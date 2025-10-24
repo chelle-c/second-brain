@@ -27,7 +27,7 @@ import {
 // TODO: Fix notes "Move to" submenu to include subfolders
 // TODO: Add ability to add, edit and delete top-level folders
 
-export function SecondBrainApp() {
+export function NotesApp() {
 	const {
 		notes,
 		notesFolders,
@@ -208,7 +208,7 @@ export function SecondBrainApp() {
 			<div className="max-w-6xl mx-auto">
 				{/* Header */}
 				<div className="mb-6">
-					<h1 className="text-3xl font-bold text-gray-800 mb-2">Second Brain</h1>
+					<h1 className="text-3xl font-bold text-gray-800 mb-2">Notes App</h1>
 					<p className="text-gray-600">Capture now, organize later</p>
 				</div>
 

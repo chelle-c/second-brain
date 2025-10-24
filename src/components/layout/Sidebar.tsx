@@ -27,7 +27,7 @@ export function Sidebar() {
 					}
 				>
 					<BrainCircuit size={20} />
-					Second Brain
+					Notes
 				</NavLink>
 
 				<NavLink
@@ -94,16 +94,6 @@ export function Sidebar() {
 					<Folder size={16} />
 					Open Data Folder
 				</button>
-
-				{/* <label className="flex items-center gap-2 text-sm cursor-pointer">
-					<input
-						type="checkbox"
-						checked={autoSaveEnabled}
-						onChange={toggleAutoSave}
-						className="rounded"
-					/>
-					Auto-save
-				</label> */}
 			</div>
 		</div>
 	);
