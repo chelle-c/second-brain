@@ -1,3 +1,12 @@
-# Tauri + React + Typescript
+# Simple Second Brain App
 
-This template should help get you started developing with Tauri, React and Typescript in Vite.
+Get thoughts of your head and into a digital space. Keep notes and track necesseties without worry. 
+
+### This app is still in progress!
+
+## Current features:
+
+- Create simple notes
+- Sort notes into folders
+- Assign categories to notes
+- Hardcoded folder structure
