@@ -2,7 +2,7 @@ export interface Note {
 	id: string;
 	title: string;
 	content: string;
-	category?: string;
+	category: string;
 	folder: string;
 	createdAt: Date;
 	updatedAt: Date;
@@ -12,18 +12,14 @@ export interface NotesFolder {
 	id: string;
 	name: string;
 	parent?: string;
-	children?: Subfolder[] | undefined;
+	children?: NotesFolder[];
 }
 
 export interface NotesFolders {
-	[folderId: string]: {
-		id: string;
-		name: string;
-		parent?: string;
-		children?: Subfolder[] | undefined;
-	};
+	[folderId: string]: NotesFolder;
 }
 
+// Keep Subfolder for backwards compatibility with existing components
 export interface Subfolder {
 	id: string;
 	name: string;
@@ -61,4 +57,36 @@ export interface AppData {
 	expenses: Expense[];
 	mindMaps: MindMapNode[];
 	lastSaved: Date;
+}
+
+export interface AppMetadata {
+	lastSaved: Date;
+	version: string;
+}
+
+export interface FoldersData {
+	folders: NotesFolders;
+	version: string;
+}
+
+export interface NotesData {
+	notes: Note[];
+	version: string;
+}
+
+export interface ExpensesData {
+	expenses: Expense[];
+	version: string;
+}
+
+export interface MindMapsData {
+	mindMaps: MindMapNode[];
+	version: string;
+}
+
+export enum AppToSave {
+	NotesApp = "notes",
+	ExpensesApp = "expenses",
+	MindMapsApp = "mindMaps",
+	All = "all",
 }

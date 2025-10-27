@@ -1,14 +1,20 @@
-// src/components/layout/Layout.tsx
+import { useState } from "react";
 import { Outlet } from "react-router";
-import { Sidebar } from "./Sidebar";
+import { LayoutSidebar } from "./Sidebar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 export function Layout() {
+	const [open, setOpen] = useState(true);
+
 	return (
 		<div className="flex h-screen bg-gray-50">
-			<Sidebar />
-			<main className="flex-1 overflow-auto">
-				<Outlet />
-			</main>
+			<SidebarProvider open={open} onOpenChange={setOpen}>
+				<LayoutSidebar />
+				<main className="flex-1 overflow-auto">
+					<SidebarTrigger />
+					<Outlet />
+				</main>
+			</SidebarProvider>
 		</div>
 	);
 }

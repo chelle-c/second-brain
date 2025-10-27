@@ -1,9 +1,26 @@
-import { BaseDirectory, mkdir, readTextFile, writeTextFile, exists } from "@tauri-apps/plugin-fs";
+import { mkdir, readTextFile, writeTextFile, exists } from "@tauri-apps/plugin-fs";
 import { appDataDir } from "@tauri-apps/api/path";
-import type { AppData, NotesFolders } from "../types";
+import { 
+	AppData, 
+	NotesFolders,
+	Note,
+	Expense,
+	MindMapNode,
+	AppMetadata,
+	FoldersData,
+	NotesData,
+	ExpensesData,
+	MindMapsData,
+	AppToSave
+} from "../types";
 
-const DATA_FILE = "app-data.json";
-const BACKUP_FILE = "app-data.backup.json";
+const NOTES_FILE = "notes.json";
+const FOLDERS_FILE = "folders.json";
+const EXPENSES_FILE = "expenses.json";
+const MINDMAPS_FILE = "mindmaps.json";
+const METADATA_FILE = "metadata.json";
+
+const DATA_VERSION = "2.0.0";
 
 class FileStorage {
 	private initialized = false;
@@ -18,7 +35,6 @@ class FileStorage {
 
 	async ensureAppDataDirectory(): Promise<string> {
 		try {
-			// Get the app data directory path
 			const dataPath = await this.getDataPath();
 			const dirExists = await exists(dataPath);
 
@@ -28,21 +44,14 @@ class FileStorage {
 
 			if (!dirExists) {
 				console.log("Creating app data directory...");
-
 				try {
-					// Create the directory with the full path
 					await mkdir(dataPath, { recursive: true });
 				} catch (err1) {
-					console.log(
-						"Failed to create with full path, trying alternative method:",
-						err1
-					);
+					console.log("Failed to create with full path, trying alternative method:", err1);
 				}
 			}
 
-			// Verify directory now exists
 			const verifyExists = await exists(dataPath);
-
 			if (!verifyExists) {
 				throw new Error("Failed to create app data directory");
 			}
@@ -55,70 +64,82 @@ class FileStorage {
 		}
 	}
 
+	private createInitialFolders(): NotesFolders {
+		const folders: NotesFolders = {
+			inbox: { 
+				id: "inbox", 
+				name: "Inbox",
+				children: []
+			},
+			personal: { 
+				id: "personal", 
+				name: "Personal",
+				children: [
+					{ id: "personal_health", name: "Health", parent: "personal", children: [] },
+					{ id: "personal_finance", name: "Finance", parent: "personal", children: [] },
+					{ id: "personal_home", name: "Home", parent: "personal", children: [] },
+				]
+			},
+			work: { 
+				id: "work", 
+				name: "Work",
+				children: [
+					{ id: "work_meetings", name: "Meetings", parent: "work", children: [] },
+					{ id: "work_tasks", name: "Tasks", parent: "work", children: [] },
+					{ id: "work_learning", name: "Learning", parent: "work", children: [] },
+				]
+			},
+			projects: { 
+				id: "projects", 
+				name: "Projects",
+				children: [
+					{ id: "projects_active", name: "Active", parent: "projects", children: [] },
+					{ id: "projects_planning", name: "Planning", parent: "projects", children: [] },
+					{ id: "projects_someday", name: "Someday", parent: "projects", children: [] },
+				]
+			},
+			resources: { 
+				id: "resources", 
+				name: "Resources",
+				children: [
+					{ id: "resources_articles", name: "Articles", parent: "resources", children: [] },
+					{ id: "resources_books", name: "Books", parent: "resources", children: [] },
+					{ id: "resources_tools", name: "Tools", parent: "resources", children: [] },
+				]
+			},
+		};
+
+		return folders;
+	}
+
 	async initialize() {
 		if (this.initialized) return;
 
 		try {
-			// First, ensure the directory exists
 			await this.ensureAppDataDirectory();
-
 			const dataPath = await this.getDataPath();
 
-			// Now try to check if data file exists
-			let fileExists = false;
-			try {
-				fileExists = await exists(`${dataPath}/${DATA_FILE}`);
-			} catch (existsError) {
-				console.log("Could not check if file exists:", existsError);
-				fileExists = false;
-			}
+			// Check if files exist, create if they don't
+			const filesToCheck = [
+				{ name: NOTES_FILE, data: { notes: [], version: DATA_VERSION } },
+				{ name: FOLDERS_FILE, data: { folders: this.createInitialFolders(), version: DATA_VERSION } },
+				{ name: EXPENSES_FILE, data: { expenses: [], version: DATA_VERSION } },
+				{ name: MINDMAPS_FILE, data: { mindMaps: [], version: DATA_VERSION } },
+				{ name: METADATA_FILE, data: { lastSaved: new Date(), version: DATA_VERSION } },
+			];
 
-			if (!fileExists) {
-				console.log("Creating initial data file...");
-
-				const initialFolders: NotesFolders = {
-					inbox: { id: "inbox", name: "Inbox" },
-					personal: { id: "personal", name: "Personal" },
-					work: { id: "work", name: "Work" },
-					projects: { id: "projects", name: "Projects" },
-					resources: { id: "resources", name: "Resources" },
-				};
-
-				const initialSubfolders = [
-					{ id: "personal_health", name: "Health", parent: "personal" },
-					{ id: "personal_finance", name: "Finance", parent: "personal" },
-					{ id: "personal_home", name: "Home", parent: "personal" },
-
-					{ id: "work_meetings", name: "Meetings", parent: "work" },
-					{ id: "work_tasks", name: "Tasks", parent: "work" },
-					{ id: "work_learning", name: "Learning", parent: "work" },
-
-					{ id: "projects_active", name: "Active", parent: "projects" },
-					{ id: "projects_planning", name: "Planning", parent: "projects" },
-					{ id: "projects_someday", name: "Someday", parent: "projects" },
-
-					{ id: "resources_articles", name: "Articles", parent: "resources" },
-					{ id: "resources_books", name: "Books", parent: "resources" },
-					{ id: "resources_tools", name: "Tools", parent: "resources" },
-				];
-
-				const initialData: AppData = {
-					notes: [],
-					notesFolders: initialFolders,
-					subfolders: initialSubfolders,
-					expenses: [],
-					mindMaps: [],
-					lastSaved: new Date(),
-				};
-
+			for (const file of filesToCheck) {
 				try {
-					await writeTextFile(
-						`${dataPath}/${DATA_FILE}`,
-						JSON.stringify(initialData, null, 2)
-					);
-					console.log("Initial data file created successfully");
-				} catch (writeError1) {
-					console.error("Failed to create initial data file:", writeError1);
+					const fileExists = await exists(`${dataPath}/${file.name}`);
+					if (!fileExists) {
+						console.log(`Creating initial ${file.name}...`);
+						await writeTextFile(
+							`${dataPath}/${file.name}`,
+							JSON.stringify(file.data, null, 2)
+						);
+					}
+				} catch (error) {
+					console.error(`Failed to create ${file.name}:`, error);
 				}
 			}
 
@@ -129,118 +150,235 @@ class FileStorage {
 		}
 	}
 
-	async loadData(): Promise<AppData> {
-		if (!this.initialized) {
-			await this.initialize();
-		}
-
-		let contents: string | null = null;
+	private async readJsonFile<T>(filename: string, defaultValue: T): Promise<T> {
 		const dataPath = await this.getDataPath();
-
 		try {
-			contents = await readTextFile(`${dataPath}/${DATA_FILE}`);
-		} catch (error1) {
-			console.log("Failed to load with BaseDirectory.AppLocalData:", error1);
+			const contents = await readTextFile(`${dataPath}/${filename}`);
+			return JSON.parse(contents);
+		} catch (error) {
+			console.log(`Failed to read ${filename}, using default:`, error);
+			return defaultValue;
 		}
+	}
 
-		if (contents) {
-			try {
-				const data = JSON.parse(contents);
-
-				// Convert date strings back to Date objects
-				if (data.lastSaved) {
-					data.lastSaved = new Date(data.lastSaved);
-				}
-
-				if (data.notes) {
-					data.notes = data.notes.map((note: any) => ({
-						...note,
-						createdAt: new Date(note.createdAt),
-						updatedAt: new Date(note.updatedAt),
-					}));
-				}
-
-				if (data.expenses) {
-					data.expenses = data.expenses.map((expense: any) => ({
-						...expense,
-						dueDate: new Date(expense.dueDate),
-					}));
-				}
-
-				console.log("Data parsed successfully");
-				return data;
-			} catch (parseError) {
-				console.error("Failed to parse data:", parseError);
-			}
+	private async writeJsonFile(filename: string, data: any): Promise<void> {
+		const dataPath = await this.getDataPath();
+		try {
+			const jsonContent = JSON.stringify(data, null, 2);
+			await writeTextFile(`${dataPath}/${filename}`, jsonContent);
+			console.log(`${filename} saved successfully`);
+		} catch (error) {
+			console.error(`Failed to save ${filename}:`, error);
+			throw error;
 		}
+	}
 
-		// Return empty data structure if load fails
-		console.log("Returning empty data structure");
+	async loadNotes(): Promise<Note[]> {
+		if (!this.initialized) await this.initialize();
+		
+		const data = await this.readJsonFile<NotesData>(NOTES_FILE, { notes: [], version: DATA_VERSION });
+		
+		return data.notes.map((note: any) => ({
+			...note,
+			createdAt: new Date(note.createdAt),
+			updatedAt: new Date(note.updatedAt),
+		}));
+	}
+
+	async saveNotes(notes: Note[]): Promise<void> {
+		if (!this.initialized) await this.initialize();
+		
+		const data: NotesData = {
+			notes,
+			version: DATA_VERSION
+		};
+		
+		await this.writeJsonFile(NOTES_FILE, data);
+	}
+
+	async loadFolders(): Promise<NotesFolders> {
+		if (!this.initialized) await this.initialize();
+		
+		const data = await this.readJsonFile<FoldersData>(FOLDERS_FILE, { 
+			folders: this.createInitialFolders(), 
+			version: DATA_VERSION 
+		});
+		
+		return data.folders;
+	}
+
+	async saveFolders(folders: NotesFolders): Promise<void> {
+		if (!this.initialized) await this.initialize();
+		
+		const data: FoldersData = {
+			folders,
+			version: DATA_VERSION
+		};
+		
+		await this.writeJsonFile(FOLDERS_FILE, data);
+	}
+
+	async loadExpenses(): Promise<Expense[]> {
+		if (!this.initialized) await this.initialize();
+		
+		const data = await this.readJsonFile<ExpensesData>(EXPENSES_FILE, { expenses: [], version: DATA_VERSION });
+		
+		return data.expenses.map((expense: any) => ({
+			...expense,
+			dueDate: new Date(expense.dueDate),
+		}));
+	}
+
+	async saveExpenses(expenses: Expense[]): Promise<void> {
+		if (!this.initialized) await this.initialize();
+		
+		const data: ExpensesData = {
+			expenses,
+			version: DATA_VERSION
+		};
+		
+		await this.writeJsonFile(EXPENSES_FILE, data);
+	}
+
+	async loadMindMaps(): Promise<MindMapNode[]> {
+		if (!this.initialized) await this.initialize();
+		
+		const data = await this.readJsonFile<MindMapsData>(MINDMAPS_FILE, { mindMaps: [], version: DATA_VERSION });
+		
+		return data.mindMaps;
+	}
+
+	async saveMindMaps(mindMaps: MindMapNode[]): Promise<void> {
+		if (!this.initialized) await this.initialize();
+		
+		const data: MindMapsData = {
+			mindMaps,
+			version: DATA_VERSION
+		};
+		
+		await this.writeJsonFile(MINDMAPS_FILE, data);
+	}
+
+	async loadMetadata(): Promise<AppMetadata> {
+		if (!this.initialized) await this.initialize();
+		
+		const data = await this.readJsonFile<AppMetadata>(METADATA_FILE, { 
+			lastSaved: new Date(), 
+			version: DATA_VERSION 
+		});
+		
 		return {
-			notes: [],
-			notesFolders: {},
-			subfolders: [],
-			expenses: [],
-			mindMaps: [],
-			lastSaved: new Date(),
+			...data,
+			lastSaved: new Date(data.lastSaved)
 		};
 	}
 
-	async saveData(data: AppData): Promise<void> {
-		if (!this.initialized) {
-			await this.initialize();
-		}
+	async saveMetadata(metadata: AppMetadata): Promise<void> {
+		if (!this.initialized) await this.initialize();
+		await this.writeJsonFile(METADATA_FILE, metadata);
+	}
 
-		const dataToSave = {
-			...data,
-			lastSaved: new Date(),
-		};
+	async loadData(): Promise<AppData> {
+		if (!this.initialized) await this.initialize();
 
-		const jsonContent = JSON.stringify(dataToSave, null, 2);
-
-		const dataPath = await this.getDataPath();
-
-		// Try to create backup first
 		try {
-			const existingContent = await readTextFile(`${dataPath}/${DATA_FILE}`);
-			if (existingContent && existingContent.length > 0) {
-				await writeTextFile(BACKUP_FILE, existingContent, {
-					baseDir: BaseDirectory.AppLocalData,
+			const [notes, folders, expenses, mindMaps, metadata] = await Promise.all([
+				this.loadNotes(),
+				this.loadFolders(),
+				this.loadExpenses(),
+				this.loadMindMaps(),
+				this.loadMetadata()
+			]);
+
+			// Convert hierarchical folders to flat subfolders for backwards compatibility
+			const subfolders = this.extractSubfoldersFromHierarchy(folders);
+
+			console.log("Data loaded successfully from multiple files");
+			return {
+				notes,
+				notesFolders: folders,
+				subfolders,
+				expenses,
+				mindMaps,
+				lastSaved: metadata.lastSaved,
+			};
+		} catch (error) {
+			console.error("Failed to load data:", error);
+			return {
+				notes: [],
+				notesFolders: {},
+				subfolders: [],
+				expenses: [],
+				mindMaps: [],
+				lastSaved: new Date(),
+			};
+		}
+	}
+
+	private extractSubfoldersFromHierarchy(folders: NotesFolders): any[] {
+		const subfolders: any[] = [];
+		
+		Object.values(folders).forEach(folder => {
+			if (folder.children && folder.children.length > 0) {
+				folder.children.forEach(child => {
+					subfolders.push({
+						id: child.id,
+						name: child.name,
+						parent: folder.id
+					});
 				});
-				console.log("Backup created");
 			}
-		} catch {
-			// Ignore backup errors
-		}
+		});
+		
+		return subfolders;
+	}
 
-		// Try multiple methods to save the file
-		let saved = false;
+	async saveData(data: AppData, appToSave: AppToSave): Promise<void> {
+		if (!this.initialized) await this.initialize();
 
-		// Method 1: Save with BaseDirectory.AppLocalData
 		try {
-			await writeTextFile(`${dataPath}/${DATA_FILE}`, jsonContent);
-			console.log("Data saved with BaseDirectory.AppLocalData");
-			console.log(`Data saved at ${BaseDirectory.AppLocalData}`);
-			saved = true;
-		} catch (error1) {
-			console.log("Failed to save with BaseDirectory.AppLocalData:", error1);
-		}
+			const metadata: AppMetadata = {
+				lastSaved: new Date(),
+				version: DATA_VERSION
+			};
 
-		if (saved) {
-			console.log("Data saved successfully");
+			if (appToSave === AppToSave.NotesApp) {
+				await Promise.all([
+					this.saveNotes(data.notes),
+					this.saveFolders(data.notesFolders),
+					this.saveMetadata(metadata),
+				]);
+			}
+
+			if (appToSave === AppToSave.ExpensesApp) {
+				await Promise.all([this.saveExpenses(data.expenses), this.saveMetadata(metadata)]);
+			}
+
+			if (appToSave === AppToSave.MindMapsApp) {
+				await Promise.all([this.saveMindMaps(data.mindMaps), this.saveMetadata(metadata)]);
+			}
+
+			if (appToSave === AppToSave.All) {
+				await Promise.all([
+					this.saveNotes(data.notes),
+					this.saveFolders(data.notesFolders),
+					this.saveExpenses(data.expenses),
+					this.saveMindMaps(data.mindMaps),
+					this.saveMetadata(metadata),
+				]);
+			}
+		} catch (error) {
+			console.error("Failed to save data:", error);
+			throw error;
 		}
 	}
 
 	async openDataFolder(): Promise<void> {
 		try {
-			// Ensure directory exists before trying to open it
 			await this.ensureAppDataDirectory();
-
 			const { openPath } = await import("@tauri-apps/plugin-opener");
 			const path = await this.getDataPath();
-
 			await openPath(path);
-
 			console.log("Opened data folder:", path);
 		} catch (error) {
 			console.error("Failed to open data folder:", error);

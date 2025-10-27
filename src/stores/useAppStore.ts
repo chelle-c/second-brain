@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
-import type { Note, NotesFolder, NotesFolders, Subfolder, Expense, MindMapNode } from "../types";
+import { Note, NotesFolder, NotesFolders, Subfolder, Expense, MindMapNode, AppToSave } from "../types";
 import { fileStorage } from "../lib/fileStorage";
 
 interface AppStore {
@@ -30,6 +30,7 @@ interface AppStore {
 	addSubFolder: (subfolder: Subfolder) => void;
 	updateSubFolder: (id: string, updates: Partial<NotesFolder>) => void;
 	removeSubfolder: (id: string) => void;
+	setNotesFolders: (folders: NotesFolders) => void;
 
 	// Actions - Expenses
 	addExpense: (expense: Omit<Expense, "id">) => void;
@@ -44,7 +45,7 @@ interface AppStore {
 
 	// Actions - Storage
 	loadFromFile: () => Promise<void>;
-	saveToFile: () => Promise<void>;
+	saveToFile: (appToSave: AppToSave) => Promise<void>;
 	toggleAutoSave: () => void;
 
 	// Inter-app communication
@@ -80,7 +81,7 @@ const useAppStore = create<AppStore>()(
 			}));
 
 			if (get().autoSaveEnabled) {
-				get().saveToFile();
+				get().saveToFile(AppToSave.NotesApp);
 			}
 		},
 
@@ -92,7 +93,7 @@ const useAppStore = create<AppStore>()(
 			}));
 
 			if (get().autoSaveEnabled) {
-				get().saveToFile();
+				get().saveToFile(AppToSave.NotesApp);
 			}
 		},
 
@@ -102,7 +103,7 @@ const useAppStore = create<AppStore>()(
 			}));
 
 			if (get().autoSaveEnabled) {
-				get().saveToFile();
+				get().saveToFile(AppToSave.NotesApp);
 			}
 		},
 
@@ -116,6 +117,10 @@ const useAppStore = create<AppStore>()(
 						: note
 				),
 			}));
+
+			if (get().autoSaveEnabled) {
+				get().saveToFile(AppToSave.NotesApp);
+			}
 		},
 
 		moveNote: (id, newFolder, newCategory?) => {
@@ -130,37 +135,107 @@ const useAppStore = create<AppStore>()(
 						: note
 				),
 			}));
+
+			if (get().autoSaveEnabled) {
+				get().saveToFile(AppToSave.NotesApp);
+			}
 		},
 
 		// Notes Folder Actions
 		setSubfolders: (subfolders) => set({ subfolders: subfolders }),
 
-		addSubFolder: (subfolder) => set((state) => {
-			return {
-				subfolders: [...state.subfolders, subfolder],
-			};
-		}),
+		setNotesFolders: (folders) => set({ notesFolders: folders }),
+
+		addSubFolder: (subfolder) => {
+			set((state) => {
+				const newFolders = { ...state.notesFolders };
+				const parentFolder = newFolders[subfolder.parent];
+
+				if (parentFolder) {
+					const newSubfolderEntry = {
+						id: subfolder.id,
+						name: subfolder.name,
+						parent: subfolder.parent,
+						children: [],
+					};
+
+					parentFolder.children = parentFolder.children || [];
+					parentFolder.children.push(newSubfolderEntry);
+				}
+
+				const newSubfolders = [...state.subfolders, subfolder];
+
+				return {
+					notesFolders: newFolders,
+					subfolders: newSubfolders,
+				};
+			});
+
+			if (get().autoSaveEnabled) {
+				get().saveToFile(AppToSave.NotesApp);
+			}
+		},
 
 		updateSubFolder: (id, updates) => {
-			set((state) => ({
-				subfolders: state.subfolders.map((subfolder) =>
+			set((state) => {
+				const newFolders = { ...state.notesFolders };
+
+				Object.values(newFolders).forEach((folder) => {
+					if (folder.children) {
+						folder.children = folder.children.map((child) => {
+							if (child.id === id) {
+								return { ...child, ...updates };
+							}
+							return child;
+						});
+					}
+				});
+
+				const newSubfolders = state.subfolders.map((subfolder) =>
 					subfolder.id === id ? { ...subfolder, ...updates } : subfolder
-				),
-			}));
+				);
+
+				return {
+					notesFolders: newFolders,
+					subfolders: newSubfolders,
+				};
+			});
+
+			if (get().autoSaveEnabled) {
+				get().saveToFile(AppToSave.NotesApp);
+			}
 		},
 
 		removeSubfolder: (id) => {
-			const subfolder = get().subfolders.find((subfolder) => subfolder.id === id);
-			set((state) => ({
-				// Move note to subbfolder's parent folder
-				notes: state.notes.map((note) =>
-					subfolder && note.folder === subfolder.name
-						? { ...note, folder: subfolder?.parent || "Inbox" }
-						: { ...note, folder: "Inbox" }
-				),
-				// Remove subfolder
-				subfolders: state.subfolders.filter((subfolder) => subfolder.id !== id),
-			}));
+			const subfolder = get().subfolders.find((sf) => sf.id === id);
+
+			set((state) => {
+				const newFolders = { ...state.notesFolders };
+
+				Object.values(newFolders).forEach((folder) => {
+					if (folder.children) {
+						folder.children = folder.children.filter((child) => child.id !== id);
+					}
+				});
+
+				const newNotes = state.notes.map((note) =>
+					subfolder && note.folder === subfolder.id
+						? { ...note, folder: subfolder.parent || "inbox" }
+						: note
+				);
+
+				const newSubfolders = state.subfolders.filter((sf) => sf.id !== id);
+
+				return {
+					notesFolders: newFolders,
+					notes: newNotes,
+					subfolders: newSubfolders,
+				};
+			});
+
+			if (get().autoSaveEnabled) {
+				get().saveToFile(AppToSave.NotesApp);
+			}
 		},
 
 		// Expense actions
@@ -175,7 +250,7 @@ const useAppStore = create<AppStore>()(
 			}));
 
 			if (get().autoSaveEnabled) {
-				get().saveToFile();
+				get().saveToFile(AppToSave.ExpensesApp);
 			}
 		},
 
@@ -187,7 +262,7 @@ const useAppStore = create<AppStore>()(
 			}));
 
 			if (get().autoSaveEnabled) {
-				get().saveToFile();
+				get().saveToFile(AppToSave.ExpensesApp);
 			}
 		},
 
@@ -197,7 +272,7 @@ const useAppStore = create<AppStore>()(
 			}));
 
 			if (get().autoSaveEnabled) {
-				get().saveToFile();
+				get().saveToFile(AppToSave.ExpensesApp);
 			}
 		},
 
@@ -229,7 +304,7 @@ const useAppStore = create<AppStore>()(
 			}));
 
 			if (get().autoSaveEnabled) {
-				get().saveToFile();
+				get().saveToFile(AppToSave.MindMapsApp);
 			}
 		},
 
@@ -241,7 +316,7 @@ const useAppStore = create<AppStore>()(
 			}));
 
 			if (get().autoSaveEnabled) {
-				get().saveToFile();
+				get().saveToFile(AppToSave.MindMapsApp);
 			}
 		},
 
@@ -251,7 +326,7 @@ const useAppStore = create<AppStore>()(
 			}));
 
 			if (get().autoSaveEnabled) {
-				get().saveToFile();
+				get().saveToFile(AppToSave.MindMapsApp);
 			}
 		},
 
@@ -275,7 +350,7 @@ const useAppStore = create<AppStore>()(
 			}
 		},
 
-		saveToFile: async () => {
+		saveToFile: async (appToSave: AppToSave) => {
 			const state = get();
 			try {
 				await fileStorage.saveData({
@@ -285,7 +360,7 @@ const useAppStore = create<AppStore>()(
 					expenses: state.expenses,
 					mindMaps: state.mindMaps,
 					lastSaved: new Date(),
-				});
+				}, appToSave);
 				set({ lastSaved: new Date() });
 			} catch (error) {
 				console.error("Failed to save data:", error);
