@@ -61,11 +61,7 @@ export function LayoutSidebar() {
 									<SidebarMenuButton asChild>
 										<NavLink
 											to={`/${item.url}`}
-											className={({ isActive }) =>
-												`flex items-center gap-3 px-3 py-2 rounded-lg mb-1 transition-colors ${
-													isActive ? "bg-blue-600" : "hover:bg-gray-800"
-												}`
-											}
+											className={`flex items-center gap-3 px-3 py-2 rounded-lg mb-1 font-semibold`}
 										>
 											<item.icon size={20} />
 											<span>{item.title}</span>

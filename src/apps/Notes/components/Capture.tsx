@@ -1,14 +1,23 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+	Select,
+	SelectContent,
+	SelectGroup,
+	SelectItem,
+	SelectLabel,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import useAppStore from "@/stores/useAppStore";
 
-export const Capture = ({ setCaptureNewNote }: any) => {
+export const Capture = ({ setCaptureNewNote, categories }: any) => {
 	const { addNote } = useAppStore();
 
-	const [newNote, setNewNote] = useState({ title: "", content: "", category: "" });
+	const [newNote, setNewNote] = useState({ title: "", content: "", category: "uncategorized" });
 
 	const handleAddNote = (e: { preventDefault: () => void }) => {
 		e.preventDefault();
@@ -16,9 +25,8 @@ export const Capture = ({ setCaptureNewNote }: any) => {
 			addNote({
 				...newNote,
 				folder: "inbox",
-				category: "uncategorized",
 			});
-			setNewNote({ title: "", content: "", category: "" });
+			setNewNote({ title: "", content: "", category: "uncategorized" });
 			setCaptureNewNote(false);
 		}
 	};
@@ -50,21 +58,49 @@ export const Capture = ({ setCaptureNewNote }: any) => {
 								className="flex-1 px-4 py-2 bg-white border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
 							/>
 						</div>
-						<div className="flex justify-end gap-2">
-							<Button
-								type="button"
-								onClick={handleAddNote}
-								className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors cursor-pointer"
+						<div className="flex justify-between gap-2">
+							<Select
+								onValueChange={(value) =>
+									setNewNote({ ...newNote, category: value })
+								}
 							>
-								Capture
-							</Button>
-							<Button
-								type="button"
-								onClick={() => setCaptureNewNote(false)}
-								className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors cursor-pointer"
-							>
-								Cancel
-							</Button>
+								<SelectTrigger className="w-[180px]">
+									<SelectValue placeholder="Select a category" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectGroup>
+										<SelectLabel>Categories</SelectLabel>
+										{Object.entries(categories).map(
+											([key, category]: any) =>
+												category.name !== "All" && (
+													<SelectItem
+														key={key}
+														value={key}
+														className="capitalize"
+													>
+														{category.name}
+													</SelectItem>
+												)
+										)}
+									</SelectGroup>
+								</SelectContent>
+							</Select>
+							<div className="flex gap-2">
+								<Button
+									type="button"
+									onClick={handleAddNote}
+									className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors cursor-pointer"
+								>
+									Capture
+								</Button>
+								<Button
+									type="button"
+									onClick={() => setCaptureNewNote(false)}
+									className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors cursor-pointer"
+								>
+									Cancel
+								</Button>
+							</div>
 						</div>
 					</div>
 				</CardContent>

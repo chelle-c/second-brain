@@ -29,7 +29,7 @@ export const FolderNav = ({
 
 	return (
 		<Card>
-			<CardContent className="p-4">
+			<CardContent className="px-4">
 				<h3 className="font-semibold mb-3 text-gray-700">Folders</h3>
 				<div className="space-y-1">
 					{/* Inbox */}

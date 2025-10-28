@@ -6,17 +6,15 @@ import { NotesCard } from "./components/NotesCard";
 import useAppStore from "../../stores/useAppStore";
 import { Category, NotesFolder, NotesFolders, Subfolder } from "../../types";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Lightbulb, BookOpen, Archive, Hash } from "lucide-react";
+import { CheckCircle, Lightbulb, BookOpen, Archive, Hash, FileWarning } from "lucide-react";
 
-// Separate sections into components
-// TODO: Fix notes "Move to" submenu to include subfolders
 // TODO: Add ability to add, edit and delete top-level folders
 
 export function NotesApp() {
 	const { notes, notesFolders } = useAppStore();
-	const [captureNewNote, setCaptureNewNote] = useState(false);
+	const [captureNewNote, setCaptureNewNote] = useState<boolean>(false);
 	const [activeFolder, setActiveFolder] = useState<NotesFolder | Subfolder | null>(null);
-	const [activeCategory, setActiveCategory] = useState("all");
+	const [activeCategory, setActiveCategory] = useState<string>("all");
 
 	const categories: Record<string, Category> = {
 		all: { name: "All", icon: Hash },
@@ -24,11 +22,10 @@ export function NotesApp() {
 		ideas: { name: "Ideas", icon: Lightbulb },
 		reference: { name: "Reference", icon: BookOpen },
 		archive: { name: "Archive", icon: Archive },
+		uncategorized: { name: "Uncategorized", icon: FileWarning },
 	};
 
 	const getAllFolders = () => {
-		// notesFolders already contains the hierarchical structure
-		// Just ensure children arrays are initialized
 		const folders = { ...notesFolders };
 		Object.values(folders).forEach((folder) => {
 			if (!folder.children) {
@@ -46,13 +43,13 @@ export function NotesApp() {
 
 	const getNoteCount = (folderId: string, categoryId?: string) => {
 		if (categoryId) {
-			return notes.filter((n) => n.folder === folderId && n.category === categoryId).length;
+			return notes.filter((n) => n.folder.includes(folderId) && n.category === categoryId)
+				.length;
 		}
-		return notes.filter((n) => n.folder === folderId).length;
+		return notes.filter((n) => n.folder.includes(folderId)).length;
 	};
 
 	const getCurrentFolder = (id: string): NotesFolder | Subfolder => {
-		// Drill down into folder children to find subfolder first
 		const currentFolder = Object.values(allFolders).find((f) => f.id === id);
 		if (currentFolder === undefined) {
 			const currentSubfolder = Object.values(allFolders).find(
@@ -64,7 +61,7 @@ export function NotesApp() {
 	};
 
 	return (
-		<div className="min-h-screen bg-gray-50 p-4">
+		<div className="">
 			<div className="max-w-6xl mx-auto">
 				{/* Header */}
 				<div className="flex justify-between items-center mb-6">
@@ -84,7 +81,7 @@ export function NotesApp() {
 				</div>
 
 				{/* Quick Capture - Always Visible */}
-				{captureNewNote && <Capture setCaptureNewNote={setCaptureNewNote} />}
+				{captureNewNote && <Capture categories={categories} setCaptureNewNote={setCaptureNewNote} />}
 
 				<div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
 					{/* Sidebar */}
@@ -103,15 +100,13 @@ export function NotesApp() {
 					{/* Main Content */}
 					<div className="flex flex-col lg:col-span-3 gap-4">
 						{/* Category Filter - Only show if not in Inbox */}
-						{activeFolder && activeFolder.id !== "inbox" && (
-							<CategoryCard
-								categories={categories}
-								getNoteCount={getNoteCount}
-								activeFolder={activeFolder}
-								activeCategory={activeCategory}
-								setActiveCategory={setActiveCategory}
-							/>
-						)}
+						<CategoryCard
+							categories={categories}
+							getNoteCount={getNoteCount}
+							activeFolder={activeFolder}
+							activeCategory={activeCategory}
+							setActiveCategory={setActiveCategory}
+						/>
 
 						<NotesCard
 							allFolders={allFolders}

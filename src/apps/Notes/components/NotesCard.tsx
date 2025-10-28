@@ -1,15 +1,14 @@
 import React, { useState } from "react";
 import useAppStore from "../../../stores/useAppStore";
-import { NotesFolder, NotesFolders, Subfolder, Category } from "../../../types";
+import { NotesDropdownMenu } from "./NotesDropdownMenu";
+import { Note, NotesFolder, NotesFolders, Subfolder, Category } from "../../../types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	Inbox,
 	Calendar,
 	Search,
-	X,
 	FolderPlus,
 	Folder,
-	MoreVertical,
 	Hash,
 	Edit2,
 	Trash2,
@@ -32,15 +31,7 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 	categories,
 	activeCategory,
 }) => {
-	const {
-		notes,
-		deleteNote,
-		updateNote,
-		categorizeNote,
-		addSubFolder,
-		removeSubfolder,
-		updateSubFolder,
-	} = useAppStore();
+	const { notes, addSubFolder, removeSubfolder, updateSubFolder } = useAppStore();
 
 	const [searchTerm, setSearchTerm] = useState("");
 
@@ -48,12 +39,9 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 	const [newSubfolderName, setNewSubfolderName] = useState("");
 
 	const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+
 	const [editingFolder, setEditingFolder] = useState("");
 	const [editFolderName, setEditFolderName] = useState("");
-
-	const moveNote = (folderId: string, newFolder: string) => {
-		updateNote(folderId, { folder: newFolder });
-	};
 
 	const addSubfolder = (parentKey: string) => {
 		if (newSubfolderName.trim()) {
@@ -303,7 +291,7 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 					</div>
 				) : (
 					<div className="space-y-3">
-						{filteredNotes.map((note) => (
+						{filteredNotes.map((note: Note) => (
 							<div
 								key={note.id}
 								className="p-4 bg-white border rounded-lg hover:shadow-md transition-shadow"
@@ -328,124 +316,14 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 											)}
 										</div>
 									</div>
-									<div className="relative flex items-center gap-1">
-										<button
-											onClick={() =>
-												setOpenDropdown(
-													openDropdown === note.id ? null : note.id
-												)
-											}
-											className="p-1 hover:bg-gray-100 rounded transition-colors"
-											title="Actions"
-										>
-											<MoreVertical size={16} className="text-gray-600" />
-										</button>
-
-										{/* Dropdown Menu */}
-										{openDropdown === note.id && (
-											<div className="absolute right-0 top-8 z-10 w-56 bg-white border rounded-lg shadow-lg">
-												<div className="py-1">
-													{/* Move to folder section */}
-													<div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">
-														Move to folder
-													</div>
-													{Object.entries(allFolders).map(
-														([key, folder]: any) => {
-															if (
-																(activeFolder &&
-																	key === activeFolder.id) ||
-																key === "inbox"
-															)
-																return null;
-															const Icon = Folder;
-															return (
-																<button
-																	key={key}
-																	onClick={() => {
-																		moveNote(note.id, key);
-																		setOpenDropdown(null);
-																	}}
-																	className="w-full px-3 py-2 text-sm text-left hover:bg-gray-100 flex items-center gap-2"
-																>
-																	<Icon
-																		size={14}
-																		className="text-gray-500"
-																	/>
-																	{folder.parent && (
-																		<span className="text-gray-400 text-xs">
-																			{
-																				allFolders[
-																					folder.parent
-																				].name
-																			}{" "}
-																			/
-																		</span>
-																	)}
-																	<span>{folder.name}</span>
-																</button>
-															);
-														}
-													)}
-
-													{/* Categorize section - only for non-inbox folders */}
-													{activeFolder &&
-														activeFolder.id !== "inbox" && (
-															<>
-																<div className="border-t my-1"></div>
-																<div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase">
-																	Categorize as
-																</div>
-																{Object.entries(categories).map(
-																	([key, category]: any) => {
-																		if (
-																			key === "all" ||
-																			key === note.category
-																		)
-																			return null;
-																		const Icon = category.icon;
-																		return (
-																			<button
-																				key={key}
-																				onClick={() => {
-																					categorizeNote(
-																						note.id,
-																						key
-																					);
-																					setOpenDropdown(
-																						null
-																					);
-																				}}
-																				className="w-full px-3 py-2 text-sm text-left hover:bg-gray-100 flex items-center gap-2"
-																			>
-																				<Icon
-																					size={14}
-																					className="text-gray-500"
-																				/>
-																				<span>
-																					{category.name}
-																				</span>
-																			</button>
-																		);
-																	}
-																)}
-															</>
-														)}
-
-													<div className="border-t my-1"></div>
-													<button
-														onClick={() => {
-															deleteNote(note.id);
-															setOpenDropdown(null);
-														}}
-														className="w-full px-3 py-2 text-sm text-left hover:bg-red-50 flex items-center gap-2 text-red-600"
-													>
-														<X size={14} />
-														Delete
-													</button>
-												</div>
-											</div>
-										)}
-									</div>
+									<NotesDropdownMenu
+										openDropdown={openDropdown}
+										setOpenDropdown={setOpenDropdown}
+										note={note}
+										allFolders={allFolders}
+										activeFolder={activeFolder}
+										categories={categories}
+									/>
 								</div>
 							</div>
 						))}

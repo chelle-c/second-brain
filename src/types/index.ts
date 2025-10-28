@@ -31,6 +31,10 @@ export interface Category {
 	icon: React.ForwardRefExoticComponent<Omit<any, "ref">>;
 }
 
+export interface Categories {
+	[key: string]: Category;
+}
+
 export interface Expense {
 	id: string;
 	name: string;
