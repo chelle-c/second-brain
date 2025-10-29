@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router";
 import { Layout } from "./components/layout/Layout";
 import { NotesApp } from "./apps/Notes";
-import { BudgetingApp } from "./apps/Budgeting";
+import { FinancesApp } from "./apps/Finances";
 import { MindMapApp } from "./apps/MindMap";
 import { DebugConsole } from "./components/DebugConsole"; // Add this
 import useAppStore from "./stores/useAppStore";
@@ -35,7 +35,7 @@ function App() {
 						<Route path="/" element={<Layout />}>
 							<Route index element={<Navigate to="/brain" replace />} />
 							<Route path="brain" element={<NotesApp />} />
-							<Route path="budget" element={<BudgetingApp />} />
+							<Route path="budget" element={<FinancesApp />} />
 							<Route path="mindmap" element={<MindMapApp />} />
 						</Route>
 					</Routes>

@@ -4,7 +4,7 @@ import { FolderNav } from "./components/FolderNav";
 import { CategoryCard } from "./components/CategoryCard";
 import { NotesCard } from "./components/NotesCard";
 import useAppStore from "../../stores/useAppStore";
-import { Category, NotesFolder, NotesFolders, Subfolder } from "../../types";
+import { Category, NotesFolder, NotesFolders, Subfolder } from "../../types/notes";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Lightbulb, BookOpen, Archive, Hash, FileWarning } from "lucide-react";
 
@@ -25,17 +25,7 @@ export function NotesApp() {
 		uncategorized: { name: "Uncategorized", icon: FileWarning },
 	};
 
-	const getAllFolders = () => {
-		const folders = { ...notesFolders };
-		Object.values(folders).forEach((folder) => {
-			if (!folder.children) {
-				folder.children = [];
-			}
-		});
-		return folders;
-	};
-
-	const allFolders: NotesFolders = getAllFolders();
+	const allFolders: NotesFolders = { ...notesFolders };
 
 	useEffect(() => {
 		setActiveFolder(allFolders["inbox"]);

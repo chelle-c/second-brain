@@ -3,7 +3,7 @@ import useAppStore from "../../stores/useAppStore";
 
 // Work in progress
 
-export function BudgetingApp() {
+export function FinancesApp() {
 
 	return (
 		<div className="p-6">
