@@ -1,18 +1,9 @@
 import { mkdir, readTextFile, writeTextFile, exists } from "@tauri-apps/plugin-fs";
 import { appDataDir } from "@tauri-apps/api/path";
-import { 
-	AppData, 
-	NotesFolders,
-	Note,
-	Expense,
-	MindMapNode,
-	AppMetadata,
-	FoldersData,
-	NotesData,
-	ExpensesData,
-	MindMapsData,
-	AppToSave
-} from "../types";
+import { Note, NotesData, NotesFolders, FoldersData } from "../types/notes";
+import { Expense, ExpensesData } from "../types/finance";
+import { MindMapNode, MindMapsData } from "../types/mindmap";
+import { AppData, AppMetadata, AppToSave } from "../types/";
 
 const NOTES_FILE = "notes.json";
 const FOLDERS_FILE = "folders.json";
@@ -300,6 +291,18 @@ class FileStorage {
 				subfolders,
 				expenses,
 				mindMaps,
+				budgetItems: [], 
+				incomePayments: [], 
+				monthlyData: [], 
+				recurringExpenses: [], 
+				expensesData: {
+					expenses,
+					version: DATA_VERSION
+				},
+				mindMapsData: {
+					mindMaps,
+					version: DATA_VERSION
+				},
 				lastSaved: metadata.lastSaved,
 			};
 		} catch (error) {
@@ -310,6 +313,18 @@ class FileStorage {
 				subfolders: [],
 				expenses: [],
 				mindMaps: [],
+				budgetItems: [], 
+				incomePayments: [], 
+				monthlyData: [], 
+				recurringExpenses: [], 
+				expensesData: {
+					expenses: [],
+					version: DATA_VERSION,
+				},
+				mindMapsData: {
+					mindMaps: [],
+					version: DATA_VERSION,
+				},
 				lastSaved: new Date(),
 			};
 		}

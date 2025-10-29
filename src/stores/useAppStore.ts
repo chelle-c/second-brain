@@ -1,6 +1,9 @@
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
-import { Note, NotesFolder, NotesFolders, Subfolder, Expense, MindMapNode, AppToSave } from "../types";
+import { Note, NotesFolder, NotesFolders, Subfolder } from "../types/notes";
+import { Expense, ExpensesData, RecurringExpense, Income, MonthlyData, BudgetItem } from "../types/finance";
+import { MindMapNode, MindMapsData } from "../types/mindmap";
+import { AppToSave } from "../types";
 import { fileStorage } from "../lib/fileStorage";
 
 interface AppStore {
@@ -10,6 +13,12 @@ interface AppStore {
 	subfolders: Subfolder[];
 	expenses: Expense[];
 	mindMaps: MindMapNode[];
+	budgetItems: BudgetItem[];
+	incomePayments: Income[];
+	monthlyData: MonthlyData[];
+	recurringExpenses: RecurringExpense[];
+	expensesData: ExpensesData;
+	mindMapsData: MindMapsData;
 	isLoading: boolean;
 	lastSaved: Date | null;
 	autoSaveEnabled: boolean;
@@ -60,6 +69,18 @@ const useAppStore = create<AppStore>()(
 		subfolders: [],
 		expenses: [],
 		mindMaps: [],
+		budgetItems: [], 
+		incomePayments: [], 
+		monthlyData: [], 
+		recurringExpenses: [], 
+		expensesData: {
+			expenses: [],
+			version: "",
+		},
+		mindMapsData: {
+			mindMaps: [],
+			version: "",
+		},
 		isLoading: true,
 		lastSaved: null,
 		autoSaveEnabled: true,
@@ -353,14 +374,23 @@ const useAppStore = create<AppStore>()(
 		saveToFile: async (appToSave: AppToSave) => {
 			const state = get();
 			try {
-				await fileStorage.saveData({
-					notes: state.notes,
-					notesFolders: state.notesFolders,
-					subfolders: state.subfolders,
-					expenses: state.expenses,
-					mindMaps: state.mindMaps,
-					lastSaved: new Date(),
-				}, appToSave);
+				await fileStorage.saveData(
+					{
+						notes: state.notes,
+						notesFolders: state.notesFolders,
+						subfolders: state.subfolders,
+						expenses: state.expenses,
+						mindMaps: state.mindMaps,
+						budgetItems: state.budgetItems, 
+						incomePayments: state.incomePayments, 
+						monthlyData: state.monthlyData, 
+						recurringExpenses: state.recurringExpenses, 
+						expensesData: state.expensesData,
+						mindMapsData: state.mindMapsData,
+						lastSaved: new Date(),
+					},
+					appToSave
+				);
 				set({ lastSaved: new Date() });
 			} catch (error) {
 				console.error("Failed to save data:", error);

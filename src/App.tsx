@@ -4,7 +4,7 @@ import { Layout } from "./components/layout/Layout";
 import { NotesApp } from "./apps/Notes";
 import { FinancesApp } from "./apps/Finances";
 import { MindMapApp } from "./apps/MindMap";
-import { DebugConsole } from "./components/DebugConsole"; // Add this
+import { DebugConsole } from "./components/DebugConsole";
 import useAppStore from "./stores/useAppStore";
 import { fileStorage } from "./lib/fileStorage";
 
