@@ -1,5 +1,4 @@
-import useAppStore from "../../stores/useAppStore";
-import { IncomeTracker } from "./components/IncomeTracker";
+import { IncomeTracker } from "./IncomeTracker";
 
 // Work in progress
 

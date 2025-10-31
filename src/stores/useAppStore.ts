@@ -8,7 +8,6 @@ import {
 	ExpenseMonthlyData,
 	BudgetItem,
 	IncomeEntry,
-	IncomeWeeklyTarget,
 	IncomeWeeklyTargets,
 	IncomeDayData,
 	IncomeParsedEntry,
@@ -83,12 +82,12 @@ interface AppStore {
 	checkDueExpenses: () => void;
 
 	// Actions - Income
-	addIncomeEntry: (entry: Omit<IncomeEntry, "id">) => void;
-	updateIncomeEntry: (id: string, updates: Partial<IncomeEntry>) => void;
+	addIncomeEntry: (entry: IncomeEntry) => void;
+	updateIncomeEntry: (updates: IncomeEntry) => void;
 	deleteIncomeEntry: (id: string) => void;
 
-	addIncomeWeeklyTarget: (target: Omit<IncomeWeeklyTarget, "id">) => void;
-	updateIncomeWeeklyTarget: (id: string, updates: Partial<IncomeWeeklyTarget>) => void;
+	addIncomeWeeklyTarget: (id: string, amount: number) => void;
+	updateIncomeWeeklyTarget: (updates: IncomeWeeklyTargets) => void;
 	deleteIncomeWeeklyTarget: (id: string) => void;
 
 	updateIncomeViewType: (viewType: IncomeViewType) => void;
@@ -378,26 +377,38 @@ const useAppStore = create<AppStore>()(
 
 		// Income actions
 		addIncomeEntry: (paymentData) => {
-			const payment: IncomeEntry = {
+			const entry: IncomeEntry = {
 				...paymentData,
-				id: `payment-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
 			};
 
-			set((state) => ({
-				...state,
-				income: [...state.incomeEntries, payment],
-			}));
+			const existingEntry = get().incomeEntries.find((p) => p.date === entry.date);
+			console.log("Existing entry:", existingEntry);
+			if (existingEntry) {
+				set((state) => ({
+					...state,
+					incomeEntries: state.incomeEntries.map((payment) =>
+						payment.date === entry.date ? { ...payment, ...entry } : payment
+					),
+				}));
+			} else {
+				set((state) => ({
+					...state,
+					incomeEntries: [...state.incomeEntries, entry],
+				}));
+			}
+
+			console.log("Income entries:", get().incomeEntries);
 
 			if (get().autoSaveEnabled) {
 				get().saveToFile(AppToSave.FinanceApp);
 			}
 		},
 
-		updateIncomeEntry: (id, updates) => {
+		updateIncomeEntry: (updates) => {
 			set((state) => ({
 				...state,
-				income: state.incomeEntries.map((payment) =>
-					payment.id === id ? { ...payment, ...updates } : payment
+				incomeEntries: state.incomeEntries.map((payment) =>
+					payment.date === updates.date ? { ...payment, ...updates } : payment
 				),
 			}));
 
@@ -409,7 +420,7 @@ const useAppStore = create<AppStore>()(
 		deleteIncomeEntry: (id) => {
 			set((state) => ({
 				...state,
-				income: state.incomeEntries.filter((payment) => payment.id !== id),
+				incomeEntries: state.incomeEntries.filter((payment) => payment.id !== id),
 			}));
 
 			if (get().autoSaveEnabled) {
@@ -417,25 +428,33 @@ const useAppStore = create<AppStore>()(
 			}
 		},
 
-		addIncomeWeeklyTarget: (targetData: IncomeWeeklyTarget) => {
+		addIncomeWeeklyTarget: (id: string, amount: number) => {
 			const target: IncomeWeeklyTargets = {
-				...targetData,
-				id: `target-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+				id: id,
+				amount: amount,
 			};
 
-			set((state) => ({
-				incomeWeeklyTargets: [...state.incomeWeeklyTargets, target],
-			}));
+			set((state) => {
+				const incomeWeeklyTargets = Array.isArray(state.incomeWeeklyTargets)
+					? state.incomeWeeklyTargets
+					: [];
+
+				incomeWeeklyTargets.push(target);
+
+				return {
+					incomeWeeklyTargets: incomeWeeklyTargets
+				};
+			});
 
 			if (get().autoSaveEnabled) {
 				get().saveToFile(AppToSave.FinanceApp);
 			}
 		},
 
-		updateIncomeWeeklyTarget: (id, updates) => {
+		updateIncomeWeeklyTarget: (updates) => {
 			set((state) => ({
 				incomeWeeklyTargets: state.incomeWeeklyTargets.map((target) =>
-					target.id === id ? { ...target, ...updates } : target
+					target.id === updates.id ? { ...target, ...updates } : target
 				),
 			}));
 
@@ -508,14 +527,14 @@ const useAppStore = create<AppStore>()(
 			try {
 				const data = await fileStorage.loadData();
 				set({
-					notes: data.notes,
-					notesFolders: data.notesFolders,
-					subfolders: data.subfolders,
-					expenses: data.expenses,
-					incomeEntries: data.incomePayments,
-					incomeWeeklyTargets: data.incomeWeeklyTargets,
-					incomeViewType: data.incomeViewType,
-					lastSaved: data.lastSaved,
+					notes: data.notes || [],
+					notesFolders: data.notesFolders || [],
+					subfolders: data.subfolders || [],
+					expenses: data.expenses || [],
+					incomeEntries: data.income.entries || [],
+					incomeWeeklyTargets: data.income.weeklyTargets || [],
+					incomeViewType: data.income.viewType || "weekly",
+					lastSaved: data.lastSaved || null,
 					autoSaveEnabled: data.autoSaveEnabled,
 				});
 				set({ isLoading: false });
@@ -534,9 +553,11 @@ const useAppStore = create<AppStore>()(
 						notesFolders: state.notesFolders,
 						subfolders: state.subfolders,
 						expenses: state.expenses,
-						incomePayments: state.incomeEntries,
-						incomeWeeklyTargets: state.incomeWeeklyTargets,
-						incomeViewType: state.incomeViewType,
+						income: {
+							entries: state.incomeEntries,
+							weeklyTargets: state.incomeWeeklyTargets,
+							viewType: state.incomeViewType,
+						},
 						isLoading: state.isLoading,
 						lastSaved: new Date(),
 						autoSaveEnabled: state.autoSaveEnabled,

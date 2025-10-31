@@ -39,9 +39,11 @@ export interface ExpensesData {
 }
 
 export interface IncomeData {
-	incomeEntries: IncomeEntry[];
-	incomeWeeklyTargets: IncomeWeeklyTargets[];
-	incomeViewType: IncomeViewType;
+	income: {
+		entries: IncomeEntry[];
+		weeklyTargets: IncomeWeeklyTargets[];
+		viewType: IncomeViewType;
+	};
 	version: string;
 }
 

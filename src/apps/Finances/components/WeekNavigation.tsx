@@ -29,7 +29,9 @@ const WeekNavigation: React.FC<WeekNavigationProps> = ({
 					{format(selectedWeek.startDate, "MMM d")} -{" "}
 					{format(selectedWeek.endDate, "MMM d, yyyy")}
 				</div>
-				<div className="text-md text-gray-600 font-medium mt-1">Week {selectedWeek.week}</div>
+				<div className="text-md text-gray-600 font-medium mt-1">
+					Week {selectedWeek.week}
+				</div>
 			</div>
 
 			<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -80,7 +82,7 @@ const WeekNavigation: React.FC<WeekNavigationProps> = ({
 				<div className="flex justify-between items-center">
 					<Button
 						onClick={() => onNavigateWeek("prev")}
-						className="flex items-center gap-2 px-4 py-2 text-gray-800 font-medium bg-gray-200 rounded-md hover:bg-gray-300 transition-colors cursor-pointer"
+						className="flex items-center gap-1 py-2 text-gray-800 font-medium bg-gray-200 rounded-md hover:bg-gray-300 transition-colors cursor-pointer text-xs md:text-sm"
 					>
 						<svg
 							className="w-4 h-4"
@@ -100,14 +102,14 @@ const WeekNavigation: React.FC<WeekNavigationProps> = ({
 
 					<Button
 						onClick={onGoToCurrentWeek}
-						className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors cursor-pointer"
+						className="px-2 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors cursor-pointer text-xs md:text-sm"
 					>
 						Current Week
 					</Button>
 
 					<Button
 						onClick={() => onNavigateWeek("next")}
-						className="flex items-center gap-2 px-4 py-2 text-gray-800 font-medium bg-gray-200 rounded-md hover:bg-gray-300 transition-colors cursor-pointer"
+						className="flex items-center gap-1 py-2 text-gray-800 font-medium bg-gray-200 rounded-md hover:bg-gray-300 transition-colors cursor-pointer text-xs md:text-sm"
 					>
 						Next Week
 						<svg

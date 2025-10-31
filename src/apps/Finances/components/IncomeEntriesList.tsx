@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import useAppStore from "@/stores/useAppStore";
 import { Button } from "../../../components/ui/button";
 import { Label } from "../../../components/ui/label";
 import { Input } from "../../../components/ui/input";
@@ -8,7 +9,6 @@ import ManualEntryForm from "./ManualEntryForm";
 import PasteEntryForm from "./PasteEntryForm";
 
 interface IncomeEntriesListProps {
-	incomeEntries: IncomeEntry[];
 	selectedWeek: IncomeWeekSelection;
 	editingEntryId: string | null;
 	editEntryForm: IncomeEntry | null;
@@ -33,7 +33,6 @@ interface IncomeEntriesListProps {
 }
 
 const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
-	incomeEntries,
 	selectedWeek,
 	editingEntryId,
 	editEntryForm,
@@ -57,6 +56,8 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 	currentWeekEntries,
 }) => {
 	const [showEntrySection, setShowEntrySection] = useState(false);
+
+	const { incomeEntries } = useAppStore();
 
 	const isLatestEntry = (entry: IncomeEntry) => {
 		return (

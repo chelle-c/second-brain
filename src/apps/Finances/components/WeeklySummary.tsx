@@ -1,19 +1,24 @@
 import React, { useState, useEffect } from "react";
+import useAppStore from "../../../stores/useAppStore";
 import { Button } from "../../../components/ui/button";
 
 interface WeeklySummaryProps {
 	weeklyTotal: number;
 	weeklyTarget: { amount: number };
 	onUpdateTarget: (amount: number) => void;
+	selectedWeek: number;
 }
 
 const WeeklySummary: React.FC<WeeklySummaryProps> = ({
 	weeklyTotal,
 	weeklyTarget,
 	onUpdateTarget,
+	selectedWeek,
 }) => {
 	const [editingTarget, setEditingTarget] = useState(false);
 	const [newTargetAmount, setNewTargetAmount] = useState(weeklyTarget.amount.toString());
+
+	const { incomeWeeklyTargets } = useAppStore();
 
 	// Sync local state when weeklyTarget prop changes
 	useEffect(() => {
@@ -23,11 +28,14 @@ const WeeklySummary: React.FC<WeeklySummaryProps> = ({
 	const targetProgress = (weeklyTotal / weeklyTarget.amount) * 100;
 	const remainingAmount = Math.max(0, weeklyTarget.amount - weeklyTotal);
 
+	const savedWeeklyTarget =
+		incomeWeeklyTargets?.find((target) => target.id === selectedWeek.toString())?.amount || 575;
+
 	const handleUpdateTarget = () => {
 		const amount = parseFloat(newTargetAmount);
 		if (!isNaN(amount) && amount > 0) {
-			onUpdateTarget(amount);
 			setEditingTarget(false);
+			onUpdateTarget(amount);
 		}
 	};
 
@@ -50,16 +58,16 @@ const WeeklySummary: React.FC<WeeklySummaryProps> = ({
 	};
 
 	return (
-		<div className="w-full bg-white rounded-lg shadow p-6">
+		<div className="w-full min-h-61 bg-white rounded-lg shadow p-6">
 			{/* Header */}
 			<div className="flex items-start justify-between mb-2">
 				<div className="w-full text-right">
-					<div className="w-full flex flex-row items-end justify-between mb-3">
+					<div className="w-full flex flex-row items-start justify-between mb-3">
 						<h3 className="text-xl font-medium text-gray-800">Weekly Target</h3>
 						{!editingTarget ? (
 							<div className="flex items-center gap-2">
-								<div className="text-xl font-bold text-gray-900">
-									${weeklyTarget.amount.toFixed(2)}
+								<div className="text-xl font-bold text-emerald-700">
+									${savedWeeklyTarget.toFixed(2)}
 								</div>
 								<button
 									onClick={startEditingTarget}
@@ -97,7 +105,7 @@ const WeeklySummary: React.FC<WeeklySummaryProps> = ({
 										autoFocus
 									/>
 								</div>
-								<div className="w-full flex justify-end my-1 gap-2">
+								<div className="w-full flex justify-end my-1 gap-4">
 									<Button
 										onClick={handleUpdateTarget}
 										className="bg-emerald-600 hover:bg-emerald-700 cursor-pointer"
@@ -106,7 +114,7 @@ const WeeklySummary: React.FC<WeeklySummaryProps> = ({
 									</Button>
 									<Button
 										onClick={cancelEditingTarget}
-										className="border border-gray-600 px-6 py-2 bg-gray-50 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+										className="px-3 py-1 text-sm bg-gray-300 text-gray-700 hover:bg-gray-400 cursor-pointer"
 									>
 										Cancel
 									</Button>
@@ -126,11 +134,18 @@ const WeeklySummary: React.FC<WeeklySummaryProps> = ({
 						<div className="text-sm text-gray-600">Target</div>
 					</div>
 
-					<div className="w-full bg-zinc-300 rounded-full h-5 relative">
+					<div className="w-full bg-zinc-300 rounded-full h-5 relative flex items-center justify-start">
 						<div
-							className="bg-emerald-500 h-5 rounded-full transition-all duration-300"
-							style={{ width: `${Math.min(targetProgress, 100)}%` }}
-						></div>
+							className="bg-emerald-500 h-5 rounded-full transition-width duration-300"
+							style={{
+								width: `${Math.min(targetProgress, 100)}%`,
+								height: `${
+									targetProgress < 5 ? `${targetProgress * 70}%` : "100%"
+								}`,
+							}}
+						>
+							&nbsp;
+						</div>
 
 						{/* Current amount indicator */}
 						{weeklyTotal > 0 && (
@@ -152,20 +167,28 @@ const WeeklySummary: React.FC<WeeklySummaryProps> = ({
 			{weeklyTotal >= weeklyTarget.amount && weeklyTarget.amount > 0 && (
 				<div className="mt-4 p-3 bg-emerald-100 border border-emerald-200 rounded-lg">
 					<div className="flex items-center justify-center">
-						<svg
-							className="w-5 h-5 text-emerald-600 mr-2"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth={2}
-								d="M5 13l4 4L19 7"
-							/>
-						</svg>
-						<span className="text-emerald-700 font-medium">Target reached! 🎉</span>
+						<div className="text-center text-emerald-700">
+							<div className="inline-flex items-center gap-2 font-medium text-lg">
+								<svg
+									className="w-5 h-5 text-emerald-600 mr-2"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M5 13l4 4L19 7"
+									/>
+								</svg>
+								<span>Target reached!</span>
+								<span>🎉</span>
+							</div>
+							<div className="mt-1 text-sm">
+								{targetProgress.toFixed(1)}% Complete
+							</div>
+						</div>
 					</div>
 				</div>
 			)}

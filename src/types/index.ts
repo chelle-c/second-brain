@@ -9,9 +9,11 @@ export interface AppData {
 
 	expenses: Expense[];
 
-	incomePayments: IncomeEntry[];
-	incomeWeeklyTargets: IncomeWeeklyTargets[];
-	incomeViewType: IncomeViewType;
+	income: {
+		entries: IncomeEntry[];
+		weeklyTargets: IncomeWeeklyTargets[];
+		viewType: IncomeViewType;
+	};
 
 	// mindMaps: MindMapNode[];
 	// mindMapsData: MindMapsData;

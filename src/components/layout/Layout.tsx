@@ -10,7 +10,7 @@ export function Layout() {
 		<div className="flex h-screen bg-gray-50">
 			<SidebarProvider open={open} onOpenChange={setOpen}>
 				<LayoutSidebar />
-				<main className="flex-1 overflow-auto min-h-screen bg-gray-50 px-4 py-8">
+				<main className="flex-1 overflow-x-hidden min-h-screen bg-gray-50 px-4 py-8">
 					<SidebarTrigger className="absolute top-0 left-0 md:left-65 z-10 lg:hidden" />
 					<Outlet />
 				</main>

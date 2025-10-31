@@ -1,6 +1,11 @@
 import React, { useState } from "react";
-import { isSameDay, parseISO, startOfDay, endOfDay, getWeek, startOfWeek, addDays, format } from "date-fns";
-import type { IncomeEntry, IncomeWeekSelection, IncomeDayData, IncomeViewType } from "../../../types/finance";
+import { isSameDay, parseISO, startOfDay, endOfDay, getWeek, startOfWeek, addDays } from "date-fns";
+import type {
+	IncomeEntry,
+	IncomeWeekSelection,
+	IncomeDayData,
+	IncomeViewType,
+} from "../../types/finance";
 import {
 	getWeeksForYear,
 	getAvailableDates,
@@ -11,24 +16,33 @@ import {
 	getYearlyData,
 	getTotalHoursWorked,
 	getTotalAmount,
-} from "../../../lib/dateUtils"
-import WeekNavigation from "./WeekNavigation";
-import IncomeEntriesList from "./IncomeEntriesList";
-import WeeklySummary from "./WeeklySummary"; // Updated import
-import IncomeChart from "./IncomeChart";
-import ViewTabs from "./ViewTabs";
-import MonthlyView from "./MonthlyView";
-import YearlyView from "./YearlyView";
+} from "../../lib/dateUtils";
+import useAppStore from "@/stores/useAppStore";
+import WeekNavigation from "./components/WeekNavigation";
+import IncomeEntriesList from "./components/IncomeEntriesList";
+import WeeklySummary from "./components/WeeklySummary"; // Updated import
+import IncomeChart from "./components/IncomeChart";
+import ViewTabs from "./components/ViewTabs";
+import MonthlyView from "./components/MonthlyView";
+import YearlyView from "./components/YearlyView";
 
 export const IncomeTracker: React.FC = () => {
-	
-	const [incomeEntries, setIncomeEntries] = useState<IncomeEntry[]>([]);
 	const [weeklyTarget, setWeeklyTarget] = useState({ amount: 575 }); // Global target
 	const [entryMethod, setEntryMethod] = useState<"manual" | "paste">("paste");
 	const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
 	const [editEntryForm, setEditEntryForm] = useState<IncomeEntry | null>(null);
-	const [currentView, setCurrentView] = useState<IncomeViewType>("weekly");
 	const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
+	const {
+		incomeEntries,
+		incomeWeeklyTargets,
+		incomeViewType,
+		addIncomeWeeklyTarget,
+		updateIncomeWeeklyTarget,
+		addIncomeEntry,
+		updateIncomeEntry,
+		deleteIncomeEntry,
+	} = useAppStore();
 
 	// Week navigation state
 	const [selectedWeek, setSelectedWeek] = useState<IncomeWeekSelection>(() => {
@@ -180,14 +194,7 @@ export const IncomeTracker: React.FC = () => {
 				amount: parseFloat(editEntryForm.amount.toFixed(2)),
 			};
 
-			setIncomeEntries((prev) => [
-				...prev.filter(
-					(entry) =>
-						entry.id !== editingEntryId &&
-						!isSameDay(parseISO(entry.date), parseISO(updatedEntry.date))
-				),
-				updatedEntry,
-			]);
+			updateIncomeEntry(updatedEntry);
 
 			setEditingEntryId(null);
 			setEditEntryForm(null);
@@ -220,15 +227,7 @@ export const IncomeTracker: React.FC = () => {
 			minutes: parsed.minutes,
 		}));
 
-		setIncomeEntries((prev) => {
-			const filteredEntries = prev.filter(
-				(oldEntry) =>
-					!newEntries.some((newEntry) =>
-						isSameDay(parseISO(oldEntry.date), parseISO(newEntry.date))
-					)
-			);
-			return [...filteredEntries, ...newEntries];
-		});
+		newEntries.forEach((entry) => addIncomeEntry(entry));
 
 		setPasteText("");
 		setParsedEntries([]);
@@ -246,10 +245,7 @@ export const IncomeTracker: React.FC = () => {
 			amount: parseFloat(newEntry.amount.toFixed(2)),
 		};
 
-		setIncomeEntries((prev) => [
-			...prev.filter((oldEntry) => !isSameDay(parseISO(oldEntry.date), parseISO(entry.date))),
-			entry,
-		]);
+		addIncomeEntry(entry);
 
 		setNewEntry({
 			date: new Date().toISOString().split("T")[0],
@@ -260,12 +256,22 @@ export const IncomeTracker: React.FC = () => {
 	};
 
 	const handleDeleteEntry = (id: string) => {
-		setIncomeEntries((prev) => prev.filter((entry) => entry.id !== id));
+		deleteIncomeEntry(id);
 	};
 
 	// Target handler
 	const handleUpdateTarget = (amount: number) => {
-		setWeeklyTarget({ amount });
+		const existingTarget = incomeWeeklyTargets
+			? incomeWeeklyTargets.find((target) => target.id === selectedWeek.week.toString())
+			: undefined;
+		existingTarget === undefined
+			? addIncomeWeeklyTarget(selectedWeek.week.toString(), amount)
+			: updateIncomeWeeklyTarget({ id: selectedWeek.week.toString(), amount });
+		setWeeklyTarget({
+			amount: incomeWeeklyTargets.filter(
+				(target) => target.id === selectedWeek.week.toString()
+			)[0].amount,
+		});
 	};
 
 	const resetEntryForm = () => {
@@ -281,8 +287,6 @@ export const IncomeTracker: React.FC = () => {
 	};
 
 	const handleNewEntryChange = (field: keyof IncomeEntry, value: string | number) => {
-		const parsedValue = field === "date" ? format(parseISO(value as string), "yyyy-MM-dd") : value;
-		console.log(parsedValue);
 		setNewEntry((prev) => ({ ...prev, [field]: value }));
 	};
 
@@ -291,21 +295,17 @@ export const IncomeTracker: React.FC = () => {
 			<div className="w-full max-w-full lg:max-w-6xl mx-auto px-4">
 				<div className="flex flex-col lg:flex-row gap-4 mb-8 justify-between items-center">
 					<div className="text-left">
-						<h1 className="text-3xl font-bold text-gray-900">
-							Income Tracker
-						</h1>
+						<h1 className="text-3xl font-bold text-gray-900">Income Tracker</h1>
 						<p className="text-gray-600">Manage your income</p>
 					</div>
 
 					<ViewTabs
-						currentView={currentView}
-						onViewChange={setCurrentView}
 						totalAmount={totalAmount}
 						totalHours={totalHours}
 					/>
 				</div>
 
-				{currentView === "weekly" && (
+				{incomeViewType === "weekly" && (
 					<div>
 						<div className="flex flex-col gap-8">
 							<div className="flex flex-row gap-4">
@@ -323,6 +323,7 @@ export const IncomeTracker: React.FC = () => {
 									weeklyTotal={weeklyTotal}
 									weeklyTarget={weeklyTarget}
 									onUpdateTarget={handleUpdateTarget}
+									selectedWeek={selectedWeek.week}
 								/>
 							</div>
 
@@ -332,7 +333,6 @@ export const IncomeTracker: React.FC = () => {
 						</div>
 						<div className="mt-6">
 							<IncomeEntriesList
-								incomeEntries={incomeEntries}
 								selectedWeek={selectedWeek}
 								editingEntryId={editingEntryId}
 								editEntryForm={editEntryForm}
@@ -359,7 +359,7 @@ export const IncomeTracker: React.FC = () => {
 					</div>
 				)}
 
-				{currentView === "monthly" && (
+				{incomeViewType === "monthly" && (
 					<div className="mt-6">
 						<MonthlyView
 							monthlyData={monthlyData}
@@ -370,7 +370,7 @@ export const IncomeTracker: React.FC = () => {
 					</div>
 				)}
 
-				{currentView === "yearly" && (
+				{incomeViewType === "yearly" && (
 					<div className="mt-6">
 						<YearlyView yearlyData={yearlyData} />
 					</div>

@@ -1,11 +1,12 @@
 import { NavLink } from "react-router";
-import useAppStore from "../../stores/useAppStore";
-import { fileStorage } from "../../lib/fileStorage";
+import useAppStore from "@/stores/useAppStore";
+import { fileStorage } from "@/lib/fileStorage";
 import { AppToSave } from "@/types";
-import { Button } from "../ui/button";
-import { Label } from "../ui/label";
-import { Switch } from "../ui/switch";
-import { Separator } from "../ui/separator";
+import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
 import {
 	Sidebar,
 	SidebarContent,
@@ -17,8 +18,10 @@ import {
 	SidebarMenuItem,
 	SidebarFooter,
 	SidebarHeader,
+	SidebarMenuSub,
+	SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
-import { Inbox, DollarSign, Folder, Network, Save, Settings } from "lucide-react";
+import { Inbox, DollarSign, Folder, Network, Save, Settings, Plus, Minus } from "lucide-react";
 
 export function LayoutSidebar() {
 	const { lastSaved, autoSaveEnabled, toggleAutoSave, saveToFile } = useAppStore();
@@ -33,6 +36,18 @@ export function LayoutSidebar() {
 			title: "Finance",
 			url: "finance",
 			icon: DollarSign,
+			subItems: [
+				{
+					title: "Expenses",
+					url: "expenses",
+					icon: Folder,
+				},
+				{
+					title: "Income",
+					url: "income",
+					icon: Folder,
+				},
+			],
 		},
 		{
 			title: "Mind Map",
@@ -56,19 +71,62 @@ export function LayoutSidebar() {
 					<SidebarGroupLabel>Application</SidebarGroupLabel>
 					<SidebarGroupContent>
 						<SidebarMenu>
-							{items.map((item) => (
-								<SidebarMenuItem key={item.title}>
-									<SidebarMenuButton asChild>
-										<NavLink
-											to={`/${item.url}`}
-											className={`flex items-center gap-3 px-3 py-2 rounded-lg mb-1 font-semibold`}
+							{items.map((item) =>
+								item?.subItems ? (
+									<Collapsible
+										key={item.title}
+										defaultOpen
+										className="group/collapsible"
+									>
+										<SidebarMenuItem>
+											<CollapsibleTrigger asChild>
+												<SidebarMenuButton className="cursor-pointer hover:bg-sidebar-background-hover rounded-md">
+													<div className="w-full flex items-center justify-between">
+														<item.icon size={16} />
+														<span className="pl-2 text-md font-semibold">
+															{item.title}
+														</span>
+														<Plus
+															size={16}
+															className="ml-auto group-data-[state=open]/collapsible:hidden"
+														/>
+														<Minus
+															size={16}
+															className="ml-auto group-data-[state=closed]/collapsible:hidden"
+														/>
+													</div>
+												</SidebarMenuButton>
+											</CollapsibleTrigger>
+											<CollapsibleContent>
+												<SidebarMenuSub>
+													{item.subItems.map((subItem) => (
+														<SidebarMenuSubItem key={subItem.title}>
+															<NavLink to={`/${subItem.url}`}>
+																<SidebarMenuButton className="cursor-pointer pl-4 text-md font-semibold hover:bg-sidebar-background-hover rounded-md">
+																	<subItem.icon size={16} />
+																	<span>{subItem.title}</span>
+																</SidebarMenuButton>
+															</NavLink>
+														</SidebarMenuSubItem>
+													))}
+												</SidebarMenuSub>
+											</CollapsibleContent>
+										</SidebarMenuItem>
+									</Collapsible>
+								) : (
+									<SidebarMenuItem key={item.title}>
+										<SidebarMenuButton
+											asChild
+											className="cursor-pointer hover:bg-sidebar-background-hover rounded-md"
 										>
-											<item.icon size={20} />
-											<span>{item.title}</span>
-										</NavLink>
-									</SidebarMenuButton>
-								</SidebarMenuItem>
-							))}
+											<NavLink to={`/${item.url}`}>
+												<item.icon size={20} />
+												<span>{item.title}</span>
+											</NavLink>
+										</SidebarMenuButton>
+									</SidebarMenuItem>
+								)
+							)}
 						</SidebarMenu>
 					</SidebarGroupContent>
 				</SidebarGroup>

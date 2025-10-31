@@ -23,7 +23,7 @@ const IncomeChart: React.FC<IncomeChartProps> = ({ weeklyData }) => {
 	}, []);
 
 	const CustomBar = (props: any) => {
-		const { day, isCurrentDay } = props;
+		const { day } = props;
 		return (
 			<g>
 				<rect
@@ -31,7 +31,7 @@ const IncomeChart: React.FC<IncomeChartProps> = ({ weeklyData }) => {
 					y={props.y}
 					width={props.width}
 					height={props.height}
-					fill={isCurrentDay ? "#3B82F6" : "#10B981"}
+					fill={"#3B82F6"}
 					rx={4}
 				/>
 				{day.amount > 0 && (
@@ -55,7 +55,11 @@ const IncomeChart: React.FC<IncomeChartProps> = ({ weeklyData }) => {
 			<h3 className="text-lg font-semibold text-gray-800 mb-4">Daily Income</h3>
 			<div className="w-full">
 				{isClient && (
-					<ResponsiveContainer initialDimension={{ width: 320, height: 200 }} minWidth={320} minHeight={200}>
+					<ResponsiveContainer
+						initialDimension={{ width: 320, height: 200 }}
+						minWidth={320}
+						minHeight={200}
+					>
 						<BarChart
 							data={weeklyData}
 							margin={{ top: 30, right: 20, left: 20, bottom: 20 }}

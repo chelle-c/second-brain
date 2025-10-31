@@ -134,7 +134,17 @@ class FileStorage {
 					data: { folders: this.createInitialFolders(), version: DATA_VERSION },
 				},
 				{ name: EXPENSES_FILE, data: { expenses: [], version: DATA_VERSION } },
-				{ name: INCOME_FILE, data: { income: [], version: DATA_VERSION } },
+				{
+					name: INCOME_FILE,
+					data: {
+						income: {
+							incomeEntries: [],
+							incomeWeeklyTargets: [],
+							incomeViewType: "weekly",
+						},
+						version: DATA_VERSION,
+					},
+				},
 				{ name: MINDMAPS_FILE, data: { mindMaps: [], version: DATA_VERSION } },
 				{ name: METADATA_FILE, data: { lastSaved: new Date(), version: DATA_VERSION } },
 			];
@@ -177,7 +187,7 @@ class FileStorage {
 		try {
 			const jsonContent = JSON.stringify(data, null, 2);
 			await writeTextFile(`${dataPath}/${filename}`, jsonContent);
-			console.log(`${filename} saved successfully`);
+			// console.log(`${filename} saved successfully`);
 		} catch (error) {
 			console.error(`Failed to save ${filename}:`, error);
 			throw error;
@@ -257,56 +267,61 @@ class FileStorage {
 		await this.writeJsonFile(EXPENSES_FILE, data);
 	}
 
-	async loadIncome(): Promise<IncomeEntry[]> {
+	async loadIncome(): Promise<AppData["income"]> {
 		if (!this.initialized) await this.initialize();
 
 		const data = await this.readJsonFile<IncomeData>(INCOME_FILE, {
-			incomeEntries: [],
-			incomeWeeklyTargets: [],
-			incomeViewType: "weekly",
+			income: {
+				entries: [],
+				weeklyTargets: [],
+				viewType: "weekly",
+			},
 			version: DATA_VERSION,
 		});
 
-		return data.incomeEntries;
+		// return everything except version
+		return {
+			entries: data.income.entries,
+			weeklyTargets: data.income.weeklyTargets,
+			viewType: data.income.viewType
+		};
 	}
 
-	async loadIncomeWeeklyTargets(): Promise<IncomeWeeklyTargets[]> {
-		if (!this.initialized) await this.initialize();
+	// async loadIncomeWeeklyTargets(): Promise<IncomeWeeklyTargets[]> {
+	// 	if (!this.initialized) await this.initialize();
 
-		const data = await this.readJsonFile<IncomeData>(INCOME_FILE, {
-			incomeEntries: [],
-			incomeWeeklyTargets: [],
-			incomeViewType: "weekly",
-			version: DATA_VERSION,
-		});
+	// 	const data = await this.readJsonFile<IncomeData>(INCOME_FILE, {
+	// 		incomeEntries: [],
+	// 		incomeWeeklyTargets: [],
+	// 		incomeViewType: "weekly",
+	// 		version: DATA_VERSION,
+	// 	});
 
-		return data.incomeWeeklyTargets;
-	}
+	// 	return data.incomeWeeklyTargets;
+	// }
 
-	async loadIncomeViewType(): Promise<IncomeViewType> {
-		if (!this.initialized) await this.initialize();
+	// async loadIncomeViewType(): Promise<IncomeViewType> {
+	// 	if (!this.initialized) await this.initialize();
 
-		const data = await this.readJsonFile<IncomeData>(INCOME_FILE, {
-			incomeEntries: [],
-			incomeWeeklyTargets: [],
-			incomeViewType: "weekly",
-			version: DATA_VERSION,
-		});
+	// 	const data = await this.readJsonFile<IncomeData>(INCOME_FILE, {
+	// 		incomeEntries: [],
+	// 		incomeWeeklyTargets: [],
+	// 		incomeViewType: "weekly",
+	// 		version: DATA_VERSION,
+	// 	});
 
-		return data.incomeViewType;
-	}
+	// 	return data.incomeViewType;
+	// }
 
-	async saveIncome(
-		incomeEntries: IncomeEntry[],
-		incomeWeeklyTargets: IncomeWeeklyTargets[],
-		incomeViewType: IncomeViewType
-	): Promise<void> {
+	async saveIncome(income: AppData["income"]): Promise<void> {
 		if (!this.initialized) await this.initialize();
 
 		const data: IncomeData = {
-			incomeEntries,
-			incomeWeeklyTargets,
-			incomeViewType,
+			income: {
+				entries: income.entries,
+				weeklyTargets: income.weeklyTargets,
+				viewType: income.viewType,
+			},
 			version: DATA_VERSION,
 		};
 
@@ -358,15 +373,13 @@ class FileStorage {
 		if (!this.initialized) await this.initialize();
 
 		try {
-			const [notes, folders, expenses, mindMaps, metadata, incomePayments, incomeWeeklyTargets, incomeViewType] = await Promise.all([
+			const [notes, folders, expenses, mindMaps, metadata, income] = await Promise.all([
 				this.loadNotes(),
 				this.loadFolders(),
 				this.loadExpenses(),
 				this.loadMindMaps(),
 				this.loadMetadata(),
 				this.loadIncome(),
-				this.loadIncomeWeeklyTargets(),
-				this.loadIncomeViewType(),
 			]);
 
 			// Convert hierarchical folders to flat subfolders for backwards compatibility
@@ -378,12 +391,10 @@ class FileStorage {
 				notesFolders: folders,
 				subfolders,
 				expenses,
-				incomePayments,
-				incomeWeeklyTargets,
-				incomeViewType,
+				income: income,
 				isLoading: false,
 				lastSaved: metadata.lastSaved,
-				autoSaveEnabled: false,
+				autoSaveEnabled: true,
 			};
 		} catch (error) {
 			console.error("Failed to load data:", error);
@@ -392,12 +403,14 @@ class FileStorage {
 				notesFolders: {},
 				subfolders: [],
 				expenses: [],
-				incomePayments: [],
-				incomeWeeklyTargets: [],
-				incomeViewType: "weekly",
+				income: {
+					entries: [],
+					weeklyTargets: [],
+					viewType: "weekly",
+				},
 				isLoading: false,
 				lastSaved: new Date(),
-				autoSaveEnabled: false,
+				autoSaveEnabled: true,
 			};
 		}
 	}
@@ -423,6 +436,8 @@ class FileStorage {
 	async saveData(data: AppData, appToSave: AppToSave): Promise<void> {
 		if (!this.initialized) await this.initialize();
 
+		console.log("App to save:", appToSave);
+
 		try {
 			const metadata: AppMetadata = {
 				lastSaved: new Date(),
@@ -438,7 +453,11 @@ class FileStorage {
 			}
 
 			if (appToSave === AppToSave.FinanceApp) {
-				await Promise.all([this.saveExpenses(data.expenses), this.saveMetadata(metadata)]);
+				await Promise.all([
+					this.saveExpenses(data.expenses),
+					this.saveIncome(data.income),
+					this.saveMetadata(metadata),
+				]);
 			}
 
 			// if (appToSave === AppToSave.MindMapsApp) {

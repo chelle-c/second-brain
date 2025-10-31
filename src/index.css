@@ -32,6 +32,7 @@
 	--color-chart-4: var(--chart-4);
 	--color-chart-5: var(--chart-5);
 	--color-sidebar: var(--sidebar-background);
+	--color-sidebar-background-hover: var(--sidebar-background-hover);
 	--color-sidebar-foreground: var(--sidebar-foreground);
 	--color-sidebar-primary: var(--sidebar-primary);
 	--color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
@@ -67,6 +68,7 @@
 	--chart-4: oklch(0.828 0.189 84.429);
 	--chart-5: oklch(0.769 0.188 70.08);
 	--sidebar-background: oklch(0.398 0.07 227.392);
+	--sidebar-background-hover: oklch(53.745% 0.08649 225.687);
 	--sidebar-foreground: oklch(1 0 0);
 	--sidebar-primary: 240 5.9% 10%;
 	--sidebar-primary-foreground: 0 0% 98%;
