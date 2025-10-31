@@ -1,13 +1,21 @@
 import { mkdir, readTextFile, writeTextFile, exists } from "@tauri-apps/plugin-fs";
 import { appDataDir } from "@tauri-apps/api/path";
 import { Note, NotesData, NotesFolders, FoldersData } from "../types/notes";
-import { Expense, ExpensesData } from "../types/finance";
+import {
+	Expense,
+	ExpensesData,
+	IncomeEntry,
+	IncomeData,
+	IncomeWeeklyTargets,
+	IncomeViewType,
+} from "../types/finance";
 import { MindMapNode, MindMapsData } from "../types/mindmap";
 import { AppData, AppMetadata, AppToSave } from "../types/";
 
 const NOTES_FILE = "notes.json";
 const FOLDERS_FILE = "folders.json";
 const EXPENSES_FILE = "expenses.json";
+const INCOME_FILE = "income.json";
 const MINDMAPS_FILE = "mindmaps.json";
 const METADATA_FILE = "metadata.json";
 
@@ -38,7 +46,10 @@ class FileStorage {
 				try {
 					await mkdir(dataPath, { recursive: true });
 				} catch (err1) {
-					console.log("Failed to create with full path, trying alternative method:", err1);
+					console.log(
+						"Failed to create with full path, trying alternative method:",
+						err1
+					);
 				}
 			}
 
@@ -57,46 +68,51 @@ class FileStorage {
 
 	private createInitialFolders(): NotesFolders {
 		const folders: NotesFolders = {
-			inbox: { 
-				id: "inbox", 
+			inbox: {
+				id: "inbox",
 				name: "Inbox",
-				children: []
+				children: [],
 			},
-			personal: { 
-				id: "personal", 
+			personal: {
+				id: "personal",
 				name: "Personal",
 				children: [
 					{ id: "personal_health", name: "Health", parent: "personal", children: [] },
 					{ id: "personal_finance", name: "Finance", parent: "personal", children: [] },
 					{ id: "personal_home", name: "Home", parent: "personal", children: [] },
-				]
+				],
 			},
-			work: { 
-				id: "work", 
+			work: {
+				id: "work",
 				name: "Work",
 				children: [
 					{ id: "work_meetings", name: "Meetings", parent: "work", children: [] },
 					{ id: "work_tasks", name: "Tasks", parent: "work", children: [] },
 					{ id: "work_learning", name: "Learning", parent: "work", children: [] },
-				]
+				],
 			},
-			projects: { 
-				id: "projects", 
+			projects: {
+				id: "projects",
 				name: "Projects",
 				children: [
 					{ id: "projects_active", name: "Active", parent: "projects", children: [] },
 					{ id: "projects_planning", name: "Planning", parent: "projects", children: [] },
 					{ id: "projects_someday", name: "Someday", parent: "projects", children: [] },
-				]
+				],
 			},
-			resources: { 
-				id: "resources", 
+			resources: {
+				id: "resources",
 				name: "Resources",
 				children: [
-					{ id: "resources_articles", name: "Articles", parent: "resources", children: [] },
+					{
+						id: "resources_articles",
+						name: "Articles",
+						parent: "resources",
+						children: [],
+					},
 					{ id: "resources_books", name: "Books", parent: "resources", children: [] },
 					{ id: "resources_tools", name: "Tools", parent: "resources", children: [] },
-				]
+				],
 			},
 		};
 
@@ -113,8 +129,12 @@ class FileStorage {
 			// Check if files exist, create if they don't
 			const filesToCheck = [
 				{ name: NOTES_FILE, data: { notes: [], version: DATA_VERSION } },
-				{ name: FOLDERS_FILE, data: { folders: this.createInitialFolders(), version: DATA_VERSION } },
+				{
+					name: FOLDERS_FILE,
+					data: { folders: this.createInitialFolders(), version: DATA_VERSION },
+				},
 				{ name: EXPENSES_FILE, data: { expenses: [], version: DATA_VERSION } },
+				{ name: INCOME_FILE, data: { income: [], version: DATA_VERSION } },
 				{ name: MINDMAPS_FILE, data: { mindMaps: [], version: DATA_VERSION } },
 				{ name: METADATA_FILE, data: { lastSaved: new Date(), version: DATA_VERSION } },
 			];
@@ -166,9 +186,12 @@ class FileStorage {
 
 	async loadNotes(): Promise<Note[]> {
 		if (!this.initialized) await this.initialize();
-		
-		const data = await this.readJsonFile<NotesData>(NOTES_FILE, { notes: [], version: DATA_VERSION });
-		
+
+		const data = await this.readJsonFile<NotesData>(NOTES_FILE, {
+			notes: [],
+			version: DATA_VERSION,
+		});
+
 		return data.notes.map((note: any) => ({
 			...note,
 			createdAt: new Date(note.createdAt),
@@ -178,42 +201,45 @@ class FileStorage {
 
 	async saveNotes(notes: Note[]): Promise<void> {
 		if (!this.initialized) await this.initialize();
-		
+
 		const data: NotesData = {
 			notes,
-			version: DATA_VERSION
+			version: DATA_VERSION,
 		};
-		
+
 		await this.writeJsonFile(NOTES_FILE, data);
 	}
 
 	async loadFolders(): Promise<NotesFolders> {
 		if (!this.initialized) await this.initialize();
-		
-		const data = await this.readJsonFile<FoldersData>(FOLDERS_FILE, { 
-			folders: this.createInitialFolders(), 
-			version: DATA_VERSION 
+
+		const data = await this.readJsonFile<FoldersData>(FOLDERS_FILE, {
+			folders: this.createInitialFolders(),
+			version: DATA_VERSION,
 		});
-		
+
 		return data.folders;
 	}
 
 	async saveFolders(folders: NotesFolders): Promise<void> {
 		if (!this.initialized) await this.initialize();
-		
+
 		const data: FoldersData = {
 			folders,
-			version: DATA_VERSION
+			version: DATA_VERSION,
 		};
-		
+
 		await this.writeJsonFile(FOLDERS_FILE, data);
 	}
 
 	async loadExpenses(): Promise<Expense[]> {
 		if (!this.initialized) await this.initialize();
-		
-		const data = await this.readJsonFile<ExpensesData>(EXPENSES_FILE, { expenses: [], version: DATA_VERSION });
-		
+
+		const data = await this.readJsonFile<ExpensesData>(EXPENSES_FILE, {
+			expenses: [],
+			version: DATA_VERSION,
+		});
+
 		return data.expenses.map((expense: any) => ({
 			...expense,
 			dueDate: new Date(expense.dueDate),
@@ -222,45 +248,104 @@ class FileStorage {
 
 	async saveExpenses(expenses: Expense[]): Promise<void> {
 		if (!this.initialized) await this.initialize();
-		
+
 		const data: ExpensesData = {
 			expenses,
-			version: DATA_VERSION
+			version: DATA_VERSION,
 		};
-		
+
 		await this.writeJsonFile(EXPENSES_FILE, data);
+	}
+
+	async loadIncome(): Promise<IncomeEntry[]> {
+		if (!this.initialized) await this.initialize();
+
+		const data = await this.readJsonFile<IncomeData>(INCOME_FILE, {
+			incomeEntries: [],
+			incomeWeeklyTargets: [],
+			incomeViewType: "weekly",
+			version: DATA_VERSION,
+		});
+
+		return data.incomeEntries;
+	}
+
+	async loadIncomeWeeklyTargets(): Promise<IncomeWeeklyTargets[]> {
+		if (!this.initialized) await this.initialize();
+
+		const data = await this.readJsonFile<IncomeData>(INCOME_FILE, {
+			incomeEntries: [],
+			incomeWeeklyTargets: [],
+			incomeViewType: "weekly",
+			version: DATA_VERSION,
+		});
+
+		return data.incomeWeeklyTargets;
+	}
+
+	async loadIncomeViewType(): Promise<IncomeViewType> {
+		if (!this.initialized) await this.initialize();
+
+		const data = await this.readJsonFile<IncomeData>(INCOME_FILE, {
+			incomeEntries: [],
+			incomeWeeklyTargets: [],
+			incomeViewType: "weekly",
+			version: DATA_VERSION,
+		});
+
+		return data.incomeViewType;
+	}
+
+	async saveIncome(
+		incomeEntries: IncomeEntry[],
+		incomeWeeklyTargets: IncomeWeeklyTargets[],
+		incomeViewType: IncomeViewType
+	): Promise<void> {
+		if (!this.initialized) await this.initialize();
+
+		const data: IncomeData = {
+			incomeEntries,
+			incomeWeeklyTargets,
+			incomeViewType,
+			version: DATA_VERSION,
+		};
+
+		await this.writeJsonFile(INCOME_FILE, data);
 	}
 
 	async loadMindMaps(): Promise<MindMapNode[]> {
 		if (!this.initialized) await this.initialize();
-		
-		const data = await this.readJsonFile<MindMapsData>(MINDMAPS_FILE, { mindMaps: [], version: DATA_VERSION });
-		
+
+		const data = await this.readJsonFile<MindMapsData>(MINDMAPS_FILE, {
+			mindMaps: [],
+			version: DATA_VERSION,
+		});
+
 		return data.mindMaps;
 	}
 
 	async saveMindMaps(mindMaps: MindMapNode[]): Promise<void> {
 		if (!this.initialized) await this.initialize();
-		
+
 		const data: MindMapsData = {
 			mindMaps,
-			version: DATA_VERSION
+			version: DATA_VERSION,
 		};
-		
+
 		await this.writeJsonFile(MINDMAPS_FILE, data);
 	}
 
 	async loadMetadata(): Promise<AppMetadata> {
 		if (!this.initialized) await this.initialize();
-		
-		const data = await this.readJsonFile<AppMetadata>(METADATA_FILE, { 
-			lastSaved: new Date(), 
-			version: DATA_VERSION 
+
+		const data = await this.readJsonFile<AppMetadata>(METADATA_FILE, {
+			lastSaved: new Date(),
+			version: DATA_VERSION,
 		});
-		
+
 		return {
 			...data,
-			lastSaved: new Date(data.lastSaved)
+			lastSaved: new Date(data.lastSaved),
 		};
 	}
 
@@ -273,12 +358,15 @@ class FileStorage {
 		if (!this.initialized) await this.initialize();
 
 		try {
-			const [notes, folders, expenses, mindMaps, metadata] = await Promise.all([
+			const [notes, folders, expenses, mindMaps, metadata, incomePayments, incomeWeeklyTargets, incomeViewType] = await Promise.all([
 				this.loadNotes(),
 				this.loadFolders(),
 				this.loadExpenses(),
 				this.loadMindMaps(),
-				this.loadMetadata()
+				this.loadMetadata(),
+				this.loadIncome(),
+				this.loadIncomeWeeklyTargets(),
+				this.loadIncomeViewType(),
 			]);
 
 			// Convert hierarchical folders to flat subfolders for backwards compatibility
@@ -290,20 +378,12 @@ class FileStorage {
 				notesFolders: folders,
 				subfolders,
 				expenses,
-				mindMaps,
-				budgetItems: [], 
-				incomePayments: [], 
-				monthlyData: [], 
-				recurringExpenses: [], 
-				expensesData: {
-					expenses,
-					version: DATA_VERSION
-				},
-				mindMapsData: {
-					mindMaps,
-					version: DATA_VERSION
-				},
+				incomePayments,
+				incomeWeeklyTargets,
+				incomeViewType,
+				isLoading: false,
 				lastSaved: metadata.lastSaved,
+				autoSaveEnabled: false,
 			};
 		} catch (error) {
 			console.error("Failed to load data:", error);
@@ -312,39 +392,31 @@ class FileStorage {
 				notesFolders: {},
 				subfolders: [],
 				expenses: [],
-				mindMaps: [],
-				budgetItems: [], 
-				incomePayments: [], 
-				monthlyData: [], 
-				recurringExpenses: [], 
-				expensesData: {
-					expenses: [],
-					version: DATA_VERSION,
-				},
-				mindMapsData: {
-					mindMaps: [],
-					version: DATA_VERSION,
-				},
+				incomePayments: [],
+				incomeWeeklyTargets: [],
+				incomeViewType: "weekly",
+				isLoading: false,
 				lastSaved: new Date(),
+				autoSaveEnabled: false,
 			};
 		}
 	}
 
 	private extractSubfoldersFromHierarchy(folders: NotesFolders): any[] {
 		const subfolders: any[] = [];
-		
-		Object.values(folders).forEach(folder => {
+
+		Object.values(folders).forEach((folder) => {
 			if (folder.children && folder.children.length > 0) {
-				folder.children.forEach(child => {
+				folder.children.forEach((child) => {
 					subfolders.push({
 						id: child.id,
 						name: child.name,
-						parent: folder.id
+						parent: folder.id,
 					});
 				});
 			}
 		});
-		
+
 		return subfolders;
 	}
 
@@ -354,7 +426,7 @@ class FileStorage {
 		try {
 			const metadata: AppMetadata = {
 				lastSaved: new Date(),
-				version: DATA_VERSION
+				version: DATA_VERSION,
 			};
 
 			if (appToSave === AppToSave.NotesApp) {
@@ -365,20 +437,19 @@ class FileStorage {
 				]);
 			}
 
-			if (appToSave === AppToSave.ExpensesApp) {
+			if (appToSave === AppToSave.FinanceApp) {
 				await Promise.all([this.saveExpenses(data.expenses), this.saveMetadata(metadata)]);
 			}
 
-			if (appToSave === AppToSave.MindMapsApp) {
-				await Promise.all([this.saveMindMaps(data.mindMaps), this.saveMetadata(metadata)]);
-			}
+			// if (appToSave === AppToSave.MindMapsApp) {
+			// 	await Promise.all([this.saveMindMaps(data.mindMaps), this.saveMetadata(metadata)]);
+			// }
 
 			if (appToSave === AppToSave.All) {
 				await Promise.all([
 					this.saveNotes(data.notes),
 					this.saveFolders(data.notesFolders),
 					this.saveExpenses(data.expenses),
-					this.saveMindMaps(data.mindMaps),
 					this.saveMetadata(metadata),
 				]);
 			}

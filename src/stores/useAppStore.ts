@@ -1,24 +1,59 @@
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import { Note, NotesFolder, NotesFolders, Subfolder } from "../types/notes";
-import { Expense, ExpensesData, RecurringExpense, Income, IncomeMonthlyData, BudgetItem } from "../types/finance";
+import {
+	Expense,
+	ExpensesData,
+	RecurringExpense,
+	ExpenseMonthlyData,
+	BudgetItem,
+	IncomeEntry,
+	IncomeWeeklyTarget,
+	IncomeWeeklyTargets,
+	IncomeDayData,
+	IncomeParsedEntry,
+	IncomeWeekSelection,
+	IncomeWeekInfo,
+	IncomeMonthlyData,
+	IncomeYearlyData,
+	IncomeViewType,
+} from "../types/finance";
 import { MindMapNode, MindMapsData } from "../types/mindmap";
 import { AppToSave } from "../types";
 import { fileStorage } from "../lib/fileStorage";
 
 interface AppStore {
 	// State
+
+	// -- Notes
 	notes: Note[];
 	notesFolders: NotesFolders;
 	subfolders: Subfolder[];
+
+	// -- Finance
+	// -- Finance/Expenses
 	expenses: Expense[];
-	mindMaps: MindMapNode[];
 	budgetItems: BudgetItem[];
-	incomePayments: Income[];
-	monthlyData: IncomeMonthlyData[];
+	expenseMonthlyData: ExpenseMonthlyData[];
 	recurringExpenses: RecurringExpense[];
 	expensesData: ExpensesData;
+
+	// -- Finance/Income
+	incomeEntries: IncomeEntry[];
+	incomeWeeklyTargets: IncomeWeeklyTargets[];
+	incomeDayData: IncomeDayData[];
+	incomeParsedEntries: IncomeParsedEntry[];
+	incomeWeekSelection: IncomeWeekSelection;
+	incomeWeekInfo: IncomeWeekInfo[];
+	incomeMonthlyData: IncomeMonthlyData[];
+	incomeYearlyData: IncomeYearlyData[];
+	incomeViewType: IncomeViewType;
+
+	// -- Mind map
+	mindMaps: MindMapNode[];
 	mindMapsData: MindMapsData;
+
+	// -- Metadata
 	isLoading: boolean;
 	lastSaved: Date | null;
 	autoSaveEnabled: boolean;
@@ -47,6 +82,17 @@ interface AppStore {
 	deleteExpense: (id: string) => void;
 	checkDueExpenses: () => void;
 
+	// Actions - Income
+	addIncomeEntry: (entry: Omit<IncomeEntry, "id">) => void;
+	updateIncomeEntry: (id: string, updates: Partial<IncomeEntry>) => void;
+	deleteIncomeEntry: (id: string) => void;
+
+	addIncomeWeeklyTarget: (target: Omit<IncomeWeeklyTarget, "id">) => void;
+	updateIncomeWeeklyTarget: (id: string, updates: Partial<IncomeWeeklyTarget>) => void;
+	deleteIncomeWeeklyTarget: (id: string) => void;
+
+	updateIncomeViewType: (viewType: IncomeViewType) => void;
+
 	// Actions - Mind Maps
 	addMindMapNode: (node: Omit<MindMapNode, "id">) => void;
 	updateMindMapNode: (id: string, updates: Partial<MindMapNode>) => void;
@@ -67,20 +113,37 @@ const useAppStore = create<AppStore>()(
 		notes: [],
 		notesFolders: {},
 		subfolders: [],
+
 		expenses: [],
-		mindMaps: [],
-		budgetItems: [], 
-		incomePayments: [], 
-		monthlyData: [], 
-		recurringExpenses: [], 
+		budgetItems: [],
+		expenseMonthlyData: [],
+		recurringExpenses: [],
 		expensesData: {
 			expenses: [],
 			version: "",
 		},
+
+		incomeEntries: [],
+		incomeWeeklyTargets: [],
+		incomeDayData: [],
+		incomeParsedEntries: [],
+		incomeWeekSelection: {
+			year: 0,
+			week: 0,
+			startDate: new Date(),
+			endDate: new Date(),
+		},
+		incomeWeekInfo: [],
+		incomeMonthlyData: [],
+		incomeYearlyData: [],
+		incomeViewType: "monthly",
+
+		mindMaps: [],
 		mindMapsData: {
 			mindMaps: [],
 			version: "",
 		},
+
 		isLoading: true,
 		lastSaved: null,
 		autoSaveEnabled: true,
@@ -92,7 +155,7 @@ const useAppStore = create<AppStore>()(
 		addNote: (noteData) => {
 			const note: Note = {
 				...noteData,
-				id: `note-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+				id: `note-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
 				createdAt: new Date(),
 				updatedAt: new Date(),
 			};
@@ -271,7 +334,7 @@ const useAppStore = create<AppStore>()(
 			}));
 
 			if (get().autoSaveEnabled) {
-				get().saveToFile(AppToSave.ExpensesApp);
+				get().saveToFile(AppToSave.FinanceApp);
 			}
 		},
 
@@ -283,7 +346,7 @@ const useAppStore = create<AppStore>()(
 			}));
 
 			if (get().autoSaveEnabled) {
-				get().saveToFile(AppToSave.ExpensesApp);
+				get().saveToFile(AppToSave.FinanceApp);
 			}
 		},
 
@@ -293,7 +356,7 @@ const useAppStore = create<AppStore>()(
 			}));
 
 			if (get().autoSaveEnabled) {
-				get().saveToFile(AppToSave.ExpensesApp);
+				get().saveToFile(AppToSave.FinanceApp);
 			}
 		},
 
@@ -311,6 +374,94 @@ const useAppStore = create<AppStore>()(
 			dueExpenses.forEach((expense) => {
 				get().createNoteFromExpense(expense);
 			});
+		},
+
+		// Income actions
+		addIncomeEntry: (paymentData) => {
+			const payment: IncomeEntry = {
+				...paymentData,
+				id: `payment-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+			};
+
+			set((state) => ({
+				...state,
+				income: [...state.incomeEntries, payment],
+			}));
+
+			if (get().autoSaveEnabled) {
+				get().saveToFile(AppToSave.FinanceApp);
+			}
+		},
+
+		updateIncomeEntry: (id, updates) => {
+			set((state) => ({
+				...state,
+				income: state.incomeEntries.map((payment) =>
+					payment.id === id ? { ...payment, ...updates } : payment
+				),
+			}));
+
+			if (get().autoSaveEnabled) {
+				get().saveToFile(AppToSave.FinanceApp);
+			}
+		},
+
+		deleteIncomeEntry: (id) => {
+			set((state) => ({
+				...state,
+				income: state.incomeEntries.filter((payment) => payment.id !== id),
+			}));
+
+			if (get().autoSaveEnabled) {
+				get().saveToFile(AppToSave.FinanceApp);
+			}
+		},
+
+		addIncomeWeeklyTarget: (targetData: IncomeWeeklyTarget) => {
+			const target: IncomeWeeklyTargets = {
+				...targetData,
+				id: `target-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+			};
+
+			set((state) => ({
+				incomeWeeklyTargets: [...state.incomeWeeklyTargets, target],
+			}));
+
+			if (get().autoSaveEnabled) {
+				get().saveToFile(AppToSave.FinanceApp);
+			}
+		},
+
+		updateIncomeWeeklyTarget: (id, updates) => {
+			set((state) => ({
+				incomeWeeklyTargets: state.incomeWeeklyTargets.map((target) =>
+					target.id === id ? { ...target, ...updates } : target
+				),
+			}));
+
+			if (get().autoSaveEnabled) {
+				get().saveToFile(AppToSave.FinanceApp);
+			}
+		},
+
+		deleteIncomeWeeklyTarget: (id) => {
+			set((state) => ({
+				incomeWeeklyTargets: state.incomeWeeklyTargets.filter((target) => target.id !== id),
+			}));
+
+			if (get().autoSaveEnabled) {
+				get().saveToFile(AppToSave.FinanceApp);
+			}
+		},
+
+		updateIncomeViewType: (viewType) => {
+			set((_) => ({
+				incomeViewType: viewType,
+			}));
+
+			if (get().autoSaveEnabled) {
+				get().saveToFile(AppToSave.FinanceApp);
+			}
 		},
 
 		// Mind map actions
@@ -361,8 +512,11 @@ const useAppStore = create<AppStore>()(
 					notesFolders: data.notesFolders,
 					subfolders: data.subfolders,
 					expenses: data.expenses,
-					mindMaps: data.mindMaps,
+					incomeEntries: data.incomePayments,
+					incomeWeeklyTargets: data.incomeWeeklyTargets,
+					incomeViewType: data.incomeViewType,
 					lastSaved: data.lastSaved,
+					autoSaveEnabled: data.autoSaveEnabled,
 				});
 				set({ isLoading: false });
 			} catch (error) {
@@ -380,14 +534,12 @@ const useAppStore = create<AppStore>()(
 						notesFolders: state.notesFolders,
 						subfolders: state.subfolders,
 						expenses: state.expenses,
-						mindMaps: state.mindMaps,
-						budgetItems: state.budgetItems, 
-						incomePayments: state.incomePayments, 
-						monthlyData: state.monthlyData, 
-						recurringExpenses: state.recurringExpenses, 
-						expensesData: state.expensesData,
-						mindMapsData: state.mindMapsData,
+						incomePayments: state.incomeEntries,
+						incomeWeeklyTargets: state.incomeWeeklyTargets,
+						incomeViewType: state.incomeViewType,
+						isLoading: state.isLoading,
 						lastSaved: new Date(),
+						autoSaveEnabled: state.autoSaveEnabled,
 					},
 					appToSave
 				);

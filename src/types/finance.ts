@@ -6,14 +6,7 @@ export interface BudgetItem {
 	date: string;
 }
 
-export interface Income {
-	id: string;
-	source: string;
-	amount: number;
-	date: string;
-}
-
-export interface MonthlyExpenseData {
+export interface ExpenseMonthlyData {
 	month: string;
 	income: number;
 	needs: number;
@@ -45,6 +38,13 @@ export interface ExpensesData {
 	version: string;
 }
 
+export interface IncomeData {
+	incomeEntries: IncomeEntry[];
+	incomeWeeklyTargets: IncomeWeeklyTargets[];
+	incomeViewType: IncomeViewType;
+	version: string;
+}
+
 export interface IncomeEntry {
 	id: string;
 	date: string;
@@ -54,6 +54,11 @@ export interface IncomeEntry {
 }
 
 export interface IncomeWeeklyTarget {
+	amount: number;
+}
+
+export interface IncomeWeeklyTargets {
+	id: string;
 	amount: number;
 }
 
