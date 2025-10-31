@@ -35,7 +35,7 @@ function App() {
 						<Route path="/" element={<Layout />}>
 							<Route index element={<Navigate to="/brain" replace />} />
 							<Route path="brain" element={<NotesApp />} />
-							<Route path="budget" element={<FinancesApp />} />
+							<Route path="finance" element={<FinancesApp />} />
 							<Route path="mindmap" element={<MindMapApp />} />
 						</Route>
 					</Routes>

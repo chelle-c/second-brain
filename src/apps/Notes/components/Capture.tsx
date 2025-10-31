@@ -96,7 +96,7 @@ export const Capture = ({ setCaptureNewNote, categories }: any) => {
 								<Button
 									type="button"
 									onClick={() => setCaptureNewNote(false)}
-									className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors cursor-pointer"
+									className="border border-gray-600 px-6 py-2 bg-gray-50 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
 								>
 									Cancel
 								</Button>

@@ -2,7 +2,7 @@ import { Note, NotesFolders, Subfolder } from "./notes";
 import {
 	BudgetItem,
 	Income,
-	MonthlyData,
+	IncomeMonthlyData,
 	RecurringExpense,
 	Expense,
 	ExpensesData,
@@ -17,7 +17,7 @@ export interface AppData {
 	mindMaps: MindMapNode[];
 	budgetItems: BudgetItem[];
 	incomePayments: Income[];
-	monthlyData: MonthlyData[];
+	monthlyData: IncomeMonthlyData[];
 	recurringExpenses: RecurringExpense[];
 	expensesData: ExpensesData;
 	mindMapsData: MindMapsData;

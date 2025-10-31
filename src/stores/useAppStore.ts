@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import { Note, NotesFolder, NotesFolders, Subfolder } from "../types/notes";
-import { Expense, ExpensesData, RecurringExpense, Income, MonthlyData, BudgetItem } from "../types/finance";
+import { Expense, ExpensesData, RecurringExpense, Income, IncomeMonthlyData, BudgetItem } from "../types/finance";
 import { MindMapNode, MindMapsData } from "../types/mindmap";
 import { AppToSave } from "../types";
 import { fileStorage } from "../lib/fileStorage";
@@ -15,7 +15,7 @@ interface AppStore {
 	mindMaps: MindMapNode[];
 	budgetItems: BudgetItem[];
 	incomePayments: Income[];
-	monthlyData: MonthlyData[];
+	monthlyData: IncomeMonthlyData[];
 	recurringExpenses: RecurringExpense[];
 	expensesData: ExpensesData;
 	mindMapsData: MindMapsData;

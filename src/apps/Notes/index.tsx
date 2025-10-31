@@ -5,7 +5,7 @@ import { CategoryCard } from "./components/CategoryCard";
 import { NotesCard } from "./components/NotesCard";
 import useAppStore from "../../stores/useAppStore";
 import { Category, NotesFolder, NotesFolders, Subfolder } from "../../types/notes";
-import { Button } from "@/components/ui/button";
+import { Button } from "../../components/ui/button";
 import { CheckCircle, Lightbulb, BookOpen, Archive, Hash, FileWarning } from "lucide-react";
 
 // TODO: Add ability to add, edit and delete top-level folders

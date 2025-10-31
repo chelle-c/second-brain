@@ -1,13 +1,12 @@
 import useAppStore from "../../stores/useAppStore";
+import { IncomeTracker } from "./components/IncomeTracker";
 
 // Work in progress
 
 /*
-** TODO #1: Add freelance income tracker UI
-** This UI should allow the user to add, edit and delete income sources, set a target for each week, and display income total made each week
-** The income data collection section should allow the user to select a day of the week and set how much was made on that day in dollars and cents
-** The target should be a default number set by the user that recurs every week, and the user should be able to edit this number
-** The data display should contain a chart of how much was made each day of the week (preferably a bar chart), and the total income made each week
+** TODO #1: Update income tracker UI
+** Add ability to set a different target each week
+** Make target optional
 */
 
 /*
@@ -34,9 +33,5 @@ import useAppStore from "../../stores/useAppStore";
 
 export function FinancesApp() {
 
-	return (
-		<div className="p-6">
-			<h1 className="text-2xl font-bold mb-6">Budget Tracker</h1>
-		</div>
-	);
+	return <IncomeTracker />;
 }
