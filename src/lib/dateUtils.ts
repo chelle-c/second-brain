@@ -13,7 +13,7 @@ import {
 	startOfMonth,
 	endOfMonth,
 } from "date-fns";
-import type { IncomeParsedEntry } from "../types/finance";
+import type { IncomeParsedEntry } from "@/types/income";
 
 export const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 export const MONTHS = [

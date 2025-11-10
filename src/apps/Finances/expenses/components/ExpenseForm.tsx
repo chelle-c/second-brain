@@ -1,0 +1,705 @@
+import { useState, useEffect, useRef } from "react";
+import { Plus, X, Save, Calendar, DollarSign, Tag, RefreshCw, CheckCircle } from "lucide-react";
+import useAppStore from "@/stores/useAppStore";
+import { ExpenseFormData, RecurrenceSettings, Expense, ImportanceLevel } from "@/types/expense";
+import { EXPENSE_CATEGORIES } from "@/lib/expenseHelpers";
+import { ConfirmRegenerationModal } from "./ConfirmRegenerationModal";
+import { format, startOfMonth, isSameDay } from "date-fns";
+
+interface ExpenseFormProps {
+	editingExpense?: Expense | null;
+	onClose?: () => void;
+	isGlobalEdit?: boolean; // Add this line
+}
+
+export const ExpenseForm: React.FC<ExpenseFormProps> = ({
+	editingExpense,
+	onClose,
+	isGlobalEdit = false, // Add this line
+}) => {
+	const { expenses, addExpense, updateExpense } = useAppStore();
+	const [isOpen, setIsOpen] = useState(false);
+	const modalRef = useRef<HTMLDivElement>(null);
+	const isDraggingFromInput = useRef(false);
+
+	const [formData, setFormData] = useState<ExpenseFormData>({
+		name: "",
+		amount: 0,
+		category: EXPENSE_CATEGORIES[0],
+		dueDate: null,
+		isRecurring: false,
+		recurrence: undefined,
+		isPaid: false,
+		paymentDate: null,
+		type: "need",
+		importance: "none",
+	});
+
+	const [amountString, setAmountString] = useState("0");
+	const [hasDueDate, setHasDueDate] = useState(true);
+	const [tempDueDate, setTempDueDate] = useState(new Date());
+
+	const [recurrenceSettings, setRecurrenceSettings] = useState<RecurrenceSettings>({
+		frequency: "monthly",
+		interval: 1,
+		occurrences: 12,
+	});
+
+	const [showRegenerationWarning, setShowRegenerationWarning] = useState(false);
+	const [pendingFormData, setPendingFormData] = useState<ExpenseFormData | null>(null);
+
+	// Add this to detect if we're editing a specific instance
+	const isEditingInstance = !!editingExpense?.parentExpenseId;
+
+	useEffect(() => {
+		if (editingExpense) {
+			setFormData({
+				name: editingExpense.name,
+				amount: editingExpense.amount,
+				category: editingExpense.category,
+				dueDate: editingExpense.dueDate,
+				isRecurring: editingExpense.isRecurring,
+				recurrence: editingExpense.recurrence,
+				isPaid: editingExpense.isPaid,
+				paymentDate: editingExpense.paymentDate,
+				type: editingExpense.type || "need",
+				importance: editingExpense.importance || "none",
+			});
+			setAmountString(editingExpense.amount.toString());
+			setHasDueDate(editingExpense.dueDate !== null);
+			setTempDueDate(editingExpense.dueDate || new Date());
+			if (editingExpense.recurrence) {
+				setRecurrenceSettings(editingExpense.recurrence);
+			}
+			setIsOpen(true);
+		}
+	}, [editingExpense]);
+
+	useEffect(() => {
+		if (formData.isRecurring) {
+			setFormData((prev) => ({ ...prev, recurrence: recurrenceSettings }));
+			setHasDueDate(true);
+			if (!editingExpense && !formData.dueDate) {
+				const firstOfMonth = startOfMonth(new Date());
+				setTempDueDate(firstOfMonth);
+				setFormData((prev) => ({ ...prev, dueDate: firstOfMonth }));
+			}
+		} else {
+			setFormData((prev) => ({ ...prev, recurrence: undefined }));
+		}
+	}, [formData.isRecurring, recurrenceSettings, editingExpense, formData.dueDate]);
+
+	const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const value = e.target.value;
+		setAmountString(value);
+
+		const numValue = parseFloat(value);
+		if (!isNaN(numValue)) {
+			setFormData({ ...formData, amount: numValue });
+		}
+	};
+
+	const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const dateValue = e.target.value;
+		if (dateValue) {
+			const selectedDate = new Date(dateValue + "T12:00:00");
+			setTempDueDate(selectedDate);
+			if (hasDueDate) {
+				setFormData({ ...formData, dueDate: selectedDate });
+			}
+		}
+	};
+
+	const handlePaymentDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const dateValue = e.target.value;
+		if (dateValue) {
+			const selectedDate = new Date(dateValue + "T12:00:00");
+			setFormData({ ...formData, paymentDate: selectedDate });
+		}
+	};
+
+	const handleDueDateToggle = (checked: boolean) => {
+		setHasDueDate(checked);
+		if (checked) {
+			setFormData({ ...formData, dueDate: tempDueDate });
+		} else {
+			setFormData({ ...formData, dueDate: null });
+		}
+	};
+
+	const willRegenerateOccurrences = (newData: ExpenseFormData): boolean => {
+		if (!editingExpense?.isRecurring || editingExpense.parentExpenseId) {
+			return false;
+		}
+
+		const needsRegeneration =
+			(newData.dueDate &&
+				editingExpense.dueDate &&
+				!isSameDay(newData.dueDate, editingExpense.dueDate)) ||
+			(newData.recurrence?.occurrences !== undefined &&
+				newData.recurrence.occurrences !== editingExpense.recurrence?.occurrences) ||
+			(newData.recurrence?.frequency !== undefined &&
+				newData.recurrence.frequency !== editingExpense.recurrence?.frequency) ||
+			(newData.recurrence?.interval !== undefined &&
+				newData.recurrence.interval !== editingExpense.recurrence?.interval);
+
+		return needsRegeneration;
+	};
+
+	// Add function to count modified occurrences:
+	const getModifiedOccurrencesCount = (): number => {
+		if (!editingExpense?.id) return 0;
+		return expenses.filter((e) => e.parentExpenseId === editingExpense.id && e.isModified)
+			.length;
+	};
+
+	// Update the handleSubmit function:
+	const handleSubmit = (e: React.FormEvent) => {
+		e.preventDefault();
+
+		const amount = parseFloat(amountString);
+		if (isNaN(amount) || amount <= 0) {
+			alert("Please enter a valid amount");
+			return;
+		}
+
+		if (formData.isRecurring && !formData.dueDate) {
+			alert("Recurring expenses must have a due date");
+			return;
+		}
+
+		const finalFormData = {
+			...formData,
+			amount,
+			dueDate: hasDueDate ? formData.dueDate : null,
+			paymentDate: formData.isPaid ? formData.paymentDate || new Date() : null,
+		};
+
+		// Check if we need to show regeneration warning
+		if (willRegenerateOccurrences(finalFormData)) {
+			setPendingFormData(finalFormData);
+			setShowRegenerationWarning(true);
+			return;
+		}
+
+		// Process the update directly if no warning needed
+		processUpdate(finalFormData);
+	};
+
+	const processUpdate = (finalFormData: ExpenseFormData) => {
+		if (editingExpense) {
+			if (isEditingInstance) {
+				updateExpense(
+					editingExpense.id,
+					{
+						amount: finalFormData.amount,
+						dueDate: finalFormData.dueDate,
+						isPaid: finalFormData.isPaid,
+						paymentDate: finalFormData.paymentDate,
+					},
+					false
+				);
+			} else {
+				updateExpense(editingExpense.id, finalFormData, isGlobalEdit);
+			}
+		} else {
+			addExpense(finalFormData);
+		}
+
+		handleReset();
+	};
+
+	// Add handlers for confirmation modal:
+	const handleConfirmRegeneration = () => {
+		if (pendingFormData) {
+			processUpdate(pendingFormData);
+		}
+		setShowRegenerationWarning(false);
+		setPendingFormData(null);
+	};
+
+	const handleCancelRegeneration = () => {
+		setShowRegenerationWarning(false);
+		setPendingFormData(null);
+	};
+
+	const handleReset = () => {
+		setFormData({
+			name: "",
+			amount: 0,
+			category: EXPENSE_CATEGORIES[0],
+			dueDate: null,
+			isRecurring: false,
+			recurrence: undefined,
+			isPaid: false,
+			paymentDate: null,
+			type: "need",
+			importance: "none",
+		});
+		setAmountString("0");
+		setHasDueDate(true);
+		setTempDueDate(new Date());
+		setRecurrenceSettings({
+			frequency: "monthly",
+			interval: 1,
+			occurrences: 12,
+		});
+		setIsOpen(false);
+		if (onClose) onClose();
+	};
+
+	const handleOpen = () => {
+		if (!editingExpense) {
+			setIsOpen(true);
+		}
+	};
+
+	const handleBackdropMouseDown = (e: React.MouseEvent) => {
+		if (e.target === e.currentTarget && !isDraggingFromInput.current) {
+			handleReset();
+		}
+		isDraggingFromInput.current = false;
+	};
+
+	const handleInputMouseDown = () => {
+		isDraggingFromInput.current = true;
+	};
+
+	const handleInputMouseUp = () => {
+		setTimeout(() => {
+			isDraggingFromInput.current = false;
+		}, 100);
+	};
+
+	return (
+		<>
+			{!editingExpense && (
+				<button
+					onClick={handleOpen}
+					className="fixed bottom-8 right-8 bg-blue-500 text-white p-4 rounded-full 
+					shadow-xl hover:bg-blue-600 hover:scale-110 transition-all duration-200 
+					active:scale-95 z-40 group"
+				>
+					<Plus size={24} />
+					<span
+						className="absolute right-full mr-3 top-1/2 -translate-y-1/2 
+						bg-gray-800 text-white px-3 py-1 rounded-lg text-sm 
+						opacity-0 group-hover:opacity-100 transition-opacity duration-200 
+						whitespace-nowrap"
+					>
+						Add Expense
+					</span>
+				</button>
+			)}
+
+			{isOpen && (
+				<div
+					className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fadeIn"
+					onMouseDown={handleBackdropMouseDown}
+				>
+					<div
+						ref={modalRef}
+						className={`bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4 
+						animate-slideUp max-h-[90vh] overflow-y-auto
+						${showRegenerationWarning ? "hidden" : ""}`}
+						onClick={(e) => e.stopPropagation()}
+					>
+						<div className="flex justify-between items-center mb-6">
+							<h3 className="text-2xl font-bold text-gray-800">
+								{editingExpense
+									? isEditingInstance
+										? "Edit This Occurrence"
+										: "Edit Expense"
+									: "Add New Expense"}
+							</h3>
+							<button
+								onClick={handleReset}
+								className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+							>
+								<X size={20} />
+							</button>
+						</div>
+
+						<form onSubmit={handleSubmit} className="space-y-4">
+							{/* Name - hide when editing occurrence */}
+							{!isEditingInstance && (
+								<div>
+									<label className="block text-sm font-medium text-gray-700 mb-2">
+										Expense Name
+									</label>
+									<div className="relative">
+										<input
+											type="text"
+											required
+											value={formData.name}
+											onChange={(e) =>
+												setFormData({ ...formData, name: e.target.value })
+											}
+											onMouseDown={handleInputMouseDown}
+											onMouseUp={handleInputMouseUp}
+											className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg 
+						focus:ring-2 focus:ring-blue-400 focus:border-transparent 
+						transition-all duration-200"
+											placeholder="Enter expense name"
+										/>
+										<Tag
+											className="absolute left-3 top-2.5 text-gray-400"
+											size={18}
+										/>
+									</div>
+								</div>
+							)}
+
+							{/* Type and Importance - hide when editing occurrence */}
+							{!isEditingInstance && (
+								<div className="grid grid-cols-2 gap-4">
+									<div>
+										<label className="block text-sm font-medium text-gray-700 mb-2">
+											Type
+										</label>
+										<div className="flex gap-2">
+											<button
+												type="button"
+												onClick={() =>
+													setFormData({ ...formData, type: "need" })
+												}
+												className={`flex-1 py-2 px-3 rounded-lg border-2 transition-all duration-200
+							${
+								formData.type === "need"
+									? "border-purple-500 bg-purple-50 text-purple-700"
+									: "border-gray-300 hover:border-gray-400"
+							}`}
+											>
+												Need
+											</button>
+											<button
+												type="button"
+												onClick={() =>
+													setFormData({ ...formData, type: "want" })
+												}
+												className={`flex-1 py-2 px-3 rounded-lg border-2 transition-all duration-200
+							${
+								formData.type === "want"
+									? "border-pink-500 bg-pink-50 text-pink-700"
+									: "border-gray-300 hover:border-gray-400"
+							}`}
+											>
+												Want
+											</button>
+										</div>
+									</div>
+
+									<div>
+										<label className="block text-sm font-medium text-gray-700 mb-2">
+											Importance
+										</label>
+										<select
+											value={formData.importance}
+											onChange={(e) =>
+												setFormData({
+													...formData,
+													importance: e.target.value as ImportanceLevel,
+												})
+											}
+											onMouseDown={handleInputMouseDown}
+											onMouseUp={handleInputMouseUp}
+											className="w-full px-3 py-2 border border-gray-300 rounded-lg 
+						focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+										>
+											<option value="none">None</option>
+											<option value="medium">Medium (!)</option>
+											<option value="high">High (!!)</option>
+											<option value="critical">Critical (!!!)</option>
+										</select>
+									</div>
+								</div>
+							)}
+
+							{/* Amount */}
+							<div>
+								<label className="block text-sm font-medium text-gray-700 mb-2">
+									Amount
+								</label>
+								<div className="relative">
+									<input
+										type="number"
+										required
+										min="0"
+										step="0.01"
+										value={amountString}
+										onChange={handleAmountChange}
+										onMouseDown={handleInputMouseDown}
+										onMouseUp={handleInputMouseUp}
+										className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg 
+											focus:ring-2 focus:ring-blue-400 focus:border-transparent 
+											transition-all duration-200"
+										placeholder="0.00"
+									/>
+									<DollarSign
+										className="absolute left-3 top-2.5 text-gray-400"
+										size={18}
+									/>
+								</div>
+							</div>
+
+							{/* Category - hide when editing occurrence */}
+							{!isEditingInstance && (
+								<div>
+									<label className="block text-sm font-medium text-gray-700 mb-2">
+										Category
+									</label>
+									<select
+										value={formData.category}
+										onChange={(e) =>
+											setFormData({ ...formData, category: e.target.value })
+										}
+										onMouseDown={handleInputMouseDown}
+										onMouseUp={handleInputMouseUp}
+										className="w-full px-4 py-2 border border-gray-300 rounded-lg 
+											focus:ring-2 focus:ring-blue-400 focus:border-transparent 
+											transition-all duration-200"
+									>
+										{EXPENSE_CATEGORIES.map((category) => (
+											<option key={category} value={category}>
+												{category}
+											</option>
+										))}
+									</select>
+								</div>
+							)}
+
+							{/* Recurrence settings - hide when editing occurrence */}
+							{!isEditingInstance && (
+								<div className="bg-blue-50 p-4 rounded-lg">
+									<label className="flex items-center gap-3 cursor-pointer mb-3">
+										<input
+											type="checkbox"
+											checked={formData.isRecurring}
+											onChange={(e) =>
+												setFormData({
+													...formData,
+													isRecurring: e.target.checked,
+												})
+											}
+											className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-400"
+										/>
+										<span className="text-sm font-medium text-gray-700 flex items-center gap-2">
+											<RefreshCw size={16} />
+											Recurring Expense
+										</span>
+									</label>
+
+									{formData.isRecurring && (
+										<div className="space-y-3">
+											<div>
+												<label className="block text-xs font-medium text-gray-600 mb-1">
+													Frequency
+												</label>
+												<select
+													value={recurrenceSettings.frequency}
+													onChange={(e) =>
+														setRecurrenceSettings({
+															...recurrenceSettings,
+															frequency: e.target.value as any,
+														})
+													}
+													onMouseDown={handleInputMouseDown}
+													onMouseUp={handleInputMouseUp}
+													className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded 
+								focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+												>
+													<option value="daily">Daily</option>
+													<option value="weekly">Weekly</option>
+													<option value="biweekly">Biweekly</option>
+													<option value="monthly">Monthly</option>
+													<option value="custom-days">
+														Every X Days
+													</option>
+													<option value="custom-months">
+														Every X Months
+													</option>
+												</select>
+											</div>
+
+											{(recurrenceSettings.frequency === "custom-days" ||
+												recurrenceSettings.frequency ===
+													"custom-months") && (
+												<div>
+													<label className="block text-xs font-medium text-gray-600 mb-1">
+														Interval
+													</label>
+													<input
+														type="number"
+														min="1"
+														value={recurrenceSettings.interval}
+														onChange={(e) =>
+															setRecurrenceSettings({
+																...recurrenceSettings,
+																interval:
+																	parseInt(e.target.value) || 1,
+															})
+														}
+														onMouseDown={handleInputMouseDown}
+														onMouseUp={handleInputMouseUp}
+														className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded 
+									focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+													/>
+												</div>
+											)}
+
+											<div>
+												<label className="block text-xs font-medium text-gray-600 mb-1">
+													Number of Occurrences
+												</label>
+												<input
+													type="number"
+													min="1"
+													value={recurrenceSettings.occurrences}
+													onChange={(e) =>
+														setRecurrenceSettings({
+															...recurrenceSettings,
+															occurrences:
+																parseInt(e.target.value) || 1,
+														})
+													}
+													onMouseDown={handleInputMouseDown}
+													onMouseUp={handleInputMouseUp}
+													className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded 
+								focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+												/>
+											</div>
+										</div>
+									)}
+								</div>
+							)}
+
+							{/* Due date toggle - hide when editing occurrence or when recurring */}
+							{!formData.isRecurring && !isEditingInstance && (
+								<div className="bg-gray-50 p-4 rounded-lg">
+									<label className="flex items-center gap-3 cursor-pointer">
+										<input
+											type="checkbox"
+											checked={hasDueDate}
+											onChange={(e) => handleDueDateToggle(e.target.checked)}
+											className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-400"
+										/>
+										<span className="text-sm font-medium text-gray-700 flex items-center gap-2">
+											<Calendar size={16} />
+											Has Due Date
+										</span>
+									</label>
+								</div>
+							)}
+
+							{/* Due Date */}
+							{(hasDueDate || formData.isRecurring || isEditingInstance) && (
+								<div>
+									<label className="block text-sm font-medium text-gray-700 mb-2">
+										Due Date
+										{formData.isRecurring && !isEditingInstance && (
+											<span className="text-xs text-gray-500 ml-2">
+												(First occurrence)
+											</span>
+										)}
+										{isEditingInstance && (
+											<span className="text-xs text-gray-500 ml-2">
+												(This occurrence only)
+											</span>
+										)}
+									</label>
+									<div className="relative">
+										<input
+											type="date"
+											required={hasDueDate || formData.isRecurring}
+											value={
+												tempDueDate ? format(tempDueDate, "yyyy-MM-dd") : ""
+											}
+											onChange={handleDateChange}
+											onMouseDown={handleInputMouseDown}
+											onMouseUp={handleInputMouseUp}
+											className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg 
+						focus:ring-2 focus:ring-blue-400 focus:border-transparent 
+						transition-all duration-200"
+										/>
+										<Calendar
+											className="absolute left-3 top-2.5 text-gray-400"
+											size={18}
+										/>
+									</div>
+								</div>
+							)}
+
+							{/* Payment status */}
+							<div className="bg-green-50 p-4 rounded-lg space-y-3">
+								<label className="flex items-center gap-3 cursor-pointer">
+									<input
+										type="checkbox"
+										checked={formData.isPaid}
+										onChange={(e) =>
+											setFormData({ ...formData, isPaid: e.target.checked })
+										}
+										className="w-5 h-5 text-green-600 rounded focus:ring-2 focus:ring-green-400"
+									/>
+									<span className="text-sm font-medium text-gray-700 flex items-center gap-2">
+										<CheckCircle size={16} />
+										Mark as Paid
+									</span>
+								</label>
+
+								{formData.isPaid && (
+									<div>
+										<label className="block text-xs font-medium text-gray-600 mb-1">
+											Payment Date
+										</label>
+										<input
+											type="date"
+											value={
+												formData.paymentDate
+													? format(formData.paymentDate, "yyyy-MM-dd") // Fixed: was "form Data.paymentDate"
+													: format(new Date(), "yyyy-MM-dd")
+											}
+											onChange={handlePaymentDateChange}
+											onMouseDown={handleInputMouseDown}
+											onMouseUp={handleInputMouseUp}
+											className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded 
+						focus:ring-2 focus:ring-green-400 focus:border-transparent"
+										/>
+									</div>
+								)}
+							</div>
+
+							<div className="flex gap-3 pt-4">
+								<button
+									type="submit"
+									className="flex-1 bg-blue-500 text-white py-2 px-4 rounded-lg 
+				hover:bg-blue-600 transition-colors duration-200 
+				flex items-center justify-center gap-2 font-medium
+				hover:scale-105 active:scale-95 transform"
+								>
+									<Save size={18} />
+									{editingExpense ? "Update" : "Add"} Expense
+								</button>
+								<button
+									type="button"
+									onClick={handleReset}
+									className="flex-1 bg-gray-200 text-gray-700 py-2 px-4 rounded-lg 
+				hover:bg-gray-300 transition-colors duration-200 font-medium
+				hover:scale-105 active:scale-95 transform"
+								>
+									Cancel
+								</button>
+							</div>
+						</form>
+					</div>
+				</div>
+			)}
+
+			<ConfirmRegenerationModal
+				isOpen={showRegenerationWarning}
+				modifiedCount={getModifiedOccurrencesCount()}
+				onConfirm={handleConfirmRegeneration}
+				onCancel={handleCancelRegeneration}
+			/>
+		</>
+	);
+};

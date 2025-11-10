@@ -4,8 +4,7 @@ import type {
 	IncomeEntry,
 	IncomeWeekSelection,
 	IncomeDayData,
-	IncomeViewType,
-} from "../../types/finance";
+} from "@/types/income";
 import {
 	getWeeksForYear,
 	getAvailableDates,
@@ -16,15 +15,15 @@ import {
 	getYearlyData,
 	getTotalHoursWorked,
 	getTotalAmount,
-} from "../../lib/dateUtils";
+} from "@/lib/dateUtils";
 import useAppStore from "@/stores/useAppStore";
-import WeekNavigation from "./components/WeekNavigation";
-import IncomeEntriesList from "./components/IncomeEntriesList";
-import WeeklySummary from "./components/WeeklySummary"; // Updated import
-import IncomeChart from "./components/IncomeChart";
-import ViewTabs from "./components/ViewTabs";
-import MonthlyView from "./components/MonthlyView";
-import YearlyView from "./components/YearlyView";
+import WeekNavigation from "@/apps/Finances/income/components/WeekNavigation";
+import IncomeEntriesList from "@/apps/Finances/income/components/IncomeEntriesList";
+import WeeklySummary from "@/apps/Finances/income/components/WeeklySummary"; // Updated import
+import IncomeChart from "@/apps/Finances/income/components/IncomeChart";
+import ViewTabs from "@/apps/Finances/income/components/ViewTabs";
+import MonthlyView from "@/apps/Finances/income/components/MonthlyView";
+import YearlyView from "@/apps/Finances/income/components/YearlyView";
 
 export const IncomeTracker: React.FC = () => {
 	const [weeklyTarget, setWeeklyTarget] = useState({ amount: 575 }); // Global target
@@ -291,7 +290,7 @@ export const IncomeTracker: React.FC = () => {
 	};
 
 	return (
-		<div className="max-w-screen min-h-screen bg-gray-50 flex items-start pb-4">
+		<div className="max-w-screen min-h-screen bg-linear-to-br from-blue-50 via-white to-blue-100 flex items-start pb-4">
 			<div className="w-full max-w-full lg:max-w-6xl mx-auto px-4">
 				<div className="flex flex-col lg:flex-row gap-4 mb-8 justify-between items-center">
 					<div className="text-left">
@@ -299,10 +298,7 @@ export const IncomeTracker: React.FC = () => {
 						<p className="text-gray-600">Manage your income</p>
 					</div>
 
-					<ViewTabs
-						totalAmount={totalAmount}
-						totalHours={totalHours}
-					/>
+					<ViewTabs totalAmount={totalAmount} totalHours={totalHours} />
 				</div>
 
 				{incomeViewType === "weekly" && (

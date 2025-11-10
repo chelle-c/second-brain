@@ -1,1 +1,0 @@
-export const ExpensesTracker = () => <div>ExpensesTracker</div>;

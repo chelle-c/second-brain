@@ -1,7 +1,7 @@
 import React from "react";
-import { Button } from "../../../components/ui/button";
+import { Button } from "@/components/ui/button";
 import { format, parseISO } from "date-fns";
-import type { IncomeParsedEntry } from "../../../types/finance";
+import type { IncomeParsedEntry } from "@/types/income";
 
 interface PasteEntryFormProps {
 	pasteText: string;

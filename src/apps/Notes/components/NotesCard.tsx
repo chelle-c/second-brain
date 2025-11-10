@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import useAppStore from "../../../stores/useAppStore";
+import useAppStore from "@/stores/useAppStore";
 import { NotesDropdownMenu } from "./NotesDropdownMenu";
-import { Note, NotesFolder, NotesFolders, Subfolder, Category } from "../../../types";
+import { Note, NotesFolder, NotesFolders, Subfolder, Category } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	Inbox,

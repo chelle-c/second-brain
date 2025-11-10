@@ -9,7 +9,7 @@ import {
 	ResponsiveContainer,
 	Cell,
 } from "recharts";
-import type { IncomeYearlyData } from "../../../types/finance";
+import type { IncomeYearlyData } from "@/types/income";
 
 interface YearlyViewProps {
 	yearlyData: IncomeYearlyData[];

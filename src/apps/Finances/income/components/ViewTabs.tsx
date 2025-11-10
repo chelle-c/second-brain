@@ -1,6 +1,6 @@
 import React from "react";
 import useAppStore from "@/stores/useAppStore";
-import { Button } from "../../../components/ui/button";
+import { Button } from "@/components/ui/button";
 
 interface ViewTabsProps {
 	totalAmount: number;

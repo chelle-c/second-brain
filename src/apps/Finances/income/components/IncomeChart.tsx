@@ -9,7 +9,7 @@ import {
 	ResponsiveContainer,
 	Cell,
 } from "recharts";
-import type { IncomeDayData } from "../../../types/finance";
+import type { IncomeDayData } from "@/types/income";
 
 interface IncomeChartProps {
 	weeklyData: IncomeDayData[];

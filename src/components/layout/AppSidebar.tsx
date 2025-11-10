@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Inbox, DollarSign, Folder, Network, Save, Settings, Plus, Minus } from "lucide-react";
 
-export function LayoutSidebar() {
+export function AppSidebar() {
 	const { lastSaved, autoSaveEnabled, toggleAutoSave, saveToFile } = useAppStore();
 
 	const items = [

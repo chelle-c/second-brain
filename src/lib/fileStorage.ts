@@ -1,16 +1,10 @@
 import { mkdir, readTextFile, writeTextFile, exists } from "@tauri-apps/plugin-fs";
 import { appDataDir } from "@tauri-apps/api/path";
-import { Note, NotesData, NotesFolders, FoldersData } from "../types/notes";
-import {
-	Expense,
-	ExpensesData,
-	IncomeEntry,
-	IncomeData,
-	IncomeWeeklyTargets,
-	IncomeViewType,
-} from "../types/finance";
-import { MindMapNode, MindMapsData } from "../types/mindmap";
-import { AppData, AppMetadata, AppToSave } from "../types/";
+import { Note, NotesData, NotesFolders, FoldersData } from "@/types/notes";
+import { IncomeData } from "@/types/income";
+import { ExpensesData } from "@/types/expense";
+import { MindMapNode, MindMapsData } from "@/types/mindmap";
+import { AppData, AppMetadata, AppToSave } from "@/types/";
 
 const NOTES_FILE = "notes.json";
 const FOLDERS_FILE = "folders.json";
@@ -242,25 +236,34 @@ class FileStorage {
 		await this.writeJsonFile(FOLDERS_FILE, data);
 	}
 
-	async loadExpenses(): Promise<Expense[]> {
+	async loadExpenses(): Promise<AppData["expenses"]> {
 		if (!this.initialized) await this.initialize();
 
 		const data = await this.readJsonFile<ExpensesData>(EXPENSES_FILE, {
-			expenses: [],
+			expenses: {
+				expenses: [],
+				selectedMonth: new Date(),
+				overviewMode: "remaining",
+			},
 			version: DATA_VERSION,
 		});
 
-		return data.expenses.map((expense: any) => ({
-			...expense,
-			dueDate: new Date(expense.dueDate),
-		}));
+		return {
+			expenses: data.expenses.expenses,
+			selectedMonth: data.expenses.selectedMonth,
+			overviewMode: data.expenses.overviewMode,
+		};
 	}
 
-	async saveExpenses(expenses: Expense[]): Promise<void> {
+	async saveExpenses(expenses: AppData["expenses"]): Promise<void> {
 		if (!this.initialized) await this.initialize();
 
 		const data: ExpensesData = {
-			expenses,
+			expenses: {
+				expenses: expenses.expenses,
+				selectedMonth: expenses.selectedMonth,
+				overviewMode: expenses.overviewMode,
+			},
 			version: DATA_VERSION,
 		};
 
@@ -283,35 +286,9 @@ class FileStorage {
 		return {
 			entries: data.income.entries,
 			weeklyTargets: data.income.weeklyTargets,
-			viewType: data.income.viewType
+			viewType: data.income.viewType,
 		};
 	}
-
-	// async loadIncomeWeeklyTargets(): Promise<IncomeWeeklyTargets[]> {
-	// 	if (!this.initialized) await this.initialize();
-
-	// 	const data = await this.readJsonFile<IncomeData>(INCOME_FILE, {
-	// 		incomeEntries: [],
-	// 		incomeWeeklyTargets: [],
-	// 		incomeViewType: "weekly",
-	// 		version: DATA_VERSION,
-	// 	});
-
-	// 	return data.incomeWeeklyTargets;
-	// }
-
-	// async loadIncomeViewType(): Promise<IncomeViewType> {
-	// 	if (!this.initialized) await this.initialize();
-
-	// 	const data = await this.readJsonFile<IncomeData>(INCOME_FILE, {
-	// 		incomeEntries: [],
-	// 		incomeWeeklyTargets: [],
-	// 		incomeViewType: "weekly",
-	// 		version: DATA_VERSION,
-	// 	});
-
-	// 	return data.incomeViewType;
-	// }
 
 	async saveIncome(income: AppData["income"]): Promise<void> {
 		if (!this.initialized) await this.initialize();
@@ -373,11 +350,10 @@ class FileStorage {
 		if (!this.initialized) await this.initialize();
 
 		try {
-			const [notes, folders, expenses, mindMaps, metadata, income] = await Promise.all([
+			const [notes, folders, expenses, metadata, income] = await Promise.all([
 				this.loadNotes(),
 				this.loadFolders(),
 				this.loadExpenses(),
-				this.loadMindMaps(),
 				this.loadMetadata(),
 				this.loadIncome(),
 			]);
@@ -391,7 +367,7 @@ class FileStorage {
 				notesFolders: folders,
 				subfolders,
 				expenses,
-				income: income,
+				income,
 				isLoading: false,
 				lastSaved: metadata.lastSaved,
 				autoSaveEnabled: true,
@@ -402,7 +378,11 @@ class FileStorage {
 				notes: [],
 				notesFolders: {},
 				subfolders: [],
-				expenses: [],
+				expenses: {
+					expenses: [],
+					selectedMonth: new Date(),
+					overviewMode: "remaining",
+				},
 				income: {
 					entries: [],
 					weeklyTargets: [],
@@ -436,7 +416,7 @@ class FileStorage {
 	async saveData(data: AppData, appToSave: AppToSave): Promise<void> {
 		if (!this.initialized) await this.initialize();
 
-		console.log("App to save:", appToSave);
+		// console.log("App to save:", appToSave);
 
 		try {
 			const metadata: AppMetadata = {
@@ -452,12 +432,12 @@ class FileStorage {
 				]);
 			}
 
-			if (appToSave === AppToSave.FinanceApp) {
-				await Promise.all([
-					this.saveExpenses(data.expenses),
-					this.saveIncome(data.income),
-					this.saveMetadata(metadata),
-				]);
+			if (appToSave === AppToSave.Expenses) {
+				await Promise.all([this.saveExpenses(data.expenses), this.saveMetadata(metadata)]);
+			}
+
+			if (appToSave === AppToSave.Income) {
+				await Promise.all([this.saveIncome(data.income), this.saveMetadata(metadata)]);
 			}
 
 			// if (appToSave === AppToSave.MindMapsApp) {
@@ -469,6 +449,7 @@ class FileStorage {
 					this.saveNotes(data.notes),
 					this.saveFolders(data.notesFolders),
 					this.saveExpenses(data.expenses),
+					this.saveIncome(data.income),
 					this.saveMetadata(metadata),
 				]);
 			}

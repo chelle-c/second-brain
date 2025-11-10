@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import useAppStore from "@/stores/useAppStore";
-import { Button } from "../../../components/ui/button";
-import { Label } from "../../../components/ui/label";
-import { Input } from "../../../components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { format, parseISO, isSameDay } from "date-fns";
-import type { IncomeEntry, IncomeWeekSelection } from "../../../types/finance";
+import type { IncomeEntry, IncomeWeekSelection } from "@/types/income";
 import ManualEntryForm from "./ManualEntryForm";
 import PasteEntryForm from "./PasteEntryForm";
 

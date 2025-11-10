@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import useAppStore from "../../../stores/useAppStore";
-import { Button } from "../../../components/ui/button";
+import useAppStore from "@/stores/useAppStore";
+import { Button } from "@/components/ui/button";
 
 interface WeeklySummaryProps {
 	weeklyTotal: number;

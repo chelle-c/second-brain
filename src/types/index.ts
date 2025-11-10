@@ -1,13 +1,17 @@
 import { Note, NotesFolders, Subfolder } from "./notes";
-import { Expense, IncomeEntry, IncomeWeeklyTargets, IncomeViewType } from "../types/finance";
-import { MindMapNode, MindMapsData } from "./mindmap";
+import { IncomeEntry, IncomeWeeklyTargets, IncomeViewType } from "@/types/income";
+import { Expense, OverviewMode } from "./expense";
 
 export interface AppData {
 	notes: Note[];
 	notesFolders: NotesFolders;
 	subfolders: Subfolder[];
 
-	expenses: Expense[];
+	expenses: {
+		expenses: Expense[];
+		selectedMonth: Date;
+		overviewMode: OverviewMode;
+	}
 
 	income: {
 		entries: IncomeEntry[];
@@ -30,7 +34,8 @@ export interface AppMetadata {
 
 export enum AppToSave {
 	NotesApp = "notes",
-	FinanceApp = "expenses",
+	Expenses = "expenses",
+	Income = "income",
 	MindMapsApp = "mindMaps",
 	All = "all",
 }
