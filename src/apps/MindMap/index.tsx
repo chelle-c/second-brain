@@ -1,5 +1,3 @@
-import useAppStore from "@/stores/useAppStore";
-
 // Work in progress
 
 export const MindMapApp = () => {

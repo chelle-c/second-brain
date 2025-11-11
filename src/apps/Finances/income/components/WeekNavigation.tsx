@@ -1,27 +1,76 @@
 import React from "react";
-import { format } from "date-fns";
+import { getWeeksForYear } from "@/lib/dateUtils";
+import { format, getWeek, startOfWeek, addDays } from "date-fns";
 import { Button } from "@/components/ui/button";
-import type { IncomeWeekSelection, IncomeWeekInfo } from "@/types/income";
+import type { IncomeWeekSelection } from "@/types/income";
 
 interface WeekNavigationProps {
 	selectedWeek: IncomeWeekSelection;
+	setSelectedWeek: { (week: IncomeWeekSelection): void };
 	years: number[];
-	currentYearWeeks: IncomeWeekInfo[];
-	onYearChange: (year: number) => void;
-	onWeekChange: (weekNumber: number) => void;
-	onNavigateWeek: (direction: "prev" | "next") => void;
-	onGoToCurrentWeek: () => void;
 }
 
 const WeekNavigation: React.FC<WeekNavigationProps> = ({
 	selectedWeek,
+	setSelectedWeek,
 	years,
-	currentYearWeeks,
-	onYearChange,
-	onWeekChange,
-	onNavigateWeek,
-	onGoToCurrentWeek,
 }) => {
+	const currentYearWeeks = getWeeksForYear(selectedWeek.year);
+	// Week navigation handlers
+	const onYearChange = (year: number) => {
+		const weeks = getWeeksForYear(year);
+		const weekToSelect = weeks.find((w) => w.number === selectedWeek.week) || weeks[0];
+
+		setSelectedWeek({
+			year,
+			week: weekToSelect.number,
+			startDate: weekToSelect.startDate,
+			endDate: weekToSelect.endDate,
+		});
+	};
+
+	const onWeekChange = (weekNumber: number) => {
+		const week = currentYearWeeks.find((w) => w.number === weekNumber);
+		if (week) {
+			setSelectedWeek({
+				year: selectedWeek.year,
+				week: weekNumber,
+				startDate: week.startDate,
+				endDate: week.endDate,
+			});
+		}
+	};
+
+	const onNavigateWeek = (direction: "prev" | "next") => {
+		const currentStart = selectedWeek.startDate;
+		const newStart = new Date(
+			currentStart.getTime() + (direction === "prev" ? -7 : 7) * 24 * 60 * 60 * 1000
+		);
+
+		// Use getWeek from date-fns for consistent week numbering
+		const newWeekNumber = getWeek(newStart, { weekStartsOn: 1 });
+
+		setSelectedWeek({
+			year: newStart.getFullYear(),
+			week: newWeekNumber, // Use getWeek for consistent numbering
+			startDate: newStart,
+			endDate: new Date(newStart.getTime() + 6 * 24 * 60 * 60 * 1000),
+		});
+	};
+
+	const onGoToCurrentWeek = () => {
+		const today = new Date();
+		const firstOfWeek = startOfWeek(today, { weekStartsOn: 1 }); // Use date-fns function
+		const weekNumber = getWeek(today, { weekStartsOn: 1 }); // Use date-fns function
+
+		setSelectedWeek({
+			year: today.getFullYear(),
+			week: weekNumber,
+			startDate: firstOfWeek,
+			endDate: addDays(firstOfWeek, 6),
+		});
+	};
+
 	return (
 		<div className="w-full bg-white rounded-lg shadow p-6 flex flex-col items-stretch justify-between">
 			<div className="flex items-center justify-between">

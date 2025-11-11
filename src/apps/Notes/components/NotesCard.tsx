@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import useAppStore from "@/stores/useAppStore";
 import { NotesDropdownMenu } from "./NotesDropdownMenu";
-import { Note, NotesFolder, NotesFolders, Subfolder, Category } from "@/types";
+import { Note, NotesFolder, NotesFolders, Subfolder, Category } from "@/types/notes";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	Inbox,
@@ -85,8 +85,7 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 
 	const getCurrentFolderParentName = (id: string) => {
 		const currentFolder = getCurrentFolder(id);
-		return Object.values(allFolders).find((f: NotesFolder) => f.id === currentFolder?.parent)
-			?.name;
+		return Object.values(allFolders).find((f: NotesFolder) => f.id === currentFolder?.parent)?.name;
 	};
 
 	const isEditableFolder = () => {

@@ -71,6 +71,8 @@ export const ExpenseList: React.FC = () => {
 		name: "",
 	});
 
+	if (!selectedMonth) return null;
+
 	// Force re-calculation when expenses change
 	const monthlyExpenses = getMonthlyExpenses(selectedMonth);
 	const isCurrentMonth = isSameMonth(selectedMonth, new Date());

@@ -344,8 +344,6 @@ const useAppStore = create<AppStore>()(
 				}));
 			}
 
-			console.log("Income entries:", get().incomeEntries);
-
 			if (get().autoSaveEnabled) {
 				get().saveToFile(AppToSave.Income);
 			}

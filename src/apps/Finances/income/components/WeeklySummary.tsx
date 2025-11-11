@@ -4,21 +4,15 @@ import { Button } from "@/components/ui/button";
 
 interface WeeklySummaryProps {
 	weeklyTotal: number;
-	weeklyTarget: { amount: number };
-	onUpdateTarget: (amount: number) => void;
 	selectedWeek: number;
 }
 
-const WeeklySummary: React.FC<WeeklySummaryProps> = ({
-	weeklyTotal,
-	weeklyTarget,
-	onUpdateTarget,
-	selectedWeek,
-}) => {
+const WeeklySummary: React.FC<WeeklySummaryProps> = ({ weeklyTotal, selectedWeek }) => {
+	const [weeklyTarget, setWeeklyTarget] = useState({ amount: 575 });
 	const [editingTarget, setEditingTarget] = useState(false);
 	const [newTargetAmount, setNewTargetAmount] = useState(weeklyTarget.amount.toString());
 
-	const { incomeWeeklyTargets } = useAppStore();
+	const { incomeWeeklyTargets, addIncomeWeeklyTarget, updateIncomeWeeklyTarget } = useAppStore();
 
 	// Sync local state when weeklyTarget prop changes
 	useEffect(() => {
@@ -35,7 +29,17 @@ const WeeklySummary: React.FC<WeeklySummaryProps> = ({
 		const amount = parseFloat(newTargetAmount);
 		if (!isNaN(amount) && amount > 0) {
 			setEditingTarget(false);
-			onUpdateTarget(amount);
+			const existingTarget = incomeWeeklyTargets
+				? incomeWeeklyTargets.find((target) => target.id === selectedWeek.toString())
+				: undefined;
+			existingTarget === undefined
+				? addIncomeWeeklyTarget(selectedWeek.toString(), amount)
+				: updateIncomeWeeklyTarget({ id: selectedWeek.toString(), amount });
+			setWeeklyTarget({
+				amount: incomeWeeklyTargets.filter(
+					(target) => target.id === selectedWeek.toString()
+				)[0].amount,
+			});
 		}
 	};
 

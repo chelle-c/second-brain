@@ -1,63 +1,42 @@
 import React, { useState } from "react";
+import ManualEntryForm from "./ManualEntryForm";
+import PasteEntryForm from "./PasteEntryForm";
+import { getAvailableDates } from "@/lib/dateUtils";
+import { parsePasteText } from "@/lib/dateUtils";
 import useAppStore from "@/stores/useAppStore";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { format, parseISO, isSameDay } from "date-fns";
 import type { IncomeEntry, IncomeWeekSelection } from "@/types/income";
-import ManualEntryForm from "./ManualEntryForm";
-import PasteEntryForm from "./PasteEntryForm";
 
 interface IncomeEntriesListProps {
 	selectedWeek: IncomeWeekSelection;
-	editingEntryId: string | null;
-	editEntryForm: IncomeEntry | null;
-	availableDates: Array<{ value: string; label: string }>;
-	onStartEditing: (entry: IncomeEntry) => void;
-	onCancelEditing: () => void;
-	onEditEntryChange: (field: keyof IncomeEntry, value: string | number) => void;
-	onSaveEditedEntry: () => void;
-	onDeleteEntry: (id: string) => void;
-	onAddEntry: (e: React.FormEvent) => void;
-	onPasteTextChange: (text: string) => void;
-	onAddParsedEntries: () => void;
-	newEntry: Omit<IncomeEntry, "id">;
-	onNewEntryChange: (field: keyof IncomeEntry, value: string | number) => void; // NEW PROP
-	pasteText: string;
-	parsedEntries: any[];
-	parseError: string;
-	entryMethod: "manual" | "paste";
-	onEntryMethodChange: (method: "manual" | "paste") => void;
-	onResetForm: () => void;
 	currentWeekEntries: IncomeEntry[];
 }
 
 const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 	selectedWeek,
-	editingEntryId,
-	editEntryForm,
-	availableDates,
-	onStartEditing,
-	onCancelEditing,
-	onEditEntryChange,
-	onSaveEditedEntry,
-	onDeleteEntry,
-	onAddEntry,
-	onPasteTextChange,
-	onAddParsedEntries,
-	newEntry,
-	onNewEntryChange,
-	pasteText,
-	parsedEntries,
-	parseError,
-	entryMethod,
-	onEntryMethodChange,
-	onResetForm,
 	currentWeekEntries,
 }) => {
+	// Form states
+	const [newEntry, setNewEntry] = useState<Omit<IncomeEntry, "id">>({
+		date: new Date().toISOString().split("T")[0],
+		amount: 0,
+		hours: 0,
+		minutes: 0,
+	});
+	const [pasteText, setPasteText] = useState("");
+	const [parsedEntries, setParsedEntries] = useState<any[]>([]);
+	const [parseError, setParseError] = useState("");
 	const [showEntrySection, setShowEntrySection] = useState(false);
+	const [entryMethod, setEntryMethod] = useState<"manual" | "paste">("paste");
+	const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
+	const [editEntryForm, setEditEntryForm] = useState<IncomeEntry | null>(null);
 
-	const { incomeEntries } = useAppStore();
+	const { incomeEntries, addIncomeEntry, updateIncomeEntry, deleteIncomeEntry } = useAppStore();
+
+	const availableDates = getAvailableDates(selectedWeek.startDate);
 
 	const isLatestEntry = (entry: IncomeEntry) => {
 		return (
@@ -85,6 +64,113 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 	const handleAddParsedEntries = () => {
 		onAddParsedEntries();
 		setShowEntrySection(false);
+	};
+
+	// *********************************
+
+	// Entry editing handlers
+	const onStartEditing = (entry: IncomeEntry) => {
+		setEditingEntryId(entry.id);
+		setEditEntryForm({ ...entry });
+	};
+
+	const onCancelEditing = () => {
+		setEditingEntryId(null);
+		setEditEntryForm(null);
+	};
+
+	const onEditEntryChange = (field: keyof IncomeEntry, value: string | number) => {
+		if (editEntryForm) {
+			setEditEntryForm((prev) => (prev ? { ...prev, [field]: value } : null));
+		}
+	};
+
+	const onSaveEditedEntry = () => {
+		if (editEntryForm) {
+			const updatedEntry = {
+				...editEntryForm,
+				amount: parseFloat(editEntryForm.amount.toFixed(2)),
+			};
+
+			updateIncomeEntry(updatedEntry);
+
+			setEditingEntryId(null);
+			setEditEntryForm(null);
+		}
+	};
+
+	// Paste text handling
+	const onPasteTextChange = (text: string) => {
+		setPasteText(text);
+		setParseError("");
+
+		if (text.trim()) {
+			try {
+				const parsed = parsePasteText(text, selectedWeek.year);
+				setParsedEntries(parsed);
+			} catch (error) {
+				setParseError("Error parsing text. Please check the format.");
+			}
+		} else {
+			setParsedEntries([]);
+		}
+	};
+
+	const onAddParsedEntries = () => {
+		const newEntries: IncomeEntry[] = parsedEntries.map((parsed) => ({
+			id: Date.now().toString() + Math.random(),
+			date: parsed.date,
+			amount: parsed.amount,
+			hours: parsed.hours,
+			minutes: parsed.minutes,
+		}));
+
+		newEntries.forEach((entry) => addIncomeEntry(entry));
+
+		setPasteText("");
+		setParsedEntries([]);
+		setParseError("");
+	};
+
+	// Manual entry handlers
+	const onAddEntry = (e: React.FormEvent) => {
+		e.preventDefault();
+		if (newEntry.amount <= 0) return;
+
+		const entry: IncomeEntry = {
+			...newEntry,
+			id: Date.now().toString(),
+			amount: parseFloat(newEntry.amount.toFixed(2)),
+		};
+
+		addIncomeEntry(entry);
+
+		setNewEntry({
+			date: new Date().toISOString().split("T")[0],
+			amount: 0,
+			hours: 0,
+			minutes: 0,
+		});
+	};
+
+	const onDeleteEntry = (id: string) => {
+		deleteIncomeEntry(id);
+	};
+
+	const onResetForm = () => {
+		setNewEntry({
+			date: new Date().toISOString().split("T")[0],
+			amount: 0,
+			hours: 0,
+			minutes: 0,
+		});
+		setPasteText("");
+		setParsedEntries([]);
+		setParseError("");
+	};
+
+	const onNewEntryChange = (field: keyof IncomeEntry, value: string | number) => {
+		setNewEntry((prev) => ({ ...prev, [field]: value }));
 	};
 
 	return (
@@ -131,7 +217,7 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 
 					<div className="flex gap-2 mb-4">
 						<Button
-							onClick={() => onEntryMethodChange("manual")}
+							onClick={() => setEntryMethod("manual")}
 							className={`flex-1 py-2 px-4 rounded-md font-medium transition-colors ${
 								entryMethod === "manual"
 									? "px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors cursor-pointer"
@@ -141,7 +227,7 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 							Manual Entry
 						</Button>
 						<Button
-							onClick={() => onEntryMethodChange("paste")}
+							onClick={() => setEntryMethod("paste")}
 							className={`flex-1 py-2 px-4 rounded-md font-medium transition-colors ${
 								entryMethod === "paste"
 									? "px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors cursor-pointer"

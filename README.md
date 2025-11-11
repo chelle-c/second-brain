@@ -26,3 +26,21 @@ Get thoughts of your head and into a digital space. Keep notes and track necesse
 - Set name, amount, due date, and payment state for one-time expenses
 - Set name, amount, initial due date, payment state, and recurrence frequency and amount
 - Expenses recorded in Monthly and Overall views
+
+## Bugs:
+
+**Expenses Tracker**
+- Marking an expense as paid in the "Add expense" form doesn't set the paid state
+- Expense table doesn't show correct amount of time (expense due in 2 weeks shows "1 week" instead)
+
+## Planned Features:
+
+**Expenses Tracker**
+- Duplicate expenses
+- Add/Edit/Delete categories
+- Filter Monthly Expenses table based on selected view in Expense Overview component
+
+**Testing**
+- Add testing suite
+- Create tests to check functionality works with each version change
+- Prevent Debug Console from displaying in production builds

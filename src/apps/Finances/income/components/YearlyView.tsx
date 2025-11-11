@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import useAppStore from "@/stores/useAppStore";
+import { getYearlyData } from "@/lib/dateUtils";
 import {
 	BarChart,
 	Bar,
@@ -9,14 +11,13 @@ import {
 	ResponsiveContainer,
 	Cell,
 } from "recharts";
-import type { IncomeYearlyData } from "@/types/income";
 
-interface YearlyViewProps {
-	yearlyData: IncomeYearlyData[];
-}
-
-const YearlyView: React.FC<YearlyViewProps> = ({ yearlyData }) => {
+const YearlyView: React.FC<{}> = () => {
 	const [isClient, setIsClient] = useState(false);
+
+	const { incomeEntries } = useAppStore();
+
+	const yearlyData = getYearlyData(incomeEntries);
 
 	useEffect(() => {
 		setIsClient(true);

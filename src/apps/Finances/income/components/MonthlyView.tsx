@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import useAppStore from "@/stores/useAppStore";
+import { getMonthlyData } from "@/lib/dateUtils";
 import {
 	BarChart,
 	Bar,
@@ -9,22 +11,19 @@ import {
 	ResponsiveContainer,
 	Cell,
 } from "recharts";
-import type { IncomeMonthlyData } from "@/types/income";
 
 interface MonthlyViewProps {
-	monthlyData: IncomeMonthlyData[];
 	selectedYear: number;
 	onYearChange: (year: number) => void;
 	years: number[];
 }
 
-const MonthlyView: React.FC<MonthlyViewProps> = ({
-	monthlyData,
-	selectedYear,
-	onYearChange,
-	years,
-}) => {
+const MonthlyView: React.FC<MonthlyViewProps> = ({ selectedYear, onYearChange, years }) => {
 	const [isClient, setIsClient] = useState(false);
+
+	const { incomeEntries } = useAppStore();
+
+	const monthlyData = getMonthlyData(incomeEntries, selectedYear);
 
 	useEffect(() => {
 		setIsClient(true);

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import {NotesFolder} from "@/types";
+import { NotesFolder } from "@/types/notes";
 import {
 	Inbox,
 	ChevronRight,

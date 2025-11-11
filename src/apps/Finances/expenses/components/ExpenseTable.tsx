@@ -20,7 +20,6 @@ import {
 } from "@/lib/dateHelpers";
 import { CATEGORY_COLORS, EXPENSE_CATEGORIES } from "@/lib/expenseHelpers";
 import { Expense, ImportanceLevel } from "@/types/expense";
-import { isSameMonth } from "date-fns";
 import { RecurringExpenseRow } from "./RecurringExpenseRow";
 
 interface ExpenseTableProps {
