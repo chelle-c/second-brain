@@ -11,6 +11,8 @@ export interface AppData {
 		expenses: Expense[];
 		selectedMonth: Date;
 		overviewMode: OverviewMode;
+		categories: string[];
+		categoryColors: Record<string, string>;
 	}
 
 	income: {

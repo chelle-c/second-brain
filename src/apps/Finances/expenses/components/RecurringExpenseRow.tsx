@@ -12,7 +12,7 @@ import {
 	RotateCcw,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/dateHelpers";
-import { CATEGORY_COLORS } from "@/lib/expenseHelpers";
+import { DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
 import { Expense, ImportanceLevel } from "@/types/expense";
 import useAppStore from "@/stores/useAppStore";
 
@@ -27,6 +27,7 @@ interface RecurringExpenseRowProps {
 	hoveredId: string | null;
 	onHoverStart: (id: string) => void;
 	onHoverEnd: () => void;
+	categoryColors: Record<string, string>;
 }
 
 const darkenColor = (hex: string, amount: number = 0.4): string => {
@@ -88,11 +89,15 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 	hoveredId,
 	onHoverStart,
 	onHoverEnd,
+	categoryColors,
 }) => {
 	const [isExpanded, setIsExpanded] = useState(false);
 	const { toggleExpensePaid, resetOccurrence } = useAppStore();
 
-	const categoryColor = CATEGORY_COLORS[parentExpense.category] || "#6b7280";
+	const categoryColor =
+		categoryColors[parentExpense.category] ||
+		DEFAULT_CATEGORY_COLORS[parentExpense.category] ||
+		"#6b7280";
 	const darkCategoryColor = darkenColor(categoryColor);
 
 	// Sort occurrences by due date (don't include parent)

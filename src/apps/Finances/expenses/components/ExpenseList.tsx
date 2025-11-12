@@ -61,8 +61,14 @@ const DeleteModal: React.FC<DeleteModalProps> = ({ isOpen, expenseName, onConfir
 };
 
 export const ExpenseList: React.FC = () => {
-	const { selectedMonth, getMonthlyExpenses, deleteExpense, toggleExpensePaid, expenses } =
-		useAppStore();
+	const {
+		selectedMonth,
+		getMonthlyExpenses,
+		deleteExpense,
+		toggleExpensePaid,
+		expenses,
+		categoryColors,
+	} = useAppStore();
 
 	const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 	const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string; name: string }>({
@@ -139,6 +145,7 @@ export const ExpenseList: React.FC = () => {
 					onEdit={handleEdit}
 					onDelete={handleDeleteClick}
 					onArchive={() => {}}
+					categoryColors={categoryColors}
 					onUnarchive={() => {}}
 					onTogglePaid={toggleExpensePaid}
 					showArchiveActions={false}

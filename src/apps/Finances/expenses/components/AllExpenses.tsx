@@ -60,8 +60,14 @@ const DeleteModal: React.FC<DeleteModalProps> = ({ isOpen, expenseName, onConfir
 };
 
 export const AllExpenses: React.FC = () => {
-	const { expenses, deleteExpense, archiveExpense, unarchiveExpense, toggleExpensePaid } =
-		useAppStore();
+	const {
+		expenses,
+		deleteExpense,
+		archiveExpense,
+		unarchiveExpense,
+		toggleExpensePaid,
+		categoryColors,
+	} = useAppStore();
 
 	const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 	const [showArchived, setShowArchived] = useState(false);
@@ -109,11 +115,6 @@ export const AllExpenses: React.FC = () => {
 
 		return filtered;
 	}, [expenses, showArchived, selectedYear]);
-
-	// Count unique expenses (for display purposes)
-	// const uniqueExpenseCount = useMemo(() => {
-	// 	return filteredExpenses.filter((e) => !e.parentExpenseId).length;
-	// }, [filteredExpenses]);
 
 	// Count archived and active expenses
 	const archivedCount = useMemo(() => {
@@ -243,6 +244,7 @@ export const AllExpenses: React.FC = () => {
 						onTogglePaid={handleTogglePaid}
 						showArchiveActions={true}
 						isAllExpensesView={true}
+						categoryColors={categoryColors}
 					/>
 				)}
 			</div>

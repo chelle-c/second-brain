@@ -3,15 +3,23 @@ import { MonthNavigation } from "./MonthNavigation";
 import useAppStore from "@/stores/useAppStore";
 import { OverviewMode } from "@/types/expense";
 import { formatCurrency } from "@/lib/dateHelpers";
-import { CATEGORY_COLORS } from "@/lib/expenseHelpers";
+import { DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
 import { TrendingUp, DollarSign } from "lucide-react";
 
 export const ExpenseOverview: React.FC = () => {
-	const { selectedMonth, getTotalByCategory, getMonthlyTotal, overviewMode, setOverviewMode } =
-		useAppStore();
+	const {
+		selectedMonth,
+		getTotalByCategory,
+		getMonthlyTotal,
+		overviewMode,
+		setOverviewMode,
+		categoryColors,
+	} = useAppStore();
 
-	const categoryTotals = getTotalByCategory(selectedMonth ?? new Date(), overviewMode);
-	const monthlyTotal = getMonthlyTotal(selectedMonth ?? new Date(), overviewMode);
+	if (!selectedMonth) return null;
+
+	const categoryTotals = getTotalByCategory(selectedMonth, overviewMode);
+	const monthlyTotal = getMonthlyTotal(selectedMonth, overviewMode);
 
 	const data = Object.entries(categoryTotals).map(([category, amount]) => ({
 		name: category,
@@ -58,12 +66,11 @@ export const ExpenseOverview: React.FC = () => {
 
 	return (
 		<div className="bg-white rounded-xl shadow-lg p-6 animate-slideUp">
-			<div className="flex justify-between items-center mb-4">
+			<div className="mb-4">
 				<h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
 					<TrendingUp className="text-blue-500" size={24} />
 					Expense Overview
 				</h3>
-				<MonthNavigation />
 			</div>
 
 			<div className="flex flex-col lg:flex-row gap-6">
@@ -132,6 +139,8 @@ export const ExpenseOverview: React.FC = () => {
 
 				{/* Left side (now right) - Chart and Legend */}
 				<div className="flex-1 min-w-0">
+					<MonthNavigation />
+
 					{isPlaceholder && (
 						<p className="text-center text-gray-500 text-sm mb-4">
 							Example distribution - Add expenses to see your data
@@ -160,7 +169,11 @@ export const ExpenseOverview: React.FC = () => {
 										{chartData.map((entry, index) => (
 											<Cell
 												key={`cell-${index}`}
-												fill={CATEGORY_COLORS[entry.name] || "#93C5FD"}
+												fill={
+													categoryColors[entry.name] ||
+													DEFAULT_CATEGORY_COLORS[entry.name] ||
+													"#93C5FD"
+												}
 												opacity={isPlaceholder ? 0.5 : 1}
 											/>
 										))}
@@ -178,7 +191,9 @@ export const ExpenseOverview: React.FC = () => {
 										className="w-3 h-3 rounded-full shrink-0"
 										style={{
 											backgroundColor:
-												CATEGORY_COLORS[entry.name] || "#93C5FD",
+												categoryColors[entry.name] ||
+												DEFAULT_CATEGORY_COLORS[entry.name] ||
+												"#93C5FD",
 										}}
 									/>
 									<span className="text-sm font-medium text-gray-700">

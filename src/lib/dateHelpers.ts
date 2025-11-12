@@ -7,6 +7,8 @@ import {
 	isTomorrow,
 	isYesterday,
 	isSameMonth,
+	startOfWeek,
+	differenceInWeeks,
 } from "date-fns";
 
 export const formatCurrency = (amount: number): string => {
@@ -50,19 +52,37 @@ export const getRelativeDateText = (dueDate: Date, currentMonth: Date): string =
 
 	if (daysDiff > 0) {
 		if (daysDiff === 2) return "In 2 days";
-		if (daysDiff <= 7) return `In ${daysDiff} days`;
-		if (daysDiff <= 14) return "In 1 week";
-		if (daysDiff <= 21) return "In 2 weeks";
-		if (daysDiff <= 28) return "In 3 weeks";
-		return `In ${Math.ceil(daysDiff / 7)} weeks`;
+		if (daysDiff <= 6) return `In ${daysDiff} days`;
+
+		// Calculate weeks from Sunday to Sunday
+		const todayStartOfWeek = startOfWeek(today, { weekStartsOn: 0 }); // 0 = Sunday
+		const dueStartOfWeek = startOfWeek(due, { weekStartsOn: 0 });
+		const weeksDiff = differenceInWeeks(dueStartOfWeek, todayStartOfWeek);
+
+		if (weeksDiff === 1) return "In 1 week";
+		if (weeksDiff === 2) return "In 2 weeks";
+		if (weeksDiff === 3) return "In 3 weeks";
+		if (weeksDiff >= 4) return `In ${weeksDiff} weeks`;
+
+		// Fallback to days if weeks calculation doesn't fit
+		return `In ${daysDiff} days`;
 	} else {
 		const absDiff = Math.abs(daysDiff);
 		if (absDiff === 2) return "2 days ago";
-		if (absDiff <= 7) return `${absDiff} days ago`;
-		if (absDiff <= 14) return "1 week ago";
-		if (absDiff <= 21) return "2 weeks ago";
-		if (absDiff <= 28) return "3 weeks ago";
-		return `${Math.ceil(absDiff / 7)} weeks ago`;
+		if (absDiff <= 6) return `${absDiff} days ago`;
+
+		// Calculate weeks from Sunday to Sunday for past dates
+		const todayStartOfWeek = startOfWeek(today, { weekStartsOn: 0 });
+		const dueStartOfWeek = startOfWeek(due, { weekStartsOn: 0 });
+		const weeksDiff = differenceInWeeks(todayStartOfWeek, dueStartOfWeek);
+
+		if (weeksDiff === 1) return "1 week ago";
+		if (weeksDiff === 2) return "2 weeks ago";
+		if (weeksDiff === 3) return "3 weeks ago";
+		if (weeksDiff >= 4) return `${weeksDiff} weeks ago`;
+
+		// Fallback to days if weeks calculation doesn't fit
+		return `${absDiff} days ago`;
 	}
 };
 

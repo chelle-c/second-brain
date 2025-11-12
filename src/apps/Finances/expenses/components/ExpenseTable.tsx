@@ -18,7 +18,7 @@ import {
 	getRelativeDateText,
 	getDueDateColor,
 } from "@/lib/dateHelpers";
-import { CATEGORY_COLORS, EXPENSE_CATEGORIES } from "@/lib/expenseHelpers";
+import { DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
 import { Expense, ImportanceLevel } from "@/types/expense";
 import { RecurringExpenseRow } from "./RecurringExpenseRow";
 
@@ -33,6 +33,7 @@ interface ExpenseTableProps {
 	onTogglePaid: (id: string) => void;
 	showArchiveActions?: boolean;
 	isAllExpensesView?: boolean;
+	categoryColors?: Record<string, string>;
 }
 
 type SortKey =
@@ -83,6 +84,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 	onTogglePaid,
 	showArchiveActions = false,
 	isAllExpensesView = false,
+	categoryColors = {},
 }) => {
 	const [hoveredId, setHoveredId] = useState<string | null>(null);
 	const [sortKey, setSortKey] = useState<SortKey>("dueDate");
@@ -248,7 +250,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 							 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
 				>
 					<option value="all">All Categories</option>
-					{EXPENSE_CATEGORIES.map((category) => (
+					{["All Categories", ...Object.keys(categoryColors)].map((category) => (
 						<option key={category} value={category}>
 							{category}
 						</option>
@@ -353,6 +355,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 										onArchive={onArchive}
 										onUnarchive={onUnarchive}
 										hoveredId={hoveredId}
+										categoryColors={categoryColors}
 										onHoverStart={setHoveredId}
 										onHoverEnd={() => setHoveredId(null)}
 									/>
@@ -360,7 +363,10 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 							}
 
 							const expense = item.expense;
-							const categoryColor = CATEGORY_COLORS[expense.category] || "#6b7280";
+							const categoryColor =
+								categoryColors[expense.category] ||
+								DEFAULT_CATEGORY_COLORS[expense.category] ||
+								"#6b7280";
 							const darkCategoryColor = darkenColor(categoryColor);
 
 							return (

@@ -5,6 +5,7 @@ import { IncomeData } from "@/types/income";
 import { ExpensesData } from "@/types/expense";
 import { MindMapNode, MindMapsData } from "@/types/mindmap";
 import { AppData, AppMetadata, AppToSave } from "@/types/";
+import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
 
 const NOTES_FILE = "notes.json";
 const FOLDERS_FILE = "folders.json";
@@ -244,6 +245,8 @@ class FileStorage {
 				expenses: [],
 				selectedMonth: new Date(),
 				overviewMode: "remaining",
+				categories: DEFAULT_EXPENSE_CATEGORIES,
+				categoryColors: DEFAULT_CATEGORY_COLORS,
 			},
 			version: DATA_VERSION,
 		});
@@ -252,6 +255,8 @@ class FileStorage {
 			expenses: data.expenses.expenses,
 			selectedMonth: data.expenses.selectedMonth,
 			overviewMode: data.expenses.overviewMode,
+			categories: data.expenses.categories || DEFAULT_EXPENSE_CATEGORIES,
+			categoryColors: data.expenses.categoryColors || DEFAULT_CATEGORY_COLORS,
 		};
 	}
 
@@ -263,6 +268,8 @@ class FileStorage {
 				expenses: expenses.expenses,
 				selectedMonth: expenses.selectedMonth,
 				overviewMode: expenses.overviewMode,
+				categories: expenses.categories,
+				categoryColors: expenses.categoryColors,
 			},
 			version: DATA_VERSION,
 		};
@@ -382,6 +389,8 @@ class FileStorage {
 					expenses: [],
 					selectedMonth: new Date(),
 					overviewMode: "remaining",
+					categories: DEFAULT_EXPENSE_CATEGORIES,
+					categoryColors: DEFAULT_CATEGORY_COLORS,
 				},
 				income: {
 					entries: [],

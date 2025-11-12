@@ -3,6 +3,8 @@ export interface ExpensesData {
 		expenses: Expense[];
 		selectedMonth: Date;
 		overviewMode: OverviewMode;
+		categories: string[];
+		categoryColors: Record<string, string>;
 	};
 	version: string;
 }

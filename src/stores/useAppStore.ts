@@ -13,7 +13,11 @@ import {
 	IncomeViewType,
 } from "@/types/income";
 import { Expense, ExpenseFormData, OverviewMode } from "@/types/expense";
-import { generateRecurringExpenses } from "@/lib/expenseHelpers";
+import {
+	generateRecurringExpenses,
+	DEFAULT_EXPENSE_CATEGORIES,
+	DEFAULT_CATEGORY_COLORS,
+} from "@/lib/expenseHelpers";
 import { MindMapNode, MindMapsData } from "@/types/mindmap";
 import { AppToSave } from "@/types";
 import { fileStorage } from "@/lib/fileStorage";
@@ -42,6 +46,8 @@ interface AppStore {
 	expenses: Expense[];
 	selectedMonth: Date | null;
 	overviewMode: OverviewMode;
+	categories: string[];
+	categoryColors: Record<string, string>;
 
 	// -- Mind map
 	mindMaps: MindMapNode[];
@@ -93,6 +99,9 @@ interface AppStore {
 	getTotalByCategory: (date: Date, mode: OverviewMode) => Record<string, number>;
 	getMonthlyTotal: (date: Date, mode: OverviewMode) => number;
 	resetOccurrence: (id: string) => void;
+	addCategory: (name: string, color: string) => void;
+	updateCategory: (oldName: string, newName: string, newColor: string) => void;
+	deleteCategory: (name: string) => void;
 
 	// Actions - Mind Maps
 	addMindMapNode: (node: Omit<MindMapNode, "id">) => void;
@@ -122,6 +131,8 @@ const useAppStore = create<AppStore>()(
 		expenses: [],
 		selectedMonth: new Date(),
 		overviewMode: "remaining",
+		categories: DEFAULT_EXPENSE_CATEGORIES,
+		categoryColors: DEFAULT_CATEGORY_COLORS,
 
 		incomeEntries: [],
 		incomeWeeklyTargets: [],
@@ -929,6 +940,79 @@ const useAppStore = create<AppStore>()(
 			return Object.values(categoryTotals).reduce((sum, amount) => sum + amount, 0);
 		},
 
+		addCategory: (name, color) => {
+			const { categories, categoryColors } = get();
+			if (!categories.includes(name)) {
+				set({
+					categories: [...categories, name].sort(),
+					categoryColors: { ...categoryColors, [name]: color },
+				});
+
+				if (get().autoSaveEnabled) {
+					get().saveToFile(AppToSave.Expenses);
+				}
+			}
+		},
+
+		updateCategory: (oldName, newName, newColor) => {
+			const { categories, categoryColors, expenses } = get();
+
+			// Update category name in the list
+			const updatedCategories = categories.map((cat) => (cat === oldName ? newName : cat));
+
+			// Update category color
+			const updatedColors = { ...categoryColors };
+			if (oldName !== newName) {
+				delete updatedColors[oldName];
+			}
+			updatedColors[newName] = newColor;
+
+			// Update all expenses that use this category
+			const updatedExpenses = expenses.map((expense) =>
+				expense.category === oldName
+					? { ...expense, category: newName, updatedAt: new Date() }
+					: expense
+			);
+
+			set({
+				categories: updatedCategories,
+				categoryColors: updatedColors,
+				expenses: updatedExpenses,
+			});
+
+			if (get().autoSaveEnabled) {
+				get().saveToFile(AppToSave.Expenses);
+			}
+		},
+
+		deleteCategory: (name) => {
+			const { categories, categoryColors, expenses } = get();
+
+			// Remove category from the list
+			const updatedCategories = categories.filter((cat) => cat !== name);
+
+			// Remove category color
+			const updatedColors = { ...categoryColors };
+			delete updatedColors[name];
+
+			// Move all expenses in this category to "Other"
+			const updatedExpenses = expenses.map((expense) =>
+				expense.category === name
+					? { ...expense, category: "Other", updatedAt: new Date() }
+					: expense
+			);
+
+			set({
+				categories: updatedCategories,
+				categoryColors: updatedColors,
+				expenses: updatedExpenses,
+			});
+
+			if (get().autoSaveEnabled) {
+				get().saveToFile(AppToSave.Expenses);
+			}
+		},
+
 		// Mind map actions
 		addMindMapNode: (nodeData) => {
 			const node: MindMapNode = {
@@ -999,6 +1083,8 @@ const useAppStore = create<AppStore>()(
 					})),
 					selectedMonth: new Date(data.expenses.selectedMonth) || new Date(),
 					overviewMode: data.expenses.overviewMode || "remaining",
+					categories: data.expenses.categories.sort() || DEFAULT_EXPENSE_CATEGORIES,
+					categoryColors: data.expenses.categoryColors || {},
 					incomeEntries: data.income.entries || [],
 					incomeWeeklyTargets: data.income.weeklyTargets || [],
 					incomeViewType: data.income.viewType || "weekly",
@@ -1024,6 +1110,8 @@ const useAppStore = create<AppStore>()(
 							expenses: state.expenses,
 							selectedMonth: state.selectedMonth || new Date(),
 							overviewMode: state.overviewMode,
+							categories: state.categories.sort(),
+							categoryColors: state.categoryColors,
 						},
 						income: {
 							entries: state.incomeEntries,

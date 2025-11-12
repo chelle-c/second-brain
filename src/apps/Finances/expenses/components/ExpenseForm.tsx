@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { Plus, X, Save, Calendar, DollarSign, Tag, RefreshCw, CheckCircle } from "lucide-react";
 import useAppStore from "@/stores/useAppStore";
 import { ExpenseFormData, RecurrenceSettings, Expense, ImportanceLevel } from "@/types/expense";
-import { EXPENSE_CATEGORIES } from "@/lib/expenseHelpers";
 import { ConfirmRegenerationModal } from "./ConfirmRegenerationModal";
 import { format, startOfMonth, isSameDay } from "date-fns";
 
@@ -17,7 +16,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 	onClose,
 	isGlobalEdit = false, // Add this line
 }) => {
-	const { expenses, addExpense, updateExpense } = useAppStore();
+	const { expenses, addExpense, updateExpense, categories } = useAppStore();
 	const [isOpen, setIsOpen] = useState(false);
 	const modalRef = useRef<HTMLDivElement>(null);
 	const isDraggingFromInput = useRef(false);
@@ -25,7 +24,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 	const [formData, setFormData] = useState<ExpenseFormData>({
 		name: "",
 		amount: 0,
-		category: EXPENSE_CATEGORIES[0],
+		category: "",
 		dueDate: null,
 		isRecurring: false,
 		recurrence: undefined,
@@ -75,6 +74,12 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 		}
 	}, [editingExpense]);
 
+	// Set initial category when form opens
+	useEffect(() => {
+		if (!editingExpense && categories.length > 0 && !formData.category) {
+			setFormData((prev) => ({ ...prev, category: categories[0] }));
+		}
+	}, [categories, editingExpense, formData.category]);
 	useEffect(() => {
 		if (formData.isRecurring) {
 			setFormData((prev) => ({ ...prev, recurrence: recurrenceSettings }));
@@ -173,6 +178,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 			amount,
 			dueDate: hasDueDate ? formData.dueDate : null,
 			paymentDate: formData.isPaid ? formData.paymentDate || new Date() : null,
+			isPaid: formData.isPaid,
 		};
 
 		// Check if we need to show regeneration warning
@@ -227,7 +233,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 		setFormData({
 			name: "",
 			amount: 0,
-			category: EXPENSE_CATEGORIES[0],
+			category: "",
 			dueDate: null,
 			isRecurring: false,
 			recurrence: undefined,
@@ -338,8 +344,8 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 											onMouseDown={handleInputMouseDown}
 											onMouseUp={handleInputMouseUp}
 											className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg 
-						focus:ring-2 focus:ring-blue-400 focus:border-transparent 
-						transition-all duration-200"
+												focus:ring-2 focus:ring-blue-400 focus:border-transparent 
+												transition-all duration-200 placeholder:text-gray-400"
 											placeholder="Enter expense name"
 										/>
 										<Tag
@@ -459,7 +465,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 											focus:ring-2 focus:ring-blue-400 focus:border-transparent 
 											transition-all duration-200"
 									>
-										{EXPENSE_CATEGORIES.map((category) => (
+										{categories.map((category) => (
 											<option key={category} value={category}>
 												{category}
 											</option>
