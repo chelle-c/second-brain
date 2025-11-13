@@ -4,6 +4,15 @@ import { useExpenseStore } from "@/stores/useExpenseStore";
 import { ExpenseFormData, RecurrenceSettings, Expense, ImportanceLevel } from "@/types/expense";
 import { ConfirmRegenerationModal } from "./ConfirmRegenerationModal";
 import { format, startOfMonth, isSameDay } from "date-fns";
+import {
+	Select,
+	SelectContent,
+	SelectGroup,
+	SelectItem,
+	SelectLabel,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 
 interface ExpenseFormProps {
 	editingExpense?: Expense | null;
@@ -358,23 +367,23 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 
 							{/* Type and Importance - hide when editing occurrence */}
 							{!isEditingInstance && (
-								<div className="grid grid-cols-2 gap-4">
-									<div>
+								<div className="flex gap-4">
+									{/* Expense Type */}
+									<div className="flex-1 items-stretch">
 										<label className="block text-sm font-medium text-gray-700 mb-2">
-											Type
+											Expense Type
 										</label>
-										<div className="flex gap-2">
+										<div className="flex gap-2 bg-gray-100 rounded-lg p-1">
 											<button
 												type="button"
 												onClick={() =>
 													setFormData({ ...formData, type: "need" })
 												}
-												className={`flex-1 py-2 px-3 rounded-lg border-2 transition-all duration-200
-							${
-								formData.type === "need"
-									? "border-purple-500 bg-purple-50 text-purple-700"
-									: "border-gray-300 hover:border-gray-400"
-							}`}
+												className={`flex-1 px-3 py-1 rounded-md font-medium transition-all duration-200 text-sm ${
+													formData.type === "need"
+														? "bg-white text-purple-600 shadow-sm"
+														: "text-gray-600 hover:text-gray-800"
+												}`}
 											>
 												Need
 											</button>
@@ -383,96 +392,108 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 												onClick={() =>
 													setFormData({ ...formData, type: "want" })
 												}
-												className={`flex-1 py-2 px-3 rounded-lg border-2 transition-all duration-200
-							${
-								formData.type === "want"
-									? "border-pink-500 bg-pink-50 text-pink-700"
-									: "border-gray-300 hover:border-gray-400"
-							}`}
+												className={`flex-1 px-3 py-1 rounded-md font-medium transition-all duration-200 text-sm ${
+													formData.type === "want"
+														? "bg-white text-gray-700 shadow-sm"
+														: "text-gray-600 hover:text-gray-800"
+												}`}
 											>
 												Want
 											</button>
 										</div>
 									</div>
 
-									<div>
+									{/* Importance */}
+									<div className="flex-1 items-stretch">
 										<label className="block text-sm font-medium text-gray-700 mb-2">
 											Importance
 										</label>
-										<select
+										<Select
 											value={formData.importance}
-											onChange={(e) =>
+											onValueChange={(value) =>
 												setFormData({
 													...formData,
-													importance: e.target.value as ImportanceLevel,
+													importance: value as ImportanceLevel,
 												})
 											}
-											onMouseDown={handleInputMouseDown}
-											onMouseUp={handleInputMouseUp}
-											className="w-full px-3 py-2 border border-gray-300 rounded-lg 
-						focus:ring-2 focus:ring-blue-400 focus:border-transparent"
 										>
-											<option value="none">None</option>
-											<option value="medium">Medium (!)</option>
-											<option value="high">High (!!)</option>
-											<option value="critical">Critical (!!!)</option>
-										</select>
+											<SelectTrigger className="w-[180px]">
+												<SelectValue placeholder="Select a week" />
+											</SelectTrigger>
+											<SelectContent>
+												<SelectGroup>
+													<SelectItem value="none">None</SelectItem>
+													<SelectItem value="medium">
+														Medium (!)
+													</SelectItem>
+													<SelectItem value="high">High (!!)</SelectItem>
+													<SelectItem value="critical">
+														Critical (!!!)
+													</SelectItem>
+												</SelectGroup>
+											</SelectContent>
+										</Select>
 									</div>
 								</div>
 							)}
 
 							{/* Amount */}
-							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-2">
-									Amount
-								</label>
-								<div className="relative">
-									<input
-										type="number"
-										required
-										min="0"
-										step="0.01"
-										value={amountString}
-										onChange={handleAmountChange}
-										onMouseDown={handleInputMouseDown}
-										onMouseUp={handleInputMouseUp}
-										className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg 
-											focus:ring-2 focus:ring-blue-400 focus:border-transparent 
-											transition-all duration-200"
-										placeholder="0.00"
-									/>
-									<DollarSign
-										className="absolute left-3 top-2.5 text-gray-400"
-										size={18}
-									/>
-								</div>
-							</div>
-
-							{/* Category - hide when editing occurrence */}
-							{!isEditingInstance && (
-								<div>
+							<div className="flex flex-row gap-4">
+								<div className="flex flex-col items-stretch">
 									<label className="block text-sm font-medium text-gray-700 mb-2">
-										Category
+										Amount
 									</label>
-									<select
-										value={formData.category}
-										onChange={(e) =>
-											setFormData({ ...formData, category: e.target.value })
-										}
-										onMouseDown={handleInputMouseDown}
-										onMouseUp={handleInputMouseUp}
-										className="w-full px-4 py-2 border border-gray-300 rounded-lg 
+									<div className="relative">
+										<input
+											type="number"
+											required
+											min="0"
+											step="0.01"
+											value={amountString}
+											onChange={handleAmountChange}
+											onMouseDown={handleInputMouseDown}
+											onMouseUp={handleInputMouseUp}
+											className="w-full px-4 py-1 pl-8 border border-gray-300 rounded-lg 
 											focus:ring-2 focus:ring-blue-400 focus:border-transparent 
 											transition-all duration-200"
-									>
-										{categories.map((category) => (
-											<option key={category} value={category}>
-												{category}
-											</option>
-										))}
-									</select>
+											placeholder="0.00"
+										/>
+										<DollarSign
+											className="absolute left-2 top-2.25 text-gray-400"
+											size={16}
+										/>
+									</div>
 								</div>
-							)}
+								{/* Category - hide when editing occurrence */}
+								{!isEditingInstance && (
+									<div className="flex flex-col items-start">
+										<label className="block text-sm font-medium text-gray-700 mb-2">
+											Category
+										</label>
+										<Select
+											onValueChange={(value) =>
+												setFormData({
+													...formData,
+													category: value,
+												})
+											}
+										>
+											<SelectTrigger className="w-[180px]">
+												<SelectValue placeholder="Select a category" />
+											</SelectTrigger>
+											<SelectContent>
+												<SelectGroup>
+													{categories.map((category) => (
+														<SelectItem key={category} value={category}>
+															{category}
+														</SelectItem>
+													))}
+												</SelectGroup>
+											</SelectContent>
+										</Select>
+									</div>
+								)}
+							</div>
 
 							{/* Recurrence settings - hide when editing occurrence */}
 							{!isEditingInstance && (
@@ -497,35 +518,39 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 
 									{formData.isRecurring && (
 										<div className="space-y-3">
-											<div>
-												<label className="block text-xs font-medium text-gray-600 mb-1">
-													Frequency
-												</label>
-												<select
-													value={recurrenceSettings.frequency}
-													onChange={(e) =>
-														setRecurrenceSettings({
-															...recurrenceSettings,
-															frequency: e.target.value as any,
-														})
-													}
-													onMouseDown={handleInputMouseDown}
-													onMouseUp={handleInputMouseUp}
-													className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded 
-								focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-												>
-													<option value="daily">Daily</option>
-													<option value="weekly">Weekly</option>
-													<option value="biweekly">Biweekly</option>
-													<option value="monthly">Monthly</option>
-													<option value="custom-days">
-														Every X Days
-													</option>
-													<option value="custom-months">
-														Every X Months
-													</option>
-												</select>
-											</div>
+											<Select
+												onValueChange={(value) =>
+													setRecurrenceSettings({
+														...recurrenceSettings,
+														frequency: value as any,
+													})
+												}
+											>
+												<SelectTrigger className="w-[180px]">
+													<SelectValue placeholder="Select frequency" />
+												</SelectTrigger>
+												<SelectContent>
+													<SelectGroup>
+														<SelectLabel>Frequency</SelectLabel>
+														<SelectItem value="daily">Daily</SelectItem>
+														<SelectItem value="weekly">
+															Weekly
+														</SelectItem>
+														<SelectItem value="biweekly">
+															Biweekly
+														</SelectItem>
+														<SelectItem value="monthly">
+															Monthly
+														</SelectItem>
+														<SelectItem value="custom-days">
+															Every X Days
+														</SelectItem>
+														<SelectItem value="custom-months">
+															Every X Months
+														</SelectItem>
+													</SelectGroup>
+												</SelectContent>
+											</Select>
 
 											{(recurrenceSettings.frequency === "custom-days" ||
 												recurrenceSettings.frequency ===
@@ -547,8 +572,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 														}
 														onMouseDown={handleInputMouseDown}
 														onMouseUp={handleInputMouseUp}
-														className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded 
-									focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+														className="w-full px-3 py-1.5 text-sm border border-gray-300 bg-gray-50 rounded focus:ring-2 focus:ring-blue-400 focus:border-transparent"
 													/>
 												</div>
 											)}

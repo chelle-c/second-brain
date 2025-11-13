@@ -11,6 +11,15 @@ import {
 	ResponsiveContainer,
 	Cell,
 } from "recharts";
+import {
+	Select,
+	SelectContent,
+	SelectGroup,
+	SelectItem,
+	SelectLabel,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 
 interface MonthlyViewProps {
 	selectedYear: number;
@@ -74,17 +83,21 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ selectedYear, onYearChange, y
 							<h2 className="text-xl font-semibold text-gray-800">
 								Monthly Overview - {selectedYear}
 							</h2>
-							<select
-								value={selectedYear}
-								onChange={(e) => onYearChange(parseInt(e.target.value))}
-								className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-							>
-								{years.map((year) => (
-									<option key={year} value={year}>
-										{year}
-									</option>
-								))}
-							</select>
+							<Select value={selectedYear.toString()} onValueChange={(value) => onYearChange(parseInt(value))}>
+								<SelectTrigger className="w-[180px]">
+									<SelectValue placeholder="Select a year" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectGroup>
+										<SelectLabel>Year</SelectLabel>
+										{years.map((year) => (
+											<SelectItem key={year} value={year.toString()}>
+												{year}
+											</SelectItem>
+										))}
+									</SelectGroup>
+								</SelectContent>
+							</Select>
 						</div>
 
 						<div className="h-80 w-full" style={{ minHeight: "320px" }}>

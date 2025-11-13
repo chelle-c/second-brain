@@ -21,6 +21,15 @@ import {
 import { DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
 import { Expense, ImportanceLevel } from "@/types/expense";
 import { RecurringExpenseRow } from "./RecurringExpenseRow";
+import {
+	Select,
+	SelectContent,
+	SelectGroup,
+	SelectItem,
+	SelectLabel,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 
 interface ExpenseTableProps {
 	expenses: Expense[];
@@ -86,7 +95,6 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 	isAllExpensesView = false,
 	categoryColors = {},
 }) => {
-	const [hoveredId, setHoveredId] = useState<string | null>(null);
 	const [sortKey, setSortKey] = useState<SortKey>("dueDate");
 	const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 	const [searchQuery, setSearchQuery] = useState("");
@@ -243,19 +251,22 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 								 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
 					/>
 				</div>
-				<select
-					value={categoryFilter}
-					onChange={(e) => setCategoryFilter(e.target.value)}
-					className="px-4 py-2 border border-gray-300 rounded-lg 
-							 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-				>
-					<option value="all">All Categories</option>
-					{["All Categories", ...Object.keys(categoryColors)].map((category) => (
-						<option key={category} value={category}>
-							{category}
-						</option>
-					))}
-				</select>
+				<Select onValueChange={(value) => setCategoryFilter(value)}>
+					<SelectTrigger className="w-[180px]">
+						<SelectValue placeholder="Select a category" />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectGroup>
+							<SelectLabel>Categories</SelectLabel>
+							<SelectItem value="all">All Categories</SelectItem>
+							{["All Categories", ...Object.keys(categoryColors)].map((category) => (
+								<SelectItem key={category} value={category}>
+									{category}
+								</SelectItem>
+							))}
+						</SelectGroup>
+					</SelectContent>
+				</Select>
 			</div>
 
 			{/* Table */}
@@ -354,10 +365,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 										onDelete={onDelete}
 										onArchive={onArchive}
 										onUnarchive={onUnarchive}
-										hoveredId={hoveredId}
 										categoryColors={categoryColors}
-										onHoverStart={setHoveredId}
-										onHoverEnd={() => setHoveredId(null)}
 									/>
 								);
 							}
@@ -372,11 +380,9 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 							return (
 								<tr
 									key={expense.id}
-									className={`border-b border-gray-100 transition-all duration-200 
-								${hoveredId === expense.id ? "bg-blue-50" : "hover:bg-gray-50"}
-								${expense.isPaid ? "opacity-60" : ""}`}
-									onMouseEnter={() => setHoveredId(expense.id)}
-									onMouseLeave={() => setHoveredId(null)}
+									className={`border-b border-gray-100 hover:bg-blue-50  ${
+										expense.isPaid ? "opacity-60" : ""
+									}`}
 								>
 									<td className="py-3 px-2">
 										<button
@@ -417,9 +423,9 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 									<td className="py-3 px-2 text-center">
 										<ImportanceIcon level={expense.importance || "none"} />
 									</td>
-									<td className="py-3 px-3">
+									<td className="w-min flex items-center justify-center stretch py-3 px-3">
 										<span
-											className="px-2 py-0.5 rounded-full text-xs font-semibold inline-flex items-center"
+											className="w-max px-3 py-0.5 rounded-full text-xs font-semibold inline-flex items-center text-center"
 											style={{
 												backgroundColor: `${categoryColor}20`,
 												color: darkCategoryColor,

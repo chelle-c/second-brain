@@ -1,18 +1,9 @@
 import React, { useState } from "react";
 import { useNotesStore } from "@/stores/useNotesStore";
 import { NotesDropdownMenu } from "./NotesDropdownMenu";
+import { CategoryCard } from "./CategoryCard";
 import { Note, NotesFolder, NotesFolders, Subfolder, Category } from "@/types/notes";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-	Inbox,
-	Calendar,
-	Search,
-	FolderPlus,
-	Folder,
-	Hash,
-	Edit2,
-	Trash2,
-} from "lucide-react";
+import { Inbox, Calendar, Search, FolderPlus, Folder, Hash, Edit2, Trash2 } from "lucide-react";
 
 interface NotesCardProps {
 	allFolders: NotesFolders;
@@ -21,6 +12,8 @@ interface NotesCardProps {
 	getCurrentFolder: Function;
 	categories: Record<string, Category>;
 	activeCategory: string;
+	getNoteCount: Function;
+	setActiveCategory: React.Dispatch<React.SetStateAction<string>>;
 }
 
 export const NotesCard: React.FC<NotesCardProps> = ({
@@ -30,6 +23,8 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 	getCurrentFolder,
 	categories,
 	activeCategory,
+	getNoteCount,
+	setActiveCategory,
 }) => {
 	const { notes, addSubFolder, removeSubfolder, updateSubFolder } = useNotesStore();
 
@@ -85,7 +80,8 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 
 	const getCurrentFolderParentName = (id: string) => {
 		const currentFolder = getCurrentFolder(id);
-		return Object.values(allFolders).find((f: NotesFolder) => f.id === currentFolder?.parent)?.name;
+		return Object.values(allFolders).find((f: NotesFolder) => f.id === currentFolder?.parent)
+			?.name;
 	};
 
 	const isEditableFolder = () => {
@@ -115,160 +111,163 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 	});
 
 	return (
-		<Card>
-			<CardHeader>
-				<div className="space-y-3">
-					<div className="flex items-center justify-between">
-						<CardTitle className="flex items-center gap-2">
-							{React.createElement(
-								activeFolder && activeFolder.name === "Inbox" ? Inbox : Folder,
-								{
-									size: 20,
-								}
-							)}
-							{activeFolder && editingFolder === activeFolder.id ? (
-								<input
-									type="text"
-									value={editFolderName}
-									onChange={(e) => setEditFolderName(e.target.value)}
-									onKeyDown={(e) => {
-										if (e.key === "Enter") saveEditedFolder();
-										if (e.key === "Escape") {
-											setEditingFolder("");
-											setEditFolderName("");
-										}
-									}}
-									onBlur={saveEditedFolder}
-									className="px-2 py-1 text-lg font-semibold border rounded"
-									autoFocus
-								/>
-							) : (
-								<span>
-									{activeFolder && getCurrentFolder(activeFolder.id) && (
-										<span className="text-sm text-gray-500">
-											{getCurrentFolderParentName(activeFolder.id)} /
-										</span>
-									)}{" "}
-									{activeFolder && getCurrentFolder(activeFolder.id).name}
-									{activeFolder &&
-										activeFolder.id !== "inbox" &&
-										activeCategory !== "all" && (
-											<span className="text-sm text-gray-500">
-												{" / "}
-												{categories[activeCategory].name}
-											</span>
-										)}
-								</span>
-							)}
-						</CardTitle>
-						<div className="flex items-center gap-2">
-							<Search size={18} className="text-gray-400" />
+		<div className="bg-white flex flex-col items-center justify-between gap-4 p-8 rounded-lg shadow-md">
+			<div className="w-full space-y-3">
+				<div className="w-full flex items-center justify-between">
+					<div className="w-full flex items-center justify-start gap-2">
+						{React.createElement(
+							activeFolder && activeFolder.name === "Inbox" ? Inbox : Folder,
+							{
+								size: 20,
+							}
+						)}
+						{activeFolder && editingFolder === activeFolder.id ? (
 							<input
 								type="text"
-								placeholder="Search notes..."
-								value={searchTerm}
-								onChange={(e) => setSearchTerm(e.target.value)}
-								className="px-3 py-1 text-sm border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
+								value={editFolderName}
+								onChange={(e) => setEditFolderName(e.target.value)}
+								onKeyDown={(e) => {
+									if (e.key === "Enter") saveEditedFolder();
+									if (e.key === "Escape") {
+										setEditingFolder("");
+										setEditFolderName("");
+									}
+								}}
+								onBlur={saveEditedFolder}
+								className="px-2 py-1 text-lg font-semibold border rounded"
+								autoFocus
 							/>
-						</div>
+						) : (
+							<span>
+								{activeFolder && getCurrentFolder(activeFolder.id) && (
+									<span className="text-sm text-gray-500">
+										{getCurrentFolderParentName(activeFolder.id)} /
+									</span>
+								)}{" "}
+								{activeFolder && getCurrentFolder(activeFolder.id).name}
+								{activeFolder &&
+									activeFolder.id !== "inbox" &&
+									activeCategory !== "all" && (
+										<span className="text-sm text-gray-500">
+											{" / "}
+											{categories[activeCategory].name}
+										</span>
+									)}
+							</span>
+						)}
 					</div>
+					<div className="flex items-center gap-2">
+						<Search size={18} className="text-gray-400" />
+						<input
+							type="text"
+							placeholder="Search notes..."
+							value={searchTerm}
+							onChange={(e) => setSearchTerm(e.target.value)}
+							className="px-3 py-1 text-sm border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
+						/>
+					</div>
+				</div>
 
-					{/* Folder Actions */}
-					{activeFolder && activeFolder.id !== "inbox" && (
-						<div className="flex items-center gap-2 border-t pt-2">
-							{/* Add Subfolder - only for main folders */}
-							{getCurrentFolderParentName(activeFolder.id) === undefined && (
-								<>
-									{activeFolder && showNewSubfolder === activeFolder.id ? (
-										<div className="flex gap-2">
-											<input
-												type="text"
-												value={newSubfolderName}
-												onChange={(e) =>
-													setNewSubfolderName(e.target.value)
-												}
-												onKeyDown={(e) => {
-													if (e.key === "Enter")
-														addSubfolder(activeFolder.id);
-													if (e.key === "Escape") {
-														setShowNewSubfolder(null);
-														setNewSubfolderName("");
-													}
-												}}
-												placeholder="Subfolder name"
-												className="px-2 py-1 text-sm border rounded"
-												autoFocus
-											/>
-											<button
-												onClick={() => addSubfolder(activeFolder.id)}
-												className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
-											>
-												Add
-											</button>
-											<button
-												onClick={() => {
+				{/* Folder Actions */}
+				{activeFolder && activeFolder.id !== "inbox" && (
+					<div className="flex items-center gap-2 border-t pt-2">
+						{/* Add Subfolder - only for main folders */}
+						{getCurrentFolderParentName(activeFolder.id) === undefined && (
+							<>
+								{activeFolder && showNewSubfolder === activeFolder.id ? (
+									<div className="flex gap-2">
+										<input
+											type="text"
+											value={newSubfolderName}
+											onChange={(e) => setNewSubfolderName(e.target.value)}
+											onKeyDown={(e) => {
+												if (e.key === "Enter")
+													addSubfolder(activeFolder.id);
+												if (e.key === "Escape") {
 													setShowNewSubfolder(null);
 													setNewSubfolderName("");
-												}}
-												className="px-3 py-1 text-sm bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
-											>
-												Cancel
-											</button>
-										</div>
-									) : (
+												}
+											}}
+											placeholder="Subfolder name"
+											className="px-2 py-1 text-sm border rounded"
+											autoFocus
+										/>
+										<button
+											onClick={() => addSubfolder(activeFolder.id)}
+											className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+										>
+											Add
+										</button>
 										<button
 											onClick={() => {
-												setShowNewSubfolder(activeFolder.id);
+												setShowNewSubfolder(null);
+												setNewSubfolderName("");
 											}}
-											className="flex items-center gap-1 px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+											className="px-3 py-1 text-sm bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
 										>
-											<FolderPlus size={14} />
-											Add Subfolder
+											Cancel
 										</button>
-									)}
-								</>
-							)}
-
-							{/* Edit and Delete - only for subfolders */}
-							{isEditableFolder() && (
-								<>
-									<button
-										onClick={() => startEditingFolder(activeFolder.id)}
-										className="flex items-center gap-1 px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded transition-colors"
-									>
-										<Edit2 size={14} />
-										Rename
-									</button>
+									</div>
+								) : (
 									<button
 										onClick={() => {
-											const parent = getCurrentFolderParentName(
-												activeFolder.id
-											);
-											if (
-												activeFolder &&
-												parent &&
-												confirm(
-													`Delete "${
-														getCurrentFolder(activeFolder.id)?.name
-													}"? Notes will be moved to ${parent}.`
-												)
-											) {
-												deleteSubfolder(parent, activeFolder.id);
-											}
+											setShowNewSubfolder(activeFolder.id);
 										}}
-										className="flex items-center gap-1 px-3 py-1 text-sm bg-red-100 hover:bg-red-200 text-red-600 rounded transition-colors"
+										className="flex items-center gap-1 px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded transition-colors"
 									>
-										<Trash2 size={14} />
-										Delete
+										<FolderPlus size={14} />
+										Add Subfolder
 									</button>
-								</>
-							)}
-						</div>
-					)}
-				</div>
-			</CardHeader>
+								)}
+							</>
+						)}
 
-			<CardContent>
+						{/* Edit and Delete - only for subfolders */}
+						{isEditableFolder() && (
+							<>
+								<button
+									onClick={() => startEditingFolder(activeFolder.id)}
+									className="flex items-center gap-1 px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+								>
+									<Edit2 size={14} />
+									Rename
+								</button>
+								<button
+									onClick={() => {
+										const parent = getCurrentFolderParentName(activeFolder.id);
+										if (
+											activeFolder &&
+											parent &&
+											confirm(
+												`Delete "${
+													getCurrentFolder(activeFolder.id)?.name
+												}"? Notes will be moved to ${parent}.`
+											)
+										) {
+											deleteSubfolder(parent, activeFolder.id);
+										}
+									}}
+									className="flex items-center gap-1 px-3 py-1 text-sm bg-red-100 hover:bg-red-200 text-red-600 rounded transition-colors"
+								>
+									<Trash2 size={14} />
+									Delete
+								</button>
+							</>
+						)}
+					</div>
+				)}
+				<CategoryCard
+					{...{
+						categories,
+						getNoteCount,
+						activeFolder,
+						activeCategory,
+						setActiveCategory,
+					}}
+				/>
+			</div>
+
+			<div className="w-full">
 				{activeFolder && filteredNotes.length === 0 ? (
 					<div className="text-center py-12 text-gray-400">
 						<p className="text-lg mb-2">
@@ -289,7 +288,7 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 						</p>
 					</div>
 				) : (
-					<div className="space-y-3">
+					<div className="max-h-164 overflow-y-auto space-y-3">
 						{filteredNotes.map((note: Note) => (
 							<div
 								key={note.id}
@@ -298,6 +297,7 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 								<div className="flex justify-between items-start gap-4">
 									<div className="flex-1">
 										<p className="text-gray-800 mb-2">{note.title}</p>
+										<p className="text-sm text-gray-600">{note.content}</p>
 										<div className="flex items-center gap-4 text-xs text-gray-500">
 											<span className="flex items-center gap-1">
 												<Calendar size={12} />
@@ -328,7 +328,7 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 						))}
 					</div>
 				)}
-			</CardContent>
-		</Card>
+			</div>
+		</div>
 	);
 };

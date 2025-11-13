@@ -4,6 +4,15 @@ import { useExpenseStore } from "@/stores/useExpenseStore";
 import { ExpenseForm } from "./ExpenseForm";
 import { ExpenseTable } from "./ExpenseTable";
 import { Expense } from "@/types/expense";
+import {
+	Select,
+	SelectContent,
+	SelectGroup,
+	SelectItem,
+	SelectLabel,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 
 interface DeleteModalProps {
 	isOpen: boolean;
@@ -199,25 +208,31 @@ export const AllExpenses: React.FC = () => {
 
 					{/* Year Filter */}
 					<div className="flex items-center gap-3">
-						<label className="text-sm font-medium text-gray-700">Filter by year:</label>
-						<select
-							value={selectedYear}
-							onChange={(e) =>
-								setSelectedYear(
-									e.target.value === "all" ? "all" : parseInt(e.target.value)
-								)
+						<label htmlFor="all-expenses-year-select" className="text-sm font-medium text-gray-700">Filter by year:</label>
+						<Select
+							name="all-expenses-year-select"
+							onValueChange={(value) =>
+								setSelectedYear(value === "all" ? "all" : parseInt(value))
 							}
-							className="px-4 py-2 border border-gray-300 rounded-lg 
-									 focus:ring-2 focus:ring-blue-400 focus:border-transparent
-									 text-sm font-medium"
 						>
-							<option value="all">All Years</option>
-							{availableYears.map((year) => (
-								<option key={year} value={year}>
-									{year}
-								</option>
-							))}
-						</select>
+							<SelectTrigger className="w-[180px]">
+								<SelectValue placeholder="Select a year" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectGroup>
+									<SelectLabel>Categories</SelectLabel>
+									{availableYears.map((year) => (
+										<SelectItem
+											key={year}
+											value={year.toString()}
+											className="capitalize"
+										>
+											{year}
+										</SelectItem>
+									))}
+								</SelectGroup>
+							</SelectContent>
+						</Select>
 					</div>
 				</div>
 

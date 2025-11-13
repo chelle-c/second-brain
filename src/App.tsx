@@ -39,6 +39,7 @@ function App() {
 							<Route path="income" element={<IncomeTracker />} />
 							<Route path="expenses" element={<ExpensesTracker />} />
 							<Route path="mindmap" element={<MindMapApp />} />
+							<Route path="settings" element={<div>Settings</div>} />
 						</Route>
 					</Routes>
 				</BrowserRouter>

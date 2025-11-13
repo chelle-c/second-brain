@@ -3,6 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { IncomeEntry } from "@/types/income";
+import {
+	Select,
+	SelectContent,
+	SelectGroup,
+	SelectItem,
+	SelectLabel,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 
 interface ManualEntryFormProps {
 	newEntry: Omit<IncomeEntry, "id">;
@@ -19,20 +28,21 @@ const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
 }) => {
 	return (
 		<form onSubmit={onSubmit} className="space-y-4">
-			<div>
-				<Label className="block text-sm font-medium text-gray-700 mb-1">Day of Week</Label>
-				<select
-					value={newEntry.date}
-					onChange={(e) => onEntryChange("date", e.target.value)}
-					className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-				>
-					{availableDates.map((date) => (
-						<option key={date.value} value={date.value}>
-							{date.label}
-						</option>
-					))}
-				</select>
-			</div>
+			<Select onValueChange={(value) => onEntryChange("date", value)}>
+				<SelectTrigger className="w-[180px]">
+					<SelectValue placeholder="Select a day" />
+				</SelectTrigger>
+				<SelectContent>
+					<SelectGroup>
+						<SelectLabel>Day of Week</SelectLabel>
+						{availableDates.map((date) => (
+							<SelectItem key={date.value} value={date.value}>
+								{date.label}
+							</SelectItem>
+						))}
+					</SelectGroup>
+				</SelectContent>
+			</Select>
 
 			<div>
 				<Label className="block text-sm font-medium text-gray-700 mb-1">Amount ($)</Label>

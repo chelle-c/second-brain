@@ -12,7 +12,6 @@ import {
 	SidebarContent,
 	SidebarGroup,
 	SidebarGroupContent,
-	SidebarGroupLabel,
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
@@ -21,7 +20,7 @@ import {
 	SidebarMenuSub,
 	SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
-import { Inbox, DollarSign, Folder, Network, Save, Settings, Plus, Minus } from "lucide-react";
+import { Inbox, DollarSign, Folder, Network, Save, Settings, Plus, Minus, Brain } from "lucide-react";
 
 export function AppSidebar() {
 	const { lastSaved, autoSaveEnabled, toggleAutoSave, saveToFile } = useAppStore();
@@ -56,19 +55,22 @@ export function AppSidebar() {
 		},
 		{
 			title: "Settings",
-			url: "#",
+			url: "settings",
 			icon: Settings,
 		},
 	];
 
 	return (
 		<Sidebar>
-			<SidebarHeader>
-				<h1 className="mx-2 text-xl font-bold">Second Brain App</h1>
+			<SidebarHeader className="px-8 py-4 flex flex-row items-center gap-4">
+				<Brain size={32} />
+				<div>
+					<h1 className="text-3xl font-bold">Lunite</h1>
+					<div className="text-sm font-medium text-gray-300">Your Second Brain</div>
+				</div>
 			</SidebarHeader>
-			<SidebarContent>
+			<SidebarContent className="px-2">
 				<SidebarGroup>
-					<SidebarGroupLabel>Application</SidebarGroupLabel>
 					<SidebarGroupContent>
 						<SidebarMenu>
 							{items.map((item) =>
@@ -149,7 +151,7 @@ export function AppSidebar() {
 
 				<Button
 					onClick={() => saveToFile(AppToSave.All)}
-					className="w-full flex items-center justify-center gap-2 px-3 py-0 bg-green-600 rounded hover:bg-green-700 mb-2"
+					className="w-full flex items-center justify-center gap-2 px-3 py-0 bg-emerald-700 rounded hover:bg-emerald-600 mb-2 cursor-pointer"
 				>
 					<Save size={16} />
 					Save Now
@@ -163,7 +165,7 @@ export function AppSidebar() {
 							console.error("Failed to open data folder:", error);
 						}
 					}}
-					className="w-full flex items-center justify-center gap-2 px-3 py-0 bg-gray-700 rounded hover:bg-gray-600 mb-2 text-sm"
+					className="w-full flex items-center justify-center gap-2 px-3 py-0 bg-gray-700 rounded hover:bg-gray-600 mb-2 text-sm cursor-pointer"
 				>
 					<Folder size={16} />
 					Open Data Folder

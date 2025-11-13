@@ -24,9 +24,6 @@ interface RecurringExpenseRowProps {
 	onDelete: (id: string, name: string) => void;
 	onArchive: (id: string) => void;
 	onUnarchive: (id: string) => void;
-	hoveredId: string | null;
-	onHoverStart: (id: string) => void;
-	onHoverEnd: () => void;
 	categoryColors: Record<string, string>;
 }
 
@@ -86,9 +83,6 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 	onDelete,
 	onArchive,
 	onUnarchive,
-	hoveredId,
-	onHoverStart,
-	onHoverEnd,
 	categoryColors,
 }) => {
 	const [isExpanded, setIsExpanded] = useState(false);
@@ -114,10 +108,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 		<>
 			{/* Parent Row - Must match table column structure */}
 			<tr
-				className={`border-b border-gray-100 transition-all duration-200 cursor-pointer
-					${hoveredId === parentExpense.id ? "bg-blue-50" : "hover:bg-gray-50"}`}
-				onMouseEnter={() => onHoverStart(parentExpense.id)}
-				onMouseLeave={onHoverEnd}
+				className={`border-b border-gray-100 cursor-pointer hover:bg-blue-50`}
 			>
 				{/* Column 1: Paid checkbox (with expand button) */}
 				<td className="py-3 px-2">
@@ -292,12 +283,9 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 				sortedOccurrences.map((occurrence, index) => (
 					<tr
 						key={occurrence.id}
-						className={`border-b border-gray-50 transition-all duration-200
-						${hoveredId === occurrence.id ? "bg-blue-50" : "hover:bg-gray-50"}
+						className={`border-b border-gray-50 hover:bg-blue-50
 						${occurrence.isPaid ? "opacity-60" : ""}
 						animate-fadeIn`}
-						onMouseEnter={() => onHoverStart(occurrence.id)}
-						onMouseLeave={onHoverEnd}
 					>
 						{/* Column 1: Paid checkbox */}
 						<td className="py-2 px-2">

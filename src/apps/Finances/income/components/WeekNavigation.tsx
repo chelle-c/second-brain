@@ -3,6 +3,15 @@ import { getWeeksForYear } from "@/lib/dateUtils";
 import { format, getWeek, startOfWeek, addDays } from "date-fns";
 import { Button } from "@/components/ui/button";
 import type { IncomeWeekSelection } from "@/types/income";
+import {
+	Select,
+	SelectContent,
+	SelectGroup,
+	SelectItem,
+	SelectLabel,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 
 interface WeekNavigationProps {
 	selectedWeek: IncomeWeekSelection;
@@ -84,47 +93,46 @@ const WeekNavigation: React.FC<WeekNavigationProps> = ({
 			</div>
 
 			<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-				<div className="text-left">
-					<label
-						htmlFor="year_select"
-						className="block text-md font-medium text-gray-700 mb-1"
-					>
-						Year
-					</label>
-					<select
-						id="year_select"
-						value={selectedWeek.year}
-						onChange={(e) => onYearChange(parseInt(e.target.value))}
-						className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-					>
-						{years.map((year) => (
-							<option key={year} value={year}>
-								{year}
-							</option>
-						))}
-					</select>
-				</div>
+				<Select
+					value={selectedWeek.year.toString()}
+					onValueChange={(value) => onYearChange(parseInt(value))}
+				>
+					<SelectTrigger className="w-[180px]">
+						<SelectValue placeholder="Select a year" />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectGroup>
+							<SelectLabel>Year</SelectLabel>
+							{years.map((year) => (
+								<SelectItem key={year} value={year.toString()}>
+									{year}
+								</SelectItem>
+							))}
+						</SelectGroup>
+					</SelectContent>
+				</Select>
 
-				<div className="text-left">
-					<label
-						htmlFor="week_select"
-						className="block text-md font-medium text-gray-700 mb-1"
-					>
-						Week
-					</label>
-					<select
-						id="week_select"
-						value={selectedWeek.week}
-						onChange={(e) => onWeekChange(parseInt(e.target.value))}
-						className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-					>
-						{currentYearWeeks.map((week) => (
-							<option key={week.number + "-" + week.label} value={week.number}>
-								{week.label}
-							</option>
-						))}
-					</select>
-				</div>
+				<Select
+					value={selectedWeek.week.toString()}
+					onValueChange={(value) => onWeekChange(parseInt(value))}
+				>
+					<SelectTrigger className="w-[180px]">
+						<SelectValue placeholder="Select a week" />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectGroup>
+							<SelectLabel>Week</SelectLabel>
+							{currentYearWeeks.map((week) => (
+								<SelectItem
+									key={week.number + "-" + week.label}
+									value={week.number.toString()}
+								>
+									{week.label}
+								</SelectItem>
+							))}
+						</SelectGroup>
+					</SelectContent>
+				</Select>
 			</div>
 
 			<div className="flex flex-col">
