@@ -12,10 +12,10 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import useAppStore from "@/stores/useAppStore";
+import { useNotesStore } from "@/stores/useNotesStore";
 
 export const Capture = ({ setCaptureNewNote, categories }: any) => {
-	const { addNote } = useAppStore();
+	const { addNote } = useNotesStore();
 
 	const [newNote, setNewNote] = useState({ title: "", content: "", category: "uncategorized" });
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Plus, X, Save, Calendar, DollarSign, Tag, RefreshCw, CheckCircle } from "lucide-react";
-import useAppStore from "@/stores/useAppStore";
+import { useExpenseStore } from "@/stores/useExpenseStore";
 import { ExpenseFormData, RecurrenceSettings, Expense, ImportanceLevel } from "@/types/expense";
 import { ConfirmRegenerationModal } from "./ConfirmRegenerationModal";
 import { format, startOfMonth, isSameDay } from "date-fns";
@@ -16,7 +16,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 	onClose,
 	isGlobalEdit = false, // Add this line
 }) => {
-	const { expenses, addExpense, updateExpense, categories } = useAppStore();
+	const { expenses, addExpense, updateExpense, categories } = useExpenseStore();
 	const [isOpen, setIsOpen] = useState(false);
 	const modalRef = useRef<HTMLDivElement>(null);
 	const isDraggingFromInput = useRef(false);

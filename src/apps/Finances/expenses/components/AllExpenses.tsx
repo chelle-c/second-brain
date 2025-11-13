@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { X, DollarSign } from "lucide-react";
-import useAppStore from "@/stores/useAppStore";
+import { useExpenseStore } from "@/stores/useExpenseStore";
 import { ExpenseForm } from "./ExpenseForm";
 import { ExpenseTable } from "./ExpenseTable";
 import { Expense } from "@/types/expense";
@@ -67,7 +67,7 @@ export const AllExpenses: React.FC = () => {
 		unarchiveExpense,
 		toggleExpensePaid,
 		categoryColors,
-	} = useAppStore();
+	} = useExpenseStore();
 
 	const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 	const [showArchived, setShowArchived] = useState(false);

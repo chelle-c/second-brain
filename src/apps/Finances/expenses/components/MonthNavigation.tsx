@@ -1,10 +1,10 @@
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { addMonths, subMonths, isThisMonth } from "date-fns";
-import useAppStore from "@/stores/useAppStore";
+import { useExpenseStore } from "@/stores/useExpenseStore";
 import { formatMonthYear } from "@/lib/dateHelpers";
 
 export const MonthNavigation: React.FC = () => {
-	const { selectedMonth, setSelectedMonth } = useAppStore();
+	const { selectedMonth, setSelectedMonth } = useExpenseStore();
 
 	const handlePreviousMonth = () => {
 		setSelectedMonth(subMonths(selectedMonth ?? new Date(), 1));

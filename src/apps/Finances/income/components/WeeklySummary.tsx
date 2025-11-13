@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import useAppStore from "@/stores/useAppStore";
+import { useIncomeStore } from "@/stores/useIncomeStore";
 import { Button } from "@/components/ui/button";
 
 interface WeeklySummaryProps {
@@ -12,7 +12,8 @@ const WeeklySummary: React.FC<WeeklySummaryProps> = ({ weeklyTotal, selectedWeek
 	const [editingTarget, setEditingTarget] = useState(false);
 	const [newTargetAmount, setNewTargetAmount] = useState(weeklyTarget.amount.toString());
 
-	const { incomeWeeklyTargets, addIncomeWeeklyTarget, updateIncomeWeeklyTarget } = useAppStore();
+	const { incomeWeeklyTargets, addIncomeWeeklyTarget, updateIncomeWeeklyTarget } =
+		useIncomeStore();
 
 	// Sync local state when weeklyTarget prop changes
 	useEffect(() => {

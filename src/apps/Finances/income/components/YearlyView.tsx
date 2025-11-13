@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import useAppStore from "@/stores/useAppStore";
+import { useIncomeStore } from "@/stores/useIncomeStore";
 import { getYearlyData } from "@/lib/dateUtils";
 import {
 	BarChart,
@@ -15,7 +15,7 @@ import {
 const YearlyView: React.FC<{}> = () => {
 	const [isClient, setIsClient] = useState(false);
 
-	const { incomeEntries } = useAppStore();
+	const { incomeEntries } = useIncomeStore();
 
 	const yearlyData = getYearlyData(incomeEntries);
 

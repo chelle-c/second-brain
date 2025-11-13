@@ -3,7 +3,7 @@ import ManualEntryForm from "./ManualEntryForm";
 import PasteEntryForm from "./PasteEntryForm";
 import { getAvailableDates } from "@/lib/dateUtils";
 import { parsePasteText } from "@/lib/dateUtils";
-import useAppStore from "@/stores/useAppStore";
+import { useIncomeStore } from "@/stores/useIncomeStore";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -34,7 +34,8 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 	const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
 	const [editEntryForm, setEditEntryForm] = useState<IncomeEntry | null>(null);
 
-	const { incomeEntries, addIncomeEntry, updateIncomeEntry, deleteIncomeEntry } = useAppStore();
+	const { incomeEntries, addIncomeEntry, updateIncomeEntry, deleteIncomeEntry } =
+		useIncomeStore();
 
 	const availableDates = getAvailableDates(selectedWeek.startDate);
 

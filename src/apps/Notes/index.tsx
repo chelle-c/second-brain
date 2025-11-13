@@ -3,7 +3,7 @@ import { Capture } from "./components/Capture";
 import { FolderNav } from "./components/FolderNav";
 import { CategoryCard } from "./components/CategoryCard";
 import { NotesCard } from "./components/NotesCard";
-import useAppStore from "@/stores/useAppStore";
+import { useNotesStore } from "@/stores/useNotesStore";
 import { Category, NotesFolder, NotesFolders, Subfolder } from "@/types/notes";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Lightbulb, BookOpen, Archive, Hash, FileWarning } from "lucide-react";
@@ -11,7 +11,7 @@ import { CheckCircle, Lightbulb, BookOpen, Archive, Hash, FileWarning } from "lu
 // TODO: Add ability to add, edit and delete top-level folders
 
 export function NotesApp() {
-	const { notes, notesFolders } = useAppStore();
+	const { notes, notesFolders } = useNotesStore();
 	const [captureNewNote, setCaptureNewNote] = useState<boolean>(false);
 	const [activeFolder, setActiveFolder] = useState<NotesFolder | Subfolder | null>(null);
 	const [activeCategory, setActiveCategory] = useState<string>("all");

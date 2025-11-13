@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { X, DollarSign } from "lucide-react";
-import useAppStore from "@/stores/useAppStore";
+import { useExpenseStore } from "@/stores/useExpenseStore";
 import { ExpenseForm } from "./ExpenseForm";
 import { ExpenseTable } from "./ExpenseTable";
 import { Expense } from "@/types/expense";
@@ -68,7 +68,7 @@ export const ExpenseList: React.FC = () => {
 		toggleExpensePaid,
 		expenses,
 		categoryColors,
-	} = useAppStore();
+	} = useExpenseStore();
 
 	const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 	const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string; name: string }>({

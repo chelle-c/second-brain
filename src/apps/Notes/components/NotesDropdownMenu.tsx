@@ -1,5 +1,5 @@
 import { Fragment, useState, useRef } from "react";
-import useAppStore from "@/stores/useAppStore";
+import { useNotesStore } from "@/stores/useNotesStore";
 import { useClickOutside } from "@/hooks/useClickOutside";
 import { NotesFolder } from "@/types/notes";
 import { CornerDownRight, ChevronDown, ChevronUp, X, Folder, MoreVertical } from "lucide-react";
@@ -21,7 +21,7 @@ export const NotesDropdownMenu: React.FC<NotesDropdownMenuProps> = ({
 	activeFolder,
 	categories,
 }) => {
-	const { deleteNote, updateNote, categorizeNote } = useAppStore();
+	const { deleteNote, updateNote, categorizeNote } = useNotesStore();
 
 	const [moveOrCategorize, setMoveOrCategorize] = useState("");
 

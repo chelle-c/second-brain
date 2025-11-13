@@ -1,6 +1,6 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { MonthNavigation } from "./MonthNavigation";
-import useAppStore from "@/stores/useAppStore";
+import { useExpenseStore } from "@/stores/useExpenseStore";
 import { OverviewMode } from "@/types/expense";
 import { formatCurrency } from "@/lib/dateHelpers";
 import { DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
@@ -14,7 +14,7 @@ export const ExpenseOverview: React.FC = () => {
 		overviewMode,
 		setOverviewMode,
 		categoryColors,
-	} = useAppStore();
+	} = useExpenseStore();
 
 	if (!selectedMonth) return null;
 

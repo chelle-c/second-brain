@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Plus, Edit2, Trash2, X, Save, Tag } from "lucide-react";
-import useAppStore from "@/stores/useAppStore";
+import { useExpenseStore } from "@/stores/useExpenseStore";
 
 interface CategoryManagerProps {
 	isOpen: boolean;
@@ -9,7 +9,7 @@ interface CategoryManagerProps {
 
 export const CategoryManager: React.FC<CategoryManagerProps> = ({ isOpen, onClose }) => {
 	const { categories, categoryColors, addCategory, updateCategory, deleteCategory } =
-		useAppStore();
+		useExpenseStore();
 
 	const [editingCategory, setEditingCategory] = useState<string | null>(null);
 	const [editName, setEditName] = useState("");

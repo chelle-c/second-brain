@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import useAppStore from "@/stores/useAppStore";
+import { useNotesStore } from "@/stores/useNotesStore";
 import { NotesDropdownMenu } from "./NotesDropdownMenu";
 import { Note, NotesFolder, NotesFolders, Subfolder, Category } from "@/types/notes";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,7 +31,7 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 	categories,
 	activeCategory,
 }) => {
-	const { notes, addSubFolder, removeSubfolder, updateSubFolder } = useAppStore();
+	const { notes, addSubFolder, removeSubfolder, updateSubFolder } = useNotesStore();
 
 	const [searchTerm, setSearchTerm] = useState("");
 

@@ -14,7 +14,7 @@ import {
 import { formatCurrency, formatDate } from "@/lib/dateHelpers";
 import { DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
 import { Expense, ImportanceLevel } from "@/types/expense";
-import useAppStore from "@/stores/useAppStore";
+import { useExpenseStore } from "@/stores/useExpenseStore";
 
 interface RecurringExpenseRowProps {
 	parentExpense: Expense;
@@ -92,7 +92,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 	categoryColors,
 }) => {
 	const [isExpanded, setIsExpanded] = useState(false);
-	const { toggleExpensePaid, resetOccurrence } = useAppStore();
+	const { toggleExpensePaid, resetOccurrence } = useExpenseStore();
 
 	const categoryColor =
 		categoryColors[parentExpense.category] ||

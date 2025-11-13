@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { isSameDay, parseISO, startOfDay, endOfDay } from "date-fns";
 import type { IncomeWeekSelection, IncomeDayData } from "@/types/income";
 import { DAYS, years } from "@/lib/dateUtils";
-import useAppStore from "@/stores/useAppStore";
+import { useIncomeStore } from "@/stores/useIncomeStore";
 import WeekNavigation from "@/apps/Finances/income/components/WeekNavigation";
 import IncomeEntriesList from "@/apps/Finances/income/components/IncomeEntriesList";
 import WeeklySummary from "@/apps/Finances/income/components/WeeklySummary";
@@ -14,7 +14,7 @@ import YearlyView from "@/apps/Finances/income/components/YearlyView";
 export const IncomeTracker: React.FC = () => {
 	const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-	const { incomeEntries, incomeViewType } = useAppStore();
+	const { incomeEntries, incomeViewType } = useIncomeStore();
 
 	// Week navigation state
 	const [selectedWeek, setSelectedWeek] = useState<IncomeWeekSelection>(() => {

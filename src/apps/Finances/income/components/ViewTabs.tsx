@@ -1,11 +1,11 @@
 import React from "react";
-import useAppStore from "@/stores/useAppStore";
+import { useIncomeStore } from "@/stores/useIncomeStore";
 import { Button } from "@/components/ui/button";
 
 type ViewTabsProps = {};
 
 const ViewTabs: React.FC<ViewTabsProps> = () => {
-	const { incomeViewType, updateIncomeViewType } = useAppStore();
+	const { incomeViewType, updateIncomeViewType } = useIncomeStore();
 
 	return (
 		<div className="w-full lg:w-auto bg-white rounded-lg shadow p-6">
