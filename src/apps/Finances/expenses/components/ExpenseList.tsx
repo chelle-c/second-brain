@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { X, DollarSign } from "lucide-react";
 import { useExpenseStore } from "@/stores/useExpenseStore";
 import { ExpenseForm } from "./ExpenseForm";
@@ -68,6 +68,7 @@ export const ExpenseList: React.FC = () => {
 		toggleExpensePaid,
 		expenses,
 		categoryColors,
+		overviewMode,
 	} = useExpenseStore();
 
 	const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
@@ -82,6 +83,24 @@ export const ExpenseList: React.FC = () => {
 	// Force re-calculation when expenses change
 	const monthlyExpenses = getMonthlyExpenses(selectedMonth);
 	const isCurrentMonth = isSameMonth(selectedMonth, new Date());
+
+	// Filter expenses based on overviewMode (same logic as ExpenseOverview pie chart)
+	const filteredExpenses = useMemo(() => {
+		return monthlyExpenses.filter((expense) => {
+			switch (overviewMode) {
+				case "remaining":
+					// Show unpaid expenses (both Need and Want types)
+					return !expense.isPaid;
+				case "required":
+					// Show only "Need" type expenses (paid or unpaid)
+					return expense.type === "need";
+				case "all":
+				default:
+					// Show all expenses
+					return true;
+			}
+		});
+	}, [monthlyExpenses, overviewMode]);
 
 	// Close edit form when expenses update
 	useEffect(() => {
@@ -115,46 +134,95 @@ export const ExpenseList: React.FC = () => {
 		setEditingExpense(null);
 	};
 
-	if (monthlyExpenses.length === 0) {
+	// Get filter label for display
+	const getFilterLabel = () => {
+		switch (overviewMode) {
+			case "remaining":
+				return " (Remaining Unpaid)";
+			case "required":
+				return " (Required Only)";
+			case "all":
+			default:
+				return "";
+		}
+	};
+
+	if (filteredExpenses.length === 0) {
 		return (
-			<div className="bg-white rounded-xl shadow-lg p-8 animate-slideUp">
-				<h3 className="text-xl font-bold text-gray-800 mb-4">Monthly Expenses</h3>
+			<>
+				<h3 className="text-xl font-bold text-gray-800 mb-4">
+					Monthly Expenses{getFilterLabel()}
+				</h3>
+				{overviewMode !== "all" && monthlyExpenses.length > 0 && (
+					<p className="text-sm text-gray-500 mb-4">
+						Showing 0 of {monthlyExpenses.length} expenses
+					</p>
+				)}
 				<div className="text-center py-12">
 					<DollarSign className="mx-auto text-gray-300 mb-4" size={48} />
-					<p className="text-gray-500">No expenses for this month.</p>
-					<p className="text-gray-400 text-sm mt-2">
-						Click the + button to add your first expense.
+					<p className="text-gray-500">
+						{overviewMode === "remaining"
+							? "All required expenses are paid!"
+							: overviewMode === "required"
+							? "No required expenses for this month."
+							: "No expenses for this month."}
 					</p>
+					{overviewMode === "all" && (
+						<p className="text-gray-400 text-sm mt-2">
+							Click the + button to add your first expense.
+						</p>
+					)}
 				</div>
-			</div>
+
+				{editingExpense && (
+					<ExpenseForm
+						key={editingExpense.id}
+						editingExpense={editingExpense}
+						onClose={handleCloseEdit}
+						isGlobalEdit={false}
+					/>
+				)}
+
+				<DeleteModal
+					isOpen={deleteModal.isOpen}
+					expenseName={deleteModal.name}
+					onConfirm={handleDeleteConfirm}
+					onCancel={handleDeleteCancel}
+				/>
+			</>
 		);
 	}
 
 	return (
 		<>
-			<div className="bg-white rounded-xl shadow-lg p-6 animate-slideUp">
 				<div className="mb-6">
-					<h3 className="text-xl font-bold text-gray-800">Monthly Expenses</h3>
+					<h3 className="text-xl font-bold text-gray-800">
+						Monthly Expenses{getFilterLabel()}
+					</h3>
+					{overviewMode !== "all" && (
+						<p className="text-sm text-gray-500 mt-1">
+							Showing {filteredExpenses.length} of {monthlyExpenses.length} expenses
+						</p>
+					)}
 				</div>
 
 				<ExpenseTable
-					key={`monthly-${selectedMonth.getTime()}-${expenses.length}`} // Force re-render
-					expenses={monthlyExpenses}
+					key={`monthly-${selectedMonth.getTime()}-${expenses.length}-${overviewMode}`}
+					expenses={filteredExpenses}
 					isCurrentMonth={isCurrentMonth}
 					selectedMonth={selectedMonth}
+					categoryColors={categoryColors}
 					onEdit={handleEdit}
 					onDelete={handleDeleteClick}
 					onArchive={() => {}}
-					categoryColors={categoryColors}
 					onUnarchive={() => {}}
 					onTogglePaid={toggleExpensePaid}
 					showArchiveActions={false}
 				/>
-			</div>
 
 			{editingExpense && (
 				<ExpenseForm
-					key={editingExpense.id} // Force form to re-mount with new data
+					key={editingExpense.id}
 					editingExpense={editingExpense}
 					onClose={handleCloseEdit}
 					isGlobalEdit={false}

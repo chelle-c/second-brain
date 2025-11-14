@@ -9,7 +9,6 @@ import {
 	SelectContent,
 	SelectGroup,
 	SelectItem,
-	SelectLabel,
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
@@ -220,7 +219,6 @@ export const AllExpenses: React.FC = () => {
 							</SelectTrigger>
 							<SelectContent>
 								<SelectGroup>
-									<SelectLabel>Categories</SelectLabel>
 									{availableYears.map((year) => (
 										<SelectItem
 											key={year}

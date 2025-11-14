@@ -1,10 +1,20 @@
-import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
-import { addMonths, subMonths, isThisMonth } from "date-fns";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { addMonths, subMonths } from "date-fns";
 import { useExpenseStore } from "@/stores/useExpenseStore";
-import { formatMonthYear } from "@/lib/dateHelpers";
+import {
+	Select,
+	SelectContent,
+	SelectGroup,
+	SelectItem,
+	SelectLabel,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 
 export const MonthNavigation: React.FC = () => {
-	const { selectedMonth, setSelectedMonth } = useExpenseStore();
+	const { selectedMonth, setSelectedMonth, expenses } = useExpenseStore();
+
+	if (!selectedMonth) return null;
 
 	const handlePreviousMonth = () => {
 		setSelectedMonth(subMonths(selectedMonth ?? new Date(), 1));
@@ -14,48 +24,116 @@ export const MonthNavigation: React.FC = () => {
 		setSelectedMonth(addMonths(selectedMonth ?? new Date(), 1));
 	};
 
-	const handleCurrentMonth = () => {
-		setSelectedMonth(new Date());
+	const handleMonthChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+		const newDate = new Date(selectedMonth);
+		newDate.setMonth(parseInt(e.target.value));
+		setSelectedMonth(newDate);
 	};
 
-	const isCurrentMonth = isThisMonth(selectedMonth ?? new Date());
+	const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+		const newDate = new Date(selectedMonth);
+		newDate.setFullYear(parseInt(e.target.value));
+		setSelectedMonth(newDate);
+	};
+
+	// Get all months
+	const months = [
+		"January",
+		"February",
+		"March",
+		"April",
+		"May",
+		"June",
+		"July",
+		"August",
+		"September",
+		"October",
+		"November",
+		"December",
+	];
+
+	// Get unique years from expenses + current year
+	const currentYear = new Date().getFullYear();
+	const expenseYears = new Set<number>();
+
+	// Add current year
+	expenseYears.add(currentYear);
+
+	// Add years from expenses
+	expenses.forEach((expense) => {
+		if (expense.dueDate) {
+			expenseYears.add(expense.dueDate.getFullYear());
+		}
+		if (expense.createdAt) {
+			expenseYears.add(expense.createdAt.getFullYear());
+		}
+		if (expense.paymentDate) {
+			expenseYears.add(expense.paymentDate.getFullYear());
+		}
+	});
+
+	// Sort years in descending order
+	const availableYears = Array.from(expenseYears).sort((a, b) => b - a);
 
 	return (
-		<div className="flex items-center justify-center gap-4">
+		<div className="flex items-center justify-center gap-2">
 			<button
 				onClick={handlePreviousMonth}
-				className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 
-					transition-colors duration-200 hover:scale-105 active:scale-95"
-				aria-label="Previous month"
+				className="hover:bg-gray-100 rounded-lg transition-colors duration-200"
+				title="Previous month"
 			>
-				<ChevronLeft size={20} />
+				<ChevronLeft size={20} className="text-gray-600" />
 			</button>
 
-			<h2 className="text-xl font-bold text-gray-800 w-[180px] text-center">
-				{formatMonthYear(selectedMonth ?? new Date())}
-			</h2>
+			<div className="flex items-center gap-2">
+				{/* Month Dropdown */}
+				<Select
+					value={selectedMonth.getMonth().toString()}
+					onValueChange={(value) => handleMonthChange({ target: { value } } as any)}
+				>
+					<SelectTrigger className="w-[132px]">
+						<SelectValue placeholder="Select month" />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectGroup>
+							<SelectLabel>Months</SelectLabel>
+							{months.map((month, index) => (
+								<SelectItem key={index} value={index.toString()}>
+									{month}
+								</SelectItem>
+							))}
+						</SelectGroup>
+					</SelectContent>
+				</Select>
+
+				{/* Year Dropdown */}
+
+				<Select
+					value={selectedMonth.getFullYear().toString()}
+					onValueChange={(value) => handleYearChange({ target: { value } } as any)}
+				>
+					<SelectTrigger className="w-[92px]">
+						<SelectValue placeholder="Select month" />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectGroup>
+							<SelectLabel>Years</SelectLabel>
+							{availableYears.map((year) => (
+								<SelectItem key={year} value={year.toString()}>
+									{year}
+								</SelectItem>
+							))}
+						</SelectGroup>
+					</SelectContent>
+				</Select>
+			</div>
 
 			<button
 				onClick={handleNextMonth}
-				className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 
-					transition-colors duration-200 hover:scale-105 active:scale-95"
-				aria-label="Next month"
+				className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+				title="Next month"
 			>
-				<ChevronRight size={20} />
-			</button>
-
-			<button
-				onClick={handleCurrentMonth}
-				disabled={isCurrentMonth}
-				className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm
-					transition-colors duration-200 ${
-						isCurrentMonth
-							? "bg-gray-100 text-gray-400 cursor-not-allowed"
-							: "bg-blue-500 text-white hover:bg-blue-600 hover:scale-105 active:scale-95"
-					}`}
-			>
-				<Calendar size={16} />
-				<span className="font-medium">Today</span>
+				<ChevronRight size={20} className="text-gray-600" />
 			</button>
 		</div>
 	);

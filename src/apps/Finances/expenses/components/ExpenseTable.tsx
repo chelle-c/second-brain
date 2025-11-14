@@ -239,27 +239,26 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 	return (
 		<div>
 			{/* Search and Filter Controls */}
-			<div className="flex flex-col sm:flex-row gap-4 mb-4">
+			<div className="flex flex-col sm:flex-row gap-4 mb-4 items-center">
 				<div className="relative flex-1">
-					<Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
+					<Search className="absolute left-3 top-3 text-gray-400" size={18} />
 					<input
 						type="text"
 						placeholder="Search expenses..."
 						value={searchQuery}
 						onChange={(e) => setSearchQuery(e.target.value)}
-						className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg 
-								 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+						className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent placeholder:text-gray-500"
 					/>
 				</div>
 				<Select onValueChange={(value) => setCategoryFilter(value)}>
-					<SelectTrigger className="w-[180px]">
-						<SelectValue placeholder="Select a category" />
+					<SelectTrigger size="default" className="w-[180px] py-2">
+						<SelectValue placeholder="Filter by category" />
 					</SelectTrigger>
 					<SelectContent>
 						<SelectGroup>
 							<SelectLabel>Categories</SelectLabel>
 							<SelectItem value="all">All Categories</SelectItem>
-							{["All Categories", ...Object.keys(categoryColors)].map((category) => (
+							{Object.keys(categoryColors).sort().map((category) => (
 								<SelectItem key={category} value={category}>
 									{category}
 								</SelectItem>

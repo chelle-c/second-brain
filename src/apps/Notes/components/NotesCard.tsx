@@ -288,7 +288,7 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 						</p>
 					</div>
 				) : (
-					<div className="max-h-164 overflow-y-auto space-y-3">
+					<div className="space-y-3">
 						{filteredNotes.map((note: Note) => (
 							<div
 								key={note.id}

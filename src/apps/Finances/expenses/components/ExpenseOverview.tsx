@@ -65,12 +65,17 @@ export const ExpenseOverview: React.FC = () => {
 	const isPlaceholder = data.length === 0;
 
 	return (
-		<div className="bg-white rounded-xl shadow-lg p-6 animate-slideUp">
-			<div className="mb-4">
-				<h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-					<TrendingUp className="text-blue-500" size={24} />
-					Expense Overview
-				</h3>
+		<>
+			<div className="mb-4 flex flex-col lg:flex-row gap-6 justify-between">
+				<div className="lg:w-80 flex flex-col gap-4">
+					<h3 className="text-xl font-bold text-gray-800 flex items-center gap-2 whitespace-nowrap">
+						<TrendingUp className="text-blue-500" size={24} />
+						Expense Overview
+					</h3>
+				</div>
+				<div className="flex-1 min-w-0">
+					<MonthNavigation />
+				</div>
 			</div>
 
 			<div className="flex flex-col lg:flex-row gap-6">
@@ -99,7 +104,7 @@ export const ExpenseOverview: React.FC = () => {
 					</div>
 
 					{/* Total Display */}
-					<div className="bg-linear-to-br from-blue-50 to-blue-100 rounded-lg p-6 flex-1 flex flex-col justify-center">
+					<div className="bg-linear-to-br from-blue-50 to-blue-200 rounded-lg p-6 flex-1 flex flex-col justify-center">
 						<div className="text-center">
 							<p className="text-sm text-gray-600 mb-2">
 								{overviewMode === "remaining" && "Remaining Needs"}
@@ -139,20 +144,18 @@ export const ExpenseOverview: React.FC = () => {
 
 				{/* Left side (now right) - Chart and Legend */}
 				<div className="flex-1 min-w-0">
-					<MonthNavigation />
-
 					{isPlaceholder && (
 						<p className="text-center text-gray-500 text-sm mb-4">
 							Example distribution - Add expenses to see your data
 						</p>
 					)}
 
-					<div className={`${isPlaceholder ? "opacity-60" : ""}`}>
+					<div className={`flex flex-col space-y-4 ${isPlaceholder ? "opacity-60" : ""}`}>
 						<div className="h-64">
 							<ResponsiveContainer
 								width="100%"
 								height="100%"
-								initialDimension={{ width: 320, height: 200 }}
+								initialDimension={{ width: 320, height: 320 }}
 							>
 								<PieChart>
 									<Pie
@@ -184,7 +187,7 @@ export const ExpenseOverview: React.FC = () => {
 						</div>
 
 						{/* Custom Legend */}
-						<div className="flex gap-x-6 gap-y-2 justify-center mt-4 pb-4 flex-wrap">
+						<div className="flex gap-x-6 gap-y-2 justify-center mt-4 flex-wrap">
 							{chartData.map((entry, index) => (
 								<div key={`legend-${index}`} className="flex items-center gap-2">
 									<span
@@ -209,6 +212,6 @@ export const ExpenseOverview: React.FC = () => {
 					</div>
 				</div>
 			</div>
-		</div>
+		</>
 	);
 };
