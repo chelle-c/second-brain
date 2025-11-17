@@ -46,6 +46,10 @@ export function NotesApp() {
 			return currentSubfolder?.children?.find((c) => c.id === id) as Subfolder;
 		}
 		return currentFolder ? currentFolder : { id: "inbox", name: "Inbox" };
+	};	
+
+	const handleOpenNoteModal = () => {
+		setCaptureNewNote(true);
 	};
 
 	return (
@@ -81,7 +85,7 @@ export function NotesApp() {
 						activeCategory={activeCategory}
 						getNoteCount={getNoteCount}
 						setActiveCategory={setActiveCategory}
-						setCaptureNewNote={setCaptureNewNote}
+						setCaptureNewNote={handleOpenNoteModal}
 					/>
 				</div>
 			</div>

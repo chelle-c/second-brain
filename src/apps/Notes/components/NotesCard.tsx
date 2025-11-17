@@ -2,8 +2,19 @@ import React, { useState } from "react";
 import { useNotesStore } from "@/stores/useNotesStore";
 import { NotesDropdownMenu } from "./NotesDropdownMenu";
 import { CategoryCard } from "./CategoryCard";
+import { NoteViewModal } from "./NoteViewModal";
 import { Note, NotesFolder, NotesFolders, Subfolder, Category } from "@/types/notes";
-import { Inbox, Calendar, Search, FolderPlus, Folder, Hash, Edit2, Trash2, FilePenLine } from "lucide-react";
+import {
+	Inbox,
+	Calendar,
+	Search,
+	FolderPlus,
+	Folder,
+	Hash,
+	Edit2,
+	Trash2,
+	FilePenLine,
+} from "lucide-react";
 
 interface NotesCardProps {
 	allFolders: NotesFolders;
@@ -29,16 +40,13 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 	setCaptureNewNote,
 }) => {
 	const { notes, addSubFolder, removeSubfolder, updateSubFolder } = useNotesStore();
-
 	const [searchTerm, setSearchTerm] = useState("");
-
 	const [showNewSubfolder, setShowNewSubfolder] = useState<string | null>(null);
 	const [newSubfolderName, setNewSubfolderName] = useState("");
-
 	const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-
 	const [editingFolder, setEditingFolder] = useState("");
 	const [editFolderName, setEditFolderName] = useState("");
+	const [viewingNote, setViewingNote] = useState<Note | null>(null);
 
 	const addSubfolder = (parentKey: string) => {
 		if (newSubfolderName.trim()) {
@@ -305,11 +313,13 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 							<div
 								key={note.id}
 								className="p-4 bg-white border rounded-lg hover:shadow-md transition-shadow"
+								onClick={() => setViewingNote(note)}
 							>
 								<div className="flex justify-between items-start gap-4">
 									<div className="flex-1">
-										<p className="text-gray-800 mb-2">{note.title}</p>
-										<p className="text-sm text-gray-600">{note.content}</p>
+										<p className="text-gray-800 mb-2 font-medium">
+											{note.title}
+										</p>
 										<div className="flex items-center gap-4 text-xs text-gray-500">
 											<span className="flex items-center gap-1">
 												<Calendar size={12} />
@@ -327,20 +337,30 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 											)}
 										</div>
 									</div>
-									<NotesDropdownMenu
-										openDropdown={openDropdown}
-										setOpenDropdown={setOpenDropdown}
-										note={note}
-										allFolders={allFolders}
-										activeFolder={activeFolder}
-										categories={categories}
-									/>
+									<div onClick={(e) => e.stopPropagation()}>
+										<NotesDropdownMenu
+											openDropdown={openDropdown}
+											setOpenDropdown={setOpenDropdown}
+											note={note}
+											allFolders={allFolders}
+											activeFolder={activeFolder}
+											categories={categories}
+										/>
+									</div>
 								</div>
 							</div>
 						))}
 					</div>
 				)}
 			</div>
+
+			{viewingNote && (
+				<NoteViewModal
+					note={viewingNote}
+					categories={categories}
+					onClose={() => setViewingNote(null)}
+				/>
+			)}
 		</div>
 	);
 };
