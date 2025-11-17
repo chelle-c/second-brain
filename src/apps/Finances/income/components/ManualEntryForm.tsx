@@ -1,5 +1,4 @@
 import React from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { IncomeEntry } from "@/types/income";
@@ -95,12 +94,12 @@ const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
 				</p>
 			</div>
 
-			<Button
+			<button
 				type="submit"
 				className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer"
 			>
 				Add Income Entry
-			</Button>
+			</button>
 		</form>
 	);
 };

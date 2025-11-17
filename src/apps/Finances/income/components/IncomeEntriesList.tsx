@@ -4,7 +4,6 @@ import PasteEntryForm from "./PasteEntryForm";
 import { getAvailableDates } from "@/lib/dateUtils";
 import { parsePasteText } from "@/lib/dateUtils";
 import { useIncomeStore } from "@/stores/useIncomeStore";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { format, parseISO, isSameDay } from "date-fns";
@@ -208,16 +207,16 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 				<div className="mb-6 border border-gray-200 rounded-lg p-4 bg-gray-50">
 					<div className="flex items-center justify-between mb-4">
 						<h3 className="text-lg font-semibold text-gray-800">Add Income</h3>
-						<Button
+						<button
 							onClick={handleCancelEntry}
 							className="border border-gray-600 px-6 py-2 bg-gray-50 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
 						>
 							Cancel
-						</Button>
+						</button>
 					</div>
 
 					<div className="flex gap-2 mb-4">
-						<Button
+						<button
 							onClick={() => setEntryMethod("manual")}
 							className={`flex-1 py-2 px-4 rounded-md font-medium transition-colors ${
 								entryMethod === "manual"
@@ -226,8 +225,8 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 							}`}
 						>
 							Manual Entry
-						</Button>
-						<Button
+						</button>
+						<button
 							onClick={() => setEntryMethod("paste")}
 							className={`flex-1 py-2 px-4 rounded-md font-medium transition-colors ${
 								entryMethod === "paste"
@@ -236,7 +235,7 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 							}`}
 						>
 							Paste Data
-						</Button>
+						</button>
 					</div>
 
 					{entryMethod === "manual" ? (
@@ -275,24 +274,24 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 						/>
 					</svg>
 					<p className="text-gray-500 mb-4">No income entries for this week</p>
-					<Button
+					<button
 						onClick={handleToggleEntrySection}
 						className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors cursor-pointer"
 					>
 						+ Add your first entry
-					</Button>
+					</button>
 				</div>
 			) : (
 				<>
-					{/* Add Income Button */}
+					{/* Add Income button */}
 					{!showEntrySection && (
 						<div className="mb-6">
-							<Button
+							<button
 								onClick={handleToggleEntrySection}
 								className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors font-medium"
 							>
 								+ Add Income Entry
-							</Button>
+							</button>
 						</div>
 					)}
 					<div className="space-y-3 max-h-96 overflow-y-auto">
@@ -386,18 +385,18 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 												</div>
 											</div>
 											<div className="flex justify-end gap-2">
-												<Button
+												<button
 													onClick={onSaveEditedEntry}
 													className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer"
 												>
 													Save
-												</Button>
-												<Button
+												</button>
+												<button
 													onClick={onCancelEditing}
 													className="bg-gray-600 text-shadow-gray-800 py-2 px-4 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer"
 												>
 													Cancel
-												</Button>
+												</button>
 											</div>
 										</div>
 									) : (

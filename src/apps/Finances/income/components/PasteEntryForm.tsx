@@ -1,5 +1,5 @@
 import React from "react";
-import { Button } from "@/components/ui/button";
+
 import { format, parseISO } from "date-fns";
 import type { IncomeParsedEntry } from "@/types/income";
 
@@ -76,13 +76,13 @@ const PasteEntryForm: React.FC<PasteEntryFormProps> = ({
 				</div>
 			)}
 
-			<Button
+			<button
 				onClick={onAddParsedEntries}
 				disabled={parsedEntries.length === 0}
 				className="w-full bg-emerald-600 text-white py-2 px-4 rounded-md hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
 			>
 				Add {parsedEntries.length} Entries
-			</Button>
+			</button>
 		</div>
 	);
 };

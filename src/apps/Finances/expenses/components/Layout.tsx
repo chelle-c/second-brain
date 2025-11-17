@@ -14,7 +14,7 @@ export const Layout: React.FC<LayoutProps> = ({
 	onManageCategories,
 }) => {
 	return (
-		<>
+		<div className="flex-1 overflow-y-scroll max-h-[98vh] bg-linear-to-br rounded-lg from-blue-50 via-white to-blue-100 p-1">
 			<header className="mb-8 animate-fadeIn p-6">
 				<div className="flex flex-col lg:flex-row items-center justify-between gap-4">
 					<div className="text-center lg:text-left">
@@ -67,6 +67,6 @@ export const Layout: React.FC<LayoutProps> = ({
 				</div>
 			</header>
 			<main>{children}</main>
-		</>
+		</div>
 	);
 };

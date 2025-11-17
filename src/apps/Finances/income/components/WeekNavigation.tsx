@@ -1,7 +1,7 @@
 import React from "react";
 import { getWeeksForYear } from "@/lib/dateUtils";
 import { format, getWeek, startOfWeek, addDays } from "date-fns";
-import { Button } from "@/components/ui/button";
+
 import type { IncomeWeekSelection } from "@/types/income";
 import {
 	Select,
@@ -137,7 +137,7 @@ const WeekNavigation: React.FC<WeekNavigationProps> = ({
 
 			<div className="flex flex-col">
 				<div className="flex justify-between items-center">
-					<Button
+					<button
 						onClick={() => onNavigateWeek("prev")}
 						className="flex items-center gap-1 py-2 text-gray-800 font-medium bg-gray-200 rounded-md hover:bg-gray-300 transition-colors cursor-pointer text-xs md:text-sm"
 					>
@@ -155,16 +155,16 @@ const WeekNavigation: React.FC<WeekNavigationProps> = ({
 							/>
 						</svg>
 						Previous Week
-					</Button>
+					</button>
 
-					<Button
+					<button
 						onClick={onGoToCurrentWeek}
 						className="px-2 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors cursor-pointer text-xs md:text-sm"
 					>
 						Current Week
-					</Button>
+					</button>
 
-					<Button
+					<button
 						onClick={() => onNavigateWeek("next")}
 						className="flex items-center gap-1 py-2 text-gray-800 font-medium bg-gray-200 rounded-md hover:bg-gray-300 transition-colors cursor-pointer text-xs md:text-sm"
 					>
@@ -182,7 +182,7 @@ const WeekNavigation: React.FC<WeekNavigationProps> = ({
 								d="M9 5l7 7-7 7"
 							/>
 						</svg>
-					</Button>
+					</button>
 				</div>
 			</div>
 		</div>

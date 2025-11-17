@@ -61,7 +61,7 @@ export function AppSidebar() {
 	];
 
 	return (
-		<Sidebar>
+		<Sidebar variant="inset" collapsible="offcanvas">
 			<SidebarHeader className="px-8 py-4 flex flex-row items-center gap-4">
 				<Brain size={32} />
 				<div>

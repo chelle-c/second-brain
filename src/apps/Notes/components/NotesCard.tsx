@@ -3,7 +3,7 @@ import { useNotesStore } from "@/stores/useNotesStore";
 import { NotesDropdownMenu } from "./NotesDropdownMenu";
 import { CategoryCard } from "./CategoryCard";
 import { Note, NotesFolder, NotesFolders, Subfolder, Category } from "@/types/notes";
-import { Inbox, Calendar, Search, FolderPlus, Folder, Hash, Edit2, Trash2 } from "lucide-react";
+import { Inbox, Calendar, Search, FolderPlus, Folder, Hash, Edit2, Trash2, FilePenLine } from "lucide-react";
 
 interface NotesCardProps {
 	allFolders: NotesFolders;
@@ -14,6 +14,7 @@ interface NotesCardProps {
 	activeCategory: string;
 	getNoteCount: Function;
 	setActiveCategory: React.Dispatch<React.SetStateAction<string>>;
+	setCaptureNewNote: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export const NotesCard: React.FC<NotesCardProps> = ({
@@ -25,6 +26,7 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 	activeCategory,
 	getNoteCount,
 	setActiveCategory,
+	setCaptureNewNote,
 }) => {
 	const { notes, addSubFolder, removeSubfolder, updateSubFolder } = useNotesStore();
 
@@ -111,9 +113,9 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 	});
 
 	return (
-		<div className="bg-white flex flex-col items-center justify-between gap-4 p-8 rounded-lg shadow-md">
+		<div className="w-full max-h-[98vh] bg-white flex flex-col items-center justify-between gap-4 p-8 rounded-lg shadow-md overflow-x-hidden overflow-y-auto animate-slideUp">
 			<div className="w-full space-y-3">
-				<div className="w-full flex items-center justify-between">
+				<div className="w-full flex flex-col md:flex-row items-center justify-between">
 					<div className="w-full flex items-center justify-start gap-2">
 						{React.createElement(
 							activeFolder && activeFolder.name === "Inbox" ? Inbox : Folder,
@@ -157,14 +159,24 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 						)}
 					</div>
 					<div className="flex items-center gap-2">
-						<Search size={18} className="text-gray-400" />
-						<input
-							type="text"
-							placeholder="Search notes..."
-							value={searchTerm}
-							onChange={(e) => setSearchTerm(e.target.value)}
-							className="px-3 py-1 text-sm border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
-						/>
+						<div className="relative flex items-center gap-2">
+							<Search size={18} className="absolute left-2 text-gray-400" />
+							<input
+								type="text"
+								placeholder="Search notes..."
+								value={searchTerm}
+								onChange={(e) => setSearchTerm(e.target.value)}
+								className="pl-8 pr-3 py-1 text-sm border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-gray-500/55 placeholder:font-medium"
+							/>
+						</div>
+						<button
+							type="button"
+							onClick={() => setCaptureNewNote(true)}
+							className="flex items-center px-2 py-1 text-sm bg-gray-100 text-sky-700 rounded-lg hover:bg-sky-600 transition-colors cursor-pointer hover:text-white"
+						>
+							<FilePenLine size={20} className="mr-1" />
+							<span className="text-sm font-medium whitespace-nowrap">New Note</span>
+						</button>
 					</div>
 				</div>
 

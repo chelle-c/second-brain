@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+
 import {
 	Select,
 	SelectContent,
@@ -77,20 +77,20 @@ export const Capture = ({ setCaptureNewNote, categories }: any) => {
 						</SelectContent>
 					</Select>
 					<div className="flex gap-2">
-						<Button
+						<button
 							type="button"
 							onClick={handleAddNote}
 							className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors cursor-pointer"
 						>
 							Capture
-						</Button>
-						<Button
+						</button>
+						<button
 							type="button"
 							onClick={() => setCaptureNewNote(false)}
 							className="border border-gray-600 px-6 py-2 bg-gray-50 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
 						>
 							Cancel
-						</Button>
+						</button>
 					</div>
 				</div>
 			</div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useIncomeStore } from "@/stores/useIncomeStore";
-import { Button } from "@/components/ui/button";
+
 
 interface WeeklySummaryProps {
 	weeklyTotal: number;
@@ -111,18 +111,18 @@ const WeeklySummary: React.FC<WeeklySummaryProps> = ({ weeklyTotal, selectedWeek
 									/>
 								</div>
 								<div className="w-full flex justify-end my-1 gap-4">
-									<Button
+									<button
 										onClick={handleUpdateTarget}
 										className="bg-emerald-600 hover:bg-emerald-700 cursor-pointer"
 									>
 										Save
-									</Button>
-									<Button
+									</button>
+									<button
 										onClick={cancelEditingTarget}
 										className="px-3 py-1 text-sm bg-gray-300 text-gray-700 hover:bg-gray-400 cursor-pointer"
 									>
 										Cancel
-									</Button>
+									</button>
 								</div>
 							</div>
 						)}

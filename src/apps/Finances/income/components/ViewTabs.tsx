@@ -1,6 +1,6 @@
 import React from "react";
 import { useIncomeStore } from "@/stores/useIncomeStore";
-import { Button } from "@/components/ui/button";
+
 
 type ViewTabsProps = {};
 
@@ -11,7 +11,7 @@ const ViewTabs: React.FC<ViewTabsProps> = () => {
 		<div className="w-full lg:w-auto bg-white rounded-lg shadow p-6">
 			<div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
 				<div className="flex flex-col md:flex-row lg:items-center lg:justify-between space-x-1 rounded-lg bg-gray-100 p-1">
-					<Button
+					<button
 						onClick={() => updateIncomeViewType("weekly")}
 						className={`flex-1 whitespace-nowrap py-2 px-4 rounded-md font-medium transition-colors ${
 							incomeViewType === "weekly"
@@ -20,8 +20,8 @@ const ViewTabs: React.FC<ViewTabsProps> = () => {
 						}`}
 					>
 						Weekly View
-					</Button>
-					<Button
+					</button>
+					<button
 						onClick={() => updateIncomeViewType("monthly")}
 						className={`flex-1 whitespace-nowrap py-2 px-4 rounded-md font-medium transition-colors ${
 							incomeViewType === "monthly"
@@ -30,8 +30,8 @@ const ViewTabs: React.FC<ViewTabsProps> = () => {
 						}`}
 					>
 						Monthly View
-					</Button>
-					<Button
+					</button>
+					<button
 						onClick={() => updateIncomeViewType("yearly")}
 						className={`flex-1 whitespace-nowrap py-2 px-4 rounded-md font-medium transition-colors ${
 							incomeViewType === "yearly"
@@ -40,7 +40,7 @@ const ViewTabs: React.FC<ViewTabsProps> = () => {
 						}`}
 					>
 						Yearly View
-					</Button>
+					</button>
 				</div>
 			</div>
 		</div>
