@@ -19,7 +19,6 @@ export interface NotesFolders {
 	[folderId: string]: NotesFolder;
 }
 
-// Keep Subfolder for backwards compatibility with existing components
 export interface Subfolder {
 	id: string;
 	name: string;

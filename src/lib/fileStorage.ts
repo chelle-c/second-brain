@@ -179,7 +179,6 @@ class FileStorage {
 		try {
 			const jsonContent = JSON.stringify(data, null, 2);
 			await writeTextFile(`${dataPath}/${filename}`, jsonContent);
-			// console.log(`${filename} saved successfully`);
 		} catch (error) {
 			console.error(`Failed to save ${filename}:`, error);
 			throw error;
@@ -399,8 +398,6 @@ class FileStorage {
 
 	async saveData(data: AppData, appToSave: AppToSave): Promise<void> {
 		if (!this.initialized) await this.initialize();
-
-		// console.log("App to save:", appToSave);
 
 		try {
 			const metadata: AppMetadata = {

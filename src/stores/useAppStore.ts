@@ -34,8 +34,6 @@ const useAppStore = create<AppStore>()(
 		getIsLoading: () => get().isLoading,
 
 		// Setters
-
-		// Storage actions
 		loadFromFile: async () => {
 			set({ isLoading: true });
 			try {
