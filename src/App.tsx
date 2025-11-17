@@ -6,7 +6,6 @@ import { IncomeTracker } from "@/apps/Finances/income/IncomeTracker";
 import { MindMapApp } from "@/apps/MindMap";
 import { DebugConsole } from "@/components/DebugConsole";
 import useAppStore from "@/stores/useAppStore";
-import { fileStorage } from "@/lib/fileStorage";
 import { ExpensesTracker } from "@/apps/Finances/expenses/ExpensesTracker";
 
 function App() {
@@ -15,7 +14,6 @@ function App() {
 
 	const initializeApp = async () => {
 		try {
-			await fileStorage.initialize();
 			await loadFromFile();
 		} catch (error) {
 			console.error("Failed to initialize app:", error);

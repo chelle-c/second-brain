@@ -8,16 +8,9 @@
   "permissions": [
     "core:default",
     "opener:default",
-    "fs:default",
-    "fs:allow-app-read",
-    "fs:allow-app-write",
     "shell:default",
-    {
-      "identifier": "fs:allow-mkdir",
-      "allow": [
-        "$APPDATA/**"
-      ]
-    },
+    "sql:default",
+    "sql:allow-execute",
     {
       "identifier": "opener:allow-open-path",
       "allow": [

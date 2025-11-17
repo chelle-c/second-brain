@@ -5,10 +5,9 @@ import { useIncomeStore } from "./useIncomeStore";
 import { useExpenseStore } from "./useExpenseStore";
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
 import { AppToSave } from "@/types";
-import { fileStorage } from "@/lib/fileStorage";
+import { sqlStorage } from "@/lib/storage";
 
 interface AppStore {
-
 	// -- Metadata
 	isLoading: boolean;
 	lastSaved: Date | null;
@@ -37,7 +36,7 @@ const useAppStore = create<AppStore>()(
 		loadFromFile: async () => {
 			set({ isLoading: true });
 			try {
-				const data = await fileStorage.loadData();
+				const data = await sqlStorage.loadData(); // Changed from fileStorage
 
 				useNotesStore.getState().setNotes(data.notes || []);
 				useNotesStore.getState().setNotesFolders(data.notesFolders || []);
@@ -102,7 +101,8 @@ const useAppStore = create<AppStore>()(
 		saveToFile: async (appToSave: AppToSave) => {
 			const state = get();
 			try {
-				await fileStorage.saveData(
+				await sqlStorage.saveData(
+					// Changed from fileStorage
 					{
 						notes: useNotesStore.getState().notes,
 						notesFolders: useNotesStore.getState().notesFolders,

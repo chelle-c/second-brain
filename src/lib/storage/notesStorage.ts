@@ -1,0 +1,246 @@
+import { Note, NotesFolders } from "@/types/notes";
+import { DatabaseContext } from "./types";
+import { deepEqual } from "./utils";
+
+export class NotesStorage {
+	private context: DatabaseContext;
+
+	constructor(context: DatabaseContext) {
+		this.context = context;
+	}
+
+	private normalizeNotes(notes: Note[]): any[] {
+		return notes
+			.map((note) => ({
+				...note,
+				createdAt:
+					note.createdAt instanceof Date ? note.createdAt.toISOString() : note.createdAt,
+				updatedAt:
+					note.updatedAt instanceof Date ? note.updatedAt.toISOString() : note.updatedAt,
+			}))
+			.sort((a, b) => a.id.localeCompare(b.id));
+	}
+
+	hasNotesChanged(newNotes: Note[]): boolean {
+		if (!this.context.cache.notes) return true;
+
+		const normalized1 = this.normalizeNotes(this.context.cache.notes);
+		const normalized2 = this.normalizeNotes(newNotes);
+
+		return !deepEqual(normalized1, normalized2);
+	}
+
+	hasFoldersChanged(newFolders: NotesFolders): boolean {
+		if (!this.context.cache.folders) return true;
+		return !deepEqual(this.context.cache.folders, newFolders);
+	}
+
+	extractSubfoldersFromHierarchy(folders: NotesFolders): any[] {
+		const subfolders: any[] = [];
+
+		Object.values(folders).forEach((folder) => {
+			if (folder.children && folder.children.length > 0) {
+				folder.children.forEach((child) => {
+					subfolders.push({
+						id: child.id,
+						name: child.name,
+						parent: folder.id,
+					});
+				});
+			}
+		});
+
+		return subfolders;
+	}
+
+	createInitialFolders(): NotesFolders {
+		return {
+			inbox: {
+				id: "inbox",
+				name: "Inbox",
+				children: [],
+			},
+			personal: {
+				id: "personal",
+				name: "Personal",
+				children: [
+					{ id: "personal_health", name: "Health", parent: "personal", children: [] },
+					{ id: "personal_finance", name: "Finance", parent: "personal", children: [] },
+					{ id: "personal_home", name: "Home", parent: "personal", children: [] },
+				],
+			},
+			work: {
+				id: "work",
+				name: "Work",
+				children: [
+					{ id: "work_meetings", name: "Meetings", parent: "work", children: [] },
+					{ id: "work_tasks", name: "Tasks", parent: "work", children: [] },
+					{ id: "work_learning", name: "Learning", parent: "work", children: [] },
+				],
+			},
+			projects: {
+				id: "projects",
+				name: "Projects",
+				children: [
+					{ id: "projects_active", name: "Active", parent: "projects", children: [] },
+					{ id: "projects_planning", name: "Planning", parent: "projects", children: [] },
+					{ id: "projects_someday", name: "Someday", parent: "projects", children: [] },
+				],
+			},
+			resources: {
+				id: "resources",
+				name: "Resources",
+				children: [
+					{
+						id: "resources_articles",
+						name: "Articles",
+						parent: "resources",
+						children: [],
+					},
+					{ id: "resources_books", name: "Books", parent: "resources", children: [] },
+					{ id: "resources_tools", name: "Tools", parent: "resources", children: [] },
+				],
+			},
+		};
+	}
+
+	async loadNotes(): Promise<Note[]> {
+		return this.context.queueOperation(async () => {
+			const results = await this.context.db.select<
+				Array<{
+					id: string;
+					title: string;
+					content: string;
+					category: string;
+					folder: string;
+					createdAt: string;
+					updatedAt: string;
+				}>
+			>("SELECT * FROM notes");
+
+			const notes = results.map((row) => ({
+				id: row.id,
+				title: row.title,
+				content: row.content,
+				category: row.category,
+				folder: row.folder,
+				createdAt: new Date(row.createdAt),
+				updatedAt: new Date(row.updatedAt),
+			}));
+
+			this.context.cache.notes = notes;
+			return notes;
+		});
+	}
+
+	async saveNotes(notes: Note[]): Promise<void> {
+		if (!this.hasNotesChanged(notes)) {
+			return;
+		}
+
+		return this.context.queueOperation(async () => {
+			const oldNotes = this.context.cache.notes || [];
+			const oldIds = new Set(oldNotes.map((n) => n.id));
+			const newIds = new Set(notes.map((n) => n.id));
+
+			// Determine what changed
+			const added = notes.filter((n) => !oldIds.has(n.id));
+			const deleted = oldNotes.filter((n) => !newIds.has(n.id));
+			const modified = notes.filter((n) => {
+				if (!oldIds.has(n.id)) return false;
+				const old = oldNotes.find((o) => o.id === n.id);
+				return (
+					old &&
+					!deepEqual(
+						{
+							...old,
+							createdAt: old.createdAt.toISOString(),
+							updatedAt: old.updatedAt.toISOString(),
+						},
+						{
+							...n,
+							createdAt: n.createdAt.toISOString(),
+							updatedAt: n.updatedAt.toISOString(),
+						}
+					)
+				);
+			});
+
+			await this.context.db.execute("DELETE FROM notes");
+
+			for (const note of notes) {
+				await this.context.db.execute(
+					`INSERT INTO notes (id, title, content, category, folder, createdAt, updatedAt)
+					VALUES (?, ?, ?, ?, ?, ?, ?)`,
+					[
+						note.id,
+						note.title,
+						note.content,
+						note.category,
+						note.folder,
+						note.createdAt.toISOString(),
+						note.updatedAt.toISOString(),
+					]
+				);
+			}
+
+			this.context.cache.notes = notes;
+
+			// Log specific changes
+			if (added.length === 1) {
+				console.log(`Note created: "${added[0].title}"`);
+			} else if (added.length > 1) {
+				console.log(`${added.length} notes created`);
+			}
+			if (deleted.length === 1) {
+				console.log(`Note deleted: "${deleted[0].title}"`);
+			} else if (deleted.length > 1) {
+				console.log(`${deleted.length} notes deleted`);
+			}
+			if (modified.length === 1) {
+				console.log(`Note updated: "${modified[0].title}"`);
+			} else if (modified.length > 1) {
+				console.log(`${modified.length} notes updated`);
+			}
+		});
+	}
+
+	async loadFolders(): Promise<NotesFolders> {
+		return this.context.queueOperation(async () => {
+			const results = await this.context.db.select<Array<{ data: string }>>(
+				"SELECT data FROM folders WHERE id = 1"
+			);
+
+			let folders: NotesFolders;
+
+			if (results.length === 0) {
+				folders = this.createInitialFolders();
+				await this.context.db.execute(
+					`INSERT OR REPLACE INTO folders (id, data) VALUES (1, ?)`,
+					[JSON.stringify(folders)]
+				);
+			} else {
+				folders = JSON.parse(results[0].data);
+			}
+
+			this.context.cache.folders = folders;
+			return folders;
+		});
+	}
+
+	async saveFolders(folders: NotesFolders): Promise<void> {
+		if (!this.hasFoldersChanged(folders)) {
+			return;
+		}
+
+		return this.context.queueOperation(async () => {
+			await this.context.db.execute(
+				`INSERT OR REPLACE INTO folders (id, data) VALUES (1, ?)`,
+				[JSON.stringify(folders)]
+			);
+
+			this.context.cache.folders = folders;
+			console.log("Folders updated");
+		});
+	}
+}

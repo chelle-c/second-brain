@@ -1,6 +1,6 @@
 import { NavLink } from "react-router";
 import useAppStore from "@/stores/useAppStore";
-import { fileStorage } from "@/lib/fileStorage";
+import { sqlStorage } from "@/lib/storage";
 import { AppToSave } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -160,7 +160,7 @@ export function AppSidebar() {
 				<Button
 					onClick={async () => {
 						try {
-							await fileStorage.openDataFolder();
+							await sqlStorage.openDataFolder();
 						} catch (error) {
 							console.error("Failed to open data folder:", error);
 						}
