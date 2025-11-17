@@ -3,7 +3,6 @@ import { appDataDir } from "@tauri-apps/api/path";
 import { Note, NotesData, NotesFolders, FoldersData } from "@/types/notes";
 import { IncomeData } from "@/types/income";
 import { ExpensesData } from "@/types/expense";
-import { MindMapNode, MindMapsData } from "@/types/mindmap";
 import { AppData, AppMetadata, AppToSave } from "@/types/";
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
 
@@ -11,7 +10,6 @@ const NOTES_FILE = "notes.json";
 const FOLDERS_FILE = "folders.json";
 const EXPENSES_FILE = "expenses.json";
 const INCOME_FILE = "income.json";
-const MINDMAPS_FILE = "mindmaps.json";
 const METADATA_FILE = "metadata.json";
 
 const DATA_VERSION = "2.0.0";
@@ -140,7 +138,6 @@ class FileStorage {
 						version: DATA_VERSION,
 					},
 				},
-				{ name: MINDMAPS_FILE, data: { mindMaps: [], version: DATA_VERSION } },
 				{ name: METADATA_FILE, data: { lastSaved: new Date(), version: DATA_VERSION } },
 			];
 
@@ -312,28 +309,6 @@ class FileStorage {
 		await this.writeJsonFile(INCOME_FILE, data);
 	}
 
-	async loadMindMaps(): Promise<MindMapNode[]> {
-		if (!this.initialized) await this.initialize();
-
-		const data = await this.readJsonFile<MindMapsData>(MINDMAPS_FILE, {
-			mindMaps: [],
-			version: DATA_VERSION,
-		});
-
-		return data.mindMaps;
-	}
-
-	async saveMindMaps(mindMaps: MindMapNode[]): Promise<void> {
-		if (!this.initialized) await this.initialize();
-
-		const data: MindMapsData = {
-			mindMaps,
-			version: DATA_VERSION,
-		};
-
-		await this.writeJsonFile(MINDMAPS_FILE, data);
-	}
-
 	async loadMetadata(): Promise<AppMetadata> {
 		if (!this.initialized) await this.initialize();
 
@@ -448,10 +423,6 @@ class FileStorage {
 			if (appToSave === AppToSave.Income) {
 				await Promise.all([this.saveIncome(data.income), this.saveMetadata(metadata)]);
 			}
-
-			// if (appToSave === AppToSave.MindMapsApp) {
-			// 	await Promise.all([this.saveMindMaps(data.mindMaps), this.saveMetadata(metadata)]);
-			// }
 
 			if (appToSave === AppToSave.All) {
 				await Promise.all([
