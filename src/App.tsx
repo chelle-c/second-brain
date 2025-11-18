@@ -2,11 +2,11 @@ import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { NotesApp } from "@/apps/Notes";
-import { IncomeTracker } from "@/apps/Finances/income/IncomeTracker";
+import { ExpensesTracker } from "@/apps/Finances/expenses";
+import { IncomeTracker } from "@/apps/Finances/income";
 import { MindMapApp } from "@/apps/MindMap";
 import { DebugConsole } from "@/components/DebugConsole";
 import useAppStore from "@/stores/useAppStore";
-import { ExpensesTracker } from "@/apps/Finances/expenses/ExpensesTracker";
 
 function App() {
 	const loadFromFile = useAppStore((state: { loadFromFile: any }) => state.loadFromFile);
