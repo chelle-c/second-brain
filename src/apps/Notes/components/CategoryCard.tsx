@@ -25,7 +25,7 @@ export const CategoryCard = ({
 							onClick={() => setActiveCategory(key)}
 							className={`flex items-center justify-between px-2 py-1 gap-4 rounded-lg transition-colors cursor-pointer ${
 								activeCategory === key
-									? "bg-blue-100 font-semibold"
+									? "bg-sky-100 font-semibold"
 									: "bg-gray-100 hover:bg-gray-200"
 							}`}
 						>

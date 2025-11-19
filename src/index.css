@@ -160,168 +160,202 @@
 }
 
 @keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+	from {
+		opacity: 0;
+		transform: translateY(-20px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
 }
 
 @keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+	from {
+		opacity: 0;
+		transform: translateY(20px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
 }
 
 .animate-slideDown {
-  animation: slideDown 0.5s ease-out;
+	animation: slideDown 0.5s ease-out;
 }
 
 .animate-slideUp {
-  animation: slideUp 0.5s ease-out;
+	animation: slideUp 0.5s ease-out;
 }
 
 .animate-fadeIn {
-  animation: fadeIn 0.3s ease-out;
+	animation: fadeIn 0.3s ease-out;
+}
+
+/* Toggle button sliding indicator */
+.toggle-group {
+	position: relative;
+}
+
+.toggle-indicator {
+	position: absolute;
+	background: white;
+	border-radius: 0.375rem;
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+	pointer-events: none;
+	z-index: 0;
+}
+
+.toggle-group button {
+	position: relative;
+	z-index: 1;
+	transition: color 0.2s ease;
 }
 
 /* Custom scrollbar - only show when needed */
 .scrollbar-thin {
-  scrollbar-width: thin;
-  scrollbar-color: #93c5fd #f1f1f1;
+	scrollbar-width: thin;
+	scrollbar-color: #93c5fd #f1f1f1;
 }
 
 .scrollbar-thin::-webkit-scrollbar {
-  height: 6px;
-  display: none;
+	height: 6px;
+	display: none;
 }
 
 .scrollbar-thin::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 10px;
+	background: #f1f1f1;
+	border-radius: 10px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: #93c5fd;
-  border-radius: 10px;
+	background: #93c5fd;
+	border-radius: 10px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: #60a5fa;
+	background: #60a5fa;
 }
 
 /* Only show scrollbar when content overflows */
 @media (max-width: 768px) {
-  .scrollbar-thin::-webkit-scrollbar {
-    display: block;
-  }
+	.scrollbar-thin::-webkit-scrollbar {
+		display: block;
+	}
 }
 
 /* Focus styles */
 *:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.3);
+	outline: none;
+	box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.3);
 }
 
 /* Sticky table styles */
 table {
-  position: relative;
+	position: relative;
 }
 
 /* Sticky header with proper background */
 thead {
-  position: sticky;
-  top: 0;
-  z-index: 30;
+	position: sticky;
+	top: 0;
+	z-index: 30;
 }
 
 thead th {
-  background-color: white;
+	background-color: white;
 }
 
 /* Sticky columns - both header and body cells */
 th:first-child,
 td:first-child {
-  position: sticky;
-  left: 0;
-  z-index: 20;
-  background-color: white;
+	position: sticky;
+	left: 0;
+	z-index: 20;
+	background-color: white;
 }
 
 th:nth-child(2),
 td:nth-child(2) {
-  position: sticky;
-  left: 52px;
-  z-index: 20;
-  background-color: white;
+	position: sticky;
+	left: 52px;
+	z-index: 20;
+	background-color: white;
 }
 
 /* Ensure sticky header cells have higher z-index */
 thead th:first-child {
-  z-index: 40;
+	z-index: 40;
 }
 
 thead th:nth-child(2) {
-  z-index: 40;
+	z-index: 40;
 }
 
 /* Row hover state for sticky columns */
 tr:hover td:first-child,
 tr:hover td:nth-child(2) {
-  background-color: inherit;
+	background-color: inherit;
 }
 
 /* Add shadow to sticky columns */
 td:nth-child(2)::after {
-  content: '';
-  position: absolute;
-  right: -1px;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: linear-gradient(to right, rgba(0,0,0,0.08), transparent);
+	content: "";
+	position: absolute;
+	right: -1px;
+	top: 0;
+	bottom: 0;
+	width: 1px;
+	background: linear-gradient(to right, rgba(0, 0, 0, 0.08), transparent);
 }
 
+/* Responsive improvements */
 @media (max-width: 768px) {
-  table {
-    font-size: 0.875rem;
-  }
-  
-  th, td {
-    padding: 0.5rem;
-  }
+	table {
+		font-size: 0.875rem;
+	}
+
+	th,
+	td {
+		padding: 0.5rem;
+	}
 }
 
 /* Print styles */
 @media print {
-  .no-print {
-    display: none;
-  }
-  
-  body {
-    background: white;
-  }
+	.no-print {
+		display: none;
+	}
+
+	body {
+		background: white;
+	}
 }
 
 /* Prevent layout shift from scrollbar */
 .overflow-x-auto {
-  overflow-x: auto;
-  overflow-y: hidden;
+	overflow-x: auto;
+	overflow-y: hidden;
+}
+
+/* Prevent horizontal overflow */
+body,
+html {
+	overflow-x: hidden;
+}
+
+/* Ensure containers don't cause overflow */
+* {
+	box-sizing: border-box;
 }

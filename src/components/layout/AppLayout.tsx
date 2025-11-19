@@ -44,7 +44,7 @@ export function AppLayout() {
 			<SidebarProvider open={open} onOpenChange={setOpen}>
 				<AppSidebar />
 				<SidebarInset>
-					<div className="flex-1 overflow-hidden min-h-[98vh] bg-linear-to-br rounded-xl from-blue-50 via-white to-blue-100 p-1">
+					<div className="flex-1 overflow-hidden min-h-[98vh] bg-linear-to-br rounded-xl from-sky-100 via-white to-sky-200 p-1">
 						<CustomTrigger
 							open={open}
 							className="-left-4 top-[50vh] lg:hidden bg-sidebar rounded-full text-white hover:bg-sidebar hover:text-white"

@@ -220,7 +220,7 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 							onClick={() => setEntryMethod("manual")}
 							className={`flex-1 py-2 px-4 rounded-md font-medium transition-colors ${
 								entryMethod === "manual"
-									? "px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors cursor-pointer"
+									? "px-6 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors cursor-pointer"
 									: "bg-gray-200 text-gray-700 hover:bg-gray-300"
 							}`}
 						>
@@ -230,7 +230,7 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 							onClick={() => setEntryMethod("paste")}
 							className={`flex-1 py-2 px-4 rounded-md font-medium transition-colors ${
 								entryMethod === "paste"
-									? "px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors cursor-pointer"
+									? "px-6 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors cursor-pointer"
 									: "bg-gray-200 text-gray-700 hover:bg-gray-300"
 							}`}
 						>
@@ -276,7 +276,7 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 					<p className="text-gray-500 mb-4">No income entries for this week</p>
 					<button
 						onClick={handleToggleEntrySection}
-						className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors cursor-pointer"
+						className="px-6 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors cursor-pointer"
 					>
 						+ Add your first entry
 					</button>
@@ -288,7 +288,7 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 						<div className="mb-6">
 							<button
 								onClick={handleToggleEntrySection}
-								className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors font-medium"
+								className="w-full bg-sky-600 text-white py-3 px-4 rounded-md hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 transition-colors font-medium"
 							>
 								+ Add Income Entry
 							</button>
@@ -327,7 +327,7 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 																parseFloat(e.target.value) || 0
 															)
 														}
-														className="bg-white w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+														className="bg-white w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
 														placeholder="0.00"
 														required
 													/>
@@ -350,7 +350,7 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 																	parseFloat(e.target.value) || 0
 																)
 															}
-															className="bg-white w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+															className="bg-white w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
 															placeholder="0"
 														/>
 													</div>
@@ -371,13 +371,13 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 																	parseInt(e.target.value) || 0
 																)
 															}
-															className="bg-white w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+															className="bg-white w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
 															placeholder="0"
 														/>
 													</div>
 												</div>
 
-												<div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-md">
+												<div className="text-sm text-gray-600 bg-sky-50 p-3 rounded-md">
 													<p>
 														💡 <strong>Tip:</strong> You can enter just
 														hours or just minutes - both are optional.
@@ -387,13 +387,13 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 											<div className="flex justify-end gap-2">
 												<button
 													onClick={onSaveEditedEntry}
-													className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer"
+													className="bg-sky-600 text-white py-2 px-4 rounded-md hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 transition-colors cursor-pointer"
 												>
 													Save
 												</button>
 												<button
 													onClick={onCancelEditing}
-													className="bg-gray-600 text-shadow-gray-800 py-2 px-4 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer"
+													className="bg-gray-600 text-shadow-gray-800 py-2 px-4 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 transition-colors cursor-pointer"
 												>
 													Cancel
 												</button>
@@ -420,7 +420,7 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 												{isLatestEntry(entry) && (
 													<button
 														onClick={() => onStartEditing(entry)}
-														className="border border-transparent text-blue-600 hover:border-blue-600 p-1 rounded transition-colors cursor-pointer"
+														className="border border-transparent text-sky-600 hover:border-sky-600 p-1 rounded transition-colors cursor-pointer"
 														title="Edit entry"
 													>
 														<svg

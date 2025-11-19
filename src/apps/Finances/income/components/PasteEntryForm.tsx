@@ -40,7 +40,7 @@ const PasteEntryForm: React.FC<PasteEntryFormProps> = ({
 					onChange={(e) => onPasteTextChange(e.target.value)}
 					placeholder={`One value per line`}
 					rows={8}
-					className="bg-white w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm text-gray-500"
+					className="bg-white w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono text-sm text-gray-500"
 				/>
 				{parseError && <p className="text-red-600 text-sm mt-1">{parseError}</p>}
 			</div>

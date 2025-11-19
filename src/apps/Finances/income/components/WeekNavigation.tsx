@@ -159,7 +159,7 @@ const WeekNavigation: React.FC<WeekNavigationProps> = ({
 
 					<button
 						onClick={onGoToCurrentWeek}
-						className="px-2 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors cursor-pointer text-xs md:text-sm"
+						className="px-2 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors cursor-pointer text-xs md:text-sm"
 					>
 						Current Week
 					</button>

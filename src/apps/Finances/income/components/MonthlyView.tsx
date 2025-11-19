@@ -183,7 +183,7 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ selectedYear, onYearChange, y
 												</div>
 												<div className="flex justify-between text-sm">
 													<span className="text-gray-600">Hours:</span>
-													<span className="font-medium text-blue-600">
+													<span className="font-medium text-sky-600">
 														{month.hours.toFixed(1)}h
 													</span>
 												</div>

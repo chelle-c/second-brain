@@ -5,10 +5,11 @@ import { ExpenseOverview } from "@/apps/Finances/expenses/components/ExpenseOver
 import { ExpenseForm } from "@/apps/Finances/expenses/components/ExpenseForm";
 import { ExpenseList } from "@/apps/Finances/expenses/components/ExpenseList";
 import { AllExpenses } from "@/apps/Finances/expenses/components/AllExpenses";
+import { UpcomingExpenses } from "@/apps/Finances/expenses/components/UpcomingExpenses";
 
 export const ExpensesTracker = () => {
 	const [showCategoryManager, setShowCategoryManager] = useState(false);
-	const [currentView, setCurrentView] = useState<"monthly" | "all">("monthly");
+	const [currentView, setCurrentView] = useState<"monthly" | "all" | "upcoming">("upcoming");
 
 	return (
 		<>
@@ -17,18 +18,20 @@ export const ExpensesTracker = () => {
 				setCurrentView={setCurrentView}
 				onManageCategories={() => setShowCategoryManager(true)}
 			>
-				<div className="space-y-6 overflow-y-auto">
+				<div className="space-y-3 overflow-y-auto">
 					{currentView === "monthly" ? (
 						<div className="bg-white rounded-xl shadow-lg p-6 animate-slideUp">
 							<ExpenseOverview />
 							<div className="mt-8 mb-6 border-t border-gray-200"></div>
 							<ExpenseList />
 						</div>
+					) : currentView === "upcoming" ? (
+						<UpcomingExpenses />
 					) : (
 						<AllExpenses />
 					)}
 
-					<ExpenseForm />
+					{currentView && <ExpenseForm />}
 				</div>
 			</Layout>
 

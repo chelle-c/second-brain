@@ -17,13 +17,13 @@ import {
 interface ExpenseFormProps {
 	editingExpense?: Expense | null;
 	onClose?: () => void;
-	isGlobalEdit?: boolean; // Add this line
+	isGlobalEdit?: boolean;
 }
 
 export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 	editingExpense,
 	onClose,
-	isGlobalEdit = false, // Add this line
+	isGlobalEdit = false,
 }) => {
 	const { expenses, addExpense, updateExpense, categories } = useExpenseStore();
 	const [isOpen, setIsOpen] = useState(false);
@@ -56,7 +56,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 	const [showRegenerationWarning, setShowRegenerationWarning] = useState(false);
 	const [pendingFormData, setPendingFormData] = useState<ExpenseFormData | null>(null);
 
-	// Add this to detect if we're editing a specific instance
+	// Detect if we're editing a specific instance
 	const isEditingInstance = !!editingExpense?.parentExpenseId;
 
 	useEffect(() => {
@@ -291,8 +291,8 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 			{!editingExpense && (
 				<button
 					onClick={handleOpen}
-					className="fixed bottom-8 right-8 bg-blue-500 text-white p-4 rounded-full 
-					shadow-xl hover:bg-blue-600 hover:scale-110 transition-all duration-200 
+					className="fixed bottom-8 right-12 bg-sky-500 text-white p-4 rounded-full 
+					shadow-xl hover:bg-sky-600 hover:scale-110 transition-all duration-200 
 					active:scale-95 z-40 group"
 				>
 					<Plus size={24} />
@@ -353,7 +353,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 											onMouseDown={handleInputMouseDown}
 											onMouseUp={handleInputMouseUp}
 											className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg 
-												focus:ring-2 focus:ring-blue-400 focus:border-transparent 
+												focus:ring-2 focus:ring-sky-400 focus:border-transparent 
 												transition-all duration-200 placeholder:text-gray-400"
 											placeholder="Enter expense name"
 										/>
@@ -454,7 +454,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 											onMouseDown={handleInputMouseDown}
 											onMouseUp={handleInputMouseUp}
 											className="w-full px-4 py-1 pl-8 border border-gray-300 rounded-lg 
-											focus:ring-2 focus:ring-blue-400 focus:border-transparent 
+											focus:ring-2 focus:ring-sky-400 focus:border-transparent 
 											transition-all duration-200"
 											placeholder="0.00"
 										/>
@@ -497,7 +497,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 
 							{/* Recurrence settings - hide when editing occurrence */}
 							{!isEditingInstance && (
-								<div className="bg-blue-50 p-4 rounded-lg">
+								<div className="bg-sky-50 p-4 rounded-lg">
 									<label className="flex items-center gap-3 cursor-pointer mb-3">
 										<input
 											type="checkbox"
@@ -508,7 +508,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 													isRecurring: e.target.checked,
 												})
 											}
-											className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-400"
+											className="w-5 h-5 text-sky-600 rounded focus:ring-2 focus:ring-sky-400"
 										/>
 										<span className="text-sm font-medium text-gray-700 flex items-center gap-2">
 											<RefreshCw size={16} />
@@ -572,7 +572,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 														}
 														onMouseDown={handleInputMouseDown}
 														onMouseUp={handleInputMouseUp}
-														className="w-full px-3 py-1.5 text-sm border border-gray-300 bg-gray-50 rounded focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+														className="w-full px-3 py-1.5 text-sm border border-gray-300 bg-gray-50 rounded focus:ring-2 focus:ring-sky-400 focus:border-transparent"
 													/>
 												</div>
 											)}
@@ -595,7 +595,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 													onMouseDown={handleInputMouseDown}
 													onMouseUp={handleInputMouseUp}
 													className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded 
-								focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+								focus:ring-2 focus:ring-sky-400 focus:border-transparent"
 												/>
 											</div>
 										</div>
@@ -611,7 +611,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 											type="checkbox"
 											checked={hasDueDate}
 											onChange={(e) => handleDueDateToggle(e.target.checked)}
-											className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-400"
+											className="w-5 h-5 text-sky-600 rounded focus:ring-2 focus:ring-sky-400"
 										/>
 										<span className="text-sm font-medium text-gray-700 flex items-center gap-2">
 											<Calendar size={16} />
@@ -648,7 +648,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 											onMouseDown={handleInputMouseDown}
 											onMouseUp={handleInputMouseUp}
 											className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg 
-						focus:ring-2 focus:ring-blue-400 focus:border-transparent 
+						focus:ring-2 focus:ring-sky-400 focus:border-transparent 
 						transition-all duration-200"
 										/>
 										<Calendar
@@ -701,8 +701,8 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 							<div className="flex gap-3 pt-4">
 								<button
 									type="submit"
-									className="flex-1 bg-blue-500 text-white py-2 px-4 rounded-lg 
-				hover:bg-blue-600 transition-colors duration-200 
+									className="flex-1 bg-sky-500 text-white py-2 px-4 rounded-lg 
+				hover:bg-sky-600 transition-colors duration-200 
 				flex items-center justify-center gap-2 font-medium
 				hover:scale-105 active:scale-95 transform"
 								>

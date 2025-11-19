@@ -76,7 +76,7 @@ const WeeklySummary: React.FC<WeeklySummaryProps> = ({ weeklyTotal, selectedWeek
 								</div>
 								<button
 									onClick={startEditingTarget}
-									className="border border-transparent text-blue-600 hover:border-blue-600 p-1 rounded transition-colors cursor-pointer"
+									className="border border-transparent text-sky-600 hover:border-sky-600 p-1 rounded transition-colors cursor-pointer"
 									title="Edit weekly target"
 								>
 									<svg
@@ -105,7 +105,7 @@ const WeeklySummary: React.FC<WeeklySummaryProps> = ({ weeklyTotal, selectedWeek
 										value={newTargetAmount}
 										onChange={(e) => setNewTargetAmount(e.target.value)}
 										onKeyDown={handleKeyPress}
-										className="w-36 px-3 py-2 border border-gray-300 rounded text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+										className="w-36 px-3 py-2 border border-gray-300 rounded text-base focus:outline-none focus:ring-2 focus:ring-sky-500"
 										placeholder="Target amount"
 										autoFocus
 									/>
@@ -199,8 +199,8 @@ const WeeklySummary: React.FC<WeeklySummaryProps> = ({ weeklyTotal, selectedWeek
 			)}
 
 			{weeklyTotal > 0 && weeklyTotal < weeklyTarget.amount && (
-				<div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-					<div className="text-center text-blue-700">
+				<div className="mt-4 p-3 bg-sky-50 border border-sky-200 rounded-lg">
+					<div className="text-center text-sky-700">
 						<div className="font-semibold text-lg">
 							{targetProgress.toFixed(1)}% Complete
 						</div>

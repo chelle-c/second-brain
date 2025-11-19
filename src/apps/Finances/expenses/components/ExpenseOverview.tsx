@@ -1,25 +1,30 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { MonthNavigation } from "./MonthNavigation";
 import { useExpenseStore } from "@/stores/useExpenseStore";
-import { OverviewMode } from "@/types/expense";
 import { formatCurrency } from "@/lib/dateHelpers";
 import { DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
 import { TrendingUp, DollarSign } from "lucide-react";
+import { AnimatedToggle } from "@/components/AnimatedToggle";
 
 export const ExpenseOverview: React.FC = () => {
 	const {
 		selectedMonth,
-		getTotalByCategory,
-		getMonthlyTotal,
+		getTotalByCategoryFiltered,
+		getMonthlyTotalFiltered,
 		overviewMode,
 		setOverviewMode,
 		categoryColors,
+		showPaidExpenses,
 	} = useExpenseStore();
 
 	if (!selectedMonth) return null;
 
-	const categoryTotals = getTotalByCategory(selectedMonth, overviewMode);
-	const monthlyTotal = getMonthlyTotal(selectedMonth, overviewMode);
+	const categoryTotals = getTotalByCategoryFiltered(
+		selectedMonth,
+		overviewMode,
+		showPaidExpenses
+	);
+	const monthlyTotal = getMonthlyTotalFiltered(selectedMonth, overviewMode, showPaidExpenses);
 
 	const data = Object.entries(categoryTotals).map(([category, amount]) => ({
 		name: category,
@@ -34,10 +39,18 @@ export const ExpenseOverview: React.FC = () => {
 		{ name: "Entertainment", value: 200 },
 	];
 
-	const viewModes: { value: OverviewMode; label: string; description: string }[] = [
-		{ value: "remaining", label: "Remaining", description: "Unpaid needs" },
-		{ value: "required", label: "Required", description: "All needs" },
-		{ value: "all", label: "All", description: "Needs & wants" },
+	const viewModeOptions = [
+		{
+			value: "remaining" as const,
+			label: "Remaining",
+			ariaLabel: "Show remaining unpaid expenses",
+		},
+		{
+			value: "required" as const,
+			label: "Required",
+			ariaLabel: "Show all required expenses",
+		},
+		{ value: "all" as const, label: "All", ariaLabel: "Show all expenses" },
 	];
 
 	const CustomTooltip = ({ active, payload }: any) => {
@@ -46,7 +59,7 @@ export const ExpenseOverview: React.FC = () => {
 			return (
 				<div className="bg-white p-3 rounded-lg shadow-lg border border-gray-100">
 					<p className="font-medium text-gray-800">{payload[0].name}</p>
-					<p className="text-blue-600 font-bold">
+					<p className="text-sky-600 font-bold">
 						{isPlaceholder ? "Example: " : ""}
 						{formatCurrency(payload[0].value)}
 					</p>
@@ -66,54 +79,53 @@ export const ExpenseOverview: React.FC = () => {
 
 	return (
 		<>
-			<div className="mb-4 flex flex-col lg:flex-row gap-6 justify-between">
-				<div className="lg:w-80 flex flex-col gap-4">
-					<h3 className="text-xl font-bold text-gray-800 flex items-center gap-2 whitespace-nowrap">
-						<TrendingUp className="text-blue-500" size={24} />
+			<div className="mb-4 flex flex-col gap-4">
+				<div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+					<h3 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2 whitespace-nowrap">
+						<TrendingUp className="text-sky-500" size={20} />
 						Expense Overview
 					</h3>
-				</div>
-				<div className="flex-1 min-w-0">
-					<MonthNavigation />
+					<div className="w-full sm:w-auto">
+						<MonthNavigation />
+					</div>
 				</div>
 			</div>
 
 			<div className="flex flex-col lg:flex-row gap-6">
-				{/* Right side (now left) - Total and View Modes */}
+				{/* Left side - Total and View Modes */}
 				<div className="lg:w-80 flex flex-col gap-4">
 					{/* View Mode Selector */}
 					<div>
 						<p className="text-sm text-gray-600 mb-2">Filter by:</p>
-						<div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-							{viewModes.map((mode) => (
-								<button
-									key={mode.value}
-									onClick={() => setOverviewMode(mode.value)}
-									className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200
-                        ${
-							overviewMode === mode.value
-								? "bg-white text-blue-600 shadow-sm"
-								: "text-gray-600 hover:text-gray-800"
-						}`}
-									title={mode.description}
-								>
-									{mode.label}
-								</button>
-							))}
-						</div>
+						<AnimatedToggle
+							options={viewModeOptions}
+							value={overviewMode}
+							onChange={setOverviewMode}
+							className="w-full sm:w-auto"
+						/>
 					</div>
 
 					{/* Total Display */}
-					<div className="bg-linear-to-br from-blue-50 to-blue-200 rounded-lg p-6 flex-1 flex flex-col justify-center">
+					<div className="bg-linear-to-br from-sky-50 to-sky-200 rounded-lg p-6 flex-1 flex flex-col justify-center">
 						<div className="text-center">
-							<p className="text-sm text-gray-600 mb-2">
-								{overviewMode === "remaining" && "Remaining Needs"}
-								{overviewMode === "required" && "Total Required Expenses"}
-								{overviewMode === "all" && "All Monthly Expenses"}
+							<p className="text-xs sm:text-sm text-gray-600 mb-2">
+								{overviewMode === "remaining" && "Remaining Unpaid"}
+								{overviewMode === "required" &&
+									showPaidExpenses &&
+									"Total Required Expenses"}
+								{overviewMode === "required" &&
+									!showPaidExpenses &&
+									"Unpaid Required Expenses"}
+								{overviewMode === "all" &&
+									showPaidExpenses &&
+									"All Monthly Expenses"}
+								{overviewMode === "all" &&
+									!showPaidExpenses &&
+									"All Unpaid Expenses"}
 							</p>
 							<div className="flex items-center justify-center gap-2">
-								<DollarSign className="text-blue-600" size={32} />
-								<p className="text-4xl font-bold text-blue-600">
+								<DollarSign className="text-sky-600" size={24} />
+								<p className="text-2xl sm:text-4xl font-bold text-sky-600">
 									{formatCurrency(monthlyTotal).replace("$", "")}
 								</p>
 							</div>
@@ -132,8 +144,10 @@ export const ExpenseOverview: React.FC = () => {
 										key={category.name}
 										className="flex items-center justify-between text-xs mb-1"
 									>
-										<span className="text-gray-700">{category.name}</span>
-										<span className="font-medium text-gray-800">
+										<span className="text-gray-700 truncate mr-2">
+											{category.name}
+										</span>
+										<span className="font-medium text-gray-800 shrink-0">
 											{((category.value / monthlyTotal) * 100).toFixed(0)}%
 										</span>
 									</div>
@@ -142,7 +156,7 @@ export const ExpenseOverview: React.FC = () => {
 					)}
 				</div>
 
-				{/* Left side (now right) - Chart and Legend */}
+				{/* Right side - Chart and Legend */}
 				<div className="flex-1 min-w-0">
 					{isPlaceholder && (
 						<p className="text-center text-gray-500 text-sm mb-4">
@@ -151,7 +165,7 @@ export const ExpenseOverview: React.FC = () => {
 					)}
 
 					<div className={`flex flex-col space-y-4 ${isPlaceholder ? "opacity-60" : ""}`}>
-						<div className="h-64">
+						<div className="h-48 sm:h-64">
 							<ResponsiveContainer
 								width="100%"
 								height="100%"
@@ -163,7 +177,7 @@ export const ExpenseOverview: React.FC = () => {
 										cx="50%"
 										cy="50%"
 										labelLine={false}
-										outerRadius={80}
+										outerRadius="80%"
 										fill="#8884d8"
 										dataKey="value"
 										animationBegin={0}
@@ -187,9 +201,12 @@ export const ExpenseOverview: React.FC = () => {
 						</div>
 
 						{/* Custom Legend */}
-						<div className="flex gap-x-6 gap-y-2 justify-center mt-4 flex-wrap">
+						<div className="flex gap-x-4 gap-y-2 justify-center flex-wrap">
 							{chartData.map((entry, index) => (
-								<div key={`legend-${index}`} className="flex items-center gap-2">
+								<div
+									key={`legend-${index}`}
+									className="flex items-center gap-2 min-w-0"
+								>
 									<span
 										className="w-3 h-3 rounded-full shrink-0"
 										style={{
@@ -199,10 +216,10 @@ export const ExpenseOverview: React.FC = () => {
 												"#93C5FD",
 										}}
 									/>
-									<span className="text-sm font-medium text-gray-700">
+									<span className="text-xs sm:text-sm font-medium text-gray-700 truncate">
 										{entry.name}
 									</span>
-									<span className="text-sm font-bold text-gray-800 whitespace-nowrap">
+									<span className="text-xs sm:text-sm font-bold text-gray-800 whitespace-nowrap">
 										{isPlaceholder && "ex: "}
 										{formatCurrency(entry.value)}
 									</span>

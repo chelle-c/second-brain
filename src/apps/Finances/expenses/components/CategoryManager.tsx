@@ -78,7 +78,7 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ isOpen, onClos
 				>
 					<div className="flex justify-between items-center mb-6">
 						<h3 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-							<Tag className="text-blue-500" size={24} />
+							<Tag className="text-sky-500" size={24} />
 							Manage Categories
 						</h3>
 						<button
@@ -90,7 +90,7 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ isOpen, onClos
 					</div>
 
 					{/* Add New Category */}
-					<div className="bg-blue-50 rounded-lg p-4 mb-6">
+					<div className="bg-sky-50 rounded-lg p-4 mb-6">
 						<h4 className="text-sm font-semibold text-gray-700 mb-3">
 							Add New Category
 						</h4>
@@ -103,7 +103,7 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ isOpen, onClos
 								onChange={(e) => setNewCategoryName(e.target.value)}
 								onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
 								className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg 
-									focus:ring-2 focus:ring-blue-400 focus:border-transparent placeholder-shown:text-gray-400 placeholder-shown:dark:text-gray-400 placeholder-shown:font-medium"
+									focus:ring-2 focus:ring-sky-400 focus:border-transparent placeholder-shown:text-gray-400 placeholder-shown:dark:text-gray-400 placeholder-shown:font-medium"
 							/>
 							<input
 								type="color"
@@ -115,8 +115,8 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ isOpen, onClos
 							<button
 								onClick={handleAddCategory}
 								disabled={!newCategoryName.trim()}
-								className="px-4 py-2 bg-blue-500 text-white rounded-lg 
-									hover:bg-blue-600 transition-colors duration-200 
+								className="px-4 py-2 bg-sky-500 text-white rounded-lg 
+									hover:bg-sky-600 transition-colors duration-200 
 									disabled:bg-gray-300 disabled:cursor-not-allowed
 									flex items-center gap-2"
 							>
@@ -154,7 +154,7 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ isOpen, onClos
 													e.key === "Enter" && handleSaveEdit()
 												}
 												className="flex-1 px-3 py-2 border border-gray-300 rounded-lg 
-													focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+													focus:ring-2 focus:ring-sky-400 focus:border-transparent"
 												autoFocus
 											/>
 											<button
@@ -187,7 +187,7 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ isOpen, onClos
 											</span>
 											<button
 												onClick={() => handleStartEdit(category)}
-												className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg 
+												className="p-2 text-sky-600 hover:bg-sky-100 rounded-lg 
 													transition-colors duration-200"
 												title="Edit"
 											>

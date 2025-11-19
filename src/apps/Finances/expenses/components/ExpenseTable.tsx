@@ -11,6 +11,9 @@ import {
 	ChevronUp,
 	ChevronDown,
 	Search,
+	Eye,
+	EyeOff,
+	Copy,
 } from "lucide-react";
 import {
 	formatCurrency,
@@ -21,6 +24,7 @@ import {
 import { DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
 import { Expense, ImportanceLevel } from "@/types/expense";
 import { RecurringExpenseRow } from "./RecurringExpenseRow";
+import { useExpenseStore } from "@/stores/useExpenseStore";
 import {
 	Select,
 	SelectContent,
@@ -40,6 +44,7 @@ interface ExpenseTableProps {
 	onArchive: (id: string) => void;
 	onUnarchive: (id: string) => void;
 	onTogglePaid: (id: string) => void;
+	onDuplicate?: (id: string) => void;
 	showArchiveActions?: boolean;
 	isAllExpensesView?: boolean;
 	categoryColors?: Record<string, string>;
@@ -91,10 +96,12 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 	onArchive,
 	onUnarchive,
 	onTogglePaid,
+	onDuplicate,
 	showArchiveActions = false,
 	isAllExpensesView = false,
 	categoryColors = {},
 }) => {
+	const { showPaidExpenses, setShowPaidExpenses } = useExpenseStore();
 	const [sortKey, setSortKey] = useState<SortKey>("dueDate");
 	const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 	const [searchQuery, setSearchQuery] = useState("");
@@ -114,9 +121,9 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 			return <ChevronUp className="opacity-20" size={12} />;
 		}
 		return sortDirection === "asc" ? (
-			<ChevronUp className="text-blue-600" size={12} />
+			<ChevronUp className="text-sky-600" size={12} />
 		) : (
-			<ChevronDown className="text-blue-600" size={12} />
+			<ChevronDown className="text-sky-600" size={12} />
 		);
 	};
 
@@ -168,6 +175,18 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 
 	const filteredAndSortedExpenses = useMemo(() => {
 		let filtered = [...processedExpenses];
+
+		// Apply paid/unpaid filter
+		if (!showPaidExpenses) {
+			filtered = filtered.filter((item) => {
+				if (item.type === "recurring") {
+					// For recurring expenses, show if any occurrence is unpaid
+					const hasUnpaid = item.occurrences?.some((occ) => !occ.isPaid);
+					return hasUnpaid || !item.expense.isPaid;
+				}
+				return !item.expense.isPaid;
+			});
+		}
 
 		// Apply search filter
 		if (searchQuery) {
@@ -229,12 +248,17 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 		});
 
 		return filtered;
-	}, [processedExpenses, sortKey, sortDirection, searchQuery, categoryFilter]);
+	}, [processedExpenses, sortKey, sortDirection, searchQuery, categoryFilter, showPaidExpenses]);
 
 	const handleEditOccurrence = (expense: Expense) => {
 		// Pass the specific occurrence for editing
 		onEdit(expense);
 	};
+
+	// Count paid and total expenses for the toggle button
+	const paidCount = expenses.filter((e) => e.isPaid).length;
+	const totalCount = expenses.length;
+	const hasPaidExpenses = paidCount > 0;
 
 	return (
 		<div>
@@ -247,7 +271,8 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 						placeholder="Search expenses..."
 						value={searchQuery}
 						onChange={(e) => setSearchQuery(e.target.value)}
-						className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent placeholder:text-gray-500"
+						className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-400 focus:border-transparent placeholder:text-gray-500"
+						aria-label="Search expenses"
 					/>
 				</div>
 				<Select onValueChange={(value) => setCategoryFilter(value)}>
@@ -258,14 +283,37 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 						<SelectGroup>
 							<SelectLabel>Categories</SelectLabel>
 							<SelectItem value="all">All Categories</SelectItem>
-							{Object.keys(categoryColors).sort().map((category) => (
-								<SelectItem key={category} value={category}>
-									{category}
-								</SelectItem>
-							))}
+							{Object.keys(categoryColors)
+								.sort()
+								.map((category) => (
+									<SelectItem key={category} value={category}>
+										{category}
+									</SelectItem>
+								))}
 						</SelectGroup>
 					</SelectContent>
 				</Select>
+				{hasPaidExpenses && (
+					<button
+						onClick={() => setShowPaidExpenses(!showPaidExpenses)}
+						className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+							showPaidExpenses
+								? "bg-sky-100 text-sky-700 hover:bg-sky-200"
+								: "bg-gray-100 text-gray-700 hover:bg-gray-200"
+						}`}
+						title={showPaidExpenses ? "Hide paid expenses" : "Show paid expenses"}
+						aria-pressed={showPaidExpenses}
+						aria-label={showPaidExpenses ? "Hide paid expenses" : "Show paid expenses"}
+					>
+						{showPaidExpenses ? <Eye size={18} /> : <EyeOff size={18} />}
+						<span className="hidden sm:inline">
+							{showPaidExpenses ? "Showing" : "Hiding"} Paid
+						</span>
+						<span className="text-xs bg-white px-2 py-0.5 rounded-full">
+							{paidCount}/{totalCount}
+						</span>
+					</button>
+				)}
 			</div>
 
 			{/* Table */}
@@ -276,7 +324,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 							<th className="text-center py-3 px-2 font-medium text-gray-600">
 								<button
 									onClick={() => handleSort("isPaid")}
-									className="flex items-center gap-1 hover:text-blue-600 mx-auto"
+									className="flex items-center gap-1 hover:text-sky-600 mx-auto"
 								>
 									Paid
 									<SortIcon column="isPaid" />
@@ -285,7 +333,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 							<th className="text-left py-3 px-3 font-medium text-gray-600">
 								<button
 									onClick={() => handleSort("name")}
-									className="flex items-center gap-1 hover:text-blue-600"
+									className="flex items-center gap-1 hover:text-sky-600"
 								>
 									Name
 									<SortIcon column="name" />
@@ -294,7 +342,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 							<th className="text-center py-3 px-2 font-medium text-gray-600">
 								<button
 									onClick={() => handleSort("importance")}
-									className="flex items-center gap-1 hover:text-blue-600 mx-auto"
+									className="flex items-center gap-1 hover:text-sky-600 mx-auto"
 								>
 									<span className="hidden sm:inline">Importance</span>
 									<span className="sm:hidden">!</span>
@@ -304,7 +352,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 							<th className="text-left py-3 px-3 font-medium text-gray-600">
 								<button
 									onClick={() => handleSort("category")}
-									className="flex items-center gap-1 hover:text-blue-600"
+									className="flex items-center gap-1 hover:text-sky-600"
 								>
 									Category
 									<SortIcon column="category" />
@@ -313,7 +361,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 							<th className="text-left py-3 px-3 font-medium text-gray-600">
 								<button
 									onClick={() => handleSort("type")}
-									className="flex items-center gap-1 hover:text-blue-600"
+									className="flex items-center gap-1 hover:text-sky-600"
 								>
 									Type
 									<SortIcon column="type" />
@@ -322,7 +370,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 							<th className="text-left py-3 px-3 font-medium text-gray-600">
 								<button
 									onClick={() => handleSort("amount")}
-									className="flex items-center gap-1 hover:text-blue-600"
+									className="flex items-center gap-1 hover:text-sky-600"
 								>
 									Amount
 									<SortIcon column="amount" />
@@ -331,7 +379,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 							<th className="text-left py-3 px-3 font-medium text-gray-600">
 								<button
 									onClick={() => handleSort("dueDate")}
-									className="flex items-center gap-1 hover:text-blue-600"
+									className="flex items-center gap-1 hover:text-sky-600"
 								>
 									Due Date
 									<SortIcon column="dueDate" />
@@ -340,7 +388,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 							<th className="text-left py-3 px-3 font-medium text-gray-600">
 								<button
 									onClick={() => handleSort("paymentDate")}
-									className="flex items-center gap-1 hover:text-blue-600"
+									className="flex items-center gap-1 hover:text-sky-600"
 								>
 									Payment Date
 									<SortIcon column="paymentDate" />
@@ -364,7 +412,9 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 										onDelete={onDelete}
 										onArchive={onArchive}
 										onUnarchive={onUnarchive}
+										onDuplicate={onDuplicate}
 										categoryColors={categoryColors}
+										showPaid={showPaidExpenses}
 									/>
 								);
 							}
@@ -379,7 +429,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 							return (
 								<tr
 									key={expense.id}
-									className={`border-b border-gray-100 hover:bg-blue-50  ${
+									className={`border-b border-gray-100 hover:bg-sky-50  ${
 										expense.isPaid ? "opacity-60" : ""
 									}`}
 								>
@@ -413,7 +463,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 												{expense.name}
 											</span>
 											{expense.isRecurring && !isAllExpensesView && (
-												<span className="text-blue-500" title="Recurring">
+												<span className="text-sky-500" title="Recurring">
 													<RefreshCw size={12} />
 												</span>
 											)}
@@ -447,7 +497,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 									</td>
 									<td className="py-3 px-3">
 										<span
-											className={`font-semibold text-blue-600 text-sm ${
+											className={`font-semibold text-sky-600 text-sm ${
 												expense.isPaid ? "line-through" : ""
 											}`}
 										>
@@ -508,12 +558,22 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 										<div className="flex items-center justify-center gap-1">
 											<button
 												onClick={() => onEdit(expense)}
-												className="p-1.5 text-gray-600 hover:text-blue-600 hover:bg-blue-100 
+												className="p-1.5 text-gray-600 hover:text-sky-600 hover:bg-sky-100 
 												 rounded-lg transition-all duration-200 hover:scale-110"
 												title="Edit"
 											>
 												<Edit2 size={14} />
 											</button>
+											{onDuplicate && (
+												<button
+													onClick={() => onDuplicate(expense.id)}
+													className="p-1.5 text-gray-600 hover:text-purple-600 hover:bg-purple-100 
+													 rounded-lg transition-all duration-200 hover:scale-110"
+													title="Duplicate"
+												>
+													<Copy size={14} />
+												</button>
+											)}
 											{showArchiveActions &&
 												(expense.isArchived ? (
 													<button

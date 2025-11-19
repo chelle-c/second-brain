@@ -69,13 +69,12 @@ export const IncomeTracker: React.FC = () => {
 	const weeklyTotal = weeklyData.reduce((sum, day) => sum + day.amount, 0);
 
 	return (
-		<div className="animate-slideUp w-full min-h-screen bg-linear-to-br from-blue-50 via-white to-blue-100 flex items-start pb-4">
-			<div className="w-full px-2">
-				<div className="flex flex-col lg:flex-row gap-4 mb-8 justify-between items-center">
-					<div className="text-left">
-						<h1 className="text-3xl font-bold text-gray-900">Income Tracker</h1>
-						<p className="text-gray-600">Manage your income</p>
-					</div>
+		<div className="flex-1 overflow-y-auto max-h-[98vh] rounded-lg p-1 w-full min-h-screen flex items-start pb-4">
+			<div className="w-full px-2 animate-slideUp">
+				<div className="flex flex-col lg:flex-row gap-4 mb-8 justify-center items-center">
+					<h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 sr-only">
+						Income Tracker
+					</h1>
 
 					<ViewTabs />
 				</div>

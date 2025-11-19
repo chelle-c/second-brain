@@ -10,6 +10,8 @@ import {
 import { AppToSave } from "@/types";
 import { format, isSameDay } from "date-fns";
 
+type TimeUnit = "days" | "weeks" | "months" | "years";
+
 interface ExpenseStore {
 	// State
 	expenses: Expense[];
@@ -18,12 +20,26 @@ interface ExpenseStore {
 	categories: string[];
 	categoryColors: Record<string, string>;
 
+	// Shared UI State
+	editingExpense: Expense | null;
+	deleteModal: { isOpen: boolean; id: string; name: string };
+	showPaidExpenses: boolean;
+	upcomingTimeAmount: number;
+	upcomingTimeUnit: TimeUnit;
+
 	// Set state
 	setExpenses: (expenses: Expense[]) => void;
 	setSelectedMonth: (date: Date) => void;
 	setOverviewMode: (mode: OverviewMode) => void;
 	setCategories: (categories: string[]) => void;
 	setCategoryColors: (categoryColors: Record<string, string>) => void;
+
+	// Shared UI State setters
+	setEditingExpense: (expense: Expense | null) => void;
+	setDeleteModal: (modal: { isOpen: boolean; id: string; name: string }) => void;
+	setShowPaidExpenses: (show: boolean) => void;
+	setUpcomingTimeAmount: (amount: number) => void;
+	setUpcomingTimeUnit: (unit: TimeUnit) => void;
 
 	// Actions
 	addExpense: (expense: ExpenseFormData) => void;
@@ -32,10 +48,17 @@ interface ExpenseStore {
 	deleteExpense: (id: string) => void;
 	archiveExpense: (id: string) => void;
 	unarchiveExpense: (id: string) => void;
+	duplicateExpense: (id: string) => void;
 	toggleExpensePaid: (id: string, paymentDate?: Date) => void;
 	getMonthlyExpenses: (date: Date) => Expense[];
 	getTotalByCategory: (date: Date, mode: OverviewMode) => Record<string, number>;
 	getMonthlyTotal: (date: Date, mode: OverviewMode) => number;
+	getTotalByCategoryFiltered: (
+		date: Date,
+		mode: OverviewMode,
+		showPaid: boolean
+	) => Record<string, number>;
+	getMonthlyTotalFiltered: (date: Date, mode: OverviewMode, showPaid: boolean) => number;
 	resetOccurrence: (id: string) => void;
 	addCategory: (name: string, color: string) => void;
 	updateCategory: (oldName: string, newName: string, newColor: string) => void;
@@ -53,6 +76,13 @@ export const useExpenseStore = create<ExpenseStore>()(
 		overviewMode: "remaining",
 		categories: DEFAULT_EXPENSE_CATEGORIES,
 		categoryColors: DEFAULT_CATEGORY_COLORS,
+
+		// Shared UI State defaults
+		editingExpense: null,
+		deleteModal: { isOpen: false, id: "", name: "" },
+		showPaidExpenses: true,
+		upcomingTimeAmount: 3,
+		upcomingTimeUnit: "weeks",
 
 		setExpenses: (expenses) => set({ expenses }),
 
@@ -87,6 +117,13 @@ export const useExpenseStore = create<ExpenseStore>()(
 				useAppStore.getState().saveToFile(AppToSave.Expenses);
 			}
 		},
+
+		// Shared UI State setters
+		setEditingExpense: (expense) => set({ editingExpense: expense }),
+		setDeleteModal: (modal) => set({ deleteModal: modal }),
+		setShowPaidExpenses: (show) => set({ showPaidExpenses: show }),
+		setUpcomingTimeAmount: (amount) => set({ upcomingTimeAmount: amount }),
+		setUpcomingTimeUnit: (unit) => set({ upcomingTimeUnit: unit }),
 
 		addExpense: (expenseData) => {
 			const parentId = crypto.randomUUID();
@@ -433,6 +470,80 @@ export const useExpenseStore = create<ExpenseStore>()(
 			}
 		},
 
+		duplicateExpense: (id) => {
+			const { expenses } = get();
+			const expense = expenses.find((e) => e.id === id);
+
+			if (!expense) return;
+
+			const newExpenses: Expense[] = [];
+			const now = new Date();
+
+			// If duplicating a parent recurring expense, duplicate it and all its occurrences
+			if (expense.isRecurring && !expense.parentExpenseId) {
+				const newParentId = crypto.randomUUID();
+
+				// Duplicate the parent
+				const duplicatedParent: Expense = {
+					...expense,
+					id: newParentId,
+					isPaid: false,
+					paymentDate: null,
+					createdAt: now,
+					updatedAt: now,
+					monthlyOverrides: {},
+				};
+				newExpenses.push(duplicatedParent);
+
+				// Duplicate all occurrences
+				const occurrences = expenses.filter((e) => e.parentExpenseId === id);
+				occurrences.forEach((occurrence) => {
+					const duplicatedOccurrence: Expense = {
+						...occurrence,
+						id: crypto.randomUUID(),
+						parentExpenseId: newParentId,
+						isPaid: false,
+						paymentDate: null,
+						isModified: false,
+						createdAt: now,
+						updatedAt: now,
+						initialState: occurrence.initialState
+							? {
+									amount: occurrence.initialState.amount,
+									dueDate: occurrence.initialState.dueDate,
+							  }
+							: undefined,
+					};
+					newExpenses.push(duplicatedOccurrence);
+				});
+			} else {
+				// Duplicating a single expense or an occurrence
+				const duplicatedExpense: Expense = {
+					...expense,
+					id: crypto.randomUUID(),
+					isPaid: false,
+					paymentDate: null,
+					isModified: false,
+					createdAt: now,
+					updatedAt: now,
+					// Remove parent reference if duplicating an occurrence (makes it standalone)
+					parentExpenseId: undefined,
+					isRecurring: false,
+					recurrence: undefined,
+					initialState: undefined,
+				};
+				newExpenses.push(duplicatedExpense);
+			}
+
+			set((state) => ({
+				expenses: [...state.expenses, ...newExpenses],
+			}));
+
+			if (useAppStore.getState().autoSaveEnabled) {
+				useAppStore.getState().saveToFile(AppToSave.Expenses);
+			}
+		},
+
 		toggleExpensePaid: (id, paymentDate) => {
 			const { expenses } = get();
 			const expense = expenses.find((e) => e.id === id);
@@ -550,9 +661,11 @@ export const useExpenseStore = create<ExpenseStore>()(
 
 				switch (mode) {
 					case "remaining":
-						includeExpense = !expense.isPaid && expense.type === "need";
+						// FIXED: Include both needs and wants for remaining (unpaid)
+						includeExpense = !expense.isPaid;
 						break;
 					case "required":
+						// Show only "Need" type expenses (paid or unpaid)
 						includeExpense = expense.type === "need";
 						break;
 					case "all":
@@ -573,6 +686,47 @@ export const useExpenseStore = create<ExpenseStore>()(
 			return Object.values(categoryTotals).reduce((sum, amount) => sum + amount, 0);
 		},
 
+		// NEW: Filtered versions that respect showPaid toggle
+		getTotalByCategoryFiltered: (date, mode, showPaid) => {
+			const monthlyExpenses = get().getMonthlyExpenses(date);
+
+			return monthlyExpenses.reduce((acc, expense) => {
+				let includeExpense = false;
+
+				// First, apply the mode filter
+				switch (mode) {
+					case "remaining":
+						// Include both needs and wants for remaining (unpaid only)
+						includeExpense = !expense.isPaid;
+						break;
+					case "required":
+						// Show only "Need" type expenses
+						includeExpense = expense.type === "need";
+						break;
+					case "all":
+						includeExpense = true;
+						break;
+				}
+
+				// Then, apply the showPaid filter (except for "remaining" which is always unpaid)
+				if (includeExpense && mode !== "remaining") {
+					if (!showPaid && expense.isPaid) {
+						includeExpense = false;
+					}
+				}
+
+				if (includeExpense) {
+					acc[expense.category] = (acc[expense.category] || 0) + expense.amount;
+				}
+
+				return acc;
+			}, {} as Record<string, number>);
+		},
+
+		getMonthlyTotalFiltered: (date, mode, showPaid) => {
+			const categoryTotals = get().getTotalByCategoryFiltered(date, mode, showPaid);
+			return Object.values(categoryTotals).reduce((sum, amount) => sum + amount, 0);
+		},
 		addCategory: (name, color) => {
 			const { categories, categoryColors } = get();
 			if (!categories.includes(name)) {

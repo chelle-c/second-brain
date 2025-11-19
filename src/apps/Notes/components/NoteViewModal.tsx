@@ -265,7 +265,7 @@ export const NoteViewModal = ({ note, categories, onClose }: NoteViewModalProps)
 												handleTitleBlur();
 											}
 										}}
-										className="w-full text-4xl font-bold text-gray-800 outline-none border-b-2 border-blue-400 pb-2"
+										className="w-full text-4xl font-bold text-gray-800 outline-none border-b-2 border-sky-400 pb-2"
 									/>
 								) : (
 									<h1

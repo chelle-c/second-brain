@@ -56,7 +56,6 @@ export const MonthNavigation: React.FC = () => {
 	const currentYear = new Date().getFullYear();
 	const expenseYears = new Set<number>();
 
-	// Add current year
 	expenseYears.add(currentYear);
 
 	// Add years from expenses

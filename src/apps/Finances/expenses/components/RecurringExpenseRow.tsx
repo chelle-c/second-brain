@@ -10,6 +10,7 @@ import {
 	Check,
 	CheckCircle,
 	RotateCcw,
+	Copy,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/dateHelpers";
 import { DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
@@ -24,7 +25,9 @@ interface RecurringExpenseRowProps {
 	onDelete: (id: string, name: string) => void;
 	onArchive: (id: string) => void;
 	onUnarchive: (id: string) => void;
+	onDuplicate?: (id: string) => void;
 	categoryColors: Record<string, string>;
+	showPaid?: boolean;
 }
 
 const darkenColor = (hex: string, amount: number = 0.4): string => {
@@ -83,7 +86,9 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 	onDelete,
 	onArchive,
 	onUnarchive,
+	onDuplicate,
 	categoryColors,
+	showPaid = true,
 }) => {
 	const [isExpanded, setIsExpanded] = useState(false);
 	const { toggleExpensePaid, resetOccurrence } = useExpenseStore();
@@ -94,11 +99,13 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 		"#6b7280";
 	const darkCategoryColor = darkenColor(categoryColor);
 
-	// Sort occurrences by due date (don't include parent)
-	const sortedOccurrences = [...occurrences].sort((a, b) => {
-		if (!a.dueDate || !b.dueDate) return 0;
-		return a.dueDate.getTime() - b.dueDate.getTime();
-	});
+	// Sort occurrences by due date and filter based on showPaid
+	const sortedOccurrences = [...occurrences]
+		.filter((occ) => showPaid || !occ.isPaid)
+		.sort((a, b) => {
+			if (!a.dueDate || !b.dueDate) return 0;
+			return a.dueDate.getTime() - b.dueDate.getTime();
+		});
 
 	// Calculate summary stats
 	const paidCount = sortedOccurrences.filter((e) => e.isPaid).length;
@@ -107,9 +114,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 	return (
 		<>
 			{/* Parent Row - Must match table column structure */}
-			<tr
-				className={`border-b border-gray-100 cursor-pointer hover:bg-blue-50`}
-			>
+			<tr className={`border-b border-gray-100 cursor-pointer hover:bg-sky-50`}>
 				{/* Column 1: Paid checkbox (with expand button) */}
 				<td className="py-3 px-2">
 					<div className="flex items-center gap-1">
@@ -157,7 +162,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 						<span className="font-medium text-gray-800 text-sm">
 							{parentExpense.name}
 						</span>
-						<span className="text-blue-500" title="Recurring">
+						<span className="text-sky-500" title="Recurring">
 							<RefreshCw size={12} />
 						</span>
 						<span className="text-xs text-gray-500">
@@ -201,7 +206,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 
 				{/* Column 6: Amount */}
 				<td className="py-3 px-3">
-					<span className="font-semibold text-blue-600 text-sm">
+					<span className="font-semibold text-sky-600 text-sm">
 						{formatCurrency(parentExpense.amount)}
 					</span>
 					<div className="text-xs text-gray-500">base amount</div>
@@ -232,12 +237,25 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 								e.stopPropagation();
 								onEdit(parentExpense);
 							}}
-							className="p-1.5 text-gray-600 hover:text-blue-600 hover:bg-blue-100 
+							className="p-1.5 text-gray-600 hover:text-sky-600 hover:bg-sky-100 
 								rounded-lg transition-all duration-200 hover:scale-110"
 							title="Edit All Occurrences"
 						>
 							<Edit2 size={14} />
 						</button>
+						{onDuplicate && (
+							<button
+								onClick={(e) => {
+									e.stopPropagation();
+									onDuplicate(parentExpense.id);
+								}}
+								className="p-1.5 text-gray-600 hover:text-purple-600 hover:bg-purple-100 
+									rounded-lg transition-all duration-200 hover:scale-110"
+								title="Duplicate All Occurrences"
+							>
+								<Copy size={14} />
+							</button>
+						)}
 						{parentExpense.isArchived ? (
 							<button
 								onClick={(e) => {
@@ -283,7 +301,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 				sortedOccurrences.map((occurrence, index) => (
 					<tr
 						key={occurrence.id}
-						className={`border-b border-gray-50 hover:bg-blue-50
+						className={`border-b border-gray-50 hover:bg-sky-50
 						${occurrence.isPaid ? "opacity-60" : ""}
 						animate-fadeIn`}
 					>
@@ -313,7 +331,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 								Occurrence #{index + 1}
 								{occurrence.isModified && (
 									<span
-										className="ml-1 text-blue-600"
+										className="ml-1 text-sky-600"
 										title="This occurrence has been modified"
 									>
 										(edited)
@@ -345,7 +363,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 										? "line-through text-gray-500"
 										: occurrence.amount !== parentExpense.amount
 										? "text-orange-600"
-										: "text-blue-600"
+										: "text-sky-600"
 								}`}
 							>
 								{formatCurrency(occurrence.amount)}
@@ -375,12 +393,22 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 							<div className="flex items-center justify-center gap-1">
 								<button
 									onClick={() => onEditOccurrence(occurrence)}
-									className="p-1.5 text-gray-600 hover:text-blue-600 hover:bg-blue-100 
+									className="p-1.5 text-gray-600 hover:text-sky-600 hover:bg-sky-100 
 										rounded-lg transition-all duration-200 hover:scale-110"
 									title="Edit this occurrence only"
 								>
 									<Edit2 size={14} />
 								</button>
+								{onDuplicate && (
+									<button
+										onClick={() => onDuplicate(occurrence.id)}
+										className="p-1.5 text-gray-600 hover:text-purple-600 hover:bg-purple-100 
+											rounded-lg transition-all duration-200 hover:scale-110"
+										title="Duplicate this occurrence"
+									>
+										<Copy size={14} />
+									</button>
+								)}
 								{occurrence.isModified && (
 									<button
 										onClick={(e) => {

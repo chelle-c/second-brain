@@ -174,7 +174,7 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 								placeholder="Search notes..."
 								value={searchTerm}
 								onChange={(e) => setSearchTerm(e.target.value)}
-								className="pl-8 pr-3 py-1 text-sm border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-gray-500/55 placeholder:font-medium"
+								className="pl-8 pr-3 py-1 text-sm border rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-500 placeholder:text-gray-500/55 placeholder:font-medium"
 							/>
 						</div>
 						<button
@@ -214,7 +214,7 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 										/>
 										<button
 											onClick={() => addSubfolder(activeFolder.id)}
-											className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+											className="px-3 py-1 text-sm bg-sky-500 text-white rounded hover:bg-sky-600"
 										>
 											Add
 										</button>

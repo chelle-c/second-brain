@@ -138,11 +138,11 @@ const YearlyView: React.FC<{}> = () => {
 									</div>
 									<div className="mt-3 space-y-2">
 										<div className="grid grid-cols-2 gap-4 text-center">
-											<div className="bg-blue-50 rounded-lg p-3">
-												<div className="text-lg font-bold text-blue-700">
+											<div className="bg-sky-50 rounded-lg p-3">
+												<div className="text-lg font-bold text-sky-700">
 													${year.amount.toFixed(2)}
 												</div>
-												<div className="text-md text-blue-700">
+												<div className="text-md text-sky-700">
 													Total Earned
 												</div>
 											</div>

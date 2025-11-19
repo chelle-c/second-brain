@@ -45,7 +45,7 @@ export const FolderNav = ({
 						}}
 						className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
 							activeFolder && activeFolder.id === "inbox"
-								? "bg-blue-50"
+								? "bg-sky-50"
 								: "hover:bg-gray-100"
 						}`}
 					>
@@ -69,7 +69,7 @@ export const FolderNav = ({
 								<div
 									className={`flex items-center rounded-lg transition-colors ${
 										activeFolder && activeFolder.id === key
-											? "bg-blue-50"
+											? "bg-sky-50"
 											: "hover:bg-gray-100"
 									}`}
 								>
@@ -115,7 +115,7 @@ export const FolderNav = ({
 											key={subfolder.id}
 											className={`ml-8 flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
 												activeFolder === subfolder
-													? "bg-blue-50"
+													? "bg-sky-50"
 													: "hover:bg-gray-100"
 											}`}
 										>

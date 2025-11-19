@@ -51,7 +51,7 @@ const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
 					min="0"
 					value={newEntry.amount || ""}
 					onChange={(e) => onEntryChange("amount", parseFloat(e.target.value) || 0)}
-					className="bg-white w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+					className="bg-white w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
 					placeholder="0.00"
 					required
 				/>
@@ -67,7 +67,7 @@ const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
 						max="24"
 						value={newEntry.hours || ""}
 						onChange={(e) => onEntryChange("hours", parseFloat(e.target.value) || 0)}
-						className="bg-white w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+						className="bg-white w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
 						placeholder="0"
 					/>
 				</div>
@@ -81,13 +81,13 @@ const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
 						max="59"
 						value={newEntry.minutes || ""}
 						onChange={(e) => onEntryChange("minutes", parseInt(e.target.value) || 0)}
-						className="bg-white w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+						className="bg-white w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
 						placeholder="0"
 					/>
 				</div>
 			</div>
 
-			<div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-md">
+			<div className="text-sm text-gray-600 bg-sky-50 p-3 rounded-md">
 				<p>
 					💡 <strong>Tip:</strong> You can enter just hours or just minutes - both are
 					optional.
@@ -96,7 +96,7 @@ const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
 
 			<button
 				type="submit"
-				className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer"
+				className="w-full bg-sky-600 text-white py-2 px-4 rounded-md hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 transition-colors cursor-pointer"
 			>
 				Add Income Entry
 			</button>

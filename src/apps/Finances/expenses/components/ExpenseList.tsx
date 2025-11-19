@@ -1,64 +1,11 @@
-import { useState, useEffect, useMemo } from "react";
-import { X, DollarSign } from "lucide-react";
+import { useEffect, useMemo } from "react";
+import { DeleteModal } from "./DeleteModal";
 import { useExpenseStore } from "@/stores/useExpenseStore";
 import { ExpenseForm } from "./ExpenseForm";
 import { ExpenseTable } from "./ExpenseTable";
 import { Expense } from "@/types/expense";
 import { isSameMonth } from "date-fns";
-
-interface DeleteModalProps {
-	isOpen: boolean;
-	expenseName: string;
-	onConfirm: () => void;
-	onCancel: () => void;
-}
-
-const DeleteModal: React.FC<DeleteModalProps> = ({ isOpen, expenseName, onConfirm, onCancel }) => {
-	if (!isOpen) return null;
-
-	return (
-		<div
-			className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fadeIn"
-			style={{ margin: 0, padding: 0 }}
-		>
-			<div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4 animate-slideUp">
-				<div className="flex justify-between items-center mb-4">
-					<h3 className="text-lg font-bold text-gray-800">Confirm Deletion</h3>
-					<button
-						onClick={onCancel}
-						className="p-1 hover:bg-gray-100 rounded-lg transition-colors duration-200"
-					>
-						<X size={20} />
-					</button>
-				</div>
-
-				<p className="text-gray-600 mb-6">
-					Are you sure you want to delete <strong>"{expenseName}"</strong>? This action
-					cannot be undone.
-				</p>
-
-				<div className="flex gap-3">
-					<button
-						onClick={onConfirm}
-						className="flex-1 bg-red-500 text-white py-2 px-4 rounded-lg 
-                     hover:bg-red-600 transition-colors duration-200 font-medium
-                     hover:scale-105 active:scale-95 transform"
-					>
-						Delete
-					</button>
-					<button
-						onClick={onCancel}
-						className="flex-1 bg-gray-200 text-gray-700 py-2 px-4 rounded-lg 
-                     hover:bg-gray-300 transition-colors duration-200 font-medium
-                     hover:scale-105 active:scale-95 transform"
-					>
-						Cancel
-					</button>
-				</div>
-			</div>
-		</div>
-	);
-};
+import { DollarSign } from "lucide-react";
 
 export const ExpenseList: React.FC = () => {
 	const {
@@ -69,14 +16,12 @@ export const ExpenseList: React.FC = () => {
 		expenses,
 		categoryColors,
 		overviewMode,
+		editingExpense,
+		setEditingExpense,
+		deleteModal,
+		setDeleteModal,
+		showPaidExpenses,
 	} = useExpenseStore();
-
-	const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
-	const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string; name: string }>({
-		isOpen: false,
-		id: "",
-		name: "",
-	});
 
 	if (!selectedMonth) return null;
 
@@ -84,7 +29,8 @@ export const ExpenseList: React.FC = () => {
 	const monthlyExpenses = getMonthlyExpenses(selectedMonth);
 	const isCurrentMonth = isSameMonth(selectedMonth, new Date());
 
-	// Filter expenses based on overviewMode (same logic as ExpenseOverview pie chart)
+	// Filter expenses based on overviewMode only
+	// Note: showPaid filtering is handled by ExpenseTable internally
 	const filteredExpenses = useMemo(() => {
 		return monthlyExpenses.filter((expense) => {
 			switch (overviewMode) {
@@ -102,6 +48,12 @@ export const ExpenseList: React.FC = () => {
 		});
 	}, [monthlyExpenses, overviewMode]);
 
+	// Calculate the visible count (respecting showPaid toggle for display purposes)
+	const visibleCount = useMemo(() => {
+		if (showPaidExpenses) return filteredExpenses.length;
+		return filteredExpenses.filter((e) => !e.isPaid).length;
+	}, [filteredExpenses, showPaidExpenses]);
+
 	// Close edit form when expenses update
 	useEffect(() => {
 		if (editingExpense) {
@@ -111,7 +63,7 @@ export const ExpenseList: React.FC = () => {
 				setEditingExpense(null);
 			}
 		}
-	}, [expenses, editingExpense]);
+	}, [expenses, editingExpense, setEditingExpense]);
 
 	const handleDeleteClick = (id: string, name: string) => {
 		setDeleteModal({ isOpen: true, id, name });
@@ -140,20 +92,21 @@ export const ExpenseList: React.FC = () => {
 			case "remaining":
 				return " (Remaining Unpaid)";
 			case "required":
-				return " (Required Only)";
+				return showPaidExpenses ? " (Required - All)" : " (Required - Unpaid Only)";
 			case "all":
+				return showPaidExpenses ? "" : " (Unpaid Only)";
 			default:
 				return "";
 		}
 	};
 
-	if (filteredExpenses.length === 0) {
+	if (visibleCount === 0) {
 		return (
 			<>
 				<h3 className="text-xl font-bold text-gray-800 mb-4">
 					Monthly Expenses{getFilterLabel()}
 				</h3>
-				{overviewMode !== "all" && monthlyExpenses.length > 0 && (
+				{(overviewMode !== "all" || !showPaidExpenses) && monthlyExpenses.length > 0 && (
 					<p className="text-sm text-gray-500 mb-4">
 						Showing 0 of {monthlyExpenses.length} expenses
 					</p>
@@ -162,17 +115,40 @@ export const ExpenseList: React.FC = () => {
 					<DollarSign className="mx-auto text-gray-300 mb-4" size={48} />
 					<p className="text-gray-500">
 						{overviewMode === "remaining"
-							? "All required expenses are paid!"
+							? "All expenses are paid!"
 							: overviewMode === "required"
-							? "No required expenses for this month."
-							: "No expenses for this month."}
+							? showPaidExpenses
+								? "No required expenses for this month."
+								: "All required expenses are paid!"
+							: showPaidExpenses
+							? "No expenses for this month."
+							: "All expenses are paid!"}
 					</p>
-					{overviewMode === "all" && (
+					{overviewMode === "all" && showPaidExpenses && (
 						<p className="text-gray-400 text-sm mt-2">
 							Click the + button to add your first expense.
 						</p>
 					)}
 				</div>
+
+				{/* Still show table controls when empty so user can toggle showPaid */}
+				{filteredExpenses.length > 0 && (
+					<ExpenseTable
+						key={`monthly-${selectedMonth.getTime()}-${
+							expenses.length
+						}-${overviewMode}`}
+						expenses={filteredExpenses}
+						isCurrentMonth={isCurrentMonth}
+						selectedMonth={selectedMonth}
+						categoryColors={categoryColors}
+						onEdit={handleEdit}
+						onDelete={handleDeleteClick}
+						onArchive={() => {}}
+						onUnarchive={() => {}}
+						onTogglePaid={toggleExpensePaid}
+						showArchiveActions={false}
+					/>
+				)}
 
 				{editingExpense && (
 					<ExpenseForm
@@ -195,30 +171,30 @@ export const ExpenseList: React.FC = () => {
 
 	return (
 		<>
-				<div className="mb-6">
-					<h3 className="text-xl font-bold text-gray-800">
-						Monthly Expenses{getFilterLabel()}
-					</h3>
-					{overviewMode !== "all" && (
-						<p className="text-sm text-gray-500 mt-1">
-							Showing {filteredExpenses.length} of {monthlyExpenses.length} expenses
-						</p>
-					)}
-				</div>
+			<div className="mb-6">
+				<h3 className="text-xl font-bold text-gray-800">
+					Monthly Expenses{getFilterLabel()}
+				</h3>
+				{(overviewMode !== "all" || !showPaidExpenses) && (
+					<p className="text-sm text-gray-500 mt-1">
+						Showing {visibleCount} of {monthlyExpenses.length} expenses
+					</p>
+				)}
+			</div>
 
-				<ExpenseTable
-					key={`monthly-${selectedMonth.getTime()}-${expenses.length}-${overviewMode}`}
-					expenses={filteredExpenses}
-					isCurrentMonth={isCurrentMonth}
-					selectedMonth={selectedMonth}
-					categoryColors={categoryColors}
-					onEdit={handleEdit}
-					onDelete={handleDeleteClick}
-					onArchive={() => {}}
-					onUnarchive={() => {}}
-					onTogglePaid={toggleExpensePaid}
-					showArchiveActions={false}
-				/>
+			<ExpenseTable
+				key={`monthly-${selectedMonth.getTime()}-${expenses.length}-${overviewMode}`}
+				expenses={filteredExpenses}
+				isCurrentMonth={isCurrentMonth}
+				selectedMonth={selectedMonth}
+				categoryColors={categoryColors}
+				onEdit={handleEdit}
+				onDelete={handleDeleteClick}
+				onArchive={() => {}}
+				onUnarchive={() => {}}
+				onTogglePaid={toggleExpensePaid}
+				showArchiveActions={false}
+			/>
 
 			{editingExpense && (
 				<ExpenseForm
