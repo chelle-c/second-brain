@@ -1,21 +1,5 @@
 import { useState, useMemo } from "react";
 import {
-	Edit2,
-	Trash2,
-	Archive,
-	ArchiveRestore,
-	RefreshCw,
-	Calendar,
-	Check,
-	CheckCircle,
-	ChevronUp,
-	ChevronDown,
-	Search,
-	Eye,
-	EyeOff,
-	Copy,
-} from "lucide-react";
-import {
 	formatCurrency,
 	formatDate,
 	getRelativeDateText,
@@ -34,12 +18,27 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import {
+	Edit2,
+	Trash2,
+	Archive,
+	ArchiveRestore,
+	RefreshCw,
+	Calendar,
+	Check,
+	CheckCircle,
+	ChevronUp,
+	ChevronDown,
+	Search,
+	Eye,
+	EyeOff,
+	Copy,
+} from "lucide-react";
 
 interface ExpenseTableProps {
 	expenses: Expense[];
 	isCurrentMonth: boolean;
 	selectedMonth: Date;
-	onEdit: (expense: Expense) => void;
 	onDelete: (id: string, name: string) => void;
 	onArchive: (id: string) => void;
 	onUnarchive: (id: string) => void;
@@ -91,7 +90,6 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 	expenses,
 	isCurrentMonth,
 	selectedMonth,
-	onEdit,
 	onDelete,
 	onArchive,
 	onUnarchive,
@@ -101,7 +99,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 	isAllExpensesView = false,
 	categoryColors = {},
 }) => {
-	const { showPaidExpenses, setShowPaidExpenses } = useExpenseStore();
+	const { showPaidExpenses, setShowPaidExpenses, setEditingExpense } = useExpenseStore();
 	const [sortKey, setSortKey] = useState<SortKey>("dueDate");
 	const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 	const [searchQuery, setSearchQuery] = useState("");
@@ -252,7 +250,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 
 	const handleEditOccurrence = (expense: Expense) => {
 		// Pass the specific occurrence for editing
-		onEdit(expense);
+		setEditingExpense(expense);
 	};
 
 	// Count paid and total expenses for the toggle button
@@ -407,7 +405,6 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 										key={item.expense.id}
 										parentExpense={item.expense}
 										occurrences={item.occurrences || []}
-										onEdit={onEdit}
 										onEditOccurrence={handleEditOccurrence}
 										onDelete={onDelete}
 										onArchive={onArchive}
@@ -557,7 +554,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 									<td className="py-3 px-3">
 										<div className="flex items-center justify-center gap-1">
 											<button
-												onClick={() => onEdit(expense)}
+												onClick={() => setEditingExpense(expense)}
 												className="p-1.5 text-gray-600 hover:text-sky-600 hover:bg-sky-100 
 												 rounded-lg transition-all duration-200 hover:scale-110"
 												title="Edit"

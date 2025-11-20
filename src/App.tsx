@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { NotesApp } from "@/apps/Notes";
@@ -9,11 +10,13 @@ import { DebugConsole } from "@/components/DebugConsole";
 import useAppStore from "@/stores/useAppStore";
 
 function App() {
+	const [isDevEnv, setIsDevEnv] = useState(false);
 	const loadFromFile = useAppStore((state: { loadFromFile: any }) => state.loadFromFile);
 	const isLoading = useAppStore((state: { isLoading: any }) => state.isLoading);
 
 	const initializeApp = async () => {
 		try {
+			setIsDevEnv(await invoke("is_dev"));
 			await loadFromFile();
 		} catch (error) {
 			console.error("Failed to initialize app:", error);
@@ -42,7 +45,8 @@ function App() {
 					</Routes>
 				</BrowserRouter>
 			)}
-			{/* <DebugConsole /> */}
+
+			{isDevEnv && <DebugConsole />}
 		</>
 	);
 }

@@ -1,9 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { DeleteModal } from "./DeleteModal";
 import { useExpenseStore } from "@/stores/useExpenseStore";
-import { ExpenseForm } from "./ExpenseForm";
 import { ExpenseTable } from "./ExpenseTable";
-import { Expense } from "@/types/expense";
 import { isSameMonth } from "date-fns";
 import { DollarSign } from "lucide-react";
 
@@ -78,13 +76,13 @@ export const ExpenseList: React.FC = () => {
 		setDeleteModal({ isOpen: false, id: "", name: "" });
 	};
 
-	const handleEdit = (expense: Expense) => {
-		setEditingExpense(expense);
-	};
+	// const handleEdit = (expense: Expense) => {
+	// 	setEditingExpense(expense);
+	// };
 
-	const handleCloseEdit = () => {
-		setEditingExpense(null);
-	};
+	// const handleCloseEdit = () => {
+	// 	setEditingExpense(null);
+	// };
 
 	// Get filter label for display
 	const getFilterLabel = () => {
@@ -141,7 +139,6 @@ export const ExpenseList: React.FC = () => {
 						isCurrentMonth={isCurrentMonth}
 						selectedMonth={selectedMonth}
 						categoryColors={categoryColors}
-						onEdit={handleEdit}
 						onDelete={handleDeleteClick}
 						onArchive={() => {}}
 						onUnarchive={() => {}}
@@ -150,14 +147,14 @@ export const ExpenseList: React.FC = () => {
 					/>
 				)}
 
-				{editingExpense && (
+				{/* {editingExpense && (
 					<ExpenseForm
 						key={editingExpense.id}
 						editingExpense={editingExpense}
 						onClose={handleCloseEdit}
 						isGlobalEdit={false}
 					/>
-				)}
+				)} */}
 
 				<DeleteModal
 					isOpen={deleteModal.isOpen}
@@ -188,7 +185,6 @@ export const ExpenseList: React.FC = () => {
 				isCurrentMonth={isCurrentMonth}
 				selectedMonth={selectedMonth}
 				categoryColors={categoryColors}
-				onEdit={handleEdit}
 				onDelete={handleDeleteClick}
 				onArchive={() => {}}
 				onUnarchive={() => {}}
@@ -196,14 +192,14 @@ export const ExpenseList: React.FC = () => {
 				showArchiveActions={false}
 			/>
 
-			{editingExpense && (
+			{/* {editingExpense && (
 				<ExpenseForm
 					key={editingExpense.id}
 					editingExpense={editingExpense}
 					onClose={handleCloseEdit}
 					isGlobalEdit={false}
 				/>
-			)}
+			)} */}
 
 			<DeleteModal
 				isOpen={deleteModal.isOpen}

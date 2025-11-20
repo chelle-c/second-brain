@@ -20,7 +20,6 @@ import { useExpenseStore } from "@/stores/useExpenseStore";
 interface RecurringExpenseRowProps {
 	parentExpense: Expense;
 	occurrences: Expense[];
-	onEdit: (expense: Expense) => void;
 	onEditOccurrence: (expense: Expense) => void;
 	onDelete: (id: string, name: string) => void;
 	onArchive: (id: string) => void;
@@ -81,7 +80,6 @@ const getFrequencyText = (expense: Expense): string => {
 export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 	parentExpense,
 	occurrences,
-	onEdit,
 	onEditOccurrence,
 	onDelete,
 	onArchive,
@@ -91,7 +89,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 	showPaid = true,
 }) => {
 	const [isExpanded, setIsExpanded] = useState(false);
-	const { toggleExpensePaid, resetOccurrence } = useExpenseStore();
+	const { toggleExpensePaid, resetOccurrence, setEditingExpense } = useExpenseStore();
 
 	const categoryColor =
 		categoryColors[parentExpense.category] ||
@@ -235,7 +233,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 						<button
 							onClick={(e) => {
 								e.stopPropagation();
-								onEdit(parentExpense);
+								setEditingExpense(parentExpense);
 							}}
 							className="p-1.5 text-gray-600 hover:text-sky-600 hover:bg-sky-100 
 								rounded-lg transition-all duration-200 hover:scale-110"

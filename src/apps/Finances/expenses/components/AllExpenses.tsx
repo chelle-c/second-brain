@@ -1,9 +1,7 @@
 import { useState, useMemo } from "react";
 import { useExpenseStore } from "@/stores/useExpenseStore";
 import { DeleteModal } from "./DeleteModal";
-import { ExpenseForm } from "./ExpenseForm";
 import { ExpenseTable } from "./ExpenseTable";
-import { Expense } from "@/types/expense";
 import { AnimatedToggle } from "@/components/AnimatedToggle";
 import {
 	Select,
@@ -26,7 +24,6 @@ export const AllExpenses: React.FC = () => {
 		categoryColors,
 	} = useExpenseStore();
 
-	const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 	const [showArchived, setShowArchived] = useState(false);
 	const [selectedYear, setSelectedYear] = useState<number | "all">("all");
 	const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string; name: string }>({
@@ -93,14 +90,6 @@ export const AllExpenses: React.FC = () => {
 
 	const handleDeleteCancel = () => {
 		setDeleteModal({ isOpen: false, id: "", name: "" });
-	};
-
-	const handleEdit = (expense: Expense) => {
-		setEditingExpense(expense);
-	};
-
-	const handleCloseEdit = () => {
-		setEditingExpense(null);
 	};
 
 	const handleTogglePaid = (id: string) => {
@@ -195,7 +184,6 @@ export const AllExpenses: React.FC = () => {
 						expenses={filteredExpenses}
 						isCurrentMonth={false}
 						selectedMonth={new Date()}
-						onEdit={handleEdit}
 						onDelete={handleDeleteClick}
 						onArchive={archiveExpense}
 						onUnarchive={unarchiveExpense}
@@ -208,14 +196,7 @@ export const AllExpenses: React.FC = () => {
 				)}
 			</div>
 
-			{editingExpense && (
-				<ExpenseForm
-					key={editingExpense.id}
-					editingExpense={editingExpense}
-					onClose={handleCloseEdit}
-					isGlobalEdit={!editingExpense.parentExpenseId}
-				/>
-			)}
+			
 
 			<DeleteModal
 				isOpen={deleteModal.isOpen}

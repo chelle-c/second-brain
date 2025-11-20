@@ -1,5 +1,5 @@
-import { Tag } from "lucide-react";
 import { AnimatedToggle } from "@/components/AnimatedToggle";
+import { Tag } from "lucide-react";
 
 interface LayoutProps {
 	children: React.ReactNode;
@@ -14,6 +14,7 @@ export const Layout: React.FC<LayoutProps> = ({
 	setCurrentView,
 	onManageCategories,
 }) => {
+
 	const viewOptions = [
 		{ value: "upcoming" as const, label: "Upcoming", ariaLabel: "View Upcoming Expenses" },
 		{ value: "monthly" as const, label: "Monthly", ariaLabel: "View Monthly Expenses" },
@@ -59,6 +60,7 @@ export const Layout: React.FC<LayoutProps> = ({
 				</div>
 			</header>
 			<main className="px-1 sm:px-0">{children}</main>
+			
 		</div>
 	);
 };

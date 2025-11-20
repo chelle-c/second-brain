@@ -7,8 +7,6 @@ import { formatCurrency } from "@/lib/dateHelpers";
 import { DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
 import { TrendingUp, DollarSign, Calendar, Clock } from "lucide-react";
 import { addDays, addWeeks, addMonths, addYears, isWithinInterval, startOfDay } from "date-fns";
-import { Expense } from "@/types/expense";
-import { ExpenseForm } from "./ExpenseForm";
 import { AnimatedToggle } from "@/components/AnimatedToggle";
 
 export const UpcomingExpenses = () => {
@@ -19,8 +17,6 @@ export const UpcomingExpenses = () => {
 		archiveExpense,
 		unarchiveExpense,
 		toggleExpensePaid,
-		editingExpense,
-		setEditingExpense,
 		deleteModal,
 		setDeleteModal,
 		upcomingTimeAmount,
@@ -118,14 +114,6 @@ export const UpcomingExpenses = () => {
 			);
 		}
 		return null;
-	};
-
-	const handleEdit = (expense: Expense) => {
-		setEditingExpense(expense);
-	};
-
-	const handleCloseEdit = () => {
-		setEditingExpense(null);
 	};
 
 	const handleDeleteClick = (id: string, name: string) => {
@@ -339,7 +327,6 @@ export const UpcomingExpenses = () => {
 						expenses={upcomingExpenses}
 						isCurrentMonth={false}
 						selectedMonth={new Date()}
-						onEdit={handleEdit}
 						onDelete={handleDeleteClick}
 						onArchive={archiveExpense}
 						onUnarchive={unarchiveExpense}
@@ -351,14 +338,14 @@ export const UpcomingExpenses = () => {
 				</div>
 			</div>
 
-			{editingExpense && (
+			{/* {editingExpense && (
 				<ExpenseForm
 					key={editingExpense.id}
 					editingExpense={editingExpense}
 					onClose={handleCloseEdit}
 					isGlobalEdit={false}
 				/>
-			)}
+			)} */}
 
 			<DeleteModal
 				isOpen={deleteModal.isOpen}

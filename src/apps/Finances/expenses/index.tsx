@@ -6,10 +6,17 @@ import { ExpenseForm } from "@/apps/Finances/expenses/components/ExpenseForm";
 import { ExpenseList } from "@/apps/Finances/expenses/components/ExpenseList";
 import { AllExpenses } from "@/apps/Finances/expenses/components/AllExpenses";
 import { UpcomingExpenses } from "@/apps/Finances/expenses/components/UpcomingExpenses";
+import { useExpenseStore } from "@/stores/useExpenseStore";
 
 export const ExpensesTracker = () => {
 	const [showCategoryManager, setShowCategoryManager] = useState(false);
 	const [currentView, setCurrentView] = useState<"monthly" | "all" | "upcoming">("upcoming");
+
+	const { editingExpense, setEditingExpense } = useExpenseStore();
+
+	const handleCloseEdit = () => {
+		setEditingExpense(null);
+	};
 
 	return (
 		<>
@@ -39,6 +46,15 @@ export const ExpensesTracker = () => {
 				isOpen={showCategoryManager}
 				onClose={() => setShowCategoryManager(false)}
 			/>
+
+			{editingExpense && (
+				<ExpenseForm
+					key={editingExpense.id}
+					editingExpense={editingExpense}
+					onClose={handleCloseEdit}
+					isGlobalEdit={!editingExpense.parentExpenseId}
+				/>
+			)}
 		</>
 	);
 };
