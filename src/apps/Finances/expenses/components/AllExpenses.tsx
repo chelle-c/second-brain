@@ -3,14 +3,6 @@ import { useExpenseStore } from "@/stores/useExpenseStore";
 import { DeleteModal } from "./DeleteModal";
 import { ExpenseTable } from "./ExpenseTable";
 import { AnimatedToggle } from "@/components/AnimatedToggle";
-import {
-	Select,
-	SelectContent,
-	SelectGroup,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
 import { DollarSign } from "lucide-react";
 
 export const AllExpenses: React.FC = () => {
@@ -31,22 +23,6 @@ export const AllExpenses: React.FC = () => {
 		id: "",
 		name: "",
 	});
-
-	// Get all unique years from expenses
-	const availableYears = useMemo(() => {
-		const years = new Set<number>();
-		const currentYear = new Date().getFullYear();
-		years.add(currentYear);
-
-		expenses.forEach((expense) => {
-			if (expense.dueDate) {
-				years.add(expense.dueDate.getFullYear());
-			}
-			years.add(expense.createdAt.getFullYear());
-		});
-
-		return Array.from(years).sort((a, b) => b - a);
-	}, [expenses]);
 
 	// Filter expenses by year and archived status
 	const filteredExpenses = useMemo(() => {
@@ -100,6 +76,10 @@ export const AllExpenses: React.FC = () => {
 		duplicateExpense(id);
 	};
 
+	const handleSelectedYearChange = (year: number | "all") => {
+		setSelectedYear(year);
+	};
+
 	const totalExpenseCount = activeCount + archivedCount;
 
 	if (totalExpenseCount === 0) {
@@ -121,50 +101,22 @@ export const AllExpenses: React.FC = () => {
 		<>
 			<div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 animate-slideUp">
 				<div className="flex flex-col gap-4 mb-6">
-					<h3 className="text-xl font-bold text-gray-800">All Expenses</h3>
+					<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+						<h3 className="text-xl font-bold text-gray-800">All Expenses</h3>
 
-					{/* Archive Toggle */}
-					<AnimatedToggle
-						options={[
-							{ value: "active" as const, label: `Active (${activeCount})` },
-							{ value: "archived" as const, label: `Archived (${archivedCount})` },
-						]}
-						value={showArchived ? "archived" : "active"}
-						onChange={(value) => setShowArchived(value === "archived")}
-						className="w-full sm:w-auto"
-					/>
-
-					{/* Year Filter */}
-					<div className="flex flex-col sm:flex-row sm:items-center gap-3">
-						<label
-							htmlFor="all-expenses-year-select"
-							className="text-sm font-medium text-gray-700"
-						>
-							Filter by year:
-						</label>
-						<Select
-							name="all-expenses-year-select"
-							onValueChange={(value) =>
-								setSelectedYear(value === "all" ? "all" : parseInt(value))
-							}
-						>
-							<SelectTrigger className="w-full sm:w-[180px]">
-								<SelectValue placeholder="Select a year" />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectGroup>
-									{availableYears.map((year) => (
-										<SelectItem
-											key={year}
-											value={year.toString()}
-											className="capitalize"
-										>
-											{year}
-										</SelectItem>
-									))}
-								</SelectGroup>
-							</SelectContent>
-						</Select>
+						{/* Archive Toggle */}
+						<AnimatedToggle
+							options={[
+								{ value: "active" as const, label: `Active (${activeCount})` },
+								{
+									value: "archived" as const,
+									label: `Archived (${archivedCount})`,
+								},
+							]}
+							value={showArchived ? "archived" : "active"}
+							onChange={(value) => setShowArchived(value === "archived")}
+							className="w-full sm:w-auto"
+						/>
 					</div>
 				</div>
 
@@ -181,7 +133,7 @@ export const AllExpenses: React.FC = () => {
 				) : (
 					<ExpenseTable
 						key={`all-${expenses.length}-${selectedYear}-${showArchived}`}
-						expenses={filteredExpenses}
+						expensesToDisplay={filteredExpenses}
 						isCurrentMonth={false}
 						selectedMonth={new Date()}
 						onDelete={handleDeleteClick}
@@ -191,12 +143,11 @@ export const AllExpenses: React.FC = () => {
 						onDuplicate={handleDuplicate}
 						showArchiveActions={true}
 						isAllExpensesView={true}
+						onSelectedYearChange={handleSelectedYearChange}
 						categoryColors={categoryColors}
 					/>
 				)}
 			</div>
-
-			
 
 			<DeleteModal
 				isOpen={deleteModal.isOpen}

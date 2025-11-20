@@ -135,7 +135,7 @@ export const ExpenseList: React.FC = () => {
 						key={`monthly-${selectedMonth.getTime()}-${
 							expenses.length
 						}-${overviewMode}`}
-						expenses={filteredExpenses}
+						expensesToDisplay={filteredExpenses}
 						isCurrentMonth={isCurrentMonth}
 						selectedMonth={selectedMonth}
 						categoryColors={categoryColors}
@@ -181,7 +181,7 @@ export const ExpenseList: React.FC = () => {
 
 			<ExpenseTable
 				key={`monthly-${selectedMonth.getTime()}-${expenses.length}-${overviewMode}`}
-				expenses={filteredExpenses}
+				expensesToDisplay={filteredExpenses}
 				isCurrentMonth={isCurrentMonth}
 				selectedMonth={selectedMonth}
 				categoryColors={categoryColors}
@@ -191,15 +191,6 @@ export const ExpenseList: React.FC = () => {
 				onTogglePaid={toggleExpensePaid}
 				showArchiveActions={false}
 			/>
-
-			{/* {editingExpense && (
-				<ExpenseForm
-					key={editingExpense.id}
-					editingExpense={editingExpense}
-					onClose={handleCloseEdit}
-					isGlobalEdit={false}
-				/>
-			)} */}
 
 			<DeleteModal
 				isOpen={deleteModal.isOpen}

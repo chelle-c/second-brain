@@ -324,7 +324,7 @@ export const UpcomingExpenses = () => {
 						</div>
 					</div>
 					<ExpenseTable
-						expenses={upcomingExpenses}
+						expensesToDisplay={upcomingExpenses}
 						isCurrentMonth={false}
 						selectedMonth={new Date()}
 						onDelete={handleDeleteClick}
@@ -337,15 +337,6 @@ export const UpcomingExpenses = () => {
 					/>
 				</div>
 			</div>
-
-			{/* {editingExpense && (
-				<ExpenseForm
-					key={editingExpense.id}
-					editingExpense={editingExpense}
-					onClose={handleCloseEdit}
-					isGlobalEdit={false}
-				/>
-			)} */}
 
 			<DeleteModal
 				isOpen={deleteModal.isOpen}

@@ -73,7 +73,7 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ isOpen, onClos
 				onClick={onClose}
 			>
 				<div
-					className="bg-white rounded-xl shadow-2xl p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto animate-slideUp"
+					className="bg-white rounded-xl shadow-2xl p-6 max-w-2xl w-full mx-4animate-slideUp"
 					onClick={(e) => e.stopPropagation()}
 				>
 					<div className="flex justify-between items-center mb-6">
@@ -88,123 +88,124 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ isOpen, onClos
 							<X size={20} />
 						</button>
 					</div>
-
-					{/* Add New Category */}
-					<div className="bg-sky-50 rounded-lg p-4 mb-6">
-						<h4 className="text-sm font-semibold text-gray-700 mb-3">
-							Add New Category
-						</h4>
-						<div className="flex gap-3">
-							<input
-								id="categoryName"
-								type="text"
-								placeholder="Category name"
-								value={newCategoryName}
-								onChange={(e) => setNewCategoryName(e.target.value)}
-								onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
-								className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg 
+					<div className="flex flex-col h-full">
+						{/* Add New Category */}
+						<div className="bg-sky-50 rounded-lg p-4 mb-6">
+							<h4 className="text-sm font-semibold text-gray-700 mb-3">
+								Add New Category
+							</h4>
+							<div className="flex gap-3">
+								<input
+									id="categoryName"
+									type="text"
+									placeholder="Category name"
+									value={newCategoryName}
+									onChange={(e) => setNewCategoryName(e.target.value)}
+									onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
+									className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg 
 									focus:ring-2 focus:ring-sky-400 focus:border-transparent placeholder-shown:text-gray-400 placeholder-shown:dark:text-gray-400 placeholder-shown:font-medium"
-							/>
-							<input
-								type="color"
-								value={newCategoryColor}
-								onChange={(e) => setNewCategoryColor(e.target.value)}
-								className="w-12 h-10 border border-gray-300 rounded-sm cursor-pointer **:border-green-500"
-								title="Choose category color"
-							/>
-							<button
-								onClick={handleAddCategory}
-								disabled={!newCategoryName.trim()}
-								className="px-4 py-2 bg-sky-500 text-white rounded-lg 
+								/>
+								<input
+									type="color"
+									value={newCategoryColor}
+									onChange={(e) => setNewCategoryColor(e.target.value)}
+									className="w-12 h-10 border border-gray-300 rounded-sm cursor-pointer **:border-green-500"
+									title="Choose category color"
+								/>
+								<button
+									onClick={handleAddCategory}
+									disabled={!newCategoryName.trim()}
+									className="px-4 py-2 bg-sky-500 text-white rounded-lg 
 									hover:bg-sky-600 transition-colors duration-200 
 									disabled:bg-gray-300 disabled:cursor-not-allowed
 									flex items-center gap-2"
-							>
-								<Plus size={18} />
-								Add
-							</button>
-						</div>
-					</div>
-
-					{/* Categories List */}
-					<div>
-						<h4 className="text-sm font-semibold text-gray-700 mb-3">
-							Existing Categories ({categories.length})
-						</h4>
-						<div className="space-y-2">
-							{categories.map((category) => (
-								<div
-									key={category}
-									className="bg-gray-50 rounded-lg p-3 flex items-center gap-3 
-										hover:bg-gray-100 transition-colors duration-200"
 								>
-									{editingCategory === category ? (
-										<>
-											<input
-												type="color"
-												value={editColor}
-												onChange={(e) => setEditColor(e.target.value)}
-												className="w-12 h-10 border border-gray-300 rounded-lg cursor-pointer"
-											/>
-											<input
-												type="text"
-												value={editName}
-												onChange={(e) => setEditName(e.target.value)}
-												onKeyDown={(e) =>
-													e.key === "Enter" && handleSaveEdit()
-												}
-												className="flex-1 px-3 py-2 border border-gray-300 rounded-lg 
+									<Plus size={18} />
+									Add
+								</button>
+							</div>
+						</div>
+
+						{/* Categories List */}
+						<div className="overflow-y-auto max-h-[60vh]">
+							<h4 className="text-sm font-semibold text-gray-700 mb-3">
+								Existing Categories ({categories.length})
+							</h4>
+							<div className="space-y-2">
+								{categories.map((category) => (
+									<div
+										key={category}
+										className="bg-gray-50 rounded-lg p-3 flex items-center gap-3 
+										hover:bg-gray-100 transition-colors duration-200"
+									>
+										{editingCategory === category ? (
+											<>
+												<input
+													type="color"
+													value={editColor}
+													onChange={(e) => setEditColor(e.target.value)}
+													className="w-12 h-10 border border-gray-300 rounded-lg cursor-pointer"
+												/>
+												<input
+													type="text"
+													value={editName}
+													onChange={(e) => setEditName(e.target.value)}
+													onKeyDown={(e) =>
+														e.key === "Enter" && handleSaveEdit()
+													}
+													className="flex-1 px-3 py-2 border border-gray-300 rounded-lg 
 													focus:ring-2 focus:ring-sky-400 focus:border-transparent"
-												autoFocus
-											/>
-											<button
-												onClick={handleSaveEdit}
-												className="p-2 text-green-600 hover:bg-green-100 rounded-lg 
+													autoFocus
+												/>
+												<button
+													onClick={handleSaveEdit}
+													className="p-2 text-green-600 hover:bg-green-100 rounded-lg 
 													transition-colors duration-200"
-												title="Save"
-											>
-												<Save size={18} />
-											</button>
-											<button
-												onClick={handleCancelEdit}
-												className="p-2 text-gray-600 hover:bg-gray-200 rounded-lg 
+													title="Save"
+												>
+													<Save size={18} />
+												</button>
+												<button
+													onClick={handleCancelEdit}
+													className="p-2 text-gray-600 hover:bg-gray-200 rounded-lg 
 													transition-colors duration-200"
-												title="Cancel"
-											>
-												<X size={18} />
-											</button>
-										</>
-									) : (
-										<>
-											<div
-												className="w-8 h-8 rounded-lg border-2 border-gray-300"
-												style={{
-													backgroundColor: categoryColors[category],
-												}}
-											/>
-											<span className="flex-1 font-medium text-gray-800">
-												{category}
-											</span>
-											<button
-												onClick={() => handleStartEdit(category)}
-												className="p-2 text-sky-600 hover:bg-sky-100 rounded-lg 
+													title="Cancel"
+												>
+													<X size={18} />
+												</button>
+											</>
+										) : (
+											<>
+												<div
+													className="w-8 h-8 rounded-lg border-2 border-gray-300"
+													style={{
+														backgroundColor: categoryColors[category],
+													}}
+												/>
+												<span className="flex-1 font-medium text-gray-800">
+													{category}
+												</span>
+												<button
+													onClick={() => handleStartEdit(category)}
+													className="p-2 text-sky-600 hover:bg-sky-100 rounded-lg 
 													transition-colors duration-200"
-												title="Edit"
-											>
-												<Edit2 size={16} />
-											</button>
-											<button
-												onClick={() => handleDeleteClick(category)}
-												className="p-2 text-red-600 hover:bg-red-100 rounded-lg 
+													title="Edit"
+												>
+													<Edit2 size={16} />
+												</button>
+												<button
+													onClick={() => handleDeleteClick(category)}
+													className="p-2 text-red-600 hover:bg-red-100 rounded-lg 
 													transition-colors duration-200"
-												title="Delete"
-											>
-												<Trash2 size={16} />
-											</button>
-										</>
-									)}
-								</div>
-							))}
+													title="Delete"
+												>
+													<Trash2 size={16} />
+												</button>
+											</>
+										)}
+									</div>
+								))}
+							</div>
 						</div>
 					</div>
 				</div>

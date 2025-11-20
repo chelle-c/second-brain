@@ -36,7 +36,7 @@ import {
 } from "lucide-react";
 
 interface ExpenseTableProps {
-	expenses: Expense[];
+	expensesToDisplay: Expense[];
 	isCurrentMonth: boolean;
 	selectedMonth: Date;
 	onDelete: (id: string, name: string) => void;
@@ -46,6 +46,7 @@ interface ExpenseTableProps {
 	onDuplicate?: (id: string) => void;
 	showArchiveActions?: boolean;
 	isAllExpensesView?: boolean;
+	onSelectedYearChange?: (year: number | "all") => void;
 	categoryColors?: Record<string, string>;
 }
 
@@ -87,7 +88,7 @@ const ImportanceIcon: React.FC<{ level: ImportanceLevel }> = ({ level }) => {
 };
 
 export const ExpenseTable: React.FC<ExpenseTableProps> = ({
-	expenses,
+	expensesToDisplay,
 	isCurrentMonth,
 	selectedMonth,
 	onDelete,
@@ -97,9 +98,10 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 	onDuplicate,
 	showArchiveActions = false,
 	isAllExpensesView = false,
+	onSelectedYearChange,
 	categoryColors = {},
 }) => {
-	const { showPaidExpenses, setShowPaidExpenses, setEditingExpense } = useExpenseStore();
+	const { expenses, showPaidExpenses, setShowPaidExpenses, setEditingExpense } = useExpenseStore();
 	const [sortKey, setSortKey] = useState<SortKey>("dueDate");
 	const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 	const [searchQuery, setSearchQuery] = useState("");
@@ -128,13 +130,13 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 	// Group recurring expenses in All Expenses view
 	const processedExpenses = useMemo(() => {
 		if (!isAllExpensesView) {
-			return expenses.map((e) => ({ type: "single", expense: e } as const));
+			return expensesToDisplay.map((e) => ({ type: "single", expense: e } as const));
 		}
 
 		const parentExpenses = new Map<string, Expense>();
 		const occurrencesByParent = new Map<string, Expense[]>();
 
-		expenses.forEach((expense) => {
+		expensesToDisplay.forEach((expense) => {
 			if (expense.isRecurring && !expense.parentExpenseId) {
 				// This is a parent
 				parentExpenses.set(expense.id, expense);
@@ -153,7 +155,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 			occurrences?: Expense[];
 		}> = [];
 
-		expenses.forEach((expense) => {
+		expensesToDisplay.forEach((expense) => {
 			if (!expense.isRecurring && !expense.parentExpenseId) {
 				// Non-recurring expense
 				result.push({ type: "single", expense });
@@ -169,7 +171,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 		});
 
 		return result;
-	}, [expenses, isAllExpensesView]);
+	}, [expensesToDisplay, isAllExpensesView]);
 
 	const filteredAndSortedExpenses = useMemo(() => {
 		let filtered = [...processedExpenses];
@@ -254,9 +256,25 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 	};
 
 	// Count paid and total expenses for the toggle button
-	const paidCount = expenses.filter((e) => e.isPaid).length;
-	const totalCount = expenses.length;
+	const paidCount = expensesToDisplay.filter((e) => e.isPaid).length;
+	const totalCount = expensesToDisplay.length;
 	const hasPaidExpenses = paidCount > 0;
+
+	// Get all unique years from expenses
+	const availableYears = useMemo(() => {
+		const years = new Set<number>();
+		const currentYear = new Date().getFullYear();
+		years.add(currentYear);
+
+		expenses.forEach((expense) => {
+			if (expense.dueDate) {
+				years.add(expense.dueDate.getFullYear());
+			}
+			years.add(expense.createdAt.getFullYear());
+		});
+
+		return Array.from(years).sort((a, b) => b - a);
+	}, [expenses]);
 
 	return (
 		<div>
@@ -273,6 +291,32 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 						aria-label="Search expenses"
 					/>
 				</div>
+				{isAllExpensesView && (
+					<Select
+						name="all-expenses-year-select"
+						onValueChange={(value) => {
+							if (onSelectedYearChange) onSelectedYearChange(value === "all" ? "all" : Number(value));
+						}}
+					>
+						<SelectTrigger className="w-full sm:w-[180px]">
+							<SelectValue placeholder="Filter by year" />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectGroup>
+								<SelectItem value="all">All Years</SelectItem>
+								{availableYears.map((year) => (
+									<SelectItem
+										key={year}
+										value={year.toString()}
+										className="capitalize"
+									>
+										{year}
+									</SelectItem>
+								))}
+							</SelectGroup>
+						</SelectContent>
+					</Select>
+				)}
 				<Select onValueChange={(value) => setCategoryFilter(value)}>
 					<SelectTrigger size="default" className="w-[180px] py-2">
 						<SelectValue placeholder="Filter by category" />
