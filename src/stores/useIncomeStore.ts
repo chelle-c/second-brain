@@ -70,7 +70,6 @@ export const useIncomeStore = create<IncomeStore>()(
 			};
 
 			const existingEntry = get().incomeEntries.find((p) => p.date === entry.date);
-			console.log("Existing entry:", existingEntry);
 			if (existingEntry) {
 				set((state) => ({
 					...state,

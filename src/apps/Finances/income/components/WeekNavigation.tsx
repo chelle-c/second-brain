@@ -1,7 +1,5 @@
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { getWeeksForYear } from "@/lib/dateUtils";
-import { format, getWeek, startOfWeek, addDays } from "date-fns";
-
 import type { IncomeWeekSelection } from "@/types/income";
 import {
 	Select,
@@ -12,6 +10,8 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { format, getWeek, startOfWeek, addDays, isSameWeek } from "date-fns";
+import { WeekPicker } from "./WeekPicker";
 
 interface WeekNavigationProps {
 	selectedWeek: IncomeWeekSelection;
@@ -24,8 +24,28 @@ const WeekNavigation: React.FC<WeekNavigationProps> = ({
 	setSelectedWeek,
 	years,
 }) => {
-	const currentYearWeeks = getWeeksForYear(selectedWeek.year);
-	// Week navigation handlers
+	const [showWeekPicker, setShowWeekPicker] = useState(false);
+	const weekPickerRef = useRef<HTMLDivElement>(null);
+	const today = new Date();
+	const isCurrentWeek = isSameWeek(selectedWeek.startDate, today, { weekStartsOn: 1 });
+
+	// Close week picker when clicking outside
+	useEffect(() => {
+		const handleClickOutside = (event: MouseEvent) => {
+			if (weekPickerRef.current && !weekPickerRef.current.contains(event.target as Node)) {
+				setShowWeekPicker(false);
+			}
+		};
+
+		if (showWeekPicker) {
+			document.addEventListener("mousedown", handleClickOutside);
+		}
+
+		return () => {
+			document.removeEventListener("mousedown", handleClickOutside);
+		};
+	}, [showWeekPicker]);
+
 	const onYearChange = (year: number) => {
 		const weeks = getWeeksForYear(year);
 		const weekToSelect = weeks.find((w) => w.number === selectedWeek.week) || weeks[0];
@@ -38,16 +58,16 @@ const WeekNavigation: React.FC<WeekNavigationProps> = ({
 		});
 	};
 
-	const onWeekChange = (weekNumber: number) => {
-		const week = currentYearWeeks.find((w) => w.number === weekNumber);
-		if (week) {
-			setSelectedWeek({
-				year: selectedWeek.year,
-				week: weekNumber,
-				startDate: week.startDate,
-				endDate: week.endDate,
-			});
-		}
+	const onWeekSelect = (weekStart: Date) => {
+		const weekNumber = getWeek(weekStart, { weekStartsOn: 1 });
+		const weekEnd = addDays(weekStart, 6);
+
+		setSelectedWeek({
+			year: weekStart.getFullYear(),
+			week: weekNumber,
+			startDate: weekStart,
+			endDate: weekEnd,
+		});
 	};
 
 	const onNavigateWeek = (direction: "prev" | "next") => {
@@ -56,12 +76,11 @@ const WeekNavigation: React.FC<WeekNavigationProps> = ({
 			currentStart.getTime() + (direction === "prev" ? -7 : 7) * 24 * 60 * 60 * 1000
 		);
 
-		// Use getWeek from date-fns for consistent week numbering
 		const newWeekNumber = getWeek(newStart, { weekStartsOn: 1 });
 
 		setSelectedWeek({
 			year: newStart.getFullYear(),
-			week: newWeekNumber, // Use getWeek for consistent numbering
+			week: newWeekNumber,
 			startDate: newStart,
 			endDate: new Date(newStart.getTime() + 6 * 24 * 60 * 60 * 1000),
 		});
@@ -69,8 +88,8 @@ const WeekNavigation: React.FC<WeekNavigationProps> = ({
 
 	const onGoToCurrentWeek = () => {
 		const today = new Date();
-		const firstOfWeek = startOfWeek(today, { weekStartsOn: 1 }); // Use date-fns function
-		const weekNumber = getWeek(today, { weekStartsOn: 1 }); // Use date-fns function
+		const firstOfWeek = startOfWeek(today, { weekStartsOn: 1 });
+		const weekNumber = getWeek(today, { weekStartsOn: 1 });
 
 		setSelectedWeek({
 			year: today.getFullYear(),
@@ -80,25 +99,90 @@ const WeekNavigation: React.FC<WeekNavigationProps> = ({
 		});
 	};
 
+	const handleWeekPickerKeyDown = (e: React.KeyboardEvent) => {
+		if (e.key === "Enter" || e.key === " ") {
+			e.preventDefault();
+			setShowWeekPicker(!showWeekPicker);
+		} else if (e.key === "Escape" && showWeekPicker) {
+			e.preventDefault();
+			setShowWeekPicker(false);
+		}
+	};
+
 	return (
-		<div className="w-full bg-white rounded-lg shadow p-6 flex flex-col items-stretch justify-between">
-			<div className="flex items-center justify-between">
-				<div className="text-lg font-semibold text-gray-900">
+		<div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 h-full">
+			{/* Date Range Display */}
+			<div className="mb-3">
+				<span className="text-xs text-gray-500 uppercase tracking-wider font-medium">
+					Week {selectedWeek.week} • {selectedWeek.year}
+				</span>
+				<div className="text-lg font-bold text-gray-900 mt-1">
 					{format(selectedWeek.startDate, "MMM d")} -{" "}
 					{format(selectedWeek.endDate, "MMM d, yyyy")}
-				</div>
-				<div className="text-md text-gray-600 font-medium mt-1">
-					Week {selectedWeek.week}
+					{isCurrentWeek && (
+						<span className="text-sm font-medium text-sky-600 ml-2">(Current)</span>
+					)}
 				</div>
 			</div>
 
-			<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+			{/* Selectors */}
+			<div className="flex items-center gap-2 mb-3">
+				<div className="relative flex-1" ref={weekPickerRef}>
+					<button
+						onClick={() => setShowWeekPicker(!showWeekPicker)}
+						onKeyDown={handleWeekPickerKeyDown}
+						className="w-full h-9 px-3 text-sm text-left bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors flex items-center justify-between cursor-pointer"
+						aria-expanded={showWeekPicker}
+						aria-haspopup="dialog"
+						aria-label={`Select week, currently Week ${selectedWeek.week}`}
+					>
+						<div className="flex items-center gap-2">
+							<svg
+								className="w-4 h-4 text-gray-500"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+								/>
+							</svg>
+							<span>Week {selectedWeek.week}</span>
+						</div>
+						<svg
+							className={`w-4 h-4 text-gray-400 transition-transform ${
+								showWeekPicker ? "rotate-180" : ""
+							}`}
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M19 9l-7 7-7-7"
+							/>
+						</svg>
+					</button>
+					{showWeekPicker && (
+						<WeekPicker
+							selectedDate={selectedWeek.startDate}
+							onWeekSelect={onWeekSelect}
+							onClose={() => setShowWeekPicker(false)}
+						/>
+					)}
+				</div>
+
 				<Select
 					value={selectedWeek.year.toString()}
 					onValueChange={(value) => onYearChange(parseInt(value))}
 				>
-					<SelectTrigger className="w-[180px]">
-						<SelectValue placeholder="Select a year" />
+					<SelectTrigger className="w-24 h-9 text-sm">
+						<SelectValue placeholder="Year" />
 					</SelectTrigger>
 					<SelectContent>
 						<SelectGroup>
@@ -112,78 +196,60 @@ const WeekNavigation: React.FC<WeekNavigationProps> = ({
 					</SelectContent>
 				</Select>
 
-				<Select
-					value={selectedWeek.week.toString()}
-					onValueChange={(value) => onWeekChange(parseInt(value))}
+				<button
+					onClick={onGoToCurrentWeek}
+					disabled={isCurrentWeek}
+					className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors duration-200 shadow-sm ${
+						isCurrentWeek
+							? "bg-gray-100 text-gray-400 cursor-not-allowed"
+							: "bg-sky-500 text-white hover:bg-sky-600/75 cursor-pointer shadow-gray-500/50"
+					}`}
+					title={isCurrentWeek ? "Already viewing current week" : "Go to Current Week"}
 				>
-					<SelectTrigger className="w-[180px]">
-						<SelectValue placeholder="Select a week" />
-					</SelectTrigger>
-					<SelectContent>
-						<SelectGroup>
-							<SelectLabel>Week</SelectLabel>
-							{currentYearWeeks.map((week) => (
-								<SelectItem
-									key={week.number + "-" + week.label}
-									value={week.number.toString()}
-								>
-									{week.label}
-								</SelectItem>
-							))}
-						</SelectGroup>
-					</SelectContent>
-				</Select>
+					Today
+				</button>
 			</div>
 
-			<div className="flex flex-col">
-				<div className="flex justify-between items-center">
-					<button
-						onClick={() => onNavigateWeek("prev")}
-						className="flex items-center gap-1 py-2 text-gray-800 font-medium bg-gray-200 rounded-md hover:bg-gray-300 transition-colors cursor-pointer text-xs md:text-sm"
+			{/* Navigation Buttons */}
+			<div className="flex justify-between gap-2">
+				<button
+					onClick={() => onNavigateWeek("prev")}
+					className="flex-1 flex items-center justify-center gap-1.5 py-2 text-gray-600 font-medium bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer text-xs"
+				>
+					<svg
+						className="w-3.5 h-3.5"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
 					>
-						<svg
-							className="w-4 h-4"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth={2}
-								d="M15 19l-7-7 7-7"
-							/>
-						</svg>
-						Previous Week
-					</button>
-
-					<button
-						onClick={onGoToCurrentWeek}
-						className="px-2 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors cursor-pointer text-xs md:text-sm"
+						<path
+							strokeLinecap="round"
+							strokeLinejoin="round"
+							strokeWidth={2}
+							d="M15 19l-7-7 7-7"
+						/>
+					</svg>
+					<span>Previous</span>
+				</button>
+				<button
+					onClick={() => onNavigateWeek("next")}
+					className="flex-1 flex items-center justify-center gap-1.5 py-2 text-gray-600 font-medium bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer text-xs"
+				>
+					<span>Next</span>
+					<svg
+						className="w-3.5 h-3.5"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
 					>
-						Current Week
-					</button>
-
-					<button
-						onClick={() => onNavigateWeek("next")}
-						className="flex items-center gap-1 py-2 text-gray-800 font-medium bg-gray-200 rounded-md hover:bg-gray-300 transition-colors cursor-pointer text-xs md:text-sm"
-					>
-						Next Week
-						<svg
-							className="w-4 h-4"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth={2}
-								d="M9 5l7 7-7 7"
-							/>
-						</svg>
-					</button>
-				</div>
+						<path
+							strokeLinecap="round"
+							strokeLinejoin="round"
+							strokeWidth={2}
+							d="M9 5l7 7-7 7"
+						/>
+					</svg>
+				</button>
 			</div>
 		</div>
 	);

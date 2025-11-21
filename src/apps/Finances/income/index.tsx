@@ -1,22 +1,21 @@
 import React, { useState } from "react";
-import { isSameDay, parseISO, startOfDay, endOfDay } from "date-fns";
-import type { IncomeWeekSelection, IncomeDayData } from "@/types/income";
 import { DAYS, years } from "@/lib/dateUtils";
 import { useIncomeStore } from "@/stores/useIncomeStore";
-import WeekNavigation from "@/apps/Finances/income/components/WeekNavigation";
-import IncomeEntriesList from "@/apps/Finances/income/components/IncomeEntriesList";
-import WeeklySummary from "@/apps/Finances/income/components/WeeklySummary";
-import IncomeChart from "@/apps/Finances/income/components/IncomeChart";
-import ViewTabs from "@/apps/Finances/income/components/ViewTabs";
-import MonthlyView from "@/apps/Finances/income/components/MonthlyView";
-import YearlyView from "@/apps/Finances/income/components/YearlyView";
+import WeekNavigation from "./components/WeekNavigation";
+import IncomeEntriesList from "./components/IncomeEntriesList";
+import WeeklySummary from "./components/WeeklySummary";
+import IncomeChart from "./components/IncomeChart";
+import ViewTabs from "./components/ViewTabs";
+import MonthlyView from "./components/MonthlyView";
+import YearlyView from "./components/YearlyView";
+import type { IncomeWeekSelection, IncomeDayData } from "@/types/income";
+import { isSameDay, parseISO, startOfDay, endOfDay } from "date-fns";
 
 export const IncomeTracker: React.FC = () => {
 	const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
 	const { incomeEntries, incomeViewType } = useIncomeStore();
 
-	// Week navigation state
 	const [selectedWeek, setSelectedWeek] = useState<IncomeWeekSelection>(() => {
 		const today = new Date();
 		const startOfWeek = new Date(today);
@@ -32,7 +31,6 @@ export const IncomeTracker: React.FC = () => {
 		};
 	});
 
-	// Derived data
 	const currentWeekEntries = incomeEntries.filter((entry) => {
 		const entryDate = startOfDay(parseISO(entry.date));
 		const weekStart = startOfDay(selectedWeek.startDate);
@@ -69,43 +67,53 @@ export const IncomeTracker: React.FC = () => {
 	const weeklyTotal = weeklyData.reduce((sum, day) => sum + day.amount, 0);
 
 	return (
-		<div className="flex-1 overflow-y-auto max-h-[98vh] rounded-lg p-1 w-full min-h-screen flex items-start pb-4">
-			<div className="w-full px-2 animate-slideUp">
-				<div className="flex flex-col lg:flex-row gap-4 mb-8 justify-center items-center">
-					<h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 sr-only">
-						Income Tracker
-					</h1>
-
+		<div className="flex-1 overflow-y-auto max-h-[98vh] p-2 w-full min-h-screen">
+			<div className="w-full max-w-7xl mx-auto animate-slideUp">
+				{/* Header */}
+				<div className="mb-4">
 					<ViewTabs />
 				</div>
 
 				{incomeViewType === "weekly" ? (
-					<>
-						<div className="flex flex-col gap-8">
-							<div className="flex flex-row gap-4">
+					<div className="space-y-4">
+						{/* Top Row: Summary (wider) + Navigation */}
+						<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+							<div className="lg:col-span-1">
 								<WeekNavigation
 									selectedWeek={selectedWeek}
 									setSelectedWeek={setSelectedWeek}
 									years={years}
 								/>
-
+							</div>
+							<div className="lg:col-span-2">
 								<WeeklySummary
 									weeklyTotal={weeklyTotal}
 									selectedWeek={selectedWeek.week}
 								/>
 							</div>
+						</div>
 
+						{/* Chart + Entries Row */}
+						<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 							{currentWeekEntries.length > 0 && (
-								<IncomeChart weeklyData={weeklyData} />
+								<div className="lg:col-span-2">
+									<IncomeChart weeklyData={weeklyData} />
+								</div>
 							)}
+							<div
+								className={
+									currentWeekEntries.length > 0
+										? "lg:col-span-1"
+										: "lg:col-span-3"
+								}
+							>
+								<IncomeEntriesList
+									selectedWeek={selectedWeek}
+									currentWeekEntries={currentWeekEntries}
+								/>
+							</div>
 						</div>
-						<div className="mt-6">
-							<IncomeEntriesList
-								selectedWeek={selectedWeek}
-								currentWeekEntries={currentWeekEntries}
-							/>
-						</div>
-					</>
+					</div>
 				) : incomeViewType === "monthly" ? (
 					<MonthlyView
 						selectedYear={selectedYear}

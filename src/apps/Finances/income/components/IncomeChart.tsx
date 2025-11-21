@@ -15,6 +15,8 @@ interface IncomeChartProps {
 	weeklyData: IncomeDayData[];
 }
 
+const SKY_500 = "#0EA5E9";
+
 const IncomeChart: React.FC<IncomeChartProps> = ({ weeklyData }) => {
 	const [isClient, setIsClient] = useState(false);
 
@@ -31,19 +33,19 @@ const IncomeChart: React.FC<IncomeChartProps> = ({ weeklyData }) => {
 					y={props.y}
 					width={props.width}
 					height={props.height}
-					fill={"#3B82F6"}
+					fill={SKY_500}
 					rx={4}
 				/>
 				{day.amount > 0 && (
 					<text
 						x={props.x + props.width / 2}
-						y={props.y - 5}
+						y={props.y - 8}
 						textAnchor="middle"
-						fill="#6B7280"
-						fontSize={12}
-						fontWeight="500"
+						fill="#374151"
+						fontSize={13}
+						fontWeight="600"
 					>
-						${day.amount.toFixed(2)}
+						${day.amount.toFixed(0)}
 					</text>
 				)}
 			</g>
@@ -51,42 +53,47 @@ const IncomeChart: React.FC<IncomeChartProps> = ({ weeklyData }) => {
 	};
 
 	return (
-		<div className="bg-white rounded-lg shadow p-6">
-			<h3 className="text-lg font-semibold text-gray-800 mb-4">Daily Income</h3>
-			<div className="w-full">
+		<div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
+			<h3 className="text-sm font-semibold text-gray-700 mb-3">Daily Income</h3>
+			<div className="w-full" style={{ height: "320px" }}>
 				{isClient && (
 					<ResponsiveContainer
-						initialDimension={{ width: 320, height: 200 }}
-						minWidth={320}
-						minHeight={200}
+						width="100%"
+						height="100%"
+						initialDimension={{ width: 600, height: 320 }}
 					>
 						<BarChart
 							data={weeklyData}
-							margin={{ top: 30, right: 20, left: 20, bottom: 20 }}
-							barSize={35}
+							margin={{ top: 25, right: 20, left: 10, bottom: 10 }}
+							barSize={50}
 						>
-							<CartesianGrid strokeDasharray="3 2" stroke="#d1d1d1" />
+							<CartesianGrid
+								strokeDasharray="3 3"
+								stroke="#E5E7EB"
+								vertical={false}
+							/>
 							<XAxis
 								dataKey="name"
 								axisLine={false}
 								tickLine={false}
-								tick={{ fill: "#6B7280", fontSize: 14 }}
+								tick={{ fill: "#374151", fontSize: 13, fontWeight: 500 }}
 								interval={0}
 							/>
 							<YAxis
 								axisLine={false}
 								tickLine={false}
-								tick={{ fill: "#6B7280", fontSize: 14 }}
+								tick={{ fill: "#9CA3AF", fontSize: 12 }}
 								tickFormatter={(value) => `$${value}`}
-								width={40}
+								width={45}
 							/>
 							<Tooltip
 								formatter={(value: number) => [`$${value.toFixed(2)}`, "Amount"]}
-								labelFormatter={(label) => `Day: ${label}`}
+								labelFormatter={(label) => label}
 								contentStyle={{
-									borderRadius: "8px",
-									border: "none",
-									boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+									borderRadius: "6px",
+									border: "1px solid #E5E7EB",
+									boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)",
+									fontSize: "12px",
 								}}
 							/>
 							<Bar

@@ -27,39 +27,42 @@ const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
 }) => {
 	return (
 		<form onSubmit={onSubmit} className="space-y-4">
-			<Select onValueChange={(value) => onEntryChange("date", value)}>
-				<SelectTrigger className="w-[180px]">
-					<SelectValue placeholder="Select a day" />
-				</SelectTrigger>
-				<SelectContent>
-					<SelectGroup>
-						<SelectLabel>Day of Week</SelectLabel>
-						{availableDates.map((date) => (
-							<SelectItem key={date.value} value={date.value}>
-								{date.label}
-							</SelectItem>
-						))}
-					</SelectGroup>
-				</SelectContent>
-			</Select>
+			<div>
+				<Label className="text-sm text-gray-600 mb-1.5 block">Day</Label>
+				<Select onValueChange={(value) => onEntryChange("date", value)}>
+					<SelectTrigger className="w-full h-10">
+						<SelectValue placeholder="Select a day" />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectGroup>
+							<SelectLabel>Day of Week</SelectLabel>
+							{availableDates.map((date) => (
+								<SelectItem key={date.value} value={date.value}>
+									{date.label}
+								</SelectItem>
+							))}
+						</SelectGroup>
+					</SelectContent>
+				</Select>
+			</div>
 
 			<div>
-				<Label className="block text-sm font-medium text-gray-700 mb-1">Amount ($)</Label>
+				<Label className="text-sm text-gray-600 mb-1.5 block">Amount ($)</Label>
 				<Input
 					type="number"
 					step="0.01"
 					min="0"
 					value={newEntry.amount || ""}
 					onChange={(e) => onEntryChange("amount", parseFloat(e.target.value) || 0)}
-					className="bg-white w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
+					className="bg-white h-10"
 					placeholder="0.00"
 					required
 				/>
 			</div>
 
-			<div className="grid grid-cols-2 gap-4">
+			<div className="grid grid-cols-2 gap-3">
 				<div>
-					<Label className="block text-sm font-medium text-gray-700 mb-1">Hours</Label>
+					<Label className="text-sm text-gray-600 mb-1.5 block">Hours</Label>
 					<Input
 						type="number"
 						step="0.1"
@@ -67,13 +70,12 @@ const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
 						max="24"
 						value={newEntry.hours || ""}
 						onChange={(e) => onEntryChange("hours", parseFloat(e.target.value) || 0)}
-						className="bg-white w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
+						className="bg-white h-10"
 						placeholder="0"
 					/>
 				</div>
-
 				<div>
-					<Label className="block text-sm font-medium text-gray-700 mb-1">Minutes</Label>
+					<Label className="text-sm text-gray-600 mb-1.5 block">Minutes</Label>
 					<Input
 						type="number"
 						step="1"
@@ -81,24 +83,29 @@ const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
 						max="59"
 						value={newEntry.minutes || ""}
 						onChange={(e) => onEntryChange("minutes", parseInt(e.target.value) || 0)}
-						className="bg-white w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
+						className="bg-white h-10"
 						placeholder="0"
 					/>
 				</div>
 			</div>
 
-			<div className="text-sm text-gray-600 bg-sky-50 p-3 rounded-md">
-				<p>
-					💡 <strong>Tip:</strong> You can enter just hours or just minutes - both are
-					optional.
-				</p>
+			<div className="text-xs text-gray-500 bg-sky-50 rounded-md px-3 py-2">
+				💡 Hours and minutes are optional
 			</div>
 
 			<button
 				type="submit"
-				className="w-full bg-sky-600 text-white py-2 px-4 rounded-md hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 transition-colors cursor-pointer"
+				className="w-full px-4 py-2.5 bg-sky-500 text-white rounded-lg hover:bg-sky-600/75 transition-colors duration-200 flex items-center justify-center gap-2 font-medium cursor-pointer shadow-sm shadow-gray-500/50"
 			>
-				Add Income Entry
+				<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						strokeWidth={2}
+						d="M12 4v16m8-8H4"
+					/>
+				</svg>
+				<span>Add Entry</span>
 			</button>
 		</form>
 	);

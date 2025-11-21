@@ -6,6 +6,7 @@ import { parsePasteText } from "@/lib/dateUtils";
 import { useIncomeStore } from "@/stores/useIncomeStore";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Modal } from "@/components/Modal";
 import { format, parseISO, isSameDay } from "date-fns";
 import type { IncomeEntry, IncomeWeekSelection } from "@/types/income";
 
@@ -14,11 +15,106 @@ interface IncomeEntriesListProps {
 	currentWeekEntries: IncomeEntry[];
 }
 
+// Edit Modal Component
+const EditModal: React.FC<{
+	isOpen: boolean;
+	onClose: () => void;
+	entry: IncomeEntry | null;
+	onSave: (entry: IncomeEntry) => void;
+}> = ({ isOpen, onClose, entry, onSave }) => {
+	const [editForm, setEditForm] = useState<IncomeEntry | null>(null);
+
+	React.useEffect(() => {
+		if (entry) {
+			setEditForm({ ...entry });
+		}
+	}, [entry]);
+
+	if (!isOpen || !editForm) return null;
+
+	const handleChange = (field: keyof IncomeEntry, value: string | number) => {
+		setEditForm((prev) => (prev ? { ...prev, [field]: value } : null));
+	};
+
+	const handleSave = () => {
+		if (editForm) {
+			onSave({
+				...editForm,
+				amount: parseFloat(editForm.amount.toFixed(2)),
+			});
+		}
+	};
+
+	return (
+		<Modal
+			isOpen={isOpen}
+			onClose={onClose}
+			title={`Edit Entry - ${format(parseISO(editForm.date), "EEE, MMM d")}`}
+		>
+			<div className="space-y-4">
+				<div>
+					<Label className="text-sm text-gray-600 mb-1">Amount ($)</Label>
+					<Input
+						type="number"
+						step="0.01"
+						min="0"
+						value={editForm.amount || ""}
+						onChange={(e) => handleChange("amount", parseFloat(e.target.value) || 0)}
+						className="bg-white h-10"
+						placeholder="0.00"
+					/>
+				</div>
+				<div className="grid grid-cols-2 gap-3">
+					<div>
+						<Label className="text-sm text-gray-600 mb-1">Hours</Label>
+						<Input
+							type="number"
+							step="0.1"
+							min="0"
+							max="24"
+							value={editForm.hours || ""}
+							onChange={(e) => handleChange("hours", parseFloat(e.target.value) || 0)}
+							className="bg-white h-10"
+							placeholder="0"
+						/>
+					</div>
+					<div>
+						<Label className="text-sm text-gray-600 mb-1">Minutes</Label>
+						<Input
+							type="number"
+							step="1"
+							min="0"
+							max="59"
+							value={editForm.minutes || ""}
+							onChange={(e) => handleChange("minutes", parseInt(e.target.value) || 0)}
+							className="bg-white h-10"
+							placeholder="0"
+						/>
+					</div>
+				</div>
+				<div className="flex gap-2 pt-2">
+					<button
+						onClick={handleSave}
+						className="flex-1 px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600/75 transition-colors duration-200 font-medium cursor-pointer shadow-sm shadow-gray-500/50"
+					>
+						Save Changes
+					</button>
+					<button
+						onClick={onClose}
+						className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer"
+					>
+						Cancel
+					</button>
+				</div>
+			</div>
+		</Modal>
+	);
+};
+
 const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 	selectedWeek,
 	currentWeekEntries,
 }) => {
-	// Form states
 	const [newEntry, setNewEntry] = useState<Omit<IncomeEntry, "id">>({
 		date: new Date().toISOString().split("T")[0],
 		amount: 0,
@@ -28,10 +124,9 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 	const [pasteText, setPasteText] = useState("");
 	const [parsedEntries, setParsedEntries] = useState<any[]>([]);
 	const [parseError, setParseError] = useState("");
-	const [showEntrySection, setShowEntrySection] = useState(false);
+	const [showAddModal, setShowAddModal] = useState(false);
 	const [entryMethod, setEntryMethod] = useState<"manual" | "paste">("paste");
-	const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
-	const [editEntryForm, setEditEntryForm] = useState<IncomeEntry | null>(null);
+	const [editingEntry, setEditingEntry] = useState<IncomeEntry | null>(null);
 
 	const { incomeEntries, addIncomeEntry, updateIncomeEntry, deleteIncomeEntry } =
 		useIncomeStore();
@@ -47,59 +142,35 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 		);
 	};
 
-	const handleToggleEntrySection = () => {
-		setShowEntrySection(!showEntrySection);
-	};
+	const handleAddEntry = (e: React.FormEvent) => {
+		e.preventDefault();
+		if (newEntry.amount <= 0) return;
 
-	const handleCancelEntry = () => {
-		setShowEntrySection(false);
+		const entry: IncomeEntry = {
+			...newEntry,
+			id: Date.now().toString(),
+			amount: parseFloat(newEntry.amount.toFixed(2)),
+		};
+
+		addIncomeEntry(entry);
+		setShowAddModal(false);
 		onResetForm();
 	};
 
-	const handleAddEntry = (e: React.FormEvent) => {
-		onAddEntry(e);
-		setShowEntrySection(false);
-	};
-
 	const handleAddParsedEntries = () => {
-		onAddParsedEntries();
-		setShowEntrySection(false);
+		const newEntries: IncomeEntry[] = parsedEntries.map((parsed) => ({
+			id: Date.now().toString() + Math.random(),
+			date: parsed.date,
+			amount: parsed.amount,
+			hours: parsed.hours,
+			minutes: parsed.minutes,
+		}));
+
+		newEntries.forEach((entry) => addIncomeEntry(entry));
+		setShowAddModal(false);
+		onResetForm();
 	};
 
-	// *********************************
-
-	// Entry editing handlers
-	const onStartEditing = (entry: IncomeEntry) => {
-		setEditingEntryId(entry.id);
-		setEditEntryForm({ ...entry });
-	};
-
-	const onCancelEditing = () => {
-		setEditingEntryId(null);
-		setEditEntryForm(null);
-	};
-
-	const onEditEntryChange = (field: keyof IncomeEntry, value: string | number) => {
-		if (editEntryForm) {
-			setEditEntryForm((prev) => (prev ? { ...prev, [field]: value } : null));
-		}
-	};
-
-	const onSaveEditedEntry = () => {
-		if (editEntryForm) {
-			const updatedEntry = {
-				...editEntryForm,
-				amount: parseFloat(editEntryForm.amount.toFixed(2)),
-			};
-
-			updateIncomeEntry(updatedEntry);
-
-			setEditingEntryId(null);
-			setEditEntryForm(null);
-		}
-	};
-
-	// Paste text handling
 	const onPasteTextChange = (text: string) => {
 		setPasteText(text);
 		setParseError("");
@@ -114,47 +185,6 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 		} else {
 			setParsedEntries([]);
 		}
-	};
-
-	const onAddParsedEntries = () => {
-		const newEntries: IncomeEntry[] = parsedEntries.map((parsed) => ({
-			id: Date.now().toString() + Math.random(),
-			date: parsed.date,
-			amount: parsed.amount,
-			hours: parsed.hours,
-			minutes: parsed.minutes,
-		}));
-
-		newEntries.forEach((entry) => addIncomeEntry(entry));
-
-		setPasteText("");
-		setParsedEntries([]);
-		setParseError("");
-	};
-
-	// Manual entry handlers
-	const onAddEntry = (e: React.FormEvent) => {
-		e.preventDefault();
-		if (newEntry.amount <= 0) return;
-
-		const entry: IncomeEntry = {
-			...newEntry,
-			id: Date.now().toString(),
-			amount: parseFloat(newEntry.amount.toFixed(2)),
-		};
-
-		addIncomeEntry(entry);
-
-		setNewEntry({
-			date: new Date().toISOString().split("T")[0],
-			amount: 0,
-			hours: 0,
-			minutes: 0,
-		});
-	};
-
-	const onDeleteEntry = (id: string) => {
-		deleteIncomeEntry(id);
 	};
 
 	const onResetForm = () => {
@@ -173,65 +203,202 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 		setNewEntry((prev) => ({ ...prev, [field]: value }));
 	};
 
+	const handleSaveEdit = (entry: IncomeEntry) => {
+		updateIncomeEntry(entry);
+		setEditingEntry(null);
+	};
+
+	const formatTime = (hours?: number, minutes?: number) => {
+		const h = hours || 0;
+		const m = minutes || 0;
+		return `${h}h ${m.toString().padStart(2, "0")}m`;
+	};
+
+	const sortedEntries = [...currentWeekEntries].sort(
+		(a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+	);
+
 	return (
-		<div className="bg-white rounded-lg shadow p-6">
-			<div className="flex items-center justify-between mb-4">
-				<h2 className="text-xl font-semibold text-gray-800">Income Entries</h2>
-				<div className="flex items-center gap-2">
-					<span className="text-sm text-gray-500">
-						{currentWeekEntries.length} entries this week
+		<div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 h-full">
+			<div className="flex items-center justify-between mb-3">
+				<div>
+					<h2 className="text-sm font-semibold text-gray-700">Income Entries</h2>
+					<span className="text-xs text-gray-500 mt-0.5 block">
+						{currentWeekEntries.length}{" "}
+						{currentWeekEntries.length === 1 ? "entry" : "entries"}
 					</span>
-					<div className="relative group">
-						<svg
-							className="w-4 h-4 text-gray-400"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth={2}
-								d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-							/>
-						</svg>
-						<div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
-							New entries replace existing ones for the same date
-						</div>
-					</div>
 				</div>
+				<button
+					onClick={() => setShowAddModal(true)}
+					className="px-3 py-1.5 bg-sky-500 text-white rounded-lg hover:bg-sky-600/75 transition-colors duration-200 flex items-center gap-1.5 text-xs font-medium cursor-pointer shadow-sm shadow-gray-500/50"
+					title="Add Income Entry"
+				>
+					<svg
+						className="w-3.5 h-3.5"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+					>
+						<path
+							strokeLinecap="round"
+							strokeLinejoin="round"
+							strokeWidth={2}
+							d="M12 4v16m8-8H4"
+						/>
+					</svg>
+					<span>Add Entry</span>
+				</button>
 			</div>
 
-			{/* Entry Methods Section */}
-			{showEntrySection && (
-				<div className="mb-6 border border-gray-200 rounded-lg p-4 bg-gray-50">
-					<div className="flex items-center justify-between mb-4">
-						<h3 className="text-lg font-semibold text-gray-800">Add Income</h3>
-						<button
-							onClick={handleCancelEntry}
-							className="border border-gray-600 px-6 py-2 bg-gray-50 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
-						>
-							Cancel
-						</button>
-					</div>
+			{currentWeekEntries.length === 0 ? (
+				<div className="text-center py-8">
+					<svg
+						className="w-10 h-10 text-gray-300 mx-auto mb-3"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+					>
+						<path
+							strokeLinecap="round"
+							strokeLinejoin="round"
+							strokeWidth={1.5}
+							d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+						/>
+					</svg>
+					<p className="text-sm text-gray-500">No entries this week</p>
+				</div>
+			) : (
+				<div className="overflow-x-auto">
+					<table className="w-full">
+						<thead>
+							<tr className="border-b border-gray-200">
+								<th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider py-2 px-2">
+									Date
+								</th>
+								<th className="text-right text-xs font-semibold text-gray-500 uppercase tracking-wider py-2 px-2">
+									Amount
+								</th>
+								<th className="text-right text-xs font-semibold text-gray-500 uppercase tracking-wider py-2 px-2">
+									Time
+								</th>
+								<th className="text-right text-xs font-semibold text-gray-500 uppercase tracking-wider py-2 px-2 w-16">
+									Actions
+								</th>
+							</tr>
+						</thead>
+						<tbody className="divide-y divide-gray-100">
+							{sortedEntries.map((entry) => {
+								const isLatest = isLatestEntry(entry);
+								return (
+									<tr
+										key={entry.id}
+										className={`${
+											isLatest
+												? "bg-white hover:bg-gray-50"
+												: "bg-gray-50/50 opacity-50"
+										} transition-colors`}
+									>
+										<td className="py-2 px-2">
+											<div className="flex flex-col gap-0.5">
+												<span className="text-xs font-medium text-gray-900">
+													{format(parseISO(entry.date), "EEE, MMM d")}
+												</span>
+												{!isLatest && (
+													<span className="text-xs text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded w-fit">
+														Replaced
+													</span>
+												)}
+											</div>
+										</td>
+										<td className="py-2 px-2 text-right">
+											<span className="text-xs font-semibold text-sky-600">
+												${entry.amount.toFixed(2)}
+											</span>
+										</td>
+										<td className="py-2 px-2 text-right">
+											<span className="text-xs text-gray-600">
+												{formatTime(entry.hours, entry.minutes)}
+											</span>
+										</td>
+										<td className="py-2 px-2">
+											<div className="flex justify-end gap-0.5">
+												{isLatest && (
+													<button
+														onClick={() => setEditingEntry(entry)}
+														className="p-1 text-sky-600 hover:bg-sky-100 rounded transition-colors cursor-pointer"
+														title="Edit"
+													>
+														<svg
+															className="w-3.5 h-3.5"
+															fill="none"
+															stroke="currentColor"
+															viewBox="0 0 24 24"
+														>
+															<path
+																strokeLinecap="round"
+																strokeLinejoin="round"
+																strokeWidth={2}
+																d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+															/>
+														</svg>
+													</button>
+												)}
+												<button
+													onClick={() => deleteIncomeEntry(entry.id)}
+													className="p-1 text-red-500 hover:bg-red-100 rounded transition-colors cursor-pointer"
+													title="Delete"
+												>
+													<svg
+														className="w-3.5 h-3.5"
+														fill="none"
+														stroke="currentColor"
+														viewBox="0 0 24 24"
+													>
+														<path
+															strokeLinecap="round"
+															strokeLinejoin="round"
+															strokeWidth={2}
+															d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+														/>
+													</svg>
+												</button>
+											</div>
+										</td>
+									</tr>
+								);
+							})}
+						</tbody>
+					</table>
+				</div>
+			)}
 
-					<div className="flex gap-2 mb-4">
+			{/* Add Entry Modal */}
+			<Modal
+				isOpen={showAddModal}
+				onClose={() => {
+					setShowAddModal(false);
+					onResetForm();
+				}}
+				title="Add Income Entry"
+			>
+				<div className="space-y-4">
+					<div className="flex gap-2">
 						<button
 							onClick={() => setEntryMethod("manual")}
-							className={`flex-1 py-2 px-4 rounded-md font-medium transition-colors ${
+							className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
 								entryMethod === "manual"
-									? "px-6 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors cursor-pointer"
-									: "bg-gray-200 text-gray-700 hover:bg-gray-300"
+									? "bg-sky-500 text-white shadow-sm"
+									: "bg-gray-100 text-gray-600 hover:bg-gray-200"
 							}`}
 						>
 							Manual Entry
 						</button>
 						<button
 							onClick={() => setEntryMethod("paste")}
-							className={`flex-1 py-2 px-4 rounded-md font-medium transition-colors ${
+							className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
 								entryMethod === "paste"
-									? "px-6 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors cursor-pointer"
-									: "bg-gray-200 text-gray-700 hover:bg-gray-300"
+									? "bg-sky-500 text-white shadow-sm"
+									: "bg-gray-100 text-gray-600 hover:bg-gray-200"
 							}`}
 						>
 							Paste Data
@@ -256,215 +423,15 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 						/>
 					)}
 				</div>
-			)}
+			</Modal>
 
-			{currentWeekEntries.length === 0 && !showEntrySection ? (
-				<div className={`text-center py-8`}>
-					<svg
-						className="w-12 h-12 text-gray-400 mx-auto mb-4"
-						fill="none"
-						stroke="currentColor"
-						viewBox="0 0 24 24"
-					>
-						<path
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							strokeWidth={2}
-							d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-						/>
-					</svg>
-					<p className="text-gray-500 mb-4">No income entries for this week</p>
-					<button
-						onClick={handleToggleEntrySection}
-						className="px-6 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors cursor-pointer"
-					>
-						+ Add your first entry
-					</button>
-				</div>
-			) : (
-				<>
-					{/* Add Income button */}
-					{!showEntrySection && (
-						<div className="mb-6">
-							<button
-								onClick={handleToggleEntrySection}
-								className="w-full bg-sky-600 text-white py-3 px-4 rounded-md hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 transition-colors font-medium"
-							>
-								+ Add Income Entry
-							</button>
-						</div>
-					)}
-					<div className="space-y-3 max-h-96 overflow-y-auto">
-						{currentWeekEntries
-							.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-							.map((entry) => (
-								<div
-									key={entry.id}
-									className={`flex items-center justify-between p-3 border rounded-lg ${
-										isLatestEntry(entry)
-											? "border-emerald-200 bg-emerald-50"
-											: "border-gray-200 bg-gray-50 opacity-60"
-									}`}
-								>
-									{editingEntryId === entry.id ? (
-										<div className="flex-1 space-y-4">
-											<div className="text-lg text-gray-600 font-semibold">
-												{format(parseISO(entry.date), "EEEE, MMM d, yyyy")}
-											</div>
-											<div className="flex flex-col gap-4">
-												<div>
-													<Label className="block text-sm font-medium text-gray-700 mb-1">
-														Amount ($)
-													</Label>
-													<Input
-														type="number"
-														step="0.01"
-														min="0"
-														value={editEntryForm?.amount || ""}
-														onChange={(e) =>
-															onEditEntryChange(
-																"amount",
-																parseFloat(e.target.value) || 0
-															)
-														}
-														className="bg-white w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
-														placeholder="0.00"
-														required
-													/>
-												</div>
-
-												<div className="grid grid-cols-2 gap-4">
-													<div>
-														<Label className="block text-sm font-medium text-gray-700 mb-1">
-															Hours
-														</Label>
-														<Input
-															type="number"
-															step="0.1"
-															min="0"
-															max="24"
-															value={editEntryForm?.hours || ""}
-															onChange={(e) =>
-																onEditEntryChange(
-																	"hours",
-																	parseFloat(e.target.value) || 0
-																)
-															}
-															className="bg-white w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
-															placeholder="0"
-														/>
-													</div>
-
-													<div>
-														<Label className="block text-sm font-medium text-gray-700 mb-1">
-															Minutes
-														</Label>
-														<Input
-															type="number"
-															step="1"
-															min="0"
-															max="59"
-															value={editEntryForm?.minutes || ""}
-															onChange={(e) =>
-																onEditEntryChange(
-																	"minutes",
-																	parseInt(e.target.value) || 0
-																)
-															}
-															className="bg-white w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
-															placeholder="0"
-														/>
-													</div>
-												</div>
-
-												<div className="text-sm text-gray-600 bg-sky-50 p-3 rounded-md">
-													<p>
-														💡 <strong>Tip:</strong> You can enter just
-														hours or just minutes - both are optional.
-													</p>
-												</div>
-											</div>
-											<div className="flex justify-end gap-2">
-												<button
-													onClick={onSaveEditedEntry}
-													className="bg-sky-600 text-white py-2 px-4 rounded-md hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 transition-colors cursor-pointer"
-												>
-													Save
-												</button>
-												<button
-													onClick={onCancelEditing}
-													className="bg-gray-600 text-shadow-gray-800 py-2 px-4 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 transition-colors cursor-pointer"
-												>
-													Cancel
-												</button>
-											</div>
-										</div>
-									) : (
-										<>
-											<div className="flex-1">
-												<div className="text-md font-medium text-gray-900">
-													${entry.amount.toFixed(2)}{" "}
-													{entry.hours &&
-														` • ${entry.hours}h ${entry.minutes}m`}
-													{!isLatestEntry(entry) && (
-														<span className="ml-2 text-xs text-orange-600 bg-orange-100 px-1 py-0.5 rounded">
-															Replaced
-														</span>
-													)}
-												</div>
-												<div className="text-sm text-gray-600">
-													{format(parseISO(entry.date), "EEEE, MMM d")}
-												</div>
-											</div>
-											<div className="flex gap-2">
-												{isLatestEntry(entry) && (
-													<button
-														onClick={() => onStartEditing(entry)}
-														className="border border-transparent text-sky-600 hover:border-sky-600 p-1 rounded transition-colors cursor-pointer"
-														title="Edit entry"
-													>
-														<svg
-															className="w-4 h-4"
-															fill="none"
-															stroke="currentColor"
-															viewBox="0 0 24 24"
-														>
-															<path
-																strokeLinecap="round"
-																strokeLinejoin="round"
-																strokeWidth={2}
-																d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-															/>
-														</svg>
-													</button>
-												)}
-												<button
-													onClick={() => onDeleteEntry(entry.id)}
-													className="border border-transparent text-red-600 hover:border-red-700 p-1 rounded transition-colors cursor-pointer"
-													title="Delete entry"
-												>
-													<svg
-														className="w-4 h-4"
-														fill="none"
-														stroke="currentColor"
-														viewBox="0 0 24 24"
-													>
-														<path
-															strokeLinecap="round"
-															strokeLinejoin="round"
-															strokeWidth={2}
-															d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-														/>
-													</svg>
-												</button>
-											</div>
-										</>
-									)}
-								</div>
-							))}
-					</div>
-				</>
-			)}
+			{/* Edit Entry Modal */}
+			<EditModal
+				isOpen={editingEntry !== null}
+				onClose={() => setEditingEntry(null)}
+				entry={editingEntry}
+				onSave={handleSaveEdit}
+			/>
 		</div>
 	);
 };
