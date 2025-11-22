@@ -7,7 +7,7 @@ export const CategoryCard = ({
 }: any) => {
 	return (
 		<div className="w-full">
-			<h3 className="font-semibold mb-3 text-gray-700">Categories</h3>
+			<h3 className="sr-only">Categories</h3>
 			<div className="flex flex-wrap gap-2 space-y-1">
 				{Object.entries(categories).map(([key, category]: any) => {
 					const Icon = category.icon;

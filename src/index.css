@@ -121,44 +121,6 @@
 	}
 }
 
-/* Yoopta Editor Custom Styles */
-.yoopta-editor-container {
-	min-height: 300px;
-	width: 100%;
-}
-
-.yoopta-editor-container [data-yoopta-editor-id] {
-	min-height: 300px;
-	width: 100%;
-}
-
-/* Make blocks full width */
-.yoopta-editor-container [data-yoopta-block] {
-	width: 100%;
-	max-width: 100%;
-}
-
-/* Adjust editor padding and spacing */
-.yoopta-editor-container .yoopta-block {
-	margin-bottom: 0.5rem;
-	width: 100%;
-}
-
-/* Make sure action menu is properly positioned */
-.yoopta-action-menu-list {
-	z-index: 1001 !important;
-}
-
-/* Make sure toolbar is visible and properly positioned */
-.yoopta-toolbar {
-	z-index: 1001 !important;
-}
-
-/* Ensure proper positioning for action button */
-[data-yoopta-action-menu-list] {
-	position: relative;
-}
-
 @keyframes slideDown {
 	from {
 		opacity: 0;

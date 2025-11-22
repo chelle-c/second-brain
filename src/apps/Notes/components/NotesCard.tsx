@@ -312,8 +312,12 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 						{filteredNotes.map((note: Note) => (
 							<div
 								key={note.id}
-								className="p-4 bg-white border rounded-lg hover:shadow-md transition-shadow"
+								tabIndex={0}
+								className="p-4 bg-white border rounded-lg hover:shadow-md transition-shadow cursor-pointer"
 								onClick={() => setViewingNote(note)}
+								onKeyDown={(e) => {
+									if (e.key === "Enter") setViewingNote(note);
+								}}
 							>
 								<div className="flex justify-between items-start gap-4">
 									<div className="flex-1">

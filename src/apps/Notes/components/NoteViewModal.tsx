@@ -1,24 +1,9 @@
-import { useState, useRef, useMemo, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
+import { EditorSetup } from "./EditorSetup";
 import { useNotesStore } from "@/stores/useNotesStore";
 import { Note, Category } from "@/types/notes";
 import { X, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import YooptaEditor, { createYooptaEditor } from "@yoopta/editor";
-import Paragraph from "@yoopta/paragraph";
-import Blockquote from "@yoopta/blockquote";
-import Embed from "@yoopta/embed";
-import Image from "@yoopta/image";
-import Link, { LinkElementProps } from "@yoopta/link";
-import Callout from "@yoopta/callout";
-import Video from "@yoopta/video";
-import File from "@yoopta/file";
-import { HeadingOne, HeadingThree, HeadingTwo } from "@yoopta/headings";
-import { NumberedList, BulletedList, TodoList } from "@yoopta/lists";
-import { Bold, Italic, CodeMark, Underline, Strike, Highlight } from "@yoopta/marks";
-import Code from "@yoopta/code";
-import LinkTool, { DefaultLinkToolRender } from "@yoopta/link-tool";
-import ActionMenu, { DefaultActionMenuRender } from "@yoopta/action-menu-list";
-import Toolbar, { DefaultToolbarRender } from "@yoopta/toolbar";
 
 interface NoteViewModalProps {
 	note: Note;
@@ -26,61 +11,8 @@ interface NoteViewModalProps {
 	onClose: () => void;
 }
 
-const MARKS = [Bold, Italic, CodeMark, Underline, Strike, Highlight];
-
-// Helper function to convert file to base64
-const fileToBase64 = (file: File): Promise<string> => {
-	return new Promise((resolve, reject) => {
-		const reader = new FileReader();
-		reader.readAsDataURL(file);
-		reader.onload = () => resolve(reader.result as string);
-		reader.onerror = (error) => reject(error);
-	});
-};
-
-// Helper function to get image dimensions
-const getImageDimensions = (file: File): Promise<{ width: number; height: number }> => {
-	return new Promise((resolve, reject) => {
-		const img = document.createElement("img");
-		const url = URL.createObjectURL(file);
-
-		img.onload = () => {
-			URL.revokeObjectURL(url);
-			resolve({ width: img.width, height: img.height });
-		};
-
-		img.onerror = () => {
-			URL.revokeObjectURL(url);
-			reject(new Error("Failed to load image"));
-		};
-
-		img.src = url;
-	});
-};
-
-// Helper function to get video dimensions
-const getVideoDimensions = (file: File): Promise<{ width: number; height: number }> => {
-	return new Promise((resolve, reject) => {
-		const video = document.createElement("video");
-		const url = URL.createObjectURL(file);
-
-		video.onloadedmetadata = () => {
-			URL.revokeObjectURL(url);
-			resolve({ width: video.videoWidth, height: video.videoHeight });
-		};
-
-		video.onerror = () => {
-			URL.revokeObjectURL(url);
-			reject(new Error("Failed to load video"));
-		};
-
-		video.src = url;
-	});
-};
-
 export const NoteViewModal = ({ note, categories, onClose }: NoteViewModalProps) => {
 	const { updateNote, deleteNote } = useNotesStore();
-	const editor = useMemo(() => createYooptaEditor(), []);
 	const selectionRef = useRef(null);
 
 	const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -93,106 +25,6 @@ export const NoteViewModal = ({ note, categories, onClose }: NoteViewModalProps)
 		}
 	});
 	const titleRef = useRef<HTMLInputElement>(null);
-
-	const plugins = [
-		Paragraph,
-		HeadingOne,
-		HeadingTwo,
-		HeadingThree,
-		Blockquote,
-		Callout,
-		NumberedList,
-		BulletedList,
-		TodoList,
-		Code,
-		Link.extend({
-			elementProps: {
-				link: (props: LinkElementProps) => ({
-					...props,
-					target: "_blank",
-				}),
-			},
-		}),
-		Embed,
-		Image.extend({
-			options: {
-				onUpload: async (file: File) => {
-					try {
-						const base64 = await fileToBase64(file);
-						const dimensions = await getImageDimensions(file);
-
-						return {
-							src: base64,
-							alt: file.name,
-							sizes: {
-								width: dimensions.width,
-								height: dimensions.height,
-							},
-						};
-					} catch (error) {
-						console.error("Error uploading image:", error);
-						throw error;
-					}
-				},
-			},
-		}),
-		Video.extend({
-			options: {
-				onUpload: async (file: File) => {
-					try {
-						const base64 = await fileToBase64(file);
-						const dimensions = await getVideoDimensions(file);
-
-						return {
-							src: base64,
-							alt: file.name,
-							sizes: {
-								width: dimensions.width,
-								height: dimensions.height,
-							},
-						};
-					} catch (error) {
-						console.error("Error uploading video:", error);
-						throw error;
-					}
-				},
-			},
-		}),
-		File.extend({
-			options: {
-				onUpload: async (file: File) => {
-					try {
-						const base64 = await fileToBase64(file);
-
-						return {
-							src: base64,
-							format: file.type,
-							name: file.name,
-							size: file.size,
-						};
-					} catch (error) {
-						console.error("Error uploading file:", error);
-						throw error;
-					}
-				},
-			},
-		}),
-	];
-
-	const TOOLS = {
-		ActionMenu: {
-			render: DefaultActionMenuRender,
-			tool: ActionMenu,
-		},
-		Toolbar: {
-			render: DefaultToolbarRender,
-			tool: Toolbar,
-		},
-		LinkTool: {
-			render: DefaultLinkToolRender,
-			tool: LinkTool,
-		},
-	};
 
 	useEffect(() => {
 		if (isEditingTitle && titleRef.current) {
@@ -237,21 +69,21 @@ export const NoteViewModal = ({ note, categories, onClose }: NoteViewModalProps)
 			<div className="fixed inset-0 z-50 flex items-center justify-center p-4">
 				<div className="bg-white rounded-lg shadow-xl w-full max-w-4xl h-[80vh] flex flex-col">
 					{/* Header */}
-					<div className="flex items-center justify-between p-8 shrink-0 max-h-[4vh]">
+					<div className="flex items-center justify-between px-12 pt-8 shrink-0 max-h-[10vh]">
 						<div></div>
 						<button
 							onClick={onClose}
 							className="p-1 hover:bg-gray-100 rounded transition-colors"
 							title="Close"
 						>
-							<X size={20} />
+							<X size={24} />
 						</button>
 					</div>
 
 					{/* Content */}
 					<div className="flex-1 overflow-y-auto">
 						<div className="min-h-full max-w-3xl mx-auto h-full px-8 py-4">
-							<div className="flex flex-col space-y-4 w-full h-full max-h-[62vh] border-b">
+							<div className="flex flex-col space-y-1 w-full h-[85%] border-b">
 								{/* Title - Click to edit */}
 								{isEditingTitle ? (
 									<input
@@ -298,18 +130,11 @@ export const NoteViewModal = ({ note, categories, onClose }: NoteViewModalProps)
 								{/* Yoopta Editor */}
 								<div
 									ref={selectionRef}
-									className="yoopta-editor-container w-full overflow-y-auto h-full"
+									className="overflow-y-auto w-full h-full"
 								>
-									<YooptaEditor
-										editor={editor}
-										plugins={plugins}
-										tools={TOOLS}
-										marks={MARKS}
-										selectionBoxRoot={selectionRef}
+									<EditorSetup
 										value={editorValue}
 										onChange={handleEditorChange}
-										width="100%"
-										className="w-full h-full"
 									/>
 								</div>
 							</div>
