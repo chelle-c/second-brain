@@ -43,7 +43,6 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 	const [searchTerm, setSearchTerm] = useState("");
 	const [showNewSubfolder, setShowNewSubfolder] = useState<string | null>(null);
 	const [newSubfolderName, setNewSubfolderName] = useState("");
-	const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 	const [editingFolder, setEditingFolder] = useState("");
 	const [editFolderName, setEditFolderName] = useState("");
 	const [viewingNote, setViewingNote] = useState<Note | null>(null);
@@ -121,7 +120,7 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 	});
 
 	return (
-		<div className="w-full max-h-[98vh] bg-white flex flex-col items-center justify-between gap-4 p-8 rounded-lg shadow-md overflow-x-hidden overflow-y-auto animate-slideUp">
+		<div className="w-full h-full max-h-[98vh] bg-white flex flex-col gap-4 p-8 rounded-lg shadow-md overflow-x-hidden overflow-y-auto animate-slideUp">
 			<div className="w-full space-y-3">
 				<div className="w-full flex flex-col md:flex-row items-center justify-between">
 					<div className="w-full flex items-center justify-start gap-2">
@@ -343,8 +342,6 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 									</div>
 									<div onClick={(e) => e.stopPropagation()}>
 										<NotesDropdownMenu
-											openDropdown={openDropdown}
-											setOpenDropdown={setOpenDropdown}
 											note={note}
 											allFolders={allFolders}
 											activeFolder={activeFolder}
