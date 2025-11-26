@@ -139,7 +139,6 @@ export const parsePasteText = (text: string, selectedYear: number) => {
 	return entries;
 };
 
-// New utility functions for monthly and yearly data
 export const getMonthlyData = (incomeEntries: any[], year: number) => {
 	const monthlyData = [];
 
@@ -156,23 +155,31 @@ export const getMonthlyData = (incomeEntries: any[], year: number) => {
 		const uniqueEntries = monthEntries.reduce((acc, entry) => {
 			const entryDate = format(parseISO(entry.date), "yyyy-MM-dd");
 			const existingEntry = acc.find(
-				(e: { date: string; }) => format(parseISO(e.date), "yyyy-MM-dd") === entryDate
+				(e: { date: string }) => format(parseISO(e.date), "yyyy-MM-dd") === entryDate
 			);
 
 			if (!existingEntry || new Date(entry.date) > new Date(existingEntry.date)) {
-				acc = acc.filter((e: { date: string; }) => format(parseISO(e.date), "yyyy-MM-dd") !== entryDate);
+				acc = acc.filter(
+					(e: { date: string }) => format(parseISO(e.date), "yyyy-MM-dd") !== entryDate
+				);
 				acc.push(entry);
 			}
 
 			return acc;
 		}, []);
 
-		const totalAmount = uniqueEntries.reduce((sum: any, entry: { amount: any; }) => sum + entry.amount, 0);
-		const totalHours = uniqueEntries.reduce((sum: any, entry: { hours: number; minutes: number; }) => {
-			const hours = entry.hours || 0;
-			const minutes = entry.minutes || 0;
-			return sum + hours + minutes / 60;
-		}, 0);
+		const totalAmount = uniqueEntries.reduce(
+			(sum: any, entry: { amount: any }) => sum + entry.amount,
+			0
+		);
+		const totalHours = uniqueEntries.reduce(
+			(sum: any, entry: { hours: number; minutes: number }) => {
+				const hours = entry.hours || 0;
+				const minutes = entry.minutes || 0;
+				return sum + hours + minutes / 60;
+			},
+			0
+		);
 
 		monthlyData.push({
 			month: MONTHS[month],
@@ -199,23 +206,31 @@ export const getYearlyData = (incomeEntries: any[]) => {
 		const uniqueEntries = yearEntries.reduce((acc, entry) => {
 			const entryDate = format(parseISO(entry.date), "yyyy-MM-dd");
 			const existingEntry = acc.find(
-				(e: { date: string; }) => format(parseISO(e.date), "yyyy-MM-dd") === entryDate
+				(e: { date: string }) => format(parseISO(e.date), "yyyy-MM-dd") === entryDate
 			);
 
 			if (!existingEntry || new Date(entry.date) > new Date(existingEntry.date)) {
-				acc = acc.filter((e: { date: string; }) => format(parseISO(e.date), "yyyy-MM-dd") !== entryDate);
+				acc = acc.filter(
+					(e: { date: string }) => format(parseISO(e.date), "yyyy-MM-dd") !== entryDate
+				);
 				acc.push(entry);
 			}
 
 			return acc;
 		}, []);
 
-		const totalAmount = uniqueEntries.reduce((sum: any, entry: { amount: any; }) => sum + entry.amount, 0);
-		const totalHours = uniqueEntries.reduce((sum: any, entry: { hours: number; minutes: number; }) => {
-			const hours = entry.hours || 0;
-			const minutes = entry.minutes || 0;
-			return sum + hours + minutes / 60;
-		}, 0);
+		const totalAmount = uniqueEntries.reduce(
+			(sum: any, entry: { amount: any }) => sum + entry.amount,
+			0
+		);
+		const totalHours = uniqueEntries.reduce(
+			(sum: any, entry: { hours: number; minutes: number }) => {
+				const hours = entry.hours || 0;
+				const minutes = entry.minutes || 0;
+				return sum + hours + minutes / 60;
+			},
+			0
+		);
 
 		yearlyData.push({
 			year: year,
@@ -230,17 +245,21 @@ export const getYearlyData = (incomeEntries: any[]) => {
 export const getTotalHoursWorked = (incomeEntries: any[]) => {
 	const uniqueEntries = incomeEntries.reduce((acc, entry) => {
 		const entryDate = format(parseISO(entry.date), "yyyy-MM-dd");
-		const existingEntry = acc.find((e: { date: string; }) => format(parseISO(e.date), "yyyy-MM-dd") === entryDate);
+		const existingEntry = acc.find(
+			(e: { date: string }) => format(parseISO(e.date), "yyyy-MM-dd") === entryDate
+		);
 
 		if (!existingEntry || new Date(entry.date) > new Date(existingEntry.date)) {
-			acc = acc.filter((e: { date: string; }) => format(parseISO(e.date), "yyyy-MM-dd") !== entryDate);
+			acc = acc.filter(
+				(e: { date: string }) => format(parseISO(e.date), "yyyy-MM-dd") !== entryDate
+			);
 			acc.push(entry);
 		}
 
 		return acc;
 	}, []);
 
-	return uniqueEntries.reduce((sum: any, entry: { hours: number; minutes: number; }) => {
+	return uniqueEntries.reduce((sum: any, entry: { hours: number; minutes: number }) => {
 		const hours = entry.hours || 0;
 		const minutes = entry.minutes || 0;
 		return sum + hours + minutes / 60;
@@ -250,15 +269,19 @@ export const getTotalHoursWorked = (incomeEntries: any[]) => {
 export const getTotalAmount = (incomeEntries: any[]) => {
 	const uniqueEntries = incomeEntries.reduce((acc, entry) => {
 		const entryDate = format(parseISO(entry.date), "yyyy-MM-dd");
-		const existingEntry = acc.find((e: { date: string; }) => format(parseISO(e.date), "yyyy-MM-dd") === entryDate);
+		const existingEntry = acc.find(
+			(e: { date: string }) => format(parseISO(e.date), "yyyy-MM-dd") === entryDate
+		);
 
 		if (!existingEntry || new Date(entry.date) > new Date(existingEntry.date)) {
-			acc = acc.filter((e: { date: string; }) => format(parseISO(e.date), "yyyy-MM-dd") !== entryDate);
+			acc = acc.filter(
+				(e: { date: string }) => format(parseISO(e.date), "yyyy-MM-dd") !== entryDate
+			);
 			acc.push(entry);
 		}
 
 		return acc;
 	}, []);
 
-	return uniqueEntries.reduce((sum: any, entry: { amount: any; }) => sum + entry.amount, 0);
+	return uniqueEntries.reduce((sum: any, entry: { amount: any }) => sum + entry.amount, 0);
 };

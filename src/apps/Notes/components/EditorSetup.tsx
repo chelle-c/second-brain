@@ -1,7 +1,10 @@
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
+import LinkPreview from "./LinkPreview";
+import { useNotesStore } from "@/stores/useNotesStore";
+import { Note } from "@/types/notes";
+import { invoke } from "@tauri-apps/api/core";
 
-import YooptaEditor, { createYooptaEditor, YooptaContentValue } from "@yoopta/editor";
-
+import YooptaEditor, { createYooptaEditor } from "@yoopta/editor";
 import Paragraph from "@yoopta/paragraph";
 import Blockquote from "@yoopta/blockquote";
 import Embed from "@yoopta/embed";
@@ -183,19 +186,64 @@ const TOOLS = {
 const MARKS = [Bold, Italic, CodeMark, Underline, Strike, Highlight];
 
 interface EditorSetupProps {
-	value: {};
-	onChange: (value: YooptaContentValue) => void;
+	note: Note;
 }
 
-export const EditorSetup = ({value, onChange}: EditorSetupProps) => {
+export const EditorSetup = ({ note }: EditorSetupProps) => {
+	const { updateNote } = useNotesStore();
+	const [value, setValue] = useState(() => {
+		try {
+			return note.content ? JSON.parse(note.content) : {};
+		} catch {
+			return {};
+		}
+	});
 	const editor = useMemo(() => createYooptaEditor(), []);
 	const selectionRef = useRef(null);
 
+	// TODO: Fix this to create link preview block when adding a link
+	const onChange = async (value: any, options: any) => {
+		setValue(value);
+
+		// Check if new content was added
+		if (options.action === "insert") {
+			// Look for paragraph blocks with URLs
+			Object.entries(value).forEach(async ([blockId, block]: any) => {
+				if (block.type === "Paragraph") {
+					const text = block.value[0]?.children[0]?.text;
+					const urlRegex = /(https?:\/\/[^\s]+)/g;
+					const matches = text?.match(urlRegex);
+
+					if (matches && matches.length > 0) {
+						const url = matches[0];
+
+						// Fetch metadata
+						const metadata = await invoke("fetch_link_metadata", { url });
+
+						// Transform the paragraph into a link preview block
+						// (You'll need to use editor methods to do this)
+						editor.insertBlock("LinkPreview", {
+							blockData: {
+								id: blockId,
+								value: [url, metadata],
+							},
+						});
+
+						// Delete the original paragraph
+						editor.deleteBlock({ blockId });
+					}
+				}
+			});
+		}
+
+		const content = JSON.stringify(value);
+		if (content !== note.content) {
+			updateNote(note.id, { content });
+		}
+	};
+
 	return (
-		<div
-			className="w-full"
-			ref={selectionRef}
-		>
+		<div className="w-full" ref={selectionRef}>
 			<YooptaEditor
 				editor={editor}
 				plugins={plugins}

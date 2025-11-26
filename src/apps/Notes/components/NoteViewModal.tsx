@@ -17,13 +17,7 @@ export const NoteViewModal = ({ note, categories, onClose }: NoteViewModalProps)
 
 	const [isEditingTitle, setIsEditingTitle] = useState(false);
 	const [editedTitle, setEditedTitle] = useState(note.title);
-	const [editorValue, setEditorValue] = useState(() => {
-		try {
-			return note.content ? JSON.parse(note.content) : {};
-		} catch {
-			return {};
-		}
-	});
+	
 	const titleRef = useRef<HTMLInputElement>(null);
 
 	useEffect(() => {
@@ -40,14 +34,6 @@ export const NoteViewModal = ({ note, categories, onClose }: NoteViewModalProps)
 		}
 	};
 
-	const handleEditorChange = (value: any) => {
-		setEditorValue(value);
-		// Auto-save content
-		const content = JSON.stringify(value);
-		if (content !== note.content) {
-			updateNote(note.id, { content });
-		}
-	};
 
 	const handleDelete = () => {
 		if (confirm("Are you sure you want to delete this note?")) {
@@ -133,8 +119,7 @@ export const NoteViewModal = ({ note, categories, onClose }: NoteViewModalProps)
 									className="overflow-y-auto w-full h-full"
 								>
 									<EditorSetup
-										value={editorValue}
-										onChange={handleEditorChange}
+										note={note}
 									/>
 								</div>
 							</div>
