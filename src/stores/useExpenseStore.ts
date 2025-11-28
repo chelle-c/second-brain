@@ -8,7 +8,7 @@ import {
 	DEFAULT_CATEGORY_COLORS,
 } from "@/lib/expenseHelpers";
 import { AppToSave } from "@/types";
-import { format, isSameDay } from "date-fns";
+import { format, isSameDay, isSameMonth } from "date-fns";
 
 type TimeUnit = "days" | "weeks" | "months" | "years";
 
@@ -661,8 +661,13 @@ export const useExpenseStore = create<ExpenseStore>()(
 
 				switch (mode) {
 					case "remaining":
-						// FIXED: Include both needs and wants for remaining (unpaid)
-						includeExpense = !expense.isPaid;
+						includeExpense =
+							!expense.isPaid && expense.type === "need"
+								? isSameMonth(
+										expense.dueDate || new Date(),
+										get().selectedMonth || new Date()
+								  )
+								: false;
 						break;
 					case "required":
 						// Show only "Need" type expenses (paid or unpaid)
@@ -686,7 +691,6 @@ export const useExpenseStore = create<ExpenseStore>()(
 			return Object.values(categoryTotals).reduce((sum, amount) => sum + amount, 0);
 		},
 
-		// NEW: Filtered versions that respect showPaid toggle
 		getTotalByCategoryFiltered: (date, mode, showPaid) => {
 			const monthlyExpenses = get().getMonthlyExpenses(date);
 
@@ -697,11 +701,22 @@ export const useExpenseStore = create<ExpenseStore>()(
 				switch (mode) {
 					case "remaining":
 						// Include both needs and wants for remaining (unpaid only)
-						includeExpense = !expense.isPaid;
+						includeExpense =
+							!expense.isPaid &&
+							isSameMonth(
+								expense.dueDate || new Date(),
+								get().selectedMonth || new Date()
+							);
 						break;
 					case "required":
 						// Show only "Need" type expenses
-						includeExpense = expense.type === "need";
+						includeExpense =
+							!expense.isPaid && expense.type === "need"
+								? isSameMonth(
+										expense.dueDate || new Date(),
+										get().selectedMonth || new Date()
+								  )
+								: false;
 						break;
 					case "all":
 						includeExpense = true;

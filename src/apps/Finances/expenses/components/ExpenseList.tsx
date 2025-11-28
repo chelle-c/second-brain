@@ -34,10 +34,12 @@ export const ExpenseList: React.FC = () => {
 			switch (overviewMode) {
 				case "remaining":
 					// Show unpaid expenses (both Need and Want types)
-					return !expense.isPaid;
+					return (
+						!expense.isPaid && isSameMonth(expense.dueDate || new Date(), selectedMonth)
+					);
 				case "required":
 					// Show only "Need" type expenses (paid or unpaid)
-					return expense.type === "need";
+					return expense.type === "need" && isSameMonth(expense.dueDate || new Date(), selectedMonth);
 				case "all":
 				default:
 					// Show all expenses
@@ -75,14 +77,6 @@ export const ExpenseList: React.FC = () => {
 	const handleDeleteCancel = () => {
 		setDeleteModal({ isOpen: false, id: "", name: "" });
 	};
-
-	// const handleEdit = (expense: Expense) => {
-	// 	setEditingExpense(expense);
-	// };
-
-	// const handleCloseEdit = () => {
-	// 	setEditingExpense(null);
-	// };
 
 	// Get filter label for display
 	const getFilterLabel = () => {
@@ -146,15 +140,6 @@ export const ExpenseList: React.FC = () => {
 						showArchiveActions={false}
 					/>
 				)}
-
-				{/* {editingExpense && (
-					<ExpenseForm
-						key={editingExpense.id}
-						editingExpense={editingExpense}
-						onClose={handleCloseEdit}
-						isGlobalEdit={false}
-					/>
-				)} */}
 
 				<DeleteModal
 					isOpen={deleteModal.isOpen}
