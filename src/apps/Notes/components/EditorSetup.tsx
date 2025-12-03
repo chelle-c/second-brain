@@ -1,5 +1,4 @@
 import { useMemo, useRef, useState } from "react";
-import LinkPreview from "./LinkPreview";
 import { useNotesStore } from "@/stores/useNotesStore";
 import { Note } from "@/types/notes";
 import { invoke } from "@tauri-apps/api/core";

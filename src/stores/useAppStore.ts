@@ -102,11 +102,11 @@ const useAppStore = create<AppStore>()(
 			const state = get();
 			try {
 				await sqlStorage.saveData(
-					// Changed from fileStorage
 					{
 						notes: useNotesStore.getState().notes,
 						notesFolders: useNotesStore.getState().notesFolders,
 						subfolders: useNotesStore.getState().subfolders,
+						tags: useNotesStore.getState().tags,
 						expenses: {
 							expenses: useExpenseStore.getState().expenses,
 							selectedMonth: useExpenseStore.getState().selectedMonth || new Date(),

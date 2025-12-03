@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useNotesStore } from "@/stores/useNotesStore";
 import { NotesFolder } from "@/types/notes";
 import {
@@ -13,31 +12,39 @@ import {
 	DropdownMenuSubContent,
 	DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { FolderInput, ChevronDown, X, Folder, MoreVertical } from "lucide-react";
-import { DropdownMenuGroup } from "@radix-ui/react-dropdown-menu";
+import {
+	FolderInput,
+	Folder,
+	MoreVertical,
+	Inbox,
+	Archive,
+	ArchiveRestore,
+	Trash2,
+} from "lucide-react";
 
 interface NotesDropdownMenuProps {
 	note: any;
 	allFolders: any;
 	activeFolder: any;
-	categories: any;
+	tags: any;
 }
 
 export const NotesDropdownMenu: React.FC<NotesDropdownMenuProps> = ({
 	note,
 	allFolders,
-	activeFolder,
-	categories,
 }) => {
-	const { deleteNote, updateNote, categorizeNote } = useNotesStore();
-	const [moveOrCategorize, setMoveOrCategorize] = useState("");
+	const { deleteNote, updateNote, archiveNote, unarchiveNote } = useNotesStore();
 
-	const handleMoveOrCategorize = (type: string) => {
-		moveOrCategorize === type ? setMoveOrCategorize("") : setMoveOrCategorize(type);
+	const moveNote = (noteId: string, newFolder: string) => {
+		updateNote(noteId, { folder: newFolder });
 	};
 
-	const moveNote = (folderId: string, newFolder: string) => {
-		updateNote(folderId, { folder: newFolder });
+	const handleArchiveToggle = () => {
+		if (note.archived) {
+			unarchiveNote(note.id);
+		} else {
+			archiveNote(note.id);
+		}
 	};
 
 	return (
@@ -52,106 +59,94 @@ export const NotesDropdownMenu: React.FC<NotesDropdownMenuProps> = ({
 				</button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end">
-				<DropdownMenuLabel
-					onClick={() => handleMoveOrCategorize("move")}
-					className="w-full flex justify-between items-center gap-4 text-sm font-semibold text-gray-900 cursor-pointer"
-				>
-					<span>Move to folder</span>
-					<ChevronDown
-						size={14}
-						className={`transition ${moveOrCategorize === "move" ? "rotate-180" : ""}`}
-					/>
-				</DropdownMenuLabel>
-				<DropdownMenuGroup>
-					{moveOrCategorize === "move" &&
-						Object.entries(allFolders).map(([key, folder]: [string, unknown]) => {
-							if (key === "inbox") return null;
-							const currentFolder = folder as NotesFolder;
-							return (
-								<DropdownMenuSub key={key}>
-									<DropdownMenuSubTrigger
-										onClick={() => {
-											moveNote(note.id, key);
-										}}
-										className="w-full px-3 py-2 text-sm text-left hover:bg-gray-100 flex items-center gap-2 cursor-pointer"
-									>
-										<Folder size={14} className="text-gray-500" />
-										<span>{currentFolder.name}</span>
-									</DropdownMenuSubTrigger>
-									<DropdownMenuPortal>
-										<DropdownMenuSubContent className="transition ">
-											{"children" in currentFolder &&
-												currentFolder.children &&
-												currentFolder.children.length > 0 &&
-												currentFolder.children.map(
-													(subfolder: NotesFolder) =>
-														activeFolder &&
-														activeFolder.id !== subfolder.id && (
-															<DropdownMenuItem
-																key={subfolder.id}
-																onClick={() => {
-																	moveNote(note.id, subfolder.id);
-																}}
-																className="w-full text-sm text-right hover:bg-gray-100 flex items-center gap-2 cursor-pointer"
-															>
-																<FolderInput
-																	size={14}
-																	className="text-gray-500"
-																/>
-																<span>
-																	{`${currentFolder.name} / ${subfolder.name}`}
-																</span>
-															</DropdownMenuItem>
-														)
-												)}
-										</DropdownMenuSubContent>
-									</DropdownMenuPortal>
-								</DropdownMenuSub>
-							);
-						})}
-				</DropdownMenuGroup>
-				<DropdownMenuSeparator />
-				<DropdownMenuLabel
-					className="w-full flex justify-between items-center text-sm font-semibold text-gray-900 cursor-pointer"
-					onClick={() => handleMoveOrCategorize("categorize")}
-				>
-					<span>Categorize</span>
-					<ChevronDown
-						size={14}
-						className={`transition ${
-							moveOrCategorize === "categorize" ? "rotate-180" : ""
-						}`}
-					/>
-				</DropdownMenuLabel>
-				{moveOrCategorize === "categorize" && (
-					<DropdownMenuGroup>
-						{Object.entries(categories).map(([key, category]: any) => {
-							if (key === "all" || key === note.category) return null;
-							const Icon = category.icon;
-							return (
-								<DropdownMenuItem
-									key={key}
-									onClick={() => {
-										categorizeNote(note.id, key);
-									}}
-									className="w-full px-3 py-2 text-sm text-left hover:bg-gray-100 flex items-center gap-2 cursor-pointer"
-								>
-									<Icon size={14} className="text-gray-500" />
-									<span>{category.name}</span>
-								</DropdownMenuItem>
-							);
-						})}
-					</DropdownMenuGroup>
+				<DropdownMenuLabel>Move to folder</DropdownMenuLabel>
+
+				{/* Inbox option - always available */}
+				{note.folder !== "inbox" && (
+					<DropdownMenuItem
+						onClick={() => moveNote(note.id, "inbox")}
+						className="cursor-pointer"
+					>
+						<Inbox size={14} className="mr-2" />
+						Inbox
+					</DropdownMenuItem>
 				)}
+
+				{/* Other folders */}
+				{Object.entries(allFolders).map(([key, folder]: [string, unknown]) => {
+					if (key === "inbox" || key === note.folder) return null;
+					const currentFolder = folder as NotesFolder;
+
+					if (!currentFolder.children || currentFolder.children.length === 0) {
+						return (
+							<DropdownMenuItem
+								key={key}
+								onClick={() => moveNote(note.id, key)}
+								className="cursor-pointer"
+							>
+								<Folder size={14} className="mr-2" />
+								{currentFolder.name}
+							</DropdownMenuItem>
+						);
+					}
+
+					return (
+						<DropdownMenuSub key={key}>
+							<DropdownMenuSubTrigger
+								onClick={() => moveNote(note.id, key)}
+								className="cursor-pointer"
+							>
+								<Folder size={14} className="mr-2" />
+								<span>{currentFolder.name}</span>
+							</DropdownMenuSubTrigger>
+							<DropdownMenuPortal>
+								<DropdownMenuSubContent>
+									<DropdownMenuItem
+										onClick={() => moveNote(note.id, key)}
+										className="cursor-pointer"
+									>
+										<Folder size={14} className="mr-2" />
+										{currentFolder.name} (root)
+									</DropdownMenuItem>
+									<DropdownMenuSeparator />
+									{currentFolder.children.map((subfolder: NotesFolder) => (
+										<DropdownMenuItem
+											key={subfolder.id}
+											onClick={() => moveNote(note.id, subfolder.id)}
+											className="cursor-pointer"
+										>
+											<FolderInput size={14} className="mr-2" />
+											{subfolder.name}
+										</DropdownMenuItem>
+									))}
+								</DropdownMenuSubContent>
+							</DropdownMenuPortal>
+						</DropdownMenuSub>
+					);
+				})}
+
 				<DropdownMenuSeparator />
+
+				<DropdownMenuItem onClick={handleArchiveToggle} className="cursor-pointer">
+					{note.archived ? (
+						<>
+							<ArchiveRestore size={14} className="mr-2" />
+							Unarchive
+						</>
+					) : (
+						<>
+							<Archive size={14} className="mr-2" />
+							Archive
+						</>
+					)}
+				</DropdownMenuItem>
+
 				<DropdownMenuItem
-					onClick={() => {
-						deleteNote(note.id);
-					}}
-					className="bg-red-50 hover:bg-red-100 flex items-center gap-2 cursor-pointer"
+					onClick={() => deleteNote(note.id)}
+					className="cursor-pointer text-red-600 focus:text-red-600"
 				>
-					<X size={16} className="mr-2 text-red-700" />
-					<span className="text-sm font-normal text-red-700">Delete</span>
+					<Trash2 size={14} className="mr-2" />
+					Delete
 				</DropdownMenuItem>
 			</DropdownMenuContent>
 		</DropdownMenu>

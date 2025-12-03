@@ -1,4 +1,4 @@
-import { Note, NotesFolders } from "@/types/notes";
+import { Note, NotesFolders, Tag } from "@/types/notes";
 import { DatabaseContext } from "./types";
 import { deepEqual } from "./utils";
 
@@ -17,6 +17,8 @@ export class NotesStorage {
 					note.createdAt instanceof Date ? note.createdAt.toISOString() : note.createdAt,
 				updatedAt:
 					note.updatedAt instanceof Date ? note.updatedAt.toISOString() : note.updatedAt,
+				tags: note.tags || [],
+				archived: note.archived || false,
 			}))
 			.sort((a, b) => a.id.localeCompare(b.id));
 	}
@@ -33,6 +35,11 @@ export class NotesStorage {
 	hasFoldersChanged(newFolders: NotesFolders): boolean {
 		if (!this.context.cache.folders) return true;
 		return !deepEqual(this.context.cache.folders, newFolders);
+	}
+
+	hasTagsChanged(newTags: Record<string, Tag>): boolean {
+		if (!this.context.cache.tags) return true;
+		return !deepEqual(this.context.cache.tags, newTags);
 	}
 
 	extractSubfoldersFromHierarchy(folders: NotesFolders): any[] {
@@ -111,21 +118,23 @@ export class NotesStorage {
 					id: string;
 					title: string;
 					content: string;
-					category: string;
+					tags: string;
 					folder: string;
 					createdAt: string;
 					updatedAt: string;
+					archived: number;
 				}>
-			>("SELECT * FROM notes");
+			>("SELECT id, title, content, tags, folder, createdAt, updatedAt, archived FROM notes");
 
 			const notes = results.map((row) => ({
 				id: row.id,
 				title: row.title,
 				content: row.content,
-				category: row.category,
+				tags: row.tags ? JSON.parse(row.tags) : [],
 				folder: row.folder,
 				createdAt: new Date(row.createdAt),
 				updatedAt: new Date(row.updatedAt),
+				archived: Boolean(row.archived),
 			}));
 
 			this.context.cache.notes = notes;
@@ -154,13 +163,25 @@ export class NotesStorage {
 					!deepEqual(
 						{
 							...old,
-							createdAt: old.createdAt.toISOString(),
-							updatedAt: old.updatedAt.toISOString(),
+							createdAt:
+								old.createdAt instanceof Date
+									? old.createdAt.toISOString()
+									: old.createdAt,
+							updatedAt:
+								old.updatedAt instanceof Date
+									? old.updatedAt.toISOString()
+									: old.updatedAt,
 						},
 						{
 							...n,
-							createdAt: n.createdAt.toISOString(),
-							updatedAt: n.updatedAt.toISOString(),
+							createdAt:
+								n.createdAt instanceof Date
+									? n.createdAt.toISOString()
+									: n.createdAt,
+							updatedAt:
+								n.updatedAt instanceof Date
+									? n.updatedAt.toISOString()
+									: n.updatedAt,
 						}
 					)
 				);
@@ -170,16 +191,21 @@ export class NotesStorage {
 
 			for (const note of notes) {
 				await this.context.db.execute(
-					`INSERT INTO notes (id, title, content, category, folder, createdAt, updatedAt)
-					VALUES (?, ?, ?, ?, ?, ?, ?)`,
+					`INSERT INTO notes (id, title, content, tags, folder, createdAt, updatedAt, archived)
+					VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 					[
 						note.id,
 						note.title,
 						note.content,
-						note.category,
+						JSON.stringify(note.tags || []),
 						note.folder,
-						note.createdAt.toISOString(),
-						note.updatedAt.toISOString(),
+						note.createdAt instanceof Date
+							? note.createdAt.toISOString()
+							: note.createdAt,
+						note.updatedAt instanceof Date
+							? note.updatedAt.toISOString()
+							: note.updatedAt,
+						note.archived ? 1 : 0,
 					]
 				);
 			}
@@ -241,6 +267,59 @@ export class NotesStorage {
 
 			this.context.cache.folders = folders;
 			console.log("Folders updated");
+		});
+	}
+
+	async loadTags(): Promise<Record<string, Tag>> {
+		return this.context.queueOperation(async () => {
+			const results = await this.context.db.select<
+				Array<{
+					id: string;
+					name: string;
+					color: string;
+					icon: string;
+				}>
+			>("SELECT * FROM tags");
+
+			const tags: Record<string, Tag> = {};
+			results.forEach((row) => {
+				tags[row.id] = {
+					id: row.id,
+					name: row.name,
+					color: row.color,
+					icon: row.icon as any, // Icon will be resolved by the component
+				};
+			});
+
+			this.context.cache.tags = tags;
+			return tags;
+		});
+	}
+
+	async saveTags(tags: Record<string, Tag>): Promise<void> {
+		if (!this.hasTagsChanged(tags)) {
+			return;
+		}
+
+		return this.context.queueOperation(async () => {
+			await this.context.db.execute("DELETE FROM tags");
+
+			for (const [_, tag] of Object.entries(tags)) {
+				// Store the icon name as a string if it's a component, otherwise store as-is
+				const iconName =
+					typeof tag.icon === "function"
+						? (tag.icon as any).displayName || (tag.icon as any).name || "Hash"
+						: String(tag.icon);
+
+				await this.context.db.execute(
+					`INSERT INTO tags (id, name, color, icon)
+					VALUES (?, ?, ?, ?)`,
+					[tag.id, tag.name, tag.color, iconName]
+				);
+			}
+
+			this.context.cache.tags = tags;
+			console.log("Tags updated");
 		});
 	}
 }

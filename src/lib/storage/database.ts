@@ -6,6 +6,13 @@ import { DatabaseContext, StorageCache, DATA_VERSION } from "./types";
 import { NotesStorage } from "./notesStorage";
 import { ExpensesStorage } from "./expensesStorage";
 import { IncomeStorage } from "./incomeStorage";
+import {
+	migrateNotesTable,
+	ensureTagsTable,
+	ensureMigrationsTable,
+	recordMigration,
+	isMigrationApplied,
+} from "./migrations";
 
 const DB_NAME = "appdata.db";
 
@@ -69,7 +76,13 @@ class SqlStorage {
 			await this.db.execute("PRAGMA synchronous=NORMAL");
 			await this.db.execute("PRAGMA busy_timeout=5000");
 
-			// Create tables
+			// Ensure migrations table exists
+			await ensureMigrationsTable(this.db);
+
+			// Run migrations first (before creating tables)
+			await this.runMigrations();
+
+			// Create tables (for new installations or missing tables)
 			await this.createTables();
 
 			// Initialize sub-storage modules
@@ -87,18 +100,46 @@ class SqlStorage {
 		}
 	}
 
+	private async runMigrations() {
+		if (!this.db) throw new Error("Database not initialized");
+
+		// Migration: Convert notes table from category to tags schema
+		const notesMigrationVersion = "0.0.3-notes-tags";
+		if (!(await isMigrationApplied(this.db, notesMigrationVersion))) {
+			const result = await migrateNotesTable(this.db);
+
+			if (result.needed) {
+				if (result.success) {
+					await recordMigration(
+						this.db,
+						notesMigrationVersion,
+						"Migrated notes table from category to tags schema"
+					);
+				} else {
+					console.error("Notes migration failed:", result.error);
+					// Don't throw - let the app continue with whatever state the DB is in
+				}
+			}
+		}
+
+		// Ensure tags table exists
+		await ensureTagsTable(this.db);
+	}
+
 	private async createTables() {
 		if (!this.db) throw new Error("Database not initialized");
 
+		// Create notes table with new schema (if it doesn't exist)
 		await this.db.execute(`
 			CREATE TABLE IF NOT EXISTS notes (
 				id TEXT PRIMARY KEY,
 				title TEXT NOT NULL,
 				content TEXT NOT NULL,
-				category TEXT NOT NULL,
+				tags TEXT DEFAULT '[]',
 				folder TEXT NOT NULL,
 				createdAt TEXT NOT NULL,
-				updatedAt TEXT NOT NULL
+				updatedAt TEXT NOT NULL,
+				archived INTEGER DEFAULT 0
 			)
 		`);
 
@@ -106,6 +147,15 @@ class SqlStorage {
 			CREATE TABLE IF NOT EXISTS folders (
 				id INTEGER PRIMARY KEY CHECK (id = 1),
 				data TEXT NOT NULL
+			)
+		`);
+
+		await this.db.execute(`
+			CREATE TABLE IF NOT EXISTS tags (
+				id TEXT PRIMARY KEY,
+				name TEXT NOT NULL,
+				color TEXT NOT NULL,
+				icon TEXT NOT NULL
 			)
 		`);
 
@@ -186,6 +236,16 @@ class SqlStorage {
 		return this.notesStorage.saveFolders(folders);
 	}
 
+	async loadTags() {
+		if (!this.initialized) await this.initialize();
+		return this.notesStorage.loadTags();
+	}
+
+	async saveTags(tags: any) {
+		if (!this.initialized) await this.initialize();
+		return this.notesStorage.saveTags(tags);
+	}
+
 	// Public API - Expenses
 	async loadExpenses() {
 		if (!this.initialized) await this.initialize();
@@ -254,6 +314,7 @@ class SqlStorage {
 		try {
 			const notes = await this.loadNotes();
 			const folders = await this.loadFolders();
+			const tags = await this.loadTags();
 			const expenses = await this.loadExpenses();
 			const metadata = await this.loadMetadata();
 			const income = await this.loadIncome();
@@ -264,6 +325,7 @@ class SqlStorage {
 				notes,
 				notesFolders: folders,
 				subfolders,
+				tags,
 				expenses,
 				income,
 				isLoading: false,
@@ -276,6 +338,7 @@ class SqlStorage {
 				notes: [],
 				notesFolders: {},
 				subfolders: [],
+				tags: {},
 				expenses: {
 					expenses: [],
 					selectedMonth: new Date(),
@@ -305,11 +368,13 @@ class SqlStorage {
 			if (appToSave === AppToSave.NotesApp) {
 				const notesChanged = this.notesStorage.hasNotesChanged(data.notes);
 				const foldersChanged = this.notesStorage.hasFoldersChanged(data.notesFolders);
+				const tagsChanged = this.notesStorage.hasTagsChanged(data.tags || {});
 
-				if (notesChanged || foldersChanged) {
+				if (notesChanged || foldersChanged || tagsChanged) {
 					hasChanges = true;
 					if (notesChanged) await this.saveNotes(data.notes);
 					if (foldersChanged) await this.saveFolders(data.notesFolders);
+					if (tagsChanged) await this.saveTags(data.tags || {});
 				}
 			} else if (appToSave === AppToSave.Expenses) {
 				if (this.expensesStorage.hasExpensesChanged(data.expenses)) {
@@ -324,13 +389,21 @@ class SqlStorage {
 			} else if (appToSave === AppToSave.All) {
 				const notesChanged = this.notesStorage.hasNotesChanged(data.notes);
 				const foldersChanged = this.notesStorage.hasFoldersChanged(data.notesFolders);
+				const tagsChanged = this.notesStorage.hasTagsChanged(data.tags || {});
 				const expensesChanged = this.expensesStorage.hasExpensesChanged(data.expenses);
 				const incomeChanged = this.incomeStorage.hasIncomeChanged(data.income);
 
-				if (notesChanged || foldersChanged || expensesChanged || incomeChanged) {
+				if (
+					notesChanged ||
+					foldersChanged ||
+					tagsChanged ||
+					expensesChanged ||
+					incomeChanged
+				) {
 					hasChanges = true;
 					if (notesChanged) await this.saveNotes(data.notes);
 					if (foldersChanged) await this.saveFolders(data.notesFolders);
+					if (tagsChanged) await this.saveTags(data.tags || {});
 					if (expensesChanged) await this.saveExpenses(data.expenses);
 					if (incomeChanged) await this.saveIncome(data.income);
 				}
@@ -365,8 +438,9 @@ class SqlStorage {
 
 		await this.queueOperation(async () => {
 			await this.db!.execute("DELETE FROM settings WHERE key = 'migrated_from_json'");
+			await this.db!.execute("DELETE FROM migrations");
 		});
-		console.log("Migration flag reset");
+		console.log("Migration flags reset");
 	}
 
 	async clearAllData(): Promise<void> {
@@ -375,6 +449,7 @@ class SqlStorage {
 		await this.queueOperation(async () => {
 			await this.db!.execute("DELETE FROM notes");
 			await this.db!.execute("DELETE FROM folders");
+			await this.db!.execute("DELETE FROM tags");
 			await this.db!.execute("DELETE FROM expenses");
 			await this.db!.execute("DELETE FROM income_entries");
 			await this.db!.execute("DELETE FROM income_weekly_targets");

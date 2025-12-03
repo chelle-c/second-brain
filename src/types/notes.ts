@@ -2,10 +2,11 @@ export interface Note {
 	id: string;
 	title: string;
 	content: string;
-	category: string;
+	tags: string[]; // Changed from category to tags array
 	folder: string;
 	createdAt: Date;
 	updatedAt: Date;
+	archived: boolean; // Added archived flag
 }
 
 export interface NotesFolder {
@@ -25,13 +26,15 @@ export interface Subfolder {
 	parent: string;
 }
 
-export interface Category {
+export interface Tag {
+	id: string;
 	name: string;
+	color: string;
 	icon: React.ForwardRefExoticComponent<Omit<any, "ref">>;
 }
 
-export interface Categories {
-	[key: string]: Category;
+export interface Tags {
+	[key: string]: Tag;
 }
 
 export interface FoldersData {
