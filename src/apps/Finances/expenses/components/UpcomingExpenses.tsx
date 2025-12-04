@@ -23,6 +23,8 @@ export const UpcomingExpenses = () => {
 		upcomingTimeUnit,
 		setUpcomingTimeAmount,
 		setUpcomingTimeUnit,
+		showUpcomingRelativeDates,
+		setShowUpcomingRelativeDates,
 	} = useExpenseStore();
 
 	// Calculate the end date based on time selection
@@ -312,16 +314,35 @@ export const UpcomingExpenses = () => {
 
 				{/* Expense Table */}
 				<div className="mt-8 pt-6 border-t border-gray-200">
-					<div className="flex flex-col items-baseline gap-2 mx-2 mb-4">
-						<h4 className="text-lg font-semibold text-gray-800 mb-2 flex items-center gap-2">
-							<TrendingUp size={20} className="text-sky-500" />
-							Expense Details
-						</h4>
-						{/* Summary Text */}
-						<div className="flex items-center gap-2 text-sm text-gray-600">
-							<Calendar size={16} />
-							<span className="font-medium">Next {getTimeRangeText()}</span>
+					<div className="flex items-center justify-between mx-2 mb-4">
+						<div className="flex flex-col items-baseline gap-2">
+							<h4 className="text-lg font-semibold text-gray-800 mb-2 flex items-center gap-2">
+								<TrendingUp size={20} className="text-sky-500" />
+								Expense Details
+							</h4>
+							{/* Summary Text */}
+							<div className="flex items-center gap-2 text-sm text-gray-600">
+								<Calendar size={16} />
+								<span className="font-medium">Next {getTimeRangeText()}</span>
+							</div>
 						</div>
+						<button
+							onClick={() => setShowUpcomingRelativeDates(!showUpcomingRelativeDates)}
+							className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+							title={showUpcomingRelativeDates ? "Show actual dates" : "Show relative dates"}
+						>
+							{showUpcomingRelativeDates ? (
+								<>
+									<Calendar size={14} />
+									<span>Show Dates</span>
+								</>
+							) : (
+								<>
+									<Clock size={14} />
+									<span>Show Relative</span>
+								</>
+							)}
+						</button>
 					</div>
 					<ExpenseTable
 						expensesToDisplay={upcomingExpenses}
@@ -333,6 +354,7 @@ export const UpcomingExpenses = () => {
 						onTogglePaid={toggleExpensePaid}
 						showArchiveActions={false}
 						isAllExpensesView={false}
+						showRelativeDates={showUpcomingRelativeDates}
 						categoryColors={categoryColors}
 					/>
 				</div>

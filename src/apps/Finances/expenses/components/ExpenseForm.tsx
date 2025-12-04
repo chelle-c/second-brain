@@ -471,6 +471,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 											Category
 										</label>
 										<Select
+											value={formData.category}
 											onValueChange={(value) =>
 												setFormData({
 													...formData,
@@ -519,6 +520,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 									{formData.isRecurring && (
 										<div className="space-y-3">
 											<Select
+												value={recurrenceSettings.frequency}
 												onValueChange={(value) =>
 													setRecurrenceSettings({
 														...recurrenceSettings,

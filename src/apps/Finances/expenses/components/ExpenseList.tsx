@@ -3,7 +3,7 @@ import { DeleteModal } from "./DeleteModal";
 import { useExpenseStore } from "@/stores/useExpenseStore";
 import { ExpenseTable } from "./ExpenseTable";
 import { isSameMonth } from "date-fns";
-import { DollarSign } from "lucide-react";
+import { DollarSign, Calendar, Clock } from "lucide-react";
 
 export const ExpenseList: React.FC = () => {
 	const {
@@ -19,6 +19,8 @@ export const ExpenseList: React.FC = () => {
 		deleteModal,
 		setDeleteModal,
 		showPaidExpenses,
+		showMonthlyRelativeDates,
+		setShowMonthlyRelativeDates,
 	} = useExpenseStore();
 
 	if (!selectedMonth) return null;
@@ -138,6 +140,7 @@ export const ExpenseList: React.FC = () => {
 						onUnarchive={() => {}}
 						onTogglePaid={toggleExpensePaid}
 						showArchiveActions={false}
+						showRelativeDates={showMonthlyRelativeDates}
 					/>
 				)}
 
@@ -154,14 +157,35 @@ export const ExpenseList: React.FC = () => {
 	return (
 		<>
 			<div className="mb-6">
-				<h3 className="text-xl font-bold text-gray-800">
-					Monthly Expenses{getFilterLabel()}
-				</h3>
-				{(overviewMode !== "all" || !showPaidExpenses) && (
-					<p className="text-sm text-gray-500 mt-1">
-						Showing {visibleCount} of {monthlyExpenses.length} expenses
-					</p>
-				)}
+				<div className="flex items-center justify-between">
+					<div>
+						<h3 className="text-xl font-bold text-gray-800">
+							Monthly Expenses{getFilterLabel()}
+						</h3>
+						{(overviewMode !== "all" || !showPaidExpenses) && (
+							<p className="text-sm text-gray-500 mt-1">
+								Showing {visibleCount} of {monthlyExpenses.length} expenses
+							</p>
+						)}
+					</div>
+					<button
+						onClick={() => setShowMonthlyRelativeDates(!showMonthlyRelativeDates)}
+						className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+						title={showMonthlyRelativeDates ? "Show actual dates" : "Show relative dates"}
+					>
+						{showMonthlyRelativeDates ? (
+							<>
+								<Calendar size={14} />
+								<span>Show Dates</span>
+							</>
+						) : (
+							<>
+								<Clock size={14} />
+								<span>Show Relative</span>
+							</>
+						)}
+					</button>
+				</div>
 			</div>
 
 			<ExpenseTable
@@ -175,6 +199,7 @@ export const ExpenseList: React.FC = () => {
 				onUnarchive={() => {}}
 				onTogglePaid={toggleExpensePaid}
 				showArchiveActions={false}
+				showRelativeDates={showMonthlyRelativeDates}
 			/>
 
 			<DeleteModal

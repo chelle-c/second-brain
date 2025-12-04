@@ -26,6 +26,8 @@ interface ExpenseStore {
 	showPaidExpenses: boolean;
 	upcomingTimeAmount: number;
 	upcomingTimeUnit: TimeUnit;
+	showMonthlyRelativeDates: boolean;
+	showUpcomingRelativeDates: boolean;
 
 	// Set state
 	setExpenses: (expenses: Expense[]) => void;
@@ -40,6 +42,8 @@ interface ExpenseStore {
 	setShowPaidExpenses: (show: boolean) => void;
 	setUpcomingTimeAmount: (amount: number) => void;
 	setUpcomingTimeUnit: (unit: TimeUnit) => void;
+	setShowMonthlyRelativeDates: (show: boolean) => void;
+	setShowUpcomingRelativeDates: (show: boolean) => void;
 
 	// Actions
 	addExpense: (expense: ExpenseFormData) => void;
@@ -83,6 +87,8 @@ export const useExpenseStore = create<ExpenseStore>()(
 		showPaidExpenses: true,
 		upcomingTimeAmount: 3,
 		upcomingTimeUnit: "weeks",
+		showMonthlyRelativeDates: true,
+		showUpcomingRelativeDates: true,
 
 		setExpenses: (expenses) => set({ expenses }),
 
@@ -124,6 +130,8 @@ export const useExpenseStore = create<ExpenseStore>()(
 		setShowPaidExpenses: (show) => set({ showPaidExpenses: show }),
 		setUpcomingTimeAmount: (amount) => set({ upcomingTimeAmount: amount }),
 		setUpcomingTimeUnit: (unit) => set({ upcomingTimeUnit: unit }),
+		setShowMonthlyRelativeDates: (show) => set({ showMonthlyRelativeDates: show }),
+		setShowUpcomingRelativeDates: (show) => set({ showUpcomingRelativeDates: show }),
 
 		addExpense: (expenseData) => {
 			const parentId = crypto.randomUUID();

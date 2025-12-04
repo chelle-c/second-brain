@@ -46,6 +46,7 @@ interface ExpenseTableProps {
 	onDuplicate?: (id: string) => void;
 	showArchiveActions?: boolean;
 	isAllExpensesView?: boolean;
+	showRelativeDates?: boolean;
 	onSelectedYearChange?: (year: number | "all") => void;
 	categoryColors?: Record<string, string>;
 }
@@ -98,6 +99,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 	onDuplicate,
 	showArchiveActions = false,
 	isAllExpensesView = false,
+	showRelativeDates = true,
 	onSelectedYearChange,
 	categoryColors = {},
 }) => {
@@ -555,20 +557,20 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 												className="text-gray-600 cursor-help flex items-center gap-1 text-sm"
 												title={`Due date: ${formatDate(expense.dueDate)}`}
 											>
-												{!isAllExpensesView && !isCurrentMonth && (
+												{showRelativeDates && !isCurrentMonth && (
 													<Calendar size={12} />
 												)}
-												{isAllExpensesView
-													? formatDate(expense.dueDate)
-													: getRelativeDateText(
+												{showRelativeDates
+													? getRelativeDateText(
 															expense.dueDate,
 															selectedMonth
-													  )}
+													  )
+													: formatDate(expense.dueDate)}
 											</span>
 										) : (
 											<span
 												className={`${
-													isAllExpensesView
+													!showRelativeDates
 														? "text-gray-800"
 														: getDueDateColor(
 																expense.dueDate,
@@ -576,15 +578,15 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 														  )
 												} flex items-center gap-1 text-sm`}
 											>
-												{!isAllExpensesView && !isCurrentMonth && (
+												{showRelativeDates && !isCurrentMonth && (
 													<Calendar size={12} />
 												)}
-												{isAllExpensesView
-													? formatDate(expense.dueDate)
-													: getRelativeDateText(
+												{showRelativeDates
+													? getRelativeDateText(
 															expense.dueDate,
 															selectedMonth
-													  )}
+													  )
+													: formatDate(expense.dueDate)}
 											</span>
 										)}
 									</td>

@@ -143,6 +143,7 @@ export const AllExpenses: React.FC = () => {
 						onDuplicate={handleDuplicate}
 						showArchiveActions={true}
 						isAllExpensesView={true}
+						showRelativeDates={false}
 						onSelectedYearChange={handleSelectedYearChange}
 						categoryColors={categoryColors}
 					/>
