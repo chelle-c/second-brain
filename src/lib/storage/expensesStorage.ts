@@ -1,8 +1,8 @@
 import { Expense } from "@/types/expense";
 import { AppData } from "@/types/";
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
-import { DatabaseContext } from "./types";
-import { deepEqual } from "./utils";
+import { DatabaseContext } from "../../types/storage";
+import { deepEqual } from "../utils";
 
 export class ExpensesStorage {
 	private context: DatabaseContext;

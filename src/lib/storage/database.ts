@@ -2,7 +2,7 @@ import Database from "@tauri-apps/plugin-sql";
 import { appDataDir } from "@tauri-apps/api/path";
 import { AppData, AppMetadata, AppToSave } from "@/types/";
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
-import { DatabaseContext, StorageCache, DATA_VERSION } from "./types";
+import { DatabaseContext, StorageCache, DATA_VERSION } from "../../types/storage";
 import { NotesStorage } from "./notesStorage";
 import { ExpensesStorage } from "./expensesStorage";
 import { IncomeStorage } from "./incomeStorage";

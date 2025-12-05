@@ -1,6 +1,6 @@
 import { Note, NotesFolders, Tag } from "@/types/notes";
-import { DatabaseContext } from "./types";
-import { deepEqual } from "./utils";
+import { DatabaseContext } from "../../types/storage";
+import { deepEqual } from "../utils";
 
 export class NotesStorage {
 	private context: DatabaseContext;

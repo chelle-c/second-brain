@@ -1,6 +1,6 @@
 import { AppData } from "@/types/";
-import { DatabaseContext } from "./types";
-import { deepEqual } from "./utils";
+import { DatabaseContext } from "../../types/storage";
+import { deepEqual } from "../utils";
 
 export class IncomeStorage {
 	private context: DatabaseContext;
