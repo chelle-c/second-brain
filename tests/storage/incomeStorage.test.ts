@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { IncomeStorage } from '../src/lib/storage/incomeStorage';
+import { IncomeStorage } from '../../src/lib/storage/incomeStorage';
 import Database from '@tauri-apps/plugin-sql';
-import type { AppData } from '../src/types/';
+import type { AppData } from '../../src/types';
 
 describe('IncomeStorage', () => {
   let db: any;

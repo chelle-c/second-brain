@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { NotesStorage } from '../src/lib/storage/notesStorage';
+import { NotesStorage } from '../../src/lib/storage/notesStorage';
 import Database from '@tauri-apps/plugin-sql';
-import type { Note, NotesFolders, Tag } from '../src/types/notes';
+import type { Note, NotesFolders, Tag } from '../../src/types/notes';
 
 describe('NotesStorage', () => {
   let db: any;

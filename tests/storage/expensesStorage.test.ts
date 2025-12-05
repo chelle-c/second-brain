@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { ExpensesStorage } from '../src/lib/storage/expensesStorage';
+import { ExpensesStorage } from '../../src/lib/storage/expensesStorage';
 import Database from '@tauri-apps/plugin-sql';
-import type { Expense } from '../src/types/expense';
-import type { AppData } from '../src/types/';
+import type { Expense } from '../../src/types/expense';
+import type { AppData } from '../../src/types';
 
 describe('ExpensesStorage', () => {
   let db: any;
