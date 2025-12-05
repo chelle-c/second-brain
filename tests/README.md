@@ -9,7 +9,7 @@ Tests are configured using **Vitest** with the following setup:
 - **Test Framework**: Vitest
 - **Environment**: happy-dom
 - **Component Testing**: @testing-library/react
-- **Mocks**: Custom Tauri database mocks (`src/test/setup.ts`)
+- **Mocks**: Custom Tauri database mocks (`tests/setup.ts`)
 
 ## Running Tests
 
