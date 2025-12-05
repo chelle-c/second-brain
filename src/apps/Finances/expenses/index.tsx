@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { Layout } from "@/apps/Finances/expenses/components/Layout";
+import { Layout } from "./components/Layout";
 import { CategoryManager } from "./components/CategoryManager";
-import { ExpenseOverview } from "@/apps/Finances/expenses/components/ExpenseOverview";
-import { ExpenseForm } from "@/apps/Finances/expenses/components/ExpenseForm";
-import { ExpenseList } from "@/apps/Finances/expenses/components/ExpenseList";
-import { AllExpenses } from "@/apps/Finances/expenses/components/AllExpenses";
-import { UpcomingExpenses } from "@/apps/Finances/expenses/components/UpcomingExpenses";
+import { ExpenseOverview } from "./components/ExpenseOverview";
+import { ExpenseForm } from "./components/ExpenseForm";
+import { ExpenseList } from "./components/ExpenseList";
+import { AllExpenses } from "./components/AllExpenses";
+import { UpcomingExpenses } from "./components/UpcomingExpenses";
 import { useExpenseStore } from "@/stores/useExpenseStore";
 
 export const ExpensesTracker = () => {
