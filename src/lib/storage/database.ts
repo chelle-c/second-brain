@@ -6,13 +6,6 @@ import { DatabaseContext, StorageCache, DATA_VERSION } from "./types";
 import { NotesStorage } from "./notesStorage";
 import { ExpensesStorage } from "./expensesStorage";
 import { IncomeStorage } from "./incomeStorage";
-import {
-	migrateNotesTable,
-	ensureTagsTable,
-	ensureMigrationsTable,
-	recordMigration,
-	isMigrationApplied,
-} from "./migrations";
 
 const DB_NAME = "appdata.db";
 
@@ -76,12 +69,6 @@ class SqlStorage {
 			await this.db.execute("PRAGMA synchronous=NORMAL");
 			await this.db.execute("PRAGMA busy_timeout=5000");
 
-			// Ensure migrations table exists
-			await ensureMigrationsTable(this.db);
-
-			// Run migrations first (before creating tables)
-			await this.runMigrations();
-
 			// Create tables (for new installations or missing tables)
 			await this.createTables();
 
@@ -98,32 +85,6 @@ class SqlStorage {
 		} finally {
 			this.initializing = false;
 		}
-	}
-
-	private async runMigrations() {
-		if (!this.db) throw new Error("Database not initialized");
-
-		// Migration: Convert notes table from category to tags schema
-		const notesMigrationVersion = "0.0.3-notes-tags";
-		if (!(await isMigrationApplied(this.db, notesMigrationVersion))) {
-			const result = await migrateNotesTable(this.db);
-
-			if (result.needed) {
-				if (result.success) {
-					await recordMigration(
-						this.db,
-						notesMigrationVersion,
-						"Migrated notes table from category to tags schema"
-					);
-				} else {
-					console.error("Notes migration failed:", result.error);
-					// Don't throw - let the app continue with whatever state the DB is in
-				}
-			}
-		}
-
-		// Ensure tags table exists
-		await ensureTagsTable(this.db);
 	}
 
 	private async createTables() {
@@ -431,16 +392,6 @@ class SqlStorage {
 		} catch (error) {
 			console.error("Failed to open data folder:", error);
 		}
-	}
-
-	async resetMigration(): Promise<void> {
-		if (!this.initialized) await this.initialize();
-
-		await this.queueOperation(async () => {
-			await this.db!.execute("DELETE FROM settings WHERE key = 'migrated_from_json'");
-			await this.db!.execute("DELETE FROM migrations");
-		});
-		console.log("Migration flags reset");
 	}
 
 	async clearAllData(): Promise<void> {
