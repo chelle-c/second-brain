@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useIncomeStore } from "@/stores/useIncomeStore";
+import { useSettingsStore } from "@/stores/useSettingsStore";
 import { getYearlyData } from "@/lib/dateUtils";
+import { getCurrencySymbol } from "@/lib/currencyUtils";
 import {
 	BarChart,
 	Bar,
@@ -18,6 +20,8 @@ const YearlyView: React.FC<{}> = () => {
 	const [isClient, setIsClient] = useState(false);
 
 	const { incomeEntries } = useIncomeStore();
+	const { incomeCurrency } = useSettingsStore();
+	const currencySymbol = getCurrencySymbol(incomeCurrency);
 
 	const yearlyData = getYearlyData(incomeEntries);
 
@@ -28,7 +32,7 @@ const YearlyView: React.FC<{}> = () => {
 	const chartData = yearlyData.map((year) => ({
 		...year,
 		hoursFormatted: `${year.hours.toFixed(1)}h`,
-		amountFormatted: `$${year.amount.toFixed(2)}`,
+		amountFormatted: `${currencySymbol}${year.amount.toFixed(2)}`,
 	}));
 
 	const totalAmount = yearlyData.reduce((sum, y) => sum + y.amount, 0);
@@ -55,7 +59,7 @@ const YearlyView: React.FC<{}> = () => {
 						fontSize={10}
 						fontWeight="500"
 					>
-						${rest.payload.amount.toFixed(0)}
+						{currencySymbol}{rest.payload.amount.toFixed(0)}
 					</text>
 				)}
 			</g>
@@ -77,7 +81,7 @@ const YearlyView: React.FC<{}> = () => {
 									<span className="text-xs text-gray-500">
 										Total:{" "}
 										<span className="font-medium text-sky-600">
-											${totalAmount.toFixed(0)}
+											{currencySymbol}{totalAmount.toFixed(0)}
 										</span>
 									</span>
 									<span className="text-xs text-gray-500">
@@ -117,13 +121,13 @@ const YearlyView: React.FC<{}> = () => {
 											axisLine={false}
 											tickLine={false}
 											tick={{ fill: "#9CA3AF", fontSize: 10 }}
-											tickFormatter={(value) => `$${value}`}
+											tickFormatter={(value) => `${currencySymbol}${value}`}
 											width={45}
 										/>
 										<Tooltip
 											formatter={(value: number, name: string) => {
 												if (name === "amount")
-													return [`$${value.toFixed(2)}`, "Amount"];
+													return [`${currencySymbol}${value.toFixed(2)}`, "Amount"];
 												if (name === "hours")
 													return [`${value.toFixed(1)} hours`, "Hours"];
 												return [value, name];
@@ -167,7 +171,7 @@ const YearlyView: React.FC<{}> = () => {
 									<div className="grid grid-cols-2 gap-2">
 										<div className="bg-sky-50 rounded-md p-2 text-center">
 											<div className="text-sm font-bold text-sky-700">
-												${year.amount.toFixed(0)}
+												{currencySymbol}{year.amount.toFixed(0)}
 											</div>
 											<div className="text-xs text-sky-600">Earned</div>
 										</div>
@@ -179,7 +183,7 @@ const YearlyView: React.FC<{}> = () => {
 										</div>
 										<div className="bg-purple-50 rounded-md p-2 text-center">
 											<div className="text-sm font-bold text-purple-700">
-												$
+												{currencySymbol}
 												{year.hours > 0
 													? (year.amount / year.hours).toFixed(0)
 													: "0"}
@@ -189,7 +193,7 @@ const YearlyView: React.FC<{}> = () => {
 										</div>
 										<div className="bg-amber-50 rounded-md p-2 text-center">
 											<div className="text-sm font-bold text-amber-700">
-												${(year.amount / 12).toFixed(0)}
+												{currencySymbol}{(year.amount / 12).toFixed(0)}
 											</div>
 											<div className="text-xs text-amber-600">
 												Monthly Avg

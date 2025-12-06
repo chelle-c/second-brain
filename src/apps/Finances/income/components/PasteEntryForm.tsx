@@ -1,6 +1,8 @@
 import React from "react";
 import type { IncomeParsedEntry } from "@/types/income";
 import { format, parseISO } from "date-fns";
+import { useSettingsStore } from "@/stores/useSettingsStore";
+import { getCurrencySymbol } from "@/lib/currencyUtils";
 
 interface PasteEntryFormProps {
 	pasteText: string;
@@ -19,6 +21,8 @@ const PasteEntryForm: React.FC<PasteEntryFormProps> = ({
 	onPasteTextChange,
 	onAddParsedEntries,
 }) => {
+	const { incomeCurrency } = useSettingsStore();
+	const currencySymbol = getCurrencySymbol(incomeCurrency);
 	const formatTime = (hours?: number, minutes?: number) => {
 		const h = hours || 0;
 		const m = minutes || 0;
@@ -63,7 +67,7 @@ const PasteEntryForm: React.FC<PasteEntryFormProps> = ({
 											{format(parseISO(entry.date), "MMM d")}
 										</td>
 										<td className="px-3 py-1.5 text-right text-sky-600 font-medium">
-											${entry.amount.toFixed(2)}
+											{currencySymbol}{entry.amount.toFixed(2)}
 										</td>
 										<td className="px-3 py-1.5 text-right text-gray-500">
 											{formatTime(entry.hours, entry.minutes)}

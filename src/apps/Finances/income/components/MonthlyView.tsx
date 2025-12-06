@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useIncomeStore } from "@/stores/useIncomeStore";
+import { useSettingsStore } from "@/stores/useSettingsStore";
 import { getMonthlyData } from "@/lib/dateUtils";
+import { getCurrencySymbol } from "@/lib/currencyUtils";
 import {
 	BarChart,
 	Bar,
@@ -33,6 +35,8 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ selectedYear, onYearChange, y
 	const [isClient, setIsClient] = useState(false);
 
 	const { incomeEntries } = useIncomeStore();
+	const { incomeCurrency } = useSettingsStore();
+	const currencySymbol = getCurrencySymbol(incomeCurrency);
 
 	const monthlyData = getMonthlyData(incomeEntries, selectedYear);
 
@@ -44,7 +48,7 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ selectedYear, onYearChange, y
 		...month,
 		shortMonth: month.month.substring(0, 3),
 		hoursFormatted: `${month.hours.toFixed(1)}h`,
-		amountFormatted: `$${month.amount.toFixed(2)}`,
+		amountFormatted: `${currencySymbol}${month.amount.toFixed(2)}`,
 	}));
 
 	const monthlyDataExists = monthlyData.filter((month) => month.amount > 0);
@@ -72,7 +76,7 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ selectedYear, onYearChange, y
 						fontSize={10}
 						fontWeight="500"
 					>
-						${rest.payload.amount.toFixed(0)}
+						{currencySymbol}{rest.payload.amount.toFixed(0)}
 					</text>
 				)}
 			</g>
@@ -94,7 +98,7 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ selectedYear, onYearChange, y
 									<span className="text-xs text-gray-500">
 										Total:{" "}
 										<span className="font-medium text-sky-600">
-											${totalYearAmount.toFixed(0)}
+											{currencySymbol}{totalYearAmount.toFixed(0)}
 										</span>
 									</span>
 									<span className="text-xs text-gray-500">
@@ -153,13 +157,13 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ selectedYear, onYearChange, y
 											axisLine={false}
 											tickLine={false}
 											tick={{ fill: "#9CA3AF", fontSize: 10 }}
-											tickFormatter={(value) => `$${value}`}
+											tickFormatter={(value) => `${currencySymbol}${value}`}
 											width={40}
 										/>
 										<Tooltip
 											formatter={(value: number, name: string) => {
 												if (name === "amount")
-													return [`$${value.toFixed(2)}`, "Amount"];
+													return [`${currencySymbol}${value.toFixed(2)}`, "Amount"];
 												if (name === "hours")
 													return [`${value.toFixed(1)} hours`, "Hours"];
 												return [value, name];
@@ -206,7 +210,7 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ selectedYear, onYearChange, y
 												<div className="flex justify-between text-xs">
 													<span className="text-gray-500">Earned</span>
 													<span className="font-medium text-sky-600">
-														${month.amount.toFixed(0)}
+														{currencySymbol}{month.amount.toFixed(0)}
 													</span>
 												</div>
 												<div className="flex justify-between text-xs">
@@ -218,7 +222,7 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ selectedYear, onYearChange, y
 												<div className="flex justify-between text-xs">
 													<span className="text-gray-500">Rate</span>
 													<span className="font-medium text-emerald-600">
-														$
+														{currencySymbol}
 														{month.hours > 0
 															? (month.amount / month.hours).toFixed(
 																	0

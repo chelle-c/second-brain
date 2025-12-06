@@ -4,6 +4,8 @@ import PasteEntryForm from "./PasteEntryForm";
 import { getAvailableDates } from "@/lib/dateUtils";
 import { parsePasteText } from "@/lib/dateUtils";
 import { useIncomeStore } from "@/stores/useIncomeStore";
+import { useSettingsStore } from "@/stores/useSettingsStore";
+import { getCurrencySymbol } from "@/lib/currencyUtils";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/Modal";
@@ -21,7 +23,8 @@ const EditModal: React.FC<{
 	onClose: () => void;
 	entry: IncomeEntry | null;
 	onSave: (entry: IncomeEntry) => void;
-}> = ({ isOpen, onClose, entry, onSave }) => {
+	currencySymbol: string;
+}> = ({ isOpen, onClose, entry, onSave, currencySymbol }) => {
 	const [editForm, setEditForm] = useState<IncomeEntry | null>(null);
 
 	React.useEffect(() => {
@@ -53,7 +56,7 @@ const EditModal: React.FC<{
 		>
 			<div className="space-y-4">
 				<div>
-					<Label className="text-sm text-gray-600 mb-1">Amount ($)</Label>
+					<Label className="text-sm text-gray-600 mb-1">Amount ({currencySymbol})</Label>
 					<Input
 						type="number"
 						step="0.01"
@@ -115,6 +118,9 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 	selectedWeek,
 	currentWeekEntries,
 }) => {
+	const { incomeCurrency } = useSettingsStore();
+	const currencySymbol = getCurrencySymbol(incomeCurrency);
+
 	const [newEntry, setNewEntry] = useState<Omit<IncomeEntry, "id">>({
 		date: new Date().toISOString().split("T")[0],
 		amount: 0,
@@ -312,7 +318,7 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 										</td>
 										<td className="py-2 px-2 text-right">
 											<span className="text-xs font-semibold text-sky-600">
-												${entry.amount.toFixed(2)}
+												{currencySymbol}{entry.amount.toFixed(2)}
 											</span>
 										</td>
 										<td className="py-2 px-2 text-right">
@@ -431,6 +437,7 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 				onClose={() => setEditingEntry(null)}
 				entry={editingEntry}
 				onSave={handleSaveEdit}
+				currencySymbol={currencySymbol}
 			/>
 		</div>
 	);

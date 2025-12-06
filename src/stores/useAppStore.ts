@@ -3,9 +3,11 @@ import { subscribeWithSelector } from "zustand/middleware";
 import { useNotesStore } from "./useNotesStore";
 import { useIncomeStore } from "./useIncomeStore";
 import { useExpenseStore } from "./useExpenseStore";
+import { useSettingsStore } from "./useSettingsStore";
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
 import { AppToSave } from "@/types";
 import { sqlStorage } from "@/lib/storage";
+import { DEFAULT_SETTINGS } from "@/types/settings";
 
 interface AppStore {
 	// -- Metadata
@@ -87,9 +89,13 @@ const useAppStore = create<AppStore>()(
 					.getState()
 					.setCategoryColors(data.expenses.categoryColors || DEFAULT_CATEGORY_COLORS);
 
+				// Load settings (skipSave=true to avoid unnecessary save on load)
+				const settings = data.settings || DEFAULT_SETTINGS;
+				useSettingsStore.getState().setSettings(settings, true);
+
 				set({
 					lastSaved: data.lastSaved || null,
-					autoSaveEnabled: data.autoSaveEnabled,
+					autoSaveEnabled: settings.autoSaveEnabled,
 				});
 				set({ isLoading: false });
 			} catch (error) {
@@ -100,6 +106,7 @@ const useAppStore = create<AppStore>()(
 
 		saveToFile: async (appToSave: AppToSave) => {
 			const state = get();
+			const settingsState = useSettingsStore.getState();
 			try {
 				await sqlStorage.saveData(
 					{
@@ -118,6 +125,15 @@ const useAppStore = create<AppStore>()(
 							entries: useIncomeStore.getState().incomeEntries,
 							weeklyTargets: useIncomeStore.getState().incomeWeeklyTargets,
 							viewType: useIncomeStore.getState().incomeViewType,
+						},
+						settings: {
+							autoSaveEnabled: settingsState.autoSaveEnabled,
+							notesDefaultFolder: settingsState.notesDefaultFolder,
+							expenseDefaultView: settingsState.expenseDefaultView,
+							expenseCurrency: settingsState.expenseCurrency,
+							incomeDefaultView: settingsState.incomeDefaultView,
+							incomeWeekStartDay: settingsState.incomeWeekStartDay,
+							incomeCurrency: settingsState.incomeCurrency,
 						},
 						isLoading: state.isLoading,
 						lastSaved: new Date(),

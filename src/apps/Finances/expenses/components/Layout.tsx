@@ -1,18 +1,15 @@
 import { AnimatedToggle } from "@/components/AnimatedToggle";
-import { Tag } from "lucide-react";
 
 interface LayoutProps {
 	children: React.ReactNode;
 	currentView: "monthly" | "all" | "upcoming";
 	setCurrentView: (view: "monthly" | "all" | "upcoming") => void;
-	onManageCategories: () => void;
 }
 
 export const Layout: React.FC<LayoutProps> = ({
 	children,
 	currentView,
 	setCurrentView,
-	onManageCategories,
 }) => {
 
 	const viewOptions = [
@@ -23,15 +20,15 @@ export const Layout: React.FC<LayoutProps> = ({
 
 	return (
 		<div className="flex-1 overflow-y-auto max-h-[98vh] rounded-lg p-1">
-			<header className="animate-fadeIn p-3 sm:px-6">
+			<header className="animate-fadeIn">
 				<div className="flex flex-col gap-4">
 					{/* Title */}
-					<h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 sr-only">
+					<h1 className="sr-only">
 						Expense Tracker
 					</h1>
 
 					{/* Controls */}
-					<div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3">
+					<div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-4">
 						{/* Animated View Toggle */}
 						<div className="w-full lg:w-auto bg-white rounded-lg shadow p-1">
 							<div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
@@ -45,17 +42,6 @@ export const Layout: React.FC<LayoutProps> = ({
 								</div>
 							</div>
 						</div>
-
-						<button
-							onClick={onManageCategories}
-							className="px-4 py-2 bg-sky-500 text-white rounded-lg 
-									hover:bg-sky-600/75 transition-colors duration-200 
-									flex items-center justify-center gap-2 font-medium transform cursor-pointer shadow-sm shadow-gray-500/50 sm:w-auto"
-							title="Manage Categories"
-						>
-							<Tag size={18} />
-							<span>Categories</span>
-						</button>
 					</div>
 				</div>
 			</header>

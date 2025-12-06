@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useIncomeStore } from "@/stores/useIncomeStore";
+import { useSettingsStore } from "@/stores/useSettingsStore";
+import { getCurrencySymbol } from "@/lib/currencyUtils";
 
 interface WeeklySummaryProps {
 	weeklyTotal: number;
@@ -13,6 +15,8 @@ const WeeklySummary: React.FC<WeeklySummaryProps> = ({ weeklyTotal, selectedWeek
 
 	const { incomeWeeklyTargets, addIncomeWeeklyTarget, updateIncomeWeeklyTarget } =
 		useIncomeStore();
+	const { incomeCurrency } = useSettingsStore();
+	const currencySymbol = getCurrencySymbol(incomeCurrency);
 
 	useEffect(() => {
 		const savedTarget =
@@ -74,7 +78,7 @@ const WeeklySummary: React.FC<WeeklySummaryProps> = ({ weeklyTotal, selectedWeek
 				{!editingTarget ? (
 					<div className="flex items-center gap-1.5">
 						<span className="text-lg font-bold text-sky-600">
-							${savedWeeklyTarget.toFixed(0)}
+							{currencySymbol}{savedWeeklyTarget.toFixed(0)}
 						</span>
 						<button
 							onClick={startEditingTarget}
@@ -99,7 +103,7 @@ const WeeklySummary: React.FC<WeeklySummaryProps> = ({ weeklyTotal, selectedWeek
 				) : (
 					<div className="flex items-center gap-2">
 						<div className="flex items-center">
-							<span className="text-gray-400 text-sm mr-1">$</span>
+							<span className="text-gray-400 text-sm mr-1">{currencySymbol}</span>
 							<input
 								type="number"
 								step="0.01"
@@ -154,7 +158,7 @@ const WeeklySummary: React.FC<WeeklySummaryProps> = ({ weeklyTotal, selectedWeek
 			{/* Progress Bar */}
 			<div className="flex-1 flex flex-col justify-center">
 				<div className="flex justify-between text-xs text-gray-500 mb-1.5">
-					<span>${weeklyTotal.toFixed(0)} earned</span>
+					<span>{currencySymbol}{weeklyTotal.toFixed(0)} earned</span>
 					<span>{Math.min(targetProgress, 100).toFixed(0)}%</span>
 				</div>
 				<div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
@@ -188,7 +192,7 @@ const WeeklySummary: React.FC<WeeklySummaryProps> = ({ weeklyTotal, selectedWeek
 					) : weeklyTotal > 0 ? (
 						<div className="text-center text-xs text-gray-500 bg-gray-50 rounded-md py-2 px-3">
 							<span className="font-medium text-sky-600">
-								${remainingAmount.toFixed(0)}
+								{currencySymbol}{remainingAmount.toFixed(0)}
 							</span>{" "}
 							remaining
 						</div>

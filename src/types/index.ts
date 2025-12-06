@@ -1,6 +1,7 @@
 import { Note, NotesFolders, Subfolder, Tag } from "./notes";
 import { IncomeEntry, IncomeWeeklyTargets, IncomeViewType } from "@/types/income";
 import { Expense, OverviewMode } from "./expense";
+import { AppSettings } from "./settings";
 
 export interface AppData {
 	notes: Note[];
@@ -21,6 +22,8 @@ export interface AppData {
 		weeklyTargets: IncomeWeeklyTargets[];
 		viewType: IncomeViewType;
 	};
+
+	settings: AppSettings;
 
 	isLoading: boolean;
 	lastSaved: Date | null;

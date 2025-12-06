@@ -47,13 +47,13 @@ export const getCurrentWeekRange = () => {
 	};
 };
 
-export const getWeeksForYear = (year: number) => {
+export const getWeeksForYear = (year: number, weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 1) => {
 	const start = startOfYear(new Date(year, 0, 1));
 	const end = endOfYear(new Date(year, 0, 1));
-	const weeks = eachWeekOfInterval({ start, end }, { weekStartsOn: 1 });
+	const weeks = eachWeekOfInterval({ start, end }, { weekStartsOn });
 
 	return weeks.map((weekStart) => {
-		const weekNumber = getWeek(weekStart, { weekStartsOn: 1 });
+		const weekNumber = getWeek(weekStart, { weekStartsOn });
 		return {
 			number: weekNumber,
 			startDate: weekStart,

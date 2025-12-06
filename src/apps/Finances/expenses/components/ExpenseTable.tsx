@@ -9,6 +9,7 @@ import { DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
 import { Expense, ImportanceLevel } from "@/types/expense";
 import { RecurringExpenseRow } from "./RecurringExpenseRow";
 import { useExpenseStore } from "@/stores/useExpenseStore";
+import { useSettingsStore } from "@/stores/useSettingsStore";
 import {
 	Select,
 	SelectContent,
@@ -104,6 +105,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 	categoryColors = {},
 }) => {
 	const { expenses, showPaidExpenses, setShowPaidExpenses, setEditingExpense } = useExpenseStore();
+	const { expenseCurrency } = useSettingsStore();
 	const [sortKey, setSortKey] = useState<SortKey>("dueDate");
 	const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 	const [searchQuery, setSearchQuery] = useState("");
@@ -544,7 +546,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 												expense.isPaid ? "line-through" : ""
 											}`}
 										>
-											{formatCurrency(expense.amount)}
+											{formatCurrency(expense.amount, expenseCurrency)}
 										</span>
 									</td>
 									<td className="py-3 px-3">

@@ -2,6 +2,8 @@ import React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { IncomeEntry } from "@/types/income";
+import { useSettingsStore } from "@/stores/useSettingsStore";
+import { getCurrencySymbol } from "@/lib/currencyUtils";
 import {
 	Select,
 	SelectContent,
@@ -25,6 +27,8 @@ const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
 	onEntryChange,
 	onSubmit,
 }) => {
+	const { incomeCurrency } = useSettingsStore();
+	const currencySymbol = getCurrencySymbol(incomeCurrency);
 	return (
 		<form onSubmit={onSubmit} className="space-y-4">
 			<div>
@@ -47,7 +51,7 @@ const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
 			</div>
 
 			<div>
-				<Label className="text-sm text-gray-600 mb-1.5 block">Amount ($)</Label>
+				<Label className="text-sm text-gray-600 mb-1.5 block">Amount ({currencySymbol})</Label>
 				<Input
 					type="number"
 					step="0.01"

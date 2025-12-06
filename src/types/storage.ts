@@ -1,6 +1,7 @@
 import Database from "@tauri-apps/plugin-sql";
 import { Note, NotesFolders, Tag } from "@/types/notes";
 import { AppData } from "@/types/";
+import { AppSettings } from "@/types/settings";
 
 export interface StorageCache {
 	notes?: Note[];
@@ -8,6 +9,7 @@ export interface StorageCache {
 	tags?: Record<string, Tag>;
 	expenses?: AppData["expenses"];
 	income?: AppData["income"];
+	settings?: AppSettings;
 }
 
 export interface DatabaseContext {
@@ -16,4 +18,4 @@ export interface DatabaseContext {
 	cache: StorageCache;
 }
 
-export const DATA_VERSION = "0.0.3";
+export const DATA_VERSION = "0.0.4";

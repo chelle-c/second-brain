@@ -10,6 +10,8 @@ import {
 	Cell,
 } from "recharts";
 import type { IncomeDayData } from "@/types/income";
+import { useSettingsStore } from "@/stores/useSettingsStore";
+import { getCurrencySymbol } from "@/lib/currencyUtils";
 
 interface IncomeChartProps {
 	weeklyData: IncomeDayData[];
@@ -19,6 +21,8 @@ const SKY_500 = "#0EA5E9";
 
 const IncomeChart: React.FC<IncomeChartProps> = ({ weeklyData }) => {
 	const [isClient, setIsClient] = useState(false);
+	const { incomeCurrency } = useSettingsStore();
+	const currencySymbol = getCurrencySymbol(incomeCurrency);
 
 	useEffect(() => {
 		setIsClient(true);
@@ -45,7 +49,7 @@ const IncomeChart: React.FC<IncomeChartProps> = ({ weeklyData }) => {
 						fontSize={13}
 						fontWeight="600"
 					>
-						${day.amount.toFixed(0)}
+						{currencySymbol}{day.amount.toFixed(0)}
 					</text>
 				)}
 			</g>
@@ -83,11 +87,11 @@ const IncomeChart: React.FC<IncomeChartProps> = ({ weeklyData }) => {
 								axisLine={false}
 								tickLine={false}
 								tick={{ fill: "#9CA3AF", fontSize: 12 }}
-								tickFormatter={(value) => `$${value}`}
+								tickFormatter={(value) => `${currencySymbol}${value}`}
 								width={45}
 							/>
 							<Tooltip
-								formatter={(value: number) => [`$${value.toFixed(2)}`, "Amount"]}
+								formatter={(value: number) => [`${currencySymbol}${value.toFixed(2)}`, "Amount"]}
 								labelFormatter={(label) => label}
 								contentStyle={{
 									borderRadius: "6px",

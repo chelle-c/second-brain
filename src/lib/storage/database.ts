@@ -6,6 +6,7 @@ import { DatabaseContext, StorageCache, DATA_VERSION } from "../../types/storage
 import { NotesStorage } from "./notesStorage";
 import { ExpensesStorage } from "./expensesStorage";
 import { IncomeStorage } from "./incomeStorage";
+import { AppSettings, DEFAULT_SETTINGS } from "@/types/settings";
 
 const DB_NAME = "appdata.db";
 
@@ -229,6 +230,52 @@ class SqlStorage {
 		return this.incomeStorage.saveIncome(income);
 	}
 
+	// Public API - Settings
+	async loadSettings(): Promise<AppSettings> {
+		if (!this.initialized) await this.initialize();
+
+		return this.queueOperation(async () => {
+			const results = await this.db!.select<Array<{ key: string; value: string }>>(
+				"SELECT key, value FROM settings"
+			);
+
+			if (results.length === 0) {
+				return DEFAULT_SETTINGS;
+			}
+
+			const settings: Partial<AppSettings> = {};
+			for (const row of results) {
+				try {
+					(settings as any)[row.key] = JSON.parse(row.value);
+				} catch {
+					(settings as any)[row.key] = row.value;
+				}
+			}
+
+			this.cache.settings = { ...DEFAULT_SETTINGS, ...settings };
+			return this.cache.settings;
+		});
+	}
+
+	async saveSettings(settings: AppSettings): Promise<void> {
+		if (!this.initialized) await this.initialize();
+
+		return this.queueOperation(async () => {
+			for (const [key, value] of Object.entries(settings)) {
+				await this.db!.execute(
+					`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`,
+					[key, JSON.stringify(value)]
+				);
+			}
+			this.cache.settings = settings;
+		});
+	}
+
+	hasSettingsChanged(settings: AppSettings): boolean {
+		if (!this.cache.settings) return true;
+		return JSON.stringify(this.cache.settings) !== JSON.stringify(settings);
+	}
+
 	// Metadata
 	async loadMetadata(): Promise<AppMetadata> {
 		if (!this.initialized) await this.initialize();
@@ -279,6 +326,7 @@ class SqlStorage {
 			const expenses = await this.loadExpenses();
 			const metadata = await this.loadMetadata();
 			const income = await this.loadIncome();
+			const settings = await this.loadSettings();
 
 			const subfolders = this.notesStorage.extractSubfoldersFromHierarchy(folders);
 
@@ -289,9 +337,10 @@ class SqlStorage {
 				tags,
 				expenses,
 				income,
+				settings,
 				isLoading: false,
 				lastSaved: metadata.lastSaved,
-				autoSaveEnabled: true,
+				autoSaveEnabled: settings.autoSaveEnabled,
 			};
 		} catch (error) {
 			console.error("Failed to load data:", error);
@@ -312,9 +361,10 @@ class SqlStorage {
 					weeklyTargets: [],
 					viewType: "weekly",
 				},
+				settings: DEFAULT_SETTINGS,
 				isLoading: false,
 				lastSaved: new Date(),
-				autoSaveEnabled: true,
+				autoSaveEnabled: DEFAULT_SETTINGS.autoSaveEnabled,
 			};
 		}
 	}
@@ -353,13 +403,15 @@ class SqlStorage {
 				const tagsChanged = this.notesStorage.hasTagsChanged(data.tags || {});
 				const expensesChanged = this.expensesStorage.hasExpensesChanged(data.expenses);
 				const incomeChanged = this.incomeStorage.hasIncomeChanged(data.income);
+				const settingsChanged = this.hasSettingsChanged(data.settings);
 
 				if (
 					notesChanged ||
 					foldersChanged ||
 					tagsChanged ||
 					expensesChanged ||
-					incomeChanged
+					incomeChanged ||
+					settingsChanged
 				) {
 					hasChanges = true;
 					if (notesChanged) await this.saveNotes(data.notes);
@@ -367,6 +419,7 @@ class SqlStorage {
 					if (tagsChanged) await this.saveTags(data.tags || {});
 					if (expensesChanged) await this.saveExpenses(data.expenses);
 					if (incomeChanged) await this.saveIncome(data.income);
+					if (settingsChanged) await this.saveSettings(data.settings);
 				}
 			}
 

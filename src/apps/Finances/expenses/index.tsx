@@ -1,16 +1,16 @@
 import { useState } from "react";
 import { Layout } from "./components/Layout";
-import { CategoryManager } from "./components/CategoryManager";
 import { ExpenseOverview } from "./components/ExpenseOverview";
 import { ExpenseForm } from "./components/ExpenseForm";
 import { ExpenseList } from "./components/ExpenseList";
 import { AllExpenses } from "./components/AllExpenses";
 import { UpcomingExpenses } from "./components/UpcomingExpenses";
 import { useExpenseStore } from "@/stores/useExpenseStore";
+import { useSettingsStore } from "@/stores/useSettingsStore";
 
 export const ExpensesTracker = () => {
-	const [showCategoryManager, setShowCategoryManager] = useState(false);
-	const [currentView, setCurrentView] = useState<"monthly" | "all" | "upcoming">("upcoming");
+	const { expenseDefaultView } = useSettingsStore();
+	const [currentView, setCurrentView] = useState<"monthly" | "all" | "upcoming">(expenseDefaultView);
 
 	const { editingExpense, setEditingExpense } = useExpenseStore();
 
@@ -23,7 +23,6 @@ export const ExpensesTracker = () => {
 			<Layout
 				currentView={currentView}
 				setCurrentView={setCurrentView}
-				onManageCategories={() => setShowCategoryManager(true)}
 			>
 				<div className="space-y-3 overflow-y-auto">
 					{currentView === "monthly" ? (
@@ -41,11 +40,6 @@ export const ExpensesTracker = () => {
 					{currentView && <ExpenseForm />}
 				</div>
 			</Layout>
-
-			<CategoryManager
-				isOpen={showCategoryManager}
-				onClose={() => setShowCategoryManager(false)}
-			/>
 
 			{editingExpense && (
 				<ExpenseForm

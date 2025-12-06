@@ -1,9 +1,11 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { MonthNavigation } from "./MonthNavigation";
 import { useExpenseStore } from "@/stores/useExpenseStore";
+import { useSettingsStore } from "@/stores/useSettingsStore";
 import { formatCurrency } from "@/lib/dateHelpers";
+import { getCurrencySymbol } from "@/lib/currencyUtils";
 import { DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
-import { TrendingUp, DollarSign } from "lucide-react";
+import { TrendingUp } from "lucide-react";
 import { AnimatedToggle } from "@/components/AnimatedToggle";
 
 export const ExpenseOverview: React.FC = () => {
@@ -16,6 +18,8 @@ export const ExpenseOverview: React.FC = () => {
 		categoryColors,
 		showPaidExpenses,
 	} = useExpenseStore();
+	const { expenseCurrency } = useSettingsStore();
+	const currencySymbol = getCurrencySymbol(expenseCurrency);
 
 	if (!selectedMonth) return null;
 
@@ -61,7 +65,7 @@ export const ExpenseOverview: React.FC = () => {
 					<p className="font-medium text-gray-800">{payload[0].name}</p>
 					<p className="text-sky-600 font-bold">
 						{isPlaceholder ? "Example: " : ""}
-						{formatCurrency(payload[0].value)}
+						{formatCurrency(payload[0].value, expenseCurrency)}
 					</p>
 					{!isPlaceholder && monthlyTotal > 0 && (
 						<p className="text-xs text-gray-500">
@@ -124,9 +128,9 @@ export const ExpenseOverview: React.FC = () => {
 									"All Unpaid Expenses"}
 							</p>
 							<div className="flex items-center justify-center gap-2">
-								<DollarSign className="text-sky-600" size={24} />
+								<span className="text-sky-600 text-2xl font-bold">{currencySymbol}</span>
 								<p className="text-2xl sm:text-4xl font-bold text-sky-600">
-									{formatCurrency(monthlyTotal).replace("$", "")}
+									{formatCurrency(monthlyTotal, expenseCurrency).replace(/^[^0-9]+/, "")}
 								</p>
 							</div>
 						</div>
@@ -221,7 +225,7 @@ export const ExpenseOverview: React.FC = () => {
 									</span>
 									<span className="text-xs sm:text-sm font-bold text-gray-800 whitespace-nowrap">
 										{isPlaceholder && "ex: "}
-										{formatCurrency(entry.value)}
+										{formatCurrency(entry.value, expenseCurrency)}
 									</span>
 								</div>
 							))}

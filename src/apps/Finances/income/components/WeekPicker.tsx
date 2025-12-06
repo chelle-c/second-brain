@@ -13,6 +13,9 @@ import {
 	addWeeks,
 	subWeeks,
 } from "date-fns";
+import { useSettingsStore } from "@/stores/useSettingsStore";
+import type { WeekStartDay } from "@/types/settings";
+import { WEEK_DAYS } from "@/types/settings";
 
 interface WeekPickerProps {
 	selectedDate: Date;
@@ -21,18 +24,21 @@ interface WeekPickerProps {
 }
 
 export const WeekPicker: React.FC<WeekPickerProps> = ({ selectedDate, onWeekSelect, onClose }) => {
+	const { incomeWeekStartDay } = useSettingsStore();
+	const weekStartsOn = incomeWeekStartDay as WeekStartDay;
+
 	const [currentMonth, setCurrentMonth] = useState(selectedDate);
 	const [hoveredWeek, setHoveredWeek] = useState<Date | null>(null);
 	const [focusedWeek, setFocusedWeek] = useState<Date>(
-		startOfWeek(selectedDate, { weekStartsOn: 1 })
+		startOfWeek(selectedDate, { weekStartsOn })
 	);
 	const containerRef = useRef<HTMLDivElement>(null);
 	const weekRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
 	const monthStart = startOfMonth(currentMonth);
 	const monthEnd = endOfMonth(currentMonth);
-	const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
-	const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+	const calendarStart = startOfWeek(monthStart, { weekStartsOn });
+	const calendarEnd = endOfWeek(monthEnd, { weekStartsOn });
 
 	const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
@@ -41,7 +47,7 @@ export const WeekPicker: React.FC<WeekPickerProps> = ({ selectedDate, onWeekSele
 		weeks.push(days.slice(i, i + 7));
 	}
 
-	const getWeekKey = (date: Date) => format(startOfWeek(date, { weekStartsOn: 1 }), "yyyy-MM-dd");
+	const getWeekKey = (date: Date) => format(startOfWeek(date, { weekStartsOn }), "yyyy-MM-dd");
 
 	const handleWeekClick = (weekStart: Date) => {
 		onWeekSelect(weekStart);
@@ -49,19 +55,19 @@ export const WeekPicker: React.FC<WeekPickerProps> = ({ selectedDate, onWeekSele
 	};
 
 	const isWeekSelected = (weekStart: Date) => {
-		return isSameWeek(weekStart, selectedDate, { weekStartsOn: 1 });
+		return isSameWeek(weekStart, selectedDate, { weekStartsOn });
 	};
 
 	const isWeekHovered = (weekStart: Date) => {
-		return hoveredWeek && isSameWeek(weekStart, hoveredWeek, { weekStartsOn: 1 });
+		return hoveredWeek && isSameWeek(weekStart, hoveredWeek, { weekStartsOn });
 	};
 
 	const isWeekFocused = (weekStart: Date) => {
-		return isSameWeek(weekStart, focusedWeek, { weekStartsOn: 1 });
+		return isSameWeek(weekStart, focusedWeek, { weekStartsOn });
 	};
 
 	const isCurrentWeek = (weekStart: Date) => {
-		return isSameWeek(weekStart, new Date(), { weekStartsOn: 1 });
+		return isSameWeek(weekStart, new Date(), { weekStartsOn });
 	};
 
 	// Focus management
@@ -183,22 +189,26 @@ export const WeekPicker: React.FC<WeekPickerProps> = ({ selectedDate, onWeekSele
 
 			{/* Weekday Headers */}
 			<div className="grid grid-cols-7 gap-1 mb-2" role="row">
-				{["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
-					<div
-						key={day}
-						className="text-center text-xs font-medium text-gray-500 py-1"
-						role="columnheader"
-					>
-						{day}
-					</div>
-				))}
+				{Array.from({ length: 7 }, (_, i) => {
+					const dayIndex = (incomeWeekStartDay + i) % 7;
+					const dayName = WEEK_DAYS[dayIndex].label.substring(0, 3);
+					return (
+						<div
+							key={dayIndex}
+							className="text-center text-xs font-medium text-gray-500 py-1"
+							role="columnheader"
+						>
+							{dayName}
+						</div>
+					);
+				})}
 			</div>
 
 			{/* Calendar Grid */}
 			<div className="space-y-1" role="grid" aria-label="Week selection calendar">
 				{weeks.map((week, weekIndex) => {
 					const weekStart = week[0];
-					const weekNumber = getWeek(weekStart, { weekStartsOn: 1 });
+					const weekNumber = getWeek(weekStart, { weekStartsOn });
 					const isSelected = isWeekSelected(weekStart);
 					const isHovered = isWeekHovered(weekStart);
 					const isFocused = isWeekFocused(weekStart);

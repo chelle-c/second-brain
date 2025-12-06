@@ -6,6 +6,7 @@ import { NotesApp } from "@/apps/Notes";
 import { ExpensesTracker } from "@/apps/Finances/expenses";
 import { IncomeTracker } from "@/apps/Finances/income";
 import { MindMapApp } from "@/apps/MindMap";
+import { Settings } from "@/apps/Settings";
 import { DebugConsole } from "@/components/DebugConsole";
 import useAppStore from "@/stores/useAppStore";
 
@@ -40,7 +41,7 @@ function App() {
 							<Route path="income" element={<IncomeTracker />} />
 							<Route path="expenses" element={<ExpensesTracker />} />
 							<Route path="mindmap" element={<MindMapApp />} />
-							<Route path="settings" element={<div>Settings</div>} />
+							<Route path="settings" element={<Settings />} />
 						</Route>
 					</Routes>
 				</BrowserRouter>

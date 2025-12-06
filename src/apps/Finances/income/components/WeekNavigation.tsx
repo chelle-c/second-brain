@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import { getWeeksForYear } from "@/lib/dateUtils";
+import { useSettingsStore } from "@/stores/useSettingsStore";
 import type { IncomeWeekSelection } from "@/types/income";
+import type { WeekStartDay } from "@/types/settings";
 import {
 	Select,
 	SelectContent,
@@ -26,8 +28,9 @@ const WeekNavigation: React.FC<WeekNavigationProps> = ({
 }) => {
 	const [showWeekPicker, setShowWeekPicker] = useState(false);
 	const weekPickerRef = useRef<HTMLDivElement>(null);
+	const { incomeWeekStartDay } = useSettingsStore();
 	const today = new Date();
-	const isCurrentWeek = isSameWeek(selectedWeek.startDate, today, { weekStartsOn: 1 });
+	const isCurrentWeek = isSameWeek(selectedWeek.startDate, today, { weekStartsOn: incomeWeekStartDay as WeekStartDay });
 
 	// Close week picker when clicking outside
 	useEffect(() => {
@@ -47,7 +50,7 @@ const WeekNavigation: React.FC<WeekNavigationProps> = ({
 	}, [showWeekPicker]);
 
 	const onYearChange = (year: number) => {
-		const weeks = getWeeksForYear(year);
+		const weeks = getWeeksForYear(year, incomeWeekStartDay as WeekStartDay);
 		const weekToSelect = weeks.find((w) => w.number === selectedWeek.week) || weeks[0];
 
 		setSelectedWeek({
@@ -59,7 +62,7 @@ const WeekNavigation: React.FC<WeekNavigationProps> = ({
 	};
 
 	const onWeekSelect = (weekStart: Date) => {
-		const weekNumber = getWeek(weekStart, { weekStartsOn: 1 });
+		const weekNumber = getWeek(weekStart, { weekStartsOn: incomeWeekStartDay as WeekStartDay });
 		const weekEnd = addDays(weekStart, 6);
 
 		setSelectedWeek({
@@ -76,7 +79,7 @@ const WeekNavigation: React.FC<WeekNavigationProps> = ({
 			currentStart.getTime() + (direction === "prev" ? -7 : 7) * 24 * 60 * 60 * 1000
 		);
 
-		const newWeekNumber = getWeek(newStart, { weekStartsOn: 1 });
+		const newWeekNumber = getWeek(newStart, { weekStartsOn: incomeWeekStartDay as WeekStartDay });
 
 		setSelectedWeek({
 			year: newStart.getFullYear(),
@@ -88,8 +91,8 @@ const WeekNavigation: React.FC<WeekNavigationProps> = ({
 
 	const onGoToCurrentWeek = () => {
 		const today = new Date();
-		const firstOfWeek = startOfWeek(today, { weekStartsOn: 1 });
-		const weekNumber = getWeek(today, { weekStartsOn: 1 });
+		const firstOfWeek = startOfWeek(today, { weekStartsOn: incomeWeekStartDay as WeekStartDay });
+		const weekNumber = getWeek(today, { weekStartsOn: incomeWeekStartDay as WeekStartDay });
 
 		setSelectedWeek({
 			year: today.getFullYear(),

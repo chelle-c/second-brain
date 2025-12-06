@@ -16,6 +16,7 @@ import { formatCurrency, formatDate } from "@/lib/dateHelpers";
 import { DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
 import { Expense, ImportanceLevel } from "@/types/expense";
 import { useExpenseStore } from "@/stores/useExpenseStore";
+import { useSettingsStore } from "@/stores/useSettingsStore";
 
 interface RecurringExpenseRowProps {
 	parentExpense: Expense;
@@ -90,6 +91,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 }) => {
 	const [isExpanded, setIsExpanded] = useState(false);
 	const { toggleExpensePaid, resetOccurrence, setEditingExpense } = useExpenseStore();
+	const { expenseCurrency } = useSettingsStore();
 
 	const categoryColor =
 		categoryColors[parentExpense.category] ||
@@ -205,7 +207,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 				{/* Column 6: Amount */}
 				<td className="py-3 px-3">
 					<span className="font-semibold text-sky-600 text-sm">
-						{formatCurrency(parentExpense.amount)}
+						{formatCurrency(parentExpense.amount, expenseCurrency)}
 					</span>
 					<div className="text-xs text-gray-500">base amount</div>
 				</td>
@@ -364,7 +366,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 										: "text-sky-600"
 								}`}
 							>
-								{formatCurrency(occurrence.amount)}
+								{formatCurrency(occurrence.amount, expenseCurrency)}
 							</span>
 						</td>
 

@@ -6,6 +6,7 @@ import { NoteCreate } from "./components/NoteCreate";
 import { NotesLayout } from "./components/NotesLayout";
 import { useNotesStore } from "@/stores/useNotesStore";
 import { useHistoryStore } from "@/stores/useHistoryStore";
+import { useSettingsStore } from "@/stores/useSettingsStore";
 import { Tag, NotesFolder, NotesFolders, Subfolder } from "@/types/notes";
 import { CheckCircle, Lightbulb, BookOpen, FileWarning, Plus } from "lucide-react";
 import { Portal } from "@/components/Portal";
@@ -15,6 +16,7 @@ type ViewState = "list" | "view" | "create";
 export function NotesApp() {
 	const { notes, notesFolders, tags, undo, redo } = useNotesStore();
 	const { canUndo, canRedo } = useHistoryStore();
+	const { notesDefaultFolder } = useSettingsStore();
 
 	const [activeFolder, setActiveFolder] = useState<NotesFolder | Subfolder | null>(null);
 	const [activeTags, setActiveTags] = useState<string[]>([]);
@@ -37,11 +39,19 @@ export function NotesApp() {
 	const allTags = { ...defaultTags, ...tags };
 	const allFolders: NotesFolders = { ...notesFolders };
 
+	// Set initial folder from settings
 	useEffect(() => {
-		if (!activeFolder && allFolders["inbox"]) {
-			setActiveFolder(allFolders["inbox"]);
+		if (!activeFolder) {
+			// Try to use the default folder from settings
+			const defaultFolder = allFolders[notesDefaultFolder];
+			if (defaultFolder) {
+				setActiveFolder(defaultFolder);
+			} else if (allFolders["inbox"]) {
+				// Fall back to inbox if default folder doesn't exist
+				setActiveFolder(allFolders["inbox"]);
+			}
 		}
-	}, [notesFolders]);
+	}, [notesFolders, notesDefaultFolder]);
 
 	// Keyboard shortcuts
 	useEffect(() => {

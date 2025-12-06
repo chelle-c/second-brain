@@ -1,6 +1,7 @@
-import React, { useState } from "react";
-import { DAYS, years } from "@/lib/dateUtils";
+import React, { useState, useEffect } from "react";
+import { years } from "@/lib/dateUtils";
 import { useIncomeStore } from "@/stores/useIncomeStore";
+import { useSettingsStore } from "@/stores/useSettingsStore";
 import WeekNavigation from "./components/WeekNavigation";
 import IncomeEntriesList from "./components/IncomeEntriesList";
 import WeeklySummary from "./components/WeeklySummary";
@@ -9,17 +10,30 @@ import ViewTabs from "./components/ViewTabs";
 import MonthlyView from "./components/MonthlyView";
 import YearlyView from "./components/YearlyView";
 import type { IncomeWeekSelection, IncomeDayData } from "@/types/income";
-import { isSameDay, parseISO, startOfDay, endOfDay } from "date-fns";
+import { isSameDay, parseISO, startOfDay, endOfDay, format } from "date-fns";
 
 export const IncomeTracker: React.FC = () => {
 	const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-	const { incomeEntries, incomeViewType } = useIncomeStore();
+	const { incomeEntries, incomeViewType, setIncomeViewType } = useIncomeStore();
+	const { incomeDefaultView, incomeWeekStartDay } = useSettingsStore();
+
+	// Set default view from settings on mount
+	useEffect(() => {
+		setIncomeViewType(incomeDefaultView);
+	}, []);
+
+	const getWeekStartDate = (date: Date, weekStartDay: number): Date => {
+		const dayOfWeek = date.getDay();
+		const diff = (dayOfWeek - weekStartDay + 7) % 7;
+		const start = new Date(date);
+		start.setDate(date.getDate() - diff);
+		return start;
+	};
 
 	const [selectedWeek, setSelectedWeek] = useState<IncomeWeekSelection>(() => {
 		const today = new Date();
-		const startOfWeek = new Date(today);
-		startOfWeek.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1));
+		const startOfWeek = getWeekStartDate(today, incomeWeekStartDay);
 		return {
 			year: today.getFullYear(),
 			week: Math.ceil(
@@ -30,6 +44,21 @@ export const IncomeTracker: React.FC = () => {
 			endDate: new Date(startOfWeek.getTime() + 6 * 24 * 60 * 60 * 1000),
 		};
 	});
+
+	// Update selected week when week start day setting changes
+	useEffect(() => {
+		const today = new Date();
+		const startOfWeek = getWeekStartDate(today, incomeWeekStartDay);
+		setSelectedWeek({
+			year: today.getFullYear(),
+			week: Math.ceil(
+				(today.getTime() - new Date(today.getFullYear(), 0, 1).getTime()) /
+					(7 * 24 * 60 * 60 * 1000)
+			),
+			startDate: startOfWeek,
+			endDate: new Date(startOfWeek.getTime() + 6 * 24 * 60 * 60 * 1000),
+		});
+	}, [incomeWeekStartDay]);
 
 	const currentWeekEntries = incomeEntries.filter((entry) => {
 		const entryDate = startOfDay(parseISO(entry.date));
@@ -42,8 +71,9 @@ export const IncomeTracker: React.FC = () => {
 	const getWeeklyData = (): IncomeDayData[] => {
 		const weekStart = selectedWeek.startDate;
 
-		return DAYS.map((dayName, index) => {
+		return Array.from({ length: 7 }, (_, index) => {
 			const dayDate = new Date(weekStart.getTime() + index * 24 * 60 * 60 * 1000);
+			const dayName = format(dayDate, "EEEE"); // Get actual day name from date
 			const dayEntries = incomeEntries.filter((entry) =>
 				isSameDay(parseISO(entry.date), dayDate)
 			);

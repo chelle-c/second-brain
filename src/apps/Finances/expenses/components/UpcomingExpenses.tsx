@@ -2,10 +2,12 @@ import { useMemo } from "react";
 import { DeleteModal } from "./DeleteModal";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { useExpenseStore } from "@/stores/useExpenseStore";
+import { useSettingsStore } from "@/stores/useSettingsStore";
 import { ExpenseTable } from "./ExpenseTable";
 import { formatCurrency } from "@/lib/dateHelpers";
+import { getCurrencySymbol } from "@/lib/currencyUtils";
 import { DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
-import { TrendingUp, DollarSign, Calendar, Clock } from "lucide-react";
+import { TrendingUp, Calendar, Clock } from "lucide-react";
 import { addDays, addWeeks, addMonths, addYears, isWithinInterval, startOfDay } from "date-fns";
 import { AnimatedToggle } from "@/components/AnimatedToggle";
 
@@ -26,6 +28,8 @@ export const UpcomingExpenses = () => {
 		showUpcomingRelativeDates,
 		setShowUpcomingRelativeDates,
 	} = useExpenseStore();
+	const { expenseCurrency } = useSettingsStore();
+	const currencySymbol = getCurrencySymbol(expenseCurrency);
 
 	// Calculate the end date based on time selection
 	const endDate = useMemo(() => {
@@ -105,7 +109,7 @@ export const UpcomingExpenses = () => {
 					<p className="font-medium text-gray-800">{payload[0].name}</p>
 					<p className="text-sky-600 font-bold">
 						{isPlaceholder ? "Example: " : ""}
-						{formatCurrency(payload[0].value)}
+						{formatCurrency(payload[0].value, expenseCurrency)}
 					</p>
 					{!isPlaceholder && total > 0 && (
 						<p className="text-xs text-gray-500">
@@ -198,9 +202,9 @@ export const UpcomingExpenses = () => {
 							<div className="text-center">
 								<p className="text-sm text-gray-600 mb-2">Total Unpaid</p>
 								<div className="flex items-center justify-center gap-2">
-									<DollarSign className="text-sky-600" size={24} />
+									<span className="text-sky-600 text-2xl font-bold">{currencySymbol}</span>
 									<p className="text-2xl sm:text-4xl font-bold text-sky-600">
-										{formatCurrency(total).replace("$", "")}
+										{formatCurrency(total, expenseCurrency).replace(/^[^0-9]+/, "")}
 									</p>
 								</div>
 								<p className="text-xs text-gray-600 mt-2">
@@ -303,7 +307,7 @@ export const UpcomingExpenses = () => {
 										</span>
 										<span className="text-sm font-bold text-gray-800 whitespace-nowrap">
 											{isPlaceholder && "ex: "}
-											{formatCurrency(entry.value)}
+											{formatCurrency(entry.value, expenseCurrency)}
 										</span>
 									</div>
 								))}

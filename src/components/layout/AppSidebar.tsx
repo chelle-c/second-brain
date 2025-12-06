@@ -1,12 +1,6 @@
 import { NavLink } from "react-router";
 import useAppStore from "@/stores/useAppStore";
-import { sqlStorage } from "@/lib/storage";
-import { AppToSave } from "@/types";
-import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
 import {
 	Sidebar,
 	SidebarContent,
@@ -20,16 +14,24 @@ import {
 	SidebarMenuSub,
 	SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
-import { Inbox, DollarSign, Folder, Network, Save, Settings, Plus, Minus, Brain } from "lucide-react";
+import {
+	StickyNote,
+	DollarSign,
+	TrendingUp,
+	Network,
+	Settings,
+	ChevronRight,
+	Brain,
+} from "lucide-react";
 
 export function AppSidebar() {
-	const { lastSaved, autoSaveEnabled, toggleAutoSave, saveToFile } = useAppStore();
+	const { lastSaved } = useAppStore();
 
 	const items = [
 		{
 			title: "Notes",
 			url: "brain",
-			icon: Inbox,
+			icon: StickyNote,
 		},
 		{
 			title: "Finance",
@@ -39,12 +41,12 @@ export function AppSidebar() {
 				{
 					title: "Expenses",
 					url: "expenses",
-					icon: Folder,
+					icon: DollarSign,
 				},
 				{
 					title: "Income",
 					url: "income",
-					icon: Folder,
+					icon: TrendingUp,
 				},
 			],
 		},
@@ -62,17 +64,21 @@ export function AppSidebar() {
 
 	return (
 		<Sidebar variant="inset" collapsible="offcanvas">
-			<SidebarHeader className="px-8 py-4 flex flex-row items-center gap-4">
-				<Brain size={32} />
+			<SidebarHeader className="px-6 py-5 flex flex-row items-center gap-3 border-b border-sidebar-border">
+				<div className="p-2 bg-sky-500/10 rounded-lg">
+					<Brain size={28} className="text-sky-400" />
+				</div>
 				<div>
-					<h1 className="text-3xl font-bold">Lunite</h1>
-					<div className="text-sm font-medium text-gray-300">Your Second Brain</div>
+					<h1 className="text-2xl font-bold tracking-tight">Lunite</h1>
+					<div className="text-xs font-medium text-sidebar-foreground/60">
+						Your Second Brain
+					</div>
 				</div>
 			</SidebarHeader>
-			<SidebarContent className="px-2">
+			<SidebarContent className="px-3 py-4">
 				<SidebarGroup>
 					<SidebarGroupContent>
-						<SidebarMenu>
+						<SidebarMenu className="space-y-1">
 							{items.map((item) =>
 								item?.subItems ? (
 									<Collapsible
@@ -82,32 +88,50 @@ export function AppSidebar() {
 									>
 										<SidebarMenuItem>
 											<CollapsibleTrigger asChild>
-												<SidebarMenuButton className="cursor-pointer hover:bg-sidebar-background-hover rounded-md">
-													<div className="w-full flex items-center justify-between">
-														<item.icon size={16} />
-														<span className="pl-2 text-md font-semibold">
+												<SidebarMenuButton className="cursor-pointer h-10 px-3 hover:bg-sidebar-accent rounded-lg transition-colors">
+													<div className="w-full flex items-center gap-3">
+														<item.icon size={18} className="text-sidebar-foreground/70" />
+														<span className="flex-1 text-sm font-medium">
 															{item.title}
 														</span>
-														<Plus
+														<ChevronRight
 															size={16}
-															className="ml-auto group-data-[state=open]/collapsible:hidden"
-														/>
-														<Minus
-															size={16}
-															className="ml-auto group-data-[state=closed]/collapsible:hidden"
+															className="text-sidebar-foreground/50 transition-transform group-data-[state=open]/collapsible:rotate-90"
 														/>
 													</div>
 												</SidebarMenuButton>
 											</CollapsibleTrigger>
 											<CollapsibleContent>
-												<SidebarMenuSub>
+												<SidebarMenuSub className="mt-1 ml-4 pl-3 border-l-2 border-sidebar-border">
 													{item.subItems.map((subItem) => (
 														<SidebarMenuSubItem key={subItem.title}>
-															<NavLink to={`/${subItem.url}`}>
-																<SidebarMenuButton className="cursor-pointer pl-4 text-md font-semibold hover:bg-sidebar-background-hover rounded-md">
-																	<subItem.icon size={16} />
-																	<span>{subItem.title}</span>
-																</SidebarMenuButton>
+															<NavLink
+																to={`/${subItem.url}`}
+																className={({ isActive }) =>
+																	`block ${isActive ? "text-sky-400" : ""}`
+																}
+															>
+																{({ isActive }) => (
+																	<SidebarMenuButton
+																		className={`cursor-pointer h-9 px-3 rounded-lg transition-colors ${
+																			isActive
+																				? "bg-sky-500/10"
+																				: "hover:bg-sidebar-accent"
+																		}`}
+																	>
+																		<subItem.icon
+																			size={16}
+																			className={
+																				isActive
+																					? "text-sky-400"
+																					: "text-sidebar-foreground/70"
+																			}
+																		/>
+																		<span className="text-sm font-medium">
+																			{subItem.title}
+																		</span>
+																	</SidebarMenuButton>
+																)}
 															</NavLink>
 														</SidebarMenuSubItem>
 													))}
@@ -117,15 +141,32 @@ export function AppSidebar() {
 									</Collapsible>
 								) : (
 									<SidebarMenuItem key={item.title}>
-										<SidebarMenuButton
-											asChild
-											className="cursor-pointer hover:bg-sidebar-background-hover rounded-md"
+										<NavLink
+											to={`/${item.url}`}
+											className={({ isActive }) =>
+												`block ${isActive ? "text-sky-400" : ""}`
+											}
 										>
-											<NavLink to={`/${item.url}`}>
-												<item.icon size={20} />
-												<span>{item.title}</span>
-											</NavLink>
-										</SidebarMenuButton>
+											{({ isActive }) => (
+												<SidebarMenuButton
+													className={`cursor-pointer h-10 px-3 rounded-lg transition-colors ${
+														isActive
+															? "bg-sky-500/10"
+															: "hover:bg-sidebar-accent"
+													}`}
+												>
+													<item.icon
+														size={18}
+														className={
+															isActive
+																? "text-sky-400"
+																: "text-sidebar-foreground/70"
+														}
+													/>
+													<span className="text-sm font-medium">{item.title}</span>
+												</SidebarMenuButton>
+											)}
+										</NavLink>
 									</SidebarMenuItem>
 								)
 							)}
@@ -133,43 +174,12 @@ export function AppSidebar() {
 					</SidebarGroupContent>
 				</SidebarGroup>
 			</SidebarContent>
-			<SidebarFooter className="mt-auto gap-0">
-				<Separator className="my-2" />
-				<div className="flex justify-between items-center">
-					<Label htmlFor="auto-save">Auto-save</Label>
-					<Switch
-						id="auto-save"
-						defaultChecked
-						checked={autoSaveEnabled}
-						onCheckedChange={() => toggleAutoSave()}
-						className="mr-2 shrink-0"
-					/>
+			<SidebarFooter className="px-4 py-3 border-t border-sidebar-border">
+				<div className="text-xs text-sidebar-foreground/50 text-center">
+					{lastSaved
+						? `Last saved: ${new Date(lastSaved).toLocaleTimeString()}`
+						: "Not saved yet"}
 				</div>
-				<div className="text-xs text-gray-400 mb-3">
-					{lastSaved && `Last saved: ${new Date(lastSaved).toLocaleTimeString()}`}
-				</div>
-
-				<Button
-					onClick={() => saveToFile(AppToSave.All)}
-					className="w-full flex items-center justify-center gap-2 px-3 py-0 bg-emerald-700 rounded hover:bg-emerald-600 mb-2 cursor-pointer"
-				>
-					<Save size={16} />
-					Save Now
-				</Button>
-
-				<Button
-					onClick={async () => {
-						try {
-							await sqlStorage.openDataFolder();
-						} catch (error) {
-							console.error("Failed to open data folder:", error);
-						}
-					}}
-					className="w-full flex items-center justify-center gap-2 px-3 py-0 bg-gray-700 rounded hover:bg-gray-600 mb-2 text-sm cursor-pointer"
-				>
-					<Folder size={16} />
-					Open Data Folder
-				</Button>
 			</SidebarFooter>
 		</Sidebar>
 	);
