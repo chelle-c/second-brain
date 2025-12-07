@@ -1,0 +1,32 @@
+/* Theme Base System
+ * This file defines the CSS variable structure that all themes must implement.
+ * Each theme palette (sky-cyan, etc.) should provide values for these variables.
+ */
+
+/* Theme structure:
+ * --theme-* variables are the actual color values
+ * Each palette defines its own values in light/dark modes
+ *
+ * To create a new theme palette:
+ * 1. Create a new CSS file (e.g., rose-pink.css)
+ * 2. Define values for all --theme-* variables
+ * 3. Add both :root (light) and .dark (dark) variants
+ * 4. Register the palette in the theme store
+ */
+
+/* Semantic color mapping - maps theme variables to component variables */
+@layer base {
+	:root,
+	.dark {
+		/* Map theme colors to component colors */
+		--sidebar-background: var(--theme-sidebar-bg);
+		--sidebar-background-hover: var(--theme-sidebar-hover);
+		--sidebar-foreground: var(--theme-sidebar-fg);
+		--sidebar-primary: var(--theme-sidebar-primary);
+		--sidebar-primary-foreground: var(--theme-sidebar-primary-fg);
+		--sidebar-accent: var(--theme-sidebar-accent);
+		--sidebar-accent-foreground: var(--theme-sidebar-accent-fg);
+		--sidebar-border: var(--theme-sidebar-border);
+		--sidebar-ring: var(--theme-sidebar-ring);
+	}
+}

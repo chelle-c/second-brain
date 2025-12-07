@@ -100,5 +100,5 @@ export const getDueDateColor = (dueDate: Date, currentMonth: Date): string => {
 
 	if (daysDiff < 0) return "text-red-600 font-semibold"; // Past due
 	if (daysDiff <= 7) return "text-yellow-600 font-medium"; // This week
-	return "text-blue-600"; // Future weeks
+	return "text-blue-500"; // Future weeks
 };

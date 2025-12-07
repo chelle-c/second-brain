@@ -144,7 +144,7 @@ export const WeekPicker: React.FC<WeekPickerProps> = ({ selectedDate, onWeekSele
 	return (
 		<div
 			ref={containerRef}
-			className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 p-3 z-50 w-80"
+			className="absolute top-full left-0 mt-1 bg-popover rounded-lg shadow-lg border border-border p-3 z-50 w-80"
 			onKeyDown={handleKeyDown}
 			role="dialog"
 			aria-modal="true"
@@ -154,7 +154,7 @@ export const WeekPicker: React.FC<WeekPickerProps> = ({ selectedDate, onWeekSele
 			<div className="flex items-center justify-between mb-3">
 				<button
 					onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-					className="p-1.5 hover:bg-gray-100 rounded transition-colors cursor-pointer"
+					className="p-1.5 hover:bg-accent rounded transition-colors cursor-pointer"
 					aria-label="Previous month"
 					type="button"
 				>
@@ -167,12 +167,12 @@ export const WeekPicker: React.FC<WeekPickerProps> = ({ selectedDate, onWeekSele
 						/>
 					</svg>
 				</button>
-				<span className="text-sm font-semibold text-gray-700">
+				<span className="text-sm font-semibold text-foreground">
 					{format(currentMonth, "MMMM yyyy")}
 				</span>
 				<button
 					onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-					className="p-1.5 hover:bg-gray-100 rounded transition-colors cursor-pointer"
+					className="p-1.5 hover:bg-accent rounded transition-colors cursor-pointer"
 					aria-label="Next month"
 					type="button"
 				>
@@ -195,7 +195,7 @@ export const WeekPicker: React.FC<WeekPickerProps> = ({ selectedDate, onWeekSele
 					return (
 						<div
 							key={dayIndex}
-							className="text-center text-xs font-medium text-gray-500 py-1"
+							className="text-center text-xs font-medium text-muted-foreground py-1"
 							role="columnheader"
 						>
 							{dayName}
@@ -220,11 +220,11 @@ export const WeekPicker: React.FC<WeekPickerProps> = ({ selectedDate, onWeekSele
 							ref={(el) => setWeekRef(weekStart, el)}
 							className={`grid grid-cols-7 gap-1 rounded-md transition-colors cursor-pointer outline-none ${
 								isSelected
-									? "bg-sky-100 ring-1 ring-sky-500"
+									? "bg-primary/20 ring-1 ring-primary"
 									: isFocused
-									? "bg-sky-50 ring-2 ring-sky-400"
+									? "bg-primary/10 ring-2 ring-primary/70"
 									: isHovered
-									? "bg-gray-100"
+									? "bg-accent"
 									: ""
 							}`}
 							onClick={() => handleWeekClick(weekStart)}
@@ -245,7 +245,7 @@ export const WeekPicker: React.FC<WeekPickerProps> = ({ selectedDate, onWeekSele
 									<div
 										key={dayIndex}
 										className={`text-center text-xs py-2 ${
-											isInMonth ? "text-gray-700" : "text-gray-300"
+											isInMonth ? "text-foreground" : "text-muted-foreground/50"
 										} ${isCurrent && isInMonth ? "font-bold" : ""}`}
 										role="gridcell"
 									>
@@ -259,7 +259,7 @@ export const WeekPicker: React.FC<WeekPickerProps> = ({ selectedDate, onWeekSele
 			</div>
 
 			{/* Instructions */}
-			<div className="mt-3 pt-3 border-t border-gray-200 text-xs text-gray-500">
+			<div className="mt-3 pt-3 border-t border-border text-xs text-muted-foreground">
 				<div className="flex items-center justify-between">
 					<span>↑↓ Navigate weeks • Enter to select</span>
 					<span>←→ Change month</span>

@@ -12,6 +12,7 @@ import {
 import type { IncomeDayData } from "@/types/income";
 import { useSettingsStore } from "@/stores/useSettingsStore";
 import { getCurrencySymbol } from "@/lib/currencyUtils";
+import { useThemeStore } from "@/stores/useThemeStore";
 
 interface IncomeChartProps {
 	weeklyData: IncomeDayData[];
@@ -23,6 +24,15 @@ const IncomeChart: React.FC<IncomeChartProps> = ({ weeklyData }) => {
 	const [isClient, setIsClient] = useState(false);
 	const { incomeCurrency } = useSettingsStore();
 	const currencySymbol = getCurrencySymbol(incomeCurrency);
+	const { resolvedTheme } = useThemeStore();
+	const isDark = resolvedTheme === "dark";
+
+	// Theme-aware colors
+	const textColor = isDark ? "#e2e8f0" : "#374151";
+	const mutedTextColor = isDark ? "#94a3b8" : "#6B7280";
+	const gridColor = isDark ? "#334155" : "#E5E7EB";
+	const tooltipBg = isDark ? "#1e293b" : "#ffffff";
+	const tooltipBorder = isDark ? "#475569" : "#E5E7EB";
 
 	useEffect(() => {
 		setIsClient(true);
@@ -45,7 +55,7 @@ const IncomeChart: React.FC<IncomeChartProps> = ({ weeklyData }) => {
 						x={props.x + props.width / 2}
 						y={props.y - 8}
 						textAnchor="middle"
-						fill="#374151"
+						fill={textColor}
 						fontSize={13}
 						fontWeight="600"
 					>
@@ -57,9 +67,9 @@ const IncomeChart: React.FC<IncomeChartProps> = ({ weeklyData }) => {
 	};
 
 	return (
-		<div className="bg-white rounded-xl shadow-lg p-4">
+		<div className="bg-card rounded-xl shadow-lg p-4">
 			<div className="pb-2">
-				<h3 className="text-base font-semibold text-gray-800">Daily Income</h3>
+				<h3 className="text-base font-semibold text-card-foreground">Daily Income</h3>
 			</div>
 			<div>
 				<div className="w-full" style={{ height: "320px" }}>
@@ -76,20 +86,20 @@ const IncomeChart: React.FC<IncomeChartProps> = ({ weeklyData }) => {
 							>
 								<CartesianGrid
 									strokeDasharray="3 3"
-									stroke="#E5E7EB"
+									stroke={gridColor}
 									vertical={false}
 								/>
 								<XAxis
 									dataKey="name"
 									axisLine={false}
 									tickLine={false}
-									tick={{ fill: "#374151", fontSize: 13, fontWeight: 500 }}
+									tick={{ fill: textColor, fontSize: 13, fontWeight: 500 }}
 									interval={0}
 								/>
 								<YAxis
 									axisLine={false}
 									tickLine={false}
-									tick={{ fill: "#6B7280", fontSize: 12 }}
+									tick={{ fill: mutedTextColor, fontSize: 12 }}
 									tickFormatter={(value) => `${currencySymbol}${value}`}
 									width={45}
 								/>
@@ -98,9 +108,11 @@ const IncomeChart: React.FC<IncomeChartProps> = ({ weeklyData }) => {
 									labelFormatter={(label) => label}
 									contentStyle={{
 										borderRadius: "6px",
-										border: "1px solid #E5E7EB",
-										boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)",
+										border: `1px solid ${tooltipBorder}`,
+										boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
 										fontSize: "12px",
+										backgroundColor: tooltipBg,
+										color: textColor,
 									}}
 								/>
 								<Bar

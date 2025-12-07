@@ -4,10 +4,12 @@ import { useNotesStore } from "./useNotesStore";
 import { useIncomeStore } from "./useIncomeStore";
 import { useExpenseStore } from "./useExpenseStore";
 import { useSettingsStore } from "./useSettingsStore";
+import { useThemeStore } from "./useThemeStore";
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
 import { AppToSave } from "@/types";
 import { sqlStorage } from "@/lib/storage";
 import { DEFAULT_SETTINGS } from "@/types/settings";
+import { DEFAULT_THEME_SETTINGS } from "@/types/theme";
 
 interface AppStore {
 	// -- Metadata
@@ -93,6 +95,11 @@ const useAppStore = create<AppStore>()(
 				const settings = data.settings || DEFAULT_SETTINGS;
 				useSettingsStore.getState().setSettings(settings, true);
 
+				// Load theme settings
+				const themeSettings = data.theme || DEFAULT_THEME_SETTINGS;
+				useThemeStore.getState().setThemeSettings(themeSettings, true);
+				useThemeStore.getState().initializeTheme();
+
 				set({
 					lastSaved: data.lastSaved || null,
 					autoSaveEnabled: settings.autoSaveEnabled,
@@ -107,6 +114,7 @@ const useAppStore = create<AppStore>()(
 		saveToFile: async (appToSave: AppToSave) => {
 			const state = get();
 			const settingsState = useSettingsStore.getState();
+			const themeState = useThemeStore.getState();
 			try {
 				await sqlStorage.saveData(
 					{
@@ -134,6 +142,10 @@ const useAppStore = create<AppStore>()(
 							incomeDefaultView: settingsState.incomeDefaultView,
 							incomeWeekStartDay: settingsState.incomeWeekStartDay,
 							incomeCurrency: settingsState.incomeCurrency,
+						},
+						theme: {
+							mode: themeState.mode,
+							palette: themeState.palette,
 						},
 						isLoading: state.isLoading,
 						lastSaved: new Date(),

@@ -18,7 +18,7 @@ export const TagFilter = ({ tags, activeTags, setActiveTags }: TagFilterProps) =
 
 	return (
 		<div className="flex items-center gap-2">
-			<span className="text-sm text-gray-600">Filter by tags:</span>
+			<span className="text-sm text-muted-foreground">Filter by tags:</span>
 			<div className="flex flex-wrap gap-2">
 				{Object.entries(tags).map(([tagId, tag]) => {
 					const isActive = activeTags.includes(tagId);
@@ -30,8 +30,8 @@ export const TagFilter = ({ tags, activeTags, setActiveTags }: TagFilterProps) =
 							onClick={() => toggleTag(tagId)}
 							className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
 								isActive
-									? "bg-sky-100 text-sky-700 border border-sky-300"
-									: "bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200"
+									? "bg-primary/10 text-primary border border-primary/30"
+									: "bg-muted text-muted-foreground hover:bg-accent border border-border"
 							}`}
 						>
 							<Icon size={12} />
@@ -44,7 +44,7 @@ export const TagFilter = ({ tags, activeTags, setActiveTags }: TagFilterProps) =
 				{activeTags.length > 0 && (
 					<button
 						onClick={() => setActiveTags([])}
-						className="text-xs text-gray-500 hover:text-gray-700"
+						className="text-xs text-muted-foreground hover:text-foreground"
 					>
 						Clear all
 					</button>

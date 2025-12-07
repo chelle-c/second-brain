@@ -125,7 +125,7 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 		<div
 			key={note.id}
 			tabIndex={0}
-			className="p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer animate-fadeIn"
+			className="p-4 bg-card border border-border rounded-lg hover:border-primary/30 hover:shadow-sm transition-all cursor-pointer animate-fadeIn"
 			onClick={() => onSelectNote(note.id)}
 			onKeyDown={(e) => {
 				if (e.key === "Enter") onSelectNote(note.id);
@@ -133,7 +133,7 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 		>
 			<div className="flex justify-between items-start gap-4">
 				<div className="flex-1 min-w-0">
-					<h3 className="text-gray-800 mb-2 font-medium truncate">
+					<h3 className="text-card-foreground mb-2 font-medium truncate">
 						{note.title || "Untitled"}
 					</h3>
 
@@ -146,7 +146,7 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 								return (
 									<span
 										key={tagId}
-										className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs"
+										className="inline-flex items-center gap-1 px-2 py-0.5 bg-muted text-muted-foreground rounded-full text-xs"
 									>
 										{typeof Icon === "function" && <Icon size={10} />}
 										{tag.name}
@@ -156,7 +156,7 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 						</div>
 					)}
 
-					<div className="flex items-center gap-4 text-xs text-gray-500">
+					<div className="flex items-center gap-4 text-xs text-muted-foreground">
 						<span className="flex items-center gap-1">
 							<Calendar size={12} />
 							{formatDate(note.createdAt)}
@@ -189,12 +189,12 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 									const parentId = (activeFolder as Subfolder).parent;
 									setActiveFolder(allFolders[parentId]);
 								}}
-								className="text-gray-500 hover:text-gray-700 flex items-center gap-1 cursor-pointer"
+								className="text-muted-foreground hover:text-foreground flex items-center gap-1 cursor-pointer"
 							>
 								<Folder size={18} />
 								<span className="text-sm">{parentFolderName}</span>
 							</button>
-							<ChevronRight size={16} className="text-gray-400" />
+							<ChevronRight size={16} className="text-muted-foreground" />
 						</>
 					)}
 					{React.createElement(
@@ -204,7 +204,7 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 					<h1 className="text-2xl font-semibold">
 						{activeFolder && getCurrentFolder(activeFolder.id).name}
 					</h1>
-					<span className="text-sm text-gray-500">({filteredNotes.length})</span>
+					<span className="text-sm text-muted-foreground">({filteredNotes.length})</span>
 				</div>
 
 				{/* Subfolders quick access - moved below title */}
@@ -215,11 +215,11 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 								key={subfolder.id}
 								type="button"
 								onClick={() => setActiveFolder(subfolder)}
-								className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg text-sm transition-colors cursor-pointer"
+								className="flex items-center gap-1.5 px-3 py-1.5 bg-card border border-border hover:bg-accent rounded-lg text-sm transition-colors cursor-pointer"
 							>
 								<Folder size={14} />
 								{subfolder.name}
-								<span className="text-xs text-gray-500 ml-1">
+								<span className="text-xs text-muted-foreground ml-1">
 									{
 										notes.filter(
 											(n) =>
@@ -237,14 +237,14 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 				<div className="relative">
 					<Search
 						size={18}
-						className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+						className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
 					/>
 					<input
 						type="text"
 						placeholder="Search notes..."
 						value={searchTerm}
 						onChange={(e) => setSearchTerm(e.target.value)}
-						className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent focus:bg-white"
+						className="w-full pl-10 pr-4 py-2 bg-muted border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent focus:bg-background"
 					/>
 				</div>
 
@@ -255,7 +255,7 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 			{/* Notes list */}
 			<div className="flex-1 overflow-y-auto">
 				{filteredNotes.length === 0 ? (
-					<div className="text-center py-12 text-gray-400 animate-fadeIn">
+					<div className="text-center py-12 text-muted-foreground animate-fadeIn">
 						<p className="text-lg mb-2">
 							No {viewMode} notes in {getCurrentFolder(activeFolder?.id || "")?.name}
 						</p>
@@ -275,7 +275,7 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 					<div className="space-y-6 animate-fadeIn">
 						{groupedNotes.ungrouped.length > 0 && (
 							<div>
-								<h3 className="text-sm font-medium text-gray-500 mb-2">
+								<h3 className="text-sm font-medium text-muted-foreground mb-2">
 									In {activeFolder?.name}
 								</h3>
 								<div className="space-y-2">
@@ -296,7 +296,7 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 										<button
 											type="button"
 											onClick={() => setActiveFolder(subfolder)}
-											className="flex items-center gap-2 text-sm font-medium text-gray-500 mb-2 hover:text-gray-700 cursor-pointer"
+											className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2 hover:text-foreground cursor-pointer"
 										>
 											<Folder size={14} />
 											{subfolder.name}

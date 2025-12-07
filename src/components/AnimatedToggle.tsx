@@ -55,7 +55,7 @@ export function AnimatedToggle<T extends string>({
 	return (
 		<div
 			ref={containerRef}
-			className={`toggle-group relative flex bg-gray-100 rounded-lg border-2 border-gray-200 ${className}`}
+			className={`toggle-group relative flex bg-muted rounded-lg border-2 border-border ${className}`}
 		>
 			{/* Animated indicator */}
 			<div
@@ -77,7 +77,7 @@ export function AnimatedToggle<T extends string>({
 					}}
 					onClick={() => onChange(option.value)}
 					className={`flex-1 px-3 sm:px-4 py-3 rounded-md text-sm font-medium transition-colors duration-200 cursor-pointer whitespace-nowrap ${
-						value === option.value ? "text-sky-700" : "text-gray-600"
+						value === option.value ? "text-primary" : "text-muted-foreground"
 					}`}
 					aria-label={option.ariaLabel || `Select ${option.label}`}
 					aria-pressed={value === option.value}

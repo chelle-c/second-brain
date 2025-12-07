@@ -61,14 +61,14 @@ export const ExpenseOverview: React.FC = () => {
 		if (active && payload && payload[0]) {
 			const isPlaceholder = data.length === 0;
 			return (
-				<div className="bg-white p-3 rounded-lg shadow-lg border border-gray-100">
-					<p className="font-medium text-gray-800">{payload[0].name}</p>
-					<p className="text-sky-600 font-bold">
+				<div className="bg-popover p-3 rounded-lg shadow-lg border border-border">
+					<p className="font-medium text-popover-foreground">{payload[0].name}</p>
+					<p className="text-primary font-bold">
 						{isPlaceholder ? "Example: " : ""}
 						{formatCurrency(payload[0].value, expenseCurrency)}
 					</p>
 					{!isPlaceholder && monthlyTotal > 0 && (
-						<p className="text-xs text-gray-500">
+						<p className="text-xs text-muted-foreground">
 							{((payload[0].value / monthlyTotal) * 100).toFixed(1)}% of total
 						</p>
 					)}
@@ -85,8 +85,8 @@ export const ExpenseOverview: React.FC = () => {
 		<>
 			<div className="mb-4 flex flex-col gap-4">
 				<div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-					<h3 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2 whitespace-nowrap">
-						<TrendingUp className="text-sky-500" size={20} />
+					<h3 className="text-lg sm:text-xl font-bold text-card-foreground flex items-center gap-2 whitespace-nowrap">
+						<TrendingUp className="text-primary" size={20} />
 						Expense Overview
 					</h3>
 					<div className="w-full sm:w-auto">
@@ -100,7 +100,7 @@ export const ExpenseOverview: React.FC = () => {
 				<div className="lg:w-80 flex flex-col gap-4">
 					{/* View Mode Selector */}
 					<div>
-						<p className="text-sm text-gray-600 mb-2">Filter by:</p>
+						<p className="text-sm text-muted-foreground mb-2">Filter by:</p>
 						<AnimatedToggle
 							options={viewModeOptions}
 							value={overviewMode}
@@ -110,9 +110,9 @@ export const ExpenseOverview: React.FC = () => {
 					</div>
 
 					{/* Total Display */}
-					<div className="bg-linear-to-br from-sky-50 to-sky-200 rounded-lg p-6 flex-1 flex flex-col justify-center">
+					<div className="bg-linear-to-br from-secondary to-accent rounded-lg p-6 flex-1 flex flex-col justify-center">
 						<div className="text-center">
-							<p className="text-xs sm:text-sm text-gray-600 mb-2">
+							<p className="text-xs sm:text-sm text-muted-foreground mb-2">
 								{overviewMode === "remaining" && "Remaining Unpaid"}
 								{overviewMode === "required" &&
 									showPaidExpenses &&
@@ -128,8 +128,8 @@ export const ExpenseOverview: React.FC = () => {
 									"All Unpaid Expenses"}
 							</p>
 							<div className="flex items-center justify-center gap-2">
-								<span className="text-sky-600 text-2xl font-bold">{currencySymbol}</span>
-								<p className="text-2xl sm:text-4xl font-bold text-sky-600">
+								<span className="text-primary text-2xl font-bold">{currencySymbol}</span>
+								<p className="text-2xl sm:text-4xl font-bold text-primary">
 									{formatCurrency(monthlyTotal, expenseCurrency).replace(/^[^0-9]+/, "")}
 								</p>
 							</div>
@@ -138,8 +138,8 @@ export const ExpenseOverview: React.FC = () => {
 
 					{/* Category breakdown stats */}
 					{data.length > 0 && (
-						<div className="bg-gray-50 rounded-lg p-4">
-							<p className="text-xs font-bold text-gray-700 mb-2">Top Categories:</p>
+						<div className="bg-muted rounded-lg p-4">
+							<p className="text-xs font-bold text-foreground mb-2">Top Categories:</p>
 							{data
 								.sort((a, b) => b.value - a.value)
 								.slice(0, 3)
@@ -148,10 +148,10 @@ export const ExpenseOverview: React.FC = () => {
 										key={category.name}
 										className="flex items-center justify-between text-xs mb-1"
 									>
-										<span className="text-gray-700 truncate mr-2">
+										<span className="text-muted-foreground truncate mr-2">
 											{category.name}
 										</span>
-										<span className="font-medium text-gray-800 shrink-0">
+										<span className="font-medium text-foreground shrink-0">
 											{((category.value / monthlyTotal) * 100).toFixed(0)}%
 										</span>
 									</div>
@@ -163,7 +163,7 @@ export const ExpenseOverview: React.FC = () => {
 				{/* Right side - Chart and Legend */}
 				<div className="flex-1 min-w-0">
 					{isPlaceholder && (
-						<p className="text-center text-gray-500 text-sm mb-4">
+						<p className="text-center text-muted-foreground text-sm mb-4">
 							Example distribution - Add expenses to see your data
 						</p>
 					)}
@@ -220,10 +220,10 @@ export const ExpenseOverview: React.FC = () => {
 												"#93C5FD",
 										}}
 									/>
-									<span className="text-xs sm:text-sm font-medium text-gray-700 truncate">
+									<span className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
 										{entry.name}
 									</span>
-									<span className="text-xs sm:text-sm font-bold text-gray-800 whitespace-nowrap">
+									<span className="text-xs sm:text-sm font-bold text-foreground whitespace-nowrap">
 										{isPlaceholder && "ex: "}
 										{formatCurrency(entry.value, expenseCurrency)}
 									</span>

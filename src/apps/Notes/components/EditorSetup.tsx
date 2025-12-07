@@ -242,7 +242,7 @@ export const EditorSetup = ({ note }: EditorSetupProps) => {
 	};
 
 	return (
-		<div className="w-full" ref={selectionRef}>
+		<div className="w-full yoopta-editor-wrapper" ref={selectionRef}>
 			<YooptaEditor
 				editor={editor}
 				plugins={plugins}

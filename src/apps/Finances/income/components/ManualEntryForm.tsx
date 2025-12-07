@@ -32,7 +32,7 @@ const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
 	return (
 		<form onSubmit={onSubmit} className="space-y-4">
 			<div>
-				<Label className="text-sm text-gray-600 mb-1.5 block">Day</Label>
+				<Label className="text-sm text-muted-foreground mb-1.5 block">Day</Label>
 				<Select onValueChange={(value) => onEntryChange("date", value)}>
 					<SelectTrigger className="w-full h-10">
 						<SelectValue placeholder="Select a day" />
@@ -51,14 +51,14 @@ const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
 			</div>
 
 			<div>
-				<Label className="text-sm text-gray-600 mb-1.5 block">Amount ({currencySymbol})</Label>
+				<Label className="text-sm text-muted-foreground mb-1.5 block">Amount ({currencySymbol})</Label>
 				<Input
 					type="number"
 					step="0.01"
 					min="0"
 					value={newEntry.amount || ""}
 					onChange={(e) => onEntryChange("amount", parseFloat(e.target.value) || 0)}
-					className="bg-white h-10"
+					className="bg-background h-10"
 					placeholder="0.00"
 					required
 				/>
@@ -66,7 +66,7 @@ const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
 
 			<div className="grid grid-cols-2 gap-3">
 				<div>
-					<Label className="text-sm text-gray-600 mb-1.5 block">Hours</Label>
+					<Label className="text-sm text-muted-foreground mb-1.5 block">Hours</Label>
 					<Input
 						type="number"
 						step="0.1"
@@ -74,12 +74,12 @@ const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
 						max="24"
 						value={newEntry.hours || ""}
 						onChange={(e) => onEntryChange("hours", parseFloat(e.target.value) || 0)}
-						className="bg-white h-10"
+						className="bg-background h-10"
 						placeholder="0"
 					/>
 				</div>
 				<div>
-					<Label className="text-sm text-gray-600 mb-1.5 block">Minutes</Label>
+					<Label className="text-sm text-muted-foreground mb-1.5 block">Minutes</Label>
 					<Input
 						type="number"
 						step="1"
@@ -87,19 +87,19 @@ const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
 						max="59"
 						value={newEntry.minutes || ""}
 						onChange={(e) => onEntryChange("minutes", parseInt(e.target.value) || 0)}
-						className="bg-white h-10"
+						className="bg-background h-10"
 						placeholder="0"
 					/>
 				</div>
 			</div>
 
-			<div className="text-xs text-gray-500 bg-sky-50 rounded-md px-3 py-2">
+			<div className="text-xs text-muted-foreground bg-primary/10 rounded-md px-3 py-2">
 				💡 Hours and minutes are optional
 			</div>
 
 			<button
 				type="submit"
-				className="w-full px-4 py-2.5 bg-sky-500 text-white rounded-lg hover:bg-sky-600/75 transition-colors duration-200 flex items-center justify-center gap-2 font-medium cursor-pointer shadow-sm shadow-gray-500/50"
+				className="w-full px-4 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/80 transition-colors duration-200 flex items-center justify-center gap-2 font-medium cursor-pointer shadow-sm"
 			>
 				<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path

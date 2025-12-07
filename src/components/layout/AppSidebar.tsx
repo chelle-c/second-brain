@@ -65,8 +65,8 @@ export function AppSidebar() {
 	return (
 		<Sidebar variant="inset" collapsible="offcanvas">
 			<SidebarHeader className="px-6 py-5 flex flex-row items-center gap-3 border-b border-sidebar-border">
-				<div className="p-2 bg-sky-500/10 rounded-lg">
-					<Brain size={28} className="text-sky-400" />
+				<div className="p-2 bg-primary/10 rounded-lg">
+					<Brain size={28} className="text-primary" />
 				</div>
 				<div>
 					<h1 className="text-2xl font-bold tracking-tight">Lunite</h1>
@@ -108,14 +108,14 @@ export function AppSidebar() {
 															<NavLink
 																to={`/${subItem.url}`}
 																className={({ isActive }) =>
-																	`block ${isActive ? "text-sky-400" : ""}`
+																	`block ${isActive ? "text-primary" : ""}`
 																}
 															>
 																{({ isActive }) => (
 																	<SidebarMenuButton
 																		className={`cursor-pointer h-9 px-3 rounded-lg transition-colors ${
 																			isActive
-																				? "bg-sky-500/10"
+																				? "bg-primary/10"
 																				: "hover:bg-sidebar-accent"
 																		}`}
 																	>
@@ -123,7 +123,7 @@ export function AppSidebar() {
 																			size={16}
 																			className={
 																				isActive
-																					? "text-sky-400"
+																					? "text-primary"
 																					: "text-sidebar-foreground/70"
 																			}
 																		/>
@@ -144,14 +144,14 @@ export function AppSidebar() {
 										<NavLink
 											to={`/${item.url}`}
 											className={({ isActive }) =>
-												`block ${isActive ? "text-sky-400" : ""}`
+												`block ${isActive ? "text-primary" : ""}`
 											}
 										>
 											{({ isActive }) => (
 												<SidebarMenuButton
 													className={`cursor-pointer h-10 px-3 rounded-lg transition-colors ${
 														isActive
-															? "bg-sky-500/10"
+															? "bg-primary/10"
 															: "hover:bg-sidebar-accent"
 													}`}
 												>
@@ -159,7 +159,7 @@ export function AppSidebar() {
 														size={18}
 														className={
 															isActive
-																? "text-sky-400"
+																? "text-primary"
 																: "text-sidebar-foreground/70"
 														}
 													/>

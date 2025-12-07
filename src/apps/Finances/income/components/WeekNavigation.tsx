@@ -115,18 +115,18 @@ const WeekNavigation: React.FC<WeekNavigationProps> = ({
 	};
 
 	return (
-		<div className="bg-white rounded-xl shadow-lg p-4 h-full">
+		<div className="bg-card rounded-xl shadow-lg p-4 h-full">
 			<div className="pb-3">
 				{/* Date Range Display */}
 				<div>
-					<span className="text-xs text-gray-500 uppercase tracking-wider font-medium">
+					<span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
 						Week {selectedWeek.week} • {selectedWeek.year}
 					</span>
-					<div className="text-lg font-bold text-gray-800 mt-1">
+					<div className="text-lg font-bold text-card-foreground mt-1">
 						{format(selectedWeek.startDate, "MMM d")} -{" "}
 						{format(selectedWeek.endDate, "MMM d, yyyy")}
 						{isCurrentWeek && (
-							<span className="text-sm font-medium text-sky-600 ml-2">(Current)</span>
+							<span className="text-sm font-medium text-primary ml-2">(Current)</span>
 						)}
 					</div>
 				</div>
@@ -145,11 +145,11 @@ const WeekNavigation: React.FC<WeekNavigationProps> = ({
 							aria-label={`Select week, currently Week ${selectedWeek.week}`}
 						>
 							<div className="flex items-center gap-2">
-								<Calendar className="w-4 h-4 text-gray-500" />
+								<Calendar className="w-4 h-4 text-muted-foreground" />
 								<span>Week {selectedWeek.week}</span>
 							</div>
 							<ChevronDown
-								className={`w-4 h-4 text-gray-500 transition-transform ${
+								className={`w-4 h-4 text-muted-foreground transition-transform ${
 									showWeekPicker ? "rotate-180" : ""
 								}`}
 							/>
@@ -186,7 +186,7 @@ const WeekNavigation: React.FC<WeekNavigationProps> = ({
 						onClick={onGoToCurrentWeek}
 						disabled={isCurrentWeek}
 						size="sm"
-						className="px-3 bg-sky-500 hover:bg-sky-600"
+						className="px-3 bg-primary hover:bg-primary/90"
 						title={isCurrentWeek ? "Already viewing current week" : "Go to Current Week"}
 					>
 						Today

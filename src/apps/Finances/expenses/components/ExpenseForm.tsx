@@ -291,16 +291,16 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 			{!editingExpense && (
 				<button
 					onClick={handleOpen}
-					className="fixed bottom-8 right-12 bg-sky-500 text-white p-4 rounded-full 
-					shadow-xl hover:bg-sky-600 hover:scale-110 transition-all duration-200 
+					className="fixed bottom-8 right-12 bg-primary text-primary-foreground p-4 rounded-full
+					shadow-xl hover:bg-primary/90 hover:scale-110 transition-all duration-200
 					active:scale-95 z-40 group"
 				>
 					<Plus size={24} />
 					<span
-						className="absolute right-full mr-3 top-1/2 -translate-y-1/2 
-						bg-gray-800 text-white px-3 py-1 rounded-lg text-sm 
-						opacity-0 group-hover:opacity-100 transition-opacity duration-200 
-						whitespace-nowrap"
+						className="absolute right-full mr-3 top-1/2 -translate-y-1/2
+						bg-popover text-popover-foreground px-3 py-1 rounded-lg text-sm
+						opacity-0 group-hover:opacity-100 transition-opacity duration-200
+						whitespace-nowrap shadow-lg border border-border"
 					>
 						Add Expense
 					</span>
@@ -314,13 +314,13 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 				>
 					<div
 						ref={modalRef}
-						className={`bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4 
+						className={`bg-card rounded-xl shadow-2xl p-8 max-w-md w-full mx-4
 						animate-slideUp max-h-[90vh] overflow-y-auto
 						${showRegenerationWarning ? "hidden" : ""}`}
 						onClick={(e) => e.stopPropagation()}
 					>
 						<div className="flex justify-between items-center mb-6">
-							<h3 className="text-2xl font-bold text-gray-800">
+							<h3 className="text-2xl font-bold text-card-foreground">
 								{editingExpense
 									? isEditingInstance
 										? "Edit This Occurrence"
@@ -329,7 +329,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 							</h3>
 							<button
 								onClick={handleReset}
-								className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+								className="p-2 hover:bg-accent rounded-lg transition-colors duration-200 text-muted-foreground hover:text-foreground"
 							>
 								<X size={20} />
 							</button>
@@ -339,7 +339,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 							{/* Name - hide when editing occurrence */}
 							{!isEditingInstance && (
 								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-2">
+									<label className="block text-sm font-medium text-foreground mb-2">
 										Expense Name
 									</label>
 									<div className="relative">
@@ -352,13 +352,13 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 											}
 											onMouseDown={handleInputMouseDown}
 											onMouseUp={handleInputMouseUp}
-											className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg 
-												focus:ring-2 focus:ring-sky-400 focus:border-transparent 
-												transition-all duration-200 placeholder:text-gray-400"
+											className="w-full px-4 py-2 pl-10 border border-border rounded-lg
+												focus:ring-2 focus:ring-primary focus:border-transparent
+												transition-all duration-200 placeholder:text-muted-foreground bg-background text-foreground"
 											placeholder="Enter expense name"
 										/>
 										<Tag
-											className="absolute left-3 top-2.5 text-gray-400"
+											className="absolute left-3 top-2.5 text-muted-foreground"
 											size={18}
 										/>
 									</div>
@@ -370,10 +370,10 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 								<div className="flex gap-4">
 									{/* Expense Type */}
 									<div className="flex-1 items-stretch">
-										<label className="block text-sm font-medium text-gray-700 mb-2">
+										<label className="block text-sm font-medium text-foreground mb-2">
 											Expense Type
 										</label>
-										<div className="flex gap-2 bg-gray-100 rounded-lg p-1">
+										<div className="flex gap-2 bg-muted rounded-lg p-1">
 											<button
 												type="button"
 												onClick={() =>
@@ -381,8 +381,8 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 												}
 												className={`flex-1 px-3 py-1 rounded-md font-medium transition-all duration-200 text-sm ${
 													formData.type === "need"
-														? "bg-white text-purple-600 shadow-sm"
-														: "text-gray-600 hover:text-gray-800"
+														? "bg-card text-purple-600 shadow-sm"
+														: "text-muted-foreground hover:text-foreground"
 												}`}
 											>
 												Need
@@ -394,8 +394,8 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 												}
 												className={`flex-1 px-3 py-1 rounded-md font-medium transition-all duration-200 text-sm ${
 													formData.type === "want"
-														? "bg-white text-gray-700 shadow-sm"
-														: "text-gray-600 hover:text-gray-800"
+														? "bg-card text-foreground shadow-sm"
+														: "text-muted-foreground hover:text-foreground"
 												}`}
 											>
 												Want
@@ -405,7 +405,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 
 									{/* Importance */}
 									<div className="flex-1 items-stretch">
-										<label className="block text-sm font-medium text-gray-700 mb-2">
+										<label className="block text-sm font-medium text-foreground mb-2">
 											Importance
 										</label>
 										<Select
@@ -440,7 +440,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 							{/* Amount */}
 							<div className="flex flex-row gap-4">
 								<div className="flex flex-col items-stretch">
-									<label className="block text-sm font-medium text-gray-700 mb-2">
+									<label className="block text-sm font-medium text-foreground mb-2">
 										Amount
 									</label>
 									<div className="relative">
@@ -453,13 +453,13 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 											onChange={handleAmountChange}
 											onMouseDown={handleInputMouseDown}
 											onMouseUp={handleInputMouseUp}
-											className="w-full px-4 py-1 pl-8 border border-gray-300 rounded-lg 
-											focus:ring-2 focus:ring-sky-400 focus:border-transparent 
-											transition-all duration-200"
+											className="w-full px-4 py-1 pl-8 border border-border rounded-lg
+											focus:ring-2 focus:ring-primary focus:border-transparent
+											transition-all duration-200 bg-background text-foreground"
 											placeholder="0.00"
 										/>
 										<DollarSign
-											className="absolute left-2 top-2.25 text-gray-400"
+											className="absolute left-2 top-2.25 text-muted-foreground"
 											size={16}
 										/>
 									</div>
@@ -467,7 +467,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 								{/* Category - hide when editing occurrence */}
 								{!isEditingInstance && (
 									<div className="flex flex-col items-start">
-										<label className="block text-sm font-medium text-gray-700 mb-2">
+										<label className="block text-sm font-medium text-foreground mb-2">
 											Category
 										</label>
 										<Select
@@ -498,7 +498,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 
 							{/* Recurrence settings - hide when editing occurrence */}
 							{!isEditingInstance && (
-								<div className="bg-sky-50 p-4 rounded-lg">
+								<div className="bg-primary/10 p-4 rounded-lg">
 									<label className="flex items-center gap-3 cursor-pointer mb-3">
 										<input
 											type="checkbox"
@@ -509,9 +509,9 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 													isRecurring: e.target.checked,
 												})
 											}
-											className="w-5 h-5 text-sky-600 rounded focus:ring-2 focus:ring-sky-400"
+											className="w-5 h-5 text-primary rounded focus:ring-2 focus:ring-primary"
 										/>
-										<span className="text-sm font-medium text-gray-700 flex items-center gap-2">
+										<span className="text-sm font-medium text-foreground flex items-center gap-2">
 											<RefreshCw size={16} />
 											Recurring Expense
 										</span>
@@ -558,7 +558,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 												recurrenceSettings.frequency ===
 													"custom-months") && (
 												<div>
-													<label className="block text-xs font-medium text-gray-600 mb-1">
+													<label className="block text-xs font-medium text-muted-foreground mb-1">
 														Interval
 													</label>
 													<input
@@ -574,13 +574,13 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 														}
 														onMouseDown={handleInputMouseDown}
 														onMouseUp={handleInputMouseUp}
-														className="w-full px-3 py-1.5 text-sm border border-gray-300 bg-gray-50 rounded focus:ring-2 focus:ring-sky-400 focus:border-transparent"
+														className="w-full px-3 py-1.5 text-sm border border-border bg-background text-foreground rounded focus:ring-2 focus:ring-primary focus:border-transparent"
 													/>
 												</div>
 											)}
 
 											<div>
-												<label className="block text-xs font-medium text-gray-600 mb-1">
+												<label className="block text-xs font-medium text-muted-foreground mb-1">
 													Number of Occurrences
 												</label>
 												<input
@@ -596,8 +596,8 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 													}
 													onMouseDown={handleInputMouseDown}
 													onMouseUp={handleInputMouseUp}
-													className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded 
-								focus:ring-2 focus:ring-sky-400 focus:border-transparent"
+													className="w-full px-3 py-1.5 text-sm border border-border rounded
+								focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
 												/>
 											</div>
 										</div>
@@ -607,15 +607,15 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 
 							{/* Due date toggle - hide when editing occurrence or when recurring */}
 							{!formData.isRecurring && !isEditingInstance && (
-								<div className="bg-gray-50 p-4 rounded-lg">
+								<div className="bg-muted p-4 rounded-lg">
 									<label className="flex items-center gap-3 cursor-pointer">
 										<input
 											type="checkbox"
 											checked={hasDueDate}
 											onChange={(e) => handleDueDateToggle(e.target.checked)}
-											className="w-5 h-5 text-sky-600 rounded focus:ring-2 focus:ring-sky-400"
+											className="w-5 h-5 text-primary rounded focus:ring-2 focus:ring-primary"
 										/>
-										<span className="text-sm font-medium text-gray-700 flex items-center gap-2">
+										<span className="text-sm font-medium text-foreground flex items-center gap-2">
 											<Calendar size={16} />
 											Has Due Date
 										</span>
@@ -626,15 +626,15 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 							{/* Due Date */}
 							{(hasDueDate || formData.isRecurring || isEditingInstance) && (
 								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-2">
+									<label className="block text-sm font-medium text-foreground mb-2">
 										Due Date
 										{formData.isRecurring && !isEditingInstance && (
-											<span className="text-xs text-gray-500 ml-2">
+											<span className="text-xs text-muted-foreground ml-2">
 												(First occurrence)
 											</span>
 										)}
 										{isEditingInstance && (
-											<span className="text-xs text-gray-500 ml-2">
+											<span className="text-xs text-muted-foreground ml-2">
 												(This occurrence only)
 											</span>
 										)}
@@ -649,12 +649,12 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 											onChange={handleDateChange}
 											onMouseDown={handleInputMouseDown}
 											onMouseUp={handleInputMouseUp}
-											className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg 
-						focus:ring-2 focus:ring-sky-400 focus:border-transparent 
-						transition-all duration-200"
+											className="w-full px-4 py-2 pl-10 border border-border rounded-lg
+						focus:ring-2 focus:ring-primary focus:border-transparent
+						transition-all duration-200 bg-background text-foreground"
 										/>
 										<Calendar
-											className="absolute left-3 top-2.5 text-gray-400"
+											className="absolute left-3 top-2.5 text-muted-foreground"
 											size={18}
 										/>
 									</div>
@@ -662,7 +662,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 							)}
 
 							{/* Payment status */}
-							<div className="bg-green-50 p-4 rounded-lg space-y-3">
+							<div className="bg-green-500/10 p-4 rounded-lg space-y-3">
 								<label className="flex items-center gap-3 cursor-pointer">
 									<input
 										type="checkbox"
@@ -672,7 +672,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 										}
 										className="w-5 h-5 text-green-600 rounded focus:ring-2 focus:ring-green-400"
 									/>
-									<span className="text-sm font-medium text-gray-700 flex items-center gap-2">
+									<span className="text-sm font-medium text-foreground flex items-center gap-2">
 										<CheckCircle size={16} />
 										Mark as Paid
 									</span>
@@ -680,7 +680,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 
 								{formData.isPaid && (
 									<div>
-										<label className="block text-xs font-medium text-gray-600 mb-1">
+										<label className="block text-xs font-medium text-muted-foreground mb-1">
 											Payment Date
 										</label>
 										<input
@@ -693,8 +693,8 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 											onChange={handlePaymentDateChange}
 											onMouseDown={handleInputMouseDown}
 											onMouseUp={handleInputMouseUp}
-											className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded 
-						focus:ring-2 focus:ring-green-400 focus:border-transparent"
+											className="w-full px-3 py-1.5 text-sm border border-border rounded
+						focus:ring-2 focus:ring-green-400 focus:border-transparent bg-background text-foreground"
 										/>
 									</div>
 								)}
@@ -703,8 +703,8 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 							<div className="flex gap-3 pt-4">
 								<button
 									type="submit"
-									className="flex-1 bg-sky-500 text-white py-2 px-4 rounded-lg 
-				hover:bg-sky-600 transition-colors duration-200 
+									className="flex-1 bg-primary text-primary-foreground py-2 px-4 rounded-lg
+				hover:bg-primary/90 transition-colors duration-200
 				flex items-center justify-center gap-2 font-medium
 				hover:scale-105 active:scale-95 transform"
 								>
@@ -714,8 +714,8 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 								<button
 									type="button"
 									onClick={handleReset}
-									className="flex-1 bg-gray-200 text-gray-700 py-2 px-4 rounded-lg 
-				hover:bg-gray-300 transition-colors duration-200 font-medium
+									className="flex-1 bg-secondary text-secondary-foreground py-2 px-4 rounded-lg
+				hover:bg-secondary/80 transition-colors duration-200 font-medium
 				hover:scale-105 active:scale-95 transform"
 								>
 									Cancel

@@ -7,6 +7,7 @@ import { NotesStorage } from "./notesStorage";
 import { ExpensesStorage } from "./expensesStorage";
 import { IncomeStorage } from "./incomeStorage";
 import { AppSettings, DEFAULT_SETTINGS } from "@/types/settings";
+import { ThemeSettings, DEFAULT_THEME_SETTINGS } from "@/types/theme";
 
 const DB_NAME = "appdata.db";
 
@@ -276,6 +277,51 @@ class SqlStorage {
 		return JSON.stringify(this.cache.settings) !== JSON.stringify(settings);
 	}
 
+	// Public API - Theme
+	async loadTheme(): Promise<ThemeSettings> {
+		if (!this.initialized) await this.initialize();
+
+		return this.queueOperation(async () => {
+			const results = await this.db!.select<Array<{ key: string; value: string }>>(
+				"SELECT key, value FROM settings WHERE key LIKE 'theme_%'"
+			);
+
+			if (results.length === 0) {
+				return DEFAULT_THEME_SETTINGS;
+			}
+
+			const theme: Partial<ThemeSettings> = {};
+			for (const row of results) {
+				const key = row.key.replace('theme_', '') as keyof ThemeSettings;
+				try {
+					(theme as any)[key] = JSON.parse(row.value);
+				} catch {
+					(theme as any)[key] = row.value;
+				}
+			}
+
+			return { ...DEFAULT_THEME_SETTINGS, ...theme };
+		});
+	}
+
+	async saveTheme(theme: ThemeSettings): Promise<void> {
+		if (!this.initialized) await this.initialize();
+
+		return this.queueOperation(async () => {
+			for (const [key, value] of Object.entries(theme)) {
+				await this.db!.execute(
+					`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`,
+					[`theme_${key}`, JSON.stringify(value)]
+				);
+			}
+		});
+	}
+
+	hasThemeChanged(_theme: ThemeSettings): boolean {
+		// Theme changes are always saved immediately, no caching needed
+		return true;
+	}
+
 	// Metadata
 	async loadMetadata(): Promise<AppMetadata> {
 		if (!this.initialized) await this.initialize();
@@ -327,6 +373,7 @@ class SqlStorage {
 			const metadata = await this.loadMetadata();
 			const income = await this.loadIncome();
 			const settings = await this.loadSettings();
+			const theme = await this.loadTheme();
 
 			const subfolders = this.notesStorage.extractSubfoldersFromHierarchy(folders);
 
@@ -338,6 +385,7 @@ class SqlStorage {
 				expenses,
 				income,
 				settings,
+				theme,
 				isLoading: false,
 				lastSaved: metadata.lastSaved,
 				autoSaveEnabled: settings.autoSaveEnabled,
@@ -362,6 +410,7 @@ class SqlStorage {
 					viewType: "weekly",
 				},
 				settings: DEFAULT_SETTINGS,
+				theme: DEFAULT_THEME_SETTINGS,
 				isLoading: false,
 				lastSaved: new Date(),
 				autoSaveEnabled: DEFAULT_SETTINGS.autoSaveEnabled,
@@ -404,6 +453,7 @@ class SqlStorage {
 				const expensesChanged = this.expensesStorage.hasExpensesChanged(data.expenses);
 				const incomeChanged = this.incomeStorage.hasIncomeChanged(data.income);
 				const settingsChanged = this.hasSettingsChanged(data.settings);
+				const themeChanged = this.hasThemeChanged(data.theme);
 
 				if (
 					notesChanged ||
@@ -411,7 +461,8 @@ class SqlStorage {
 					tagsChanged ||
 					expensesChanged ||
 					incomeChanged ||
-					settingsChanged
+					settingsChanged ||
+					themeChanged
 				) {
 					hasChanges = true;
 					if (notesChanged) await this.saveNotes(data.notes);
@@ -420,6 +471,7 @@ class SqlStorage {
 					if (expensesChanged) await this.saveExpenses(data.expenses);
 					if (incomeChanged) await this.saveIncome(data.income);
 					if (settingsChanged) await this.saveSettings(data.settings);
+					if (themeChanged) await this.saveTheme(data.theme);
 				}
 			}
 

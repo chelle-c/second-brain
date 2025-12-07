@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useIncomeStore } from "@/stores/useIncomeStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
+import { useThemeStore } from "@/stores/useThemeStore";
 import { getMonthlyData } from "@/lib/dateUtils";
 import { getCurrencySymbol } from "@/lib/currencyUtils";
 import {
@@ -38,6 +39,15 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ selectedYear, onYearChange, y
 	const { incomeEntries } = useIncomeStore();
 	const { incomeCurrency } = useSettingsStore();
 	const currencySymbol = getCurrencySymbol(incomeCurrency);
+	const { resolvedTheme } = useThemeStore();
+	const isDark = resolvedTheme === "dark";
+
+	// Theme-aware colors
+	const textColor = isDark ? "#e2e8f0" : "#374151";
+	const mutedTextColor = isDark ? "#94a3b8" : "#6B7280";
+	const gridColor = isDark ? "#334155" : "#E5E7EB";
+	const tooltipBg = isDark ? "#1e293b" : "#ffffff";
+	const tooltipBorder = isDark ? "#475569" : "#E5E7EB";
 
 	const monthlyData = getMonthlyData(incomeEntries, selectedYear);
 
@@ -73,11 +83,12 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ selectedYear, onYearChange, y
 						x={rest.x + rest.width / 2}
 						y={rest.y - 4}
 						textAnchor="middle"
-						fill="#6B7280"
+						fill={textColor}
 						fontSize={10}
 						fontWeight="500"
 					>
-						{currencySymbol}{rest.payload.amount.toFixed(0)}
+						{currencySymbol}
+						{rest.payload.amount.toFixed(0)}
 					</text>
 				)}
 			</g>
@@ -89,23 +100,24 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ selectedYear, onYearChange, y
 			{monthlyDataExists.length > 0 ? (
 				<>
 					{/* Chart Section */}
-					<div className="bg-white rounded-xl shadow-lg p-4">
+					<div className="bg-card rounded-xl shadow-lg p-4">
 						<div className="pb-2">
 							<div className="flex items-center justify-between">
 								<div>
-									<h3 className="text-sm font-semibold text-gray-800">
+									<h3 className="text-sm font-semibold text-card-foreground">
 										Monthly Overview
 									</h3>
 									<div className="flex gap-4 mt-1">
-										<span className="text-xs text-gray-500">
+										<span className="text-xs text-muted-foreground">
 											Total:{" "}
-											<span className="font-medium text-sky-600">
-												{currencySymbol}{totalYearAmount.toFixed(0)}
+											<span className="font-medium text-primary">
+												{currencySymbol}
+												{totalYearAmount.toFixed(0)}
 											</span>
 										</span>
-										<span className="text-xs text-gray-500">
+										<span className="text-xs text-muted-foreground">
 											Hours:{" "}
-											<span className="font-medium text-sky-600">
+											<span className="font-medium text-primary">
 												{totalYearHours.toFixed(1)}h
 											</span>
 										</span>
@@ -146,37 +158,47 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ selectedYear, onYearChange, y
 										>
 											<CartesianGrid
 												strokeDasharray="3 3"
-												stroke="#E5E7EB"
+												stroke={gridColor}
 												vertical={false}
 											/>
 											<XAxis
 												dataKey="shortMonth"
 												axisLine={false}
 												tickLine={false}
-												tick={{ fill: "#374151", fontSize: 10 }}
+												tick={{ fill: textColor, fontSize: 10 }}
 												interval={0}
 											/>
 											<YAxis
 												axisLine={false}
 												tickLine={false}
-												tick={{ fill: "#6B7280", fontSize: 10 }}
-												tickFormatter={(value) => `${currencySymbol}${value}`}
+												tick={{ fill: mutedTextColor, fontSize: 10 }}
+												tickFormatter={(value) =>
+													`${currencySymbol}${value}`
+												}
 												width={40}
 											/>
 											<Tooltip
 												formatter={(value: number, name: string) => {
 													if (name === "amount")
-														return [`${currencySymbol}${value.toFixed(2)}`, "Amount"];
+														return [
+															`${currencySymbol}${value.toFixed(2)}`,
+															"Amount",
+														];
 													if (name === "hours")
-														return [`${value.toFixed(1)} hours`, "Hours"];
+														return [
+															`${value.toFixed(1)} hours`,
+															"Hours",
+														];
 													return [value, name];
 												}}
 												labelFormatter={(label) => label}
 												contentStyle={{
 													borderRadius: "6px",
-													border: "1px solid #E5E7EB",
-													boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)",
+													border: `1px solid ${tooltipBorder}`,
+													boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
 													fontSize: "12px",
+													backgroundColor: tooltipBg,
+													color: textColor,
 												}}
 											/>
 											<Bar
@@ -195,9 +217,9 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ selectedYear, onYearChange, y
 					</div>
 
 					{/* Monthly Cards */}
-					<div className="bg-white rounded-xl shadow-lg p-4">
+					<div className="bg-card rounded-xl shadow-lg p-4">
 						<div className="pb-2">
-							<h3 className="text-sm font-semibold text-gray-800">
+							<h3 className="text-sm font-semibold text-card-foreground">
 								Monthly Breakdown
 							</h3>
 						</div>
@@ -208,32 +230,39 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ selectedYear, onYearChange, y
 										(month.amount > 0 || month.hours > 0) && (
 											<div
 												key={month.month}
-												className="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-colors"
+												className="border border-border rounded-lg p-3 hover:bg-accent transition-colors"
 											>
-												<div className="text-sm font-semibold text-gray-800 mb-2">
+												<div className="text-sm font-semibold text-card-foreground mb-2">
 													{month.month.substring(0, 3)}
 												</div>
 												<div className="space-y-1">
 													<div className="flex justify-between text-xs">
-														<span className="text-gray-500">Earned</span>
-														<span className="font-medium text-sky-600">
-															{currencySymbol}{month.amount.toFixed(0)}
+														<span className="text-muted-foreground">
+															Earned
+														</span>
+														<span className="font-medium text-primary">
+															{currencySymbol}
+															{month.amount.toFixed(0)}
 														</span>
 													</div>
 													<div className="flex justify-between text-xs">
-														<span className="text-gray-500">Hours</span>
-														<span className="font-medium text-gray-800">
+														<span className="text-muted-foreground">
+															Hours
+														</span>
+														<span className="font-medium text-foreground">
 															{month.hours.toFixed(1)}h
 														</span>
 													</div>
 													<div className="flex justify-between text-xs">
-														<span className="text-gray-500">Rate</span>
-														<span className="font-medium text-emerald-600">
+														<span className="text-muted-foreground">
+															Rate
+														</span>
+														<span className="font-medium text-emerald-500">
 															{currencySymbol}
 															{month.hours > 0
-																? (month.amount / month.hours).toFixed(
-																		0
-																  )
+																? (
+																		month.amount / month.hours
+																  ).toFixed(0)
 																: "0"}
 															/h
 														</span>
@@ -247,10 +276,12 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ selectedYear, onYearChange, y
 					</div>
 				</>
 			) : (
-				<div className="bg-white rounded-xl shadow-lg p-4">
+				<div className="bg-card rounded-xl shadow-lg p-4">
 					<div className="p-8 flex flex-col items-center">
-						<FileText className="w-10 h-10 text-gray-300 mb-3" />
-						<p className="text-sm text-gray-500">No income entries for {selectedYear}</p>
+						<FileText className="w-10 h-10 text-muted-foreground/30 mb-3" />
+						<p className="text-sm text-muted-foreground">
+							No income entries for {selectedYear}
+						</p>
 					</div>
 				</div>
 			)}

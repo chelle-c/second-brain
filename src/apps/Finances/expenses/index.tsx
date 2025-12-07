@@ -23,9 +23,9 @@ export const ExpensesTracker = () => {
 			<Layout currentView={currentView} setCurrentView={setCurrentView}>
 				<div className="space-y-3 overflow-y-auto">
 					{currentView === "monthly" ? (
-						<div className="bg-white rounded-xl shadow-lg p-6 animate-slideUp">
+						<div className="bg-card rounded-xl shadow-lg p-6 animate-slideUp">
 							<ExpenseOverview />
-							<div className="mt-8 mb-6 border-t border-gray-200"></div>
+							<div className="mt-8 mb-6 border-t border-border"></div>
 							<ExpenseList />
 						</div>
 					) : currentView === "upcoming" ? (

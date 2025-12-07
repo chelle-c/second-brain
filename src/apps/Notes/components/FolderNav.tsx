@@ -328,7 +328,7 @@ export const FolderNav = ({
 						type="button"
 						onClick={undo}
 						disabled={!canUndo}
-						className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors cursor-pointer"
+						className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-secondary text-secondary-foreground hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors cursor-pointer"
 						title="Undo (Ctrl+Z)"
 					>
 						<Undo2 size={14} />
@@ -338,7 +338,7 @@ export const FolderNav = ({
 						type="button"
 						onClick={redo}
 						disabled={!canRedo}
-						className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors cursor-pointer"
+						className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-secondary text-secondary-foreground hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors cursor-pointer"
 						title="Redo (Ctrl+Y)"
 					>
 						<Redo2 size={14} />
@@ -347,15 +347,15 @@ export const FolderNav = ({
 				</div>
 
 				<div className="flex justify-between items-center mb-3">
-					<h3 className="font-semibold text-gray-700 text-sm">Folders</h3>
+					<h3 className="font-semibold text-foreground text-sm">Folders</h3>
 					<button
 						type="button"
 						onClick={() => setShowNewFolder(true)}
 						disabled={isAnyEditMode}
-						className="p-1 hover:bg-gray-200 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+						className="p-1 hover:bg-accent rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
 						title="Add folder"
 					>
-						<FolderPlus size={18} className="text-gray-600" />
+						<FolderPlus size={18} className="text-muted-foreground" />
 					</button>
 				</div>
 
@@ -363,7 +363,7 @@ export const FolderNav = ({
 				{showNewFolder && (
 					<div
 						ref={newFolderContainerRef}
-						className="mb-2 p-2 bg-gray-100 rounded-lg border border-gray-300"
+						className="mb-2 p-2 bg-muted rounded-lg border border-border"
 					>
 						<input
 							ref={inputRef}
@@ -372,13 +372,13 @@ export const FolderNav = ({
 							onChange={(e) => setNewFolderName(e.target.value)}
 							onKeyDown={(e) => handleCreateKeyDown(e, addNewFolder)}
 							placeholder="Folder name..."
-							className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded bg-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+							className="w-full px-2 py-1.5 text-sm border border-border rounded bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
 						/>
 						<div className="flex justify-end gap-1 mt-2">
 							<button
 								type="button"
 								onClick={cancelCreating}
-								className="p-1.5 text-gray-500 hover:bg-gray-200 rounded cursor-pointer"
+								className="p-1.5 text-muted-foreground hover:bg-accent rounded cursor-pointer"
 								title="Cancel (Esc)"
 							>
 								<X size={16} />
@@ -387,7 +387,7 @@ export const FolderNav = ({
 								type="button"
 								onClick={addNewFolder}
 								disabled={!newFolderName.trim()}
-								className="p-1.5 text-sky-600 hover:bg-sky-100 rounded disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+								className="p-1.5 text-primary hover:bg-primary/10 rounded disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
 								title="Save (Enter)"
 							>
 								<Check size={16} />
@@ -409,15 +409,15 @@ export const FolderNav = ({
 						disabled={isAnyEditMode}
 						className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg transition-colors cursor-pointer ${
 							activeFolder && activeFolder.id === "inbox"
-								? "bg-sky-100 text-sky-700"
-								: "hover:bg-gray-100"
+								? "bg-primary/10 text-primary"
+								: "hover:bg-accent"
 						} ${isAnyEditMode ? "opacity-50 cursor-not-allowed" : ""}`}
 					>
 						<div className="flex items-center gap-2">
 							<Inbox size={16} />
 							<span className="text-sm font-medium">Inbox</span>
 						</div>
-						<span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+						<span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
 							{getNoteCount("inbox", viewMode === "archived")}
 						</span>
 					</button>
@@ -435,8 +435,8 @@ export const FolderNav = ({
 								<div
 									className={`group flex items-center rounded-lg transition-colors ${
 										activeFolder && activeFolder.id === key
-											? "bg-sky-100 text-sky-700"
-											: "hover:bg-gray-100"
+											? "bg-primary/10 text-primary"
+											: "hover:bg-accent"
 									} ${
 										isAnyEditMode && !isEditingThis
 											? "opacity-50 pointer-events-none"
@@ -447,7 +447,7 @@ export const FolderNav = ({
 										type="button"
 										onClick={() => !isAnyEditMode && toggleFolder(key)}
 										disabled={isAnyEditMode}
-										className="p-1 hover:bg-gray-200 rounded shrink-0 cursor-pointer"
+										className="p-1 hover:bg-accent rounded shrink-0 cursor-pointer"
 									>
 										{hasSubfolders ? (
 											isExpanded ? (
@@ -469,7 +469,7 @@ export const FolderNav = ({
 												onChange={(e) => setEditFolderName(e.target.value)}
 												onKeyDown={(e) => handleEditKeyDown(e, key, false)}
 												onBlur={() => saveEditedFolder(key, false)}
-												className="w-full px-1.5 py-0.5 text-sm border border-gray-300 rounded bg-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+												className="w-full px-1.5 py-0.5 text-sm border border-border rounded bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
 											/>
 										</div>
 									) : (
@@ -491,14 +491,14 @@ export const FolderNav = ({
 												</span>
 											</div>
 											<div className="flex items-center gap-1 shrink-0">
-												<span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+												<span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
 													{getNoteCount(key, viewMode === "archived")}
 												</span>
 												{!isAnyEditMode && (
 													<DropdownMenu>
 														<DropdownMenuTrigger
 															onClick={(e) => e.stopPropagation()}
-															className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 hover:bg-gray-200 rounded transition-all focus:ring-2 focus:ring-sky-500 focus:outline-none cursor-pointer"
+															className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 hover:bg-accent rounded transition-all focus:ring-2 focus:ring-primary focus:outline-none cursor-pointer"
 														>
 															<MoreVertical size={14} />
 														</DropdownMenuTrigger>
@@ -557,7 +557,7 @@ export const FolderNav = ({
 								{showNewSubfolder === key && (
 									<div
 										ref={newSubfolderContainerRef}
-										className="ml-5 mt-1 p-2 bg-gray-100 rounded-lg border border-gray-300"
+										className="ml-5 mt-1 p-2 bg-muted rounded-lg border border-border"
 									>
 										<input
 											ref={inputRef}
@@ -568,13 +568,13 @@ export const FolderNav = ({
 												handleCreateKeyDown(e, () => addNewSubfolder(key))
 											}
 											placeholder="Subfolder name..."
-											className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded bg-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+											className="w-full px-2 py-1.5 text-sm border border-border rounded bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
 										/>
 										<div className="flex justify-end gap-1 mt-2">
 											<button
 												type="button"
 												onClick={cancelCreating}
-												className="p-1.5 text-gray-500 hover:bg-gray-200 rounded cursor-pointer"
+												className="p-1.5 text-muted-foreground hover:bg-accent rounded cursor-pointer"
 												title="Cancel (Esc)"
 											>
 												<X size={16} />
@@ -583,7 +583,7 @@ export const FolderNav = ({
 												type="button"
 												onClick={() => addNewSubfolder(key)}
 												disabled={!newSubfolderName.trim()}
-												className="p-1.5 text-sky-600 hover:bg-sky-100 rounded disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+												className="p-1.5 text-primary hover:bg-primary/10 rounded disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
 												title="Save (Enter)"
 											>
 												<Check size={16} />
@@ -604,8 +604,8 @@ export const FolderNav = ({
 												key={subfolder.id}
 												className={`group ml-5 flex items-center rounded-lg transition-colors ${
 													activeFolder?.id === subfolder.id
-														? "bg-sky-100 text-sky-700"
-														: "hover:bg-gray-100"
+														? "bg-primary/10 text-primary"
+														: "hover:bg-accent"
 												} ${
 													isAnyEditMode && !isEditingSubfolder
 														? "opacity-50 pointer-events-none"
@@ -631,7 +631,7 @@ export const FolderNav = ({
 															onBlur={() =>
 																saveEditedFolder(subfolder.id, true)
 															}
-															className="w-full px-1.5 py-0.5 text-sm border border-gray-300 rounded bg-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+															className="w-full px-1.5 py-0.5 text-sm border border-border rounded bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
 														/>
 													</div>
 												) : (
@@ -658,7 +658,7 @@ export const FolderNav = ({
 															</span>
 														</div>
 														<div className="flex items-center gap-1 shrink-0">
-															<span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+															<span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
 																{getNoteCount(
 																	subfolder.id,
 																	viewMode === "archived"
@@ -670,7 +670,7 @@ export const FolderNav = ({
 																		onClick={(e) =>
 																			e.stopPropagation()
 																		}
-																		className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 hover:bg-gray-200 rounded transition-all focus:ring-2 focus:ring-sky-500 focus:outline-none cursor-pointer"
+																		className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 hover:bg-accent rounded transition-all focus:ring-2 focus:ring-primary focus:outline-none cursor-pointer"
 																	>
 																		<MoreVertical size={14} />
 																	</DropdownMenuTrigger>

@@ -58,20 +58,20 @@ const EditModal: React.FC<{
 		>
 			<div className="space-y-4">
 				<div>
-					<Label className="text-sm text-gray-600 mb-1">Amount ({currencySymbol})</Label>
+					<Label className="text-sm text-muted-foreground mb-1">Amount ({currencySymbol})</Label>
 					<Input
 						type="number"
 						step="0.01"
 						min="0"
 						value={editForm.amount || ""}
 						onChange={(e) => handleChange("amount", parseFloat(e.target.value) || 0)}
-						className="bg-white h-10"
+						className="bg-background h-10"
 						placeholder="0.00"
 					/>
 				</div>
 				<div className="grid grid-cols-2 gap-3">
 					<div>
-						<Label className="text-sm text-gray-600 mb-1">Hours</Label>
+						<Label className="text-sm text-muted-foreground mb-1">Hours</Label>
 						<Input
 							type="number"
 							step="0.1"
@@ -79,12 +79,12 @@ const EditModal: React.FC<{
 							max="24"
 							value={editForm.hours || ""}
 							onChange={(e) => handleChange("hours", parseFloat(e.target.value) || 0)}
-							className="bg-white h-10"
+							className="bg-background h-10"
 							placeholder="0"
 						/>
 					</div>
 					<div>
-						<Label className="text-sm text-gray-600 mb-1">Minutes</Label>
+						<Label className="text-sm text-muted-foreground mb-1">Minutes</Label>
 						<Input
 							type="number"
 							step="1"
@@ -92,13 +92,13 @@ const EditModal: React.FC<{
 							max="59"
 							value={editForm.minutes || ""}
 							onChange={(e) => handleChange("minutes", parseInt(e.target.value) || 0)}
-							className="bg-white h-10"
+							className="bg-background h-10"
 							placeholder="0"
 						/>
 					</div>
 				</div>
 				<div className="flex gap-2 pt-2">
-					<Button onClick={handleSave} className="flex-1 bg-sky-500 hover:bg-sky-600">
+					<Button onClick={handleSave} className="flex-1 bg-primary hover:bg-primary/80">
 						Save Changes
 					</Button>
 					<Button variant="secondary" onClick={onClose}>
@@ -221,12 +221,12 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 	);
 
 	return (
-		<div className="bg-white rounded-xl shadow-lg p-4 h-full">
+		<div className="bg-card rounded-xl shadow-lg p-4 h-full">
 			<div className="pb-3">
 				<div className="flex items-center justify-between">
 					<div>
-						<h3 className="text-sm font-semibold text-gray-800">Income Entries</h3>
-						<span className="text-xs text-gray-500 mt-0.5 block">
+						<h3 className="text-sm font-semibold text-card-foreground">Income Entries</h3>
+						<span className="text-xs text-muted-foreground mt-0.5 block">
 							{currentWeekEntries.length}{" "}
 							{currentWeekEntries.length === 1 ? "entry" : "entries"}
 						</span>
@@ -235,7 +235,7 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 						onClick={() => setShowAddModal(true)}
 						size="sm"
 						title="Add Income Entry"
-						className="bg-sky-500 hover:bg-sky-600"
+						className="bg-primary hover:bg-primary/90"
 					>
 						<Plus className="w-3.5 h-3.5 mr-1.5" />
 						Add Entry
@@ -245,29 +245,29 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 			<div>
 				{currentWeekEntries.length === 0 ? (
 					<div className="text-center py-8">
-						<FileText className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-						<p className="text-sm text-gray-500">No entries this week</p>
+						<FileText className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+						<p className="text-sm text-muted-foreground">No entries this week</p>
 					</div>
 				) : (
 					<div className="overflow-x-auto">
 						<table className="w-full">
 							<thead>
-								<tr className="border-b border-gray-200">
-									<th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider py-2 px-2">
+								<tr className="border-b border-border">
+									<th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider py-2 px-2">
 										Date
 									</th>
-									<th className="text-right text-xs font-semibold text-gray-500 uppercase tracking-wider py-2 px-2">
+									<th className="text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider py-2 px-2">
 										Amount
 									</th>
-									<th className="text-right text-xs font-semibold text-gray-500 uppercase tracking-wider py-2 px-2">
+									<th className="text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider py-2 px-2">
 										Time
 									</th>
-									<th className="text-right text-xs font-semibold text-gray-500 uppercase tracking-wider py-2 px-2 w-16">
+									<th className="text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider py-2 px-2 w-16">
 										Actions
 									</th>
 								</tr>
 							</thead>
-							<tbody className="divide-y divide-gray-100">
+							<tbody className="divide-y divide-border/50">
 								{sortedEntries.map((entry) => {
 									const isLatest = isLatestEntry(entry);
 									return (
@@ -275,29 +275,29 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 											key={entry.id}
 											className={`${
 												isLatest
-													? "bg-white hover:bg-gray-50"
-													: "bg-gray-50 opacity-50"
+													? "bg-card hover:bg-accent"
+													: "bg-muted/50 opacity-50"
 											} transition-colors`}
 										>
 											<td className="py-2 px-2">
 												<div className="flex flex-col gap-0.5">
-													<span className="text-xs font-medium text-gray-800">
+													<span className="text-xs font-medium text-foreground">
 														{format(parseISO(entry.date), "EEE, MMM d")}
 													</span>
 													{!isLatest && (
-														<span className="text-xs text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded w-fit">
+														<span className="text-xs text-orange-500 bg-orange-500/10 px-1.5 py-0.5 rounded w-fit">
 															Replaced
 														</span>
 													)}
 												</div>
 											</td>
 											<td className="py-2 px-2 text-right">
-												<span className="text-xs font-semibold text-sky-600">
+												<span className="text-xs font-semibold text-primary">
 													{currencySymbol}{entry.amount.toFixed(2)}
 												</span>
 											</td>
 											<td className="py-2 px-2 text-right">
-												<span className="text-xs text-gray-500">
+												<span className="text-xs text-muted-foreground">
 													{formatTime(entry.hours, entry.minutes)}
 												</span>
 											</td>
@@ -317,7 +317,7 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 														variant="ghost"
 														size="icon-sm"
 														onClick={() => deleteIncomeEntry(entry.id)}
-														className="text-red-500 hover:text-red-600 hover:bg-red-50"
+														className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
 														title="Delete"
 													>
 														<Trash2 className="w-3.5 h-3.5" />
@@ -348,8 +348,8 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 							onClick={() => setEntryMethod("manual")}
 							className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
 								entryMethod === "manual"
-									? "bg-sky-500 text-white shadow-sm"
-									: "bg-gray-100 text-gray-600 hover:bg-gray-200"
+									? "bg-primary text-primary-foreground shadow-sm"
+									: "bg-muted text-muted-foreground hover:bg-accent"
 							}`}
 						>
 							Manual Entry
@@ -358,8 +358,8 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 							onClick={() => setEntryMethod("paste")}
 							className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
 								entryMethod === "paste"
-									? "bg-sky-500 text-white shadow-sm"
-									: "bg-gray-100 text-gray-600 hover:bg-gray-200"
+									? "bg-primary text-primary-foreground shadow-sm"
+									: "bg-muted text-muted-foreground hover:bg-accent"
 							}`}
 						>
 							Paste Data

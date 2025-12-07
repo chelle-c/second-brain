@@ -73,25 +73,25 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ isOpen, onClos
 				onClick={onClose}
 			>
 				<div
-					className="bg-white rounded-xl shadow-2xl p-6 max-w-2xl w-full mx-4animate-slideUp"
+					className="bg-card rounded-xl shadow-2xl p-6 max-w-2xl w-full mx-4 animate-slideUp"
 					onClick={(e) => e.stopPropagation()}
 				>
 					<div className="flex justify-between items-center mb-6">
-						<h3 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-							<Tag className="text-sky-500" size={24} />
+						<h3 className="text-2xl font-bold text-card-foreground flex items-center gap-2">
+							<Tag className="text-primary" size={24} />
 							Manage Categories
 						</h3>
 						<button
 							onClick={onClose}
-							className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+							className="p-2 hover:bg-accent rounded-lg transition-colors duration-200 text-muted-foreground hover:text-foreground"
 						>
 							<X size={20} />
 						</button>
 					</div>
 					<div className="flex flex-col h-full">
 						{/* Add New Category */}
-						<div className="bg-sky-50 rounded-lg p-4 mb-6">
-							<h4 className="text-sm font-semibold text-gray-700 mb-3">
+						<div className="bg-primary/10 rounded-lg p-4 mb-6">
+							<h4 className="text-sm font-semibold text-foreground mb-3">
 								Add New Category
 							</h4>
 							<div className="flex gap-3">
@@ -102,22 +102,22 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ isOpen, onClos
 									value={newCategoryName}
 									onChange={(e) => setNewCategoryName(e.target.value)}
 									onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
-									className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg 
-									focus:ring-2 focus:ring-sky-400 focus:border-transparent placeholder-shown:text-gray-400 placeholder-shown:dark:text-gray-400 placeholder-shown:font-medium"
+									className="flex-1 px-3 py-2 bg-background border border-border rounded-lg
+									focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-muted-foreground text-foreground"
 								/>
 								<input
 									type="color"
 									value={newCategoryColor}
 									onChange={(e) => setNewCategoryColor(e.target.value)}
-									className="w-12 h-10 border border-gray-300 rounded-sm cursor-pointer **:border-green-500"
+									className="w-12 h-10 border border-border rounded-sm cursor-pointer"
 									title="Choose category color"
 								/>
 								<button
 									onClick={handleAddCategory}
 									disabled={!newCategoryName.trim()}
-									className="px-4 py-2 bg-sky-500 text-white rounded-lg 
-									hover:bg-sky-600 transition-colors duration-200 
-									disabled:bg-gray-300 disabled:cursor-not-allowed
+									className="px-4 py-2 bg-primary text-primary-foreground rounded-lg
+									hover:bg-primary/90 transition-colors duration-200
+									disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed
 									flex items-center gap-2"
 								>
 									<Plus size={18} />
@@ -128,15 +128,15 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ isOpen, onClos
 
 						{/* Categories List */}
 						<div className="overflow-y-auto max-h-[60vh]">
-							<h4 className="text-sm font-semibold text-gray-700 mb-3">
+							<h4 className="text-sm font-semibold text-foreground mb-3">
 								Existing Categories ({categories.length})
 							</h4>
 							<div className="space-y-2">
 								{categories.map((category) => (
 									<div
 										key={category}
-										className="bg-gray-50 rounded-lg p-3 flex items-center gap-3 
-										hover:bg-gray-100 transition-colors duration-200"
+										className="bg-muted rounded-lg p-3 flex items-center gap-3
+										hover:bg-accent transition-colors duration-200"
 									>
 										{editingCategory === category ? (
 											<>
@@ -144,7 +144,7 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ isOpen, onClos
 													type="color"
 													value={editColor}
 													onChange={(e) => setEditColor(e.target.value)}
-													className="w-12 h-10 border border-gray-300 rounded-lg cursor-pointer"
+													className="w-12 h-10 border border-border rounded-lg cursor-pointer"
 												/>
 												<input
 													type="text"
@@ -153,13 +153,13 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ isOpen, onClos
 													onKeyDown={(e) =>
 														e.key === "Enter" && handleSaveEdit()
 													}
-													className="flex-1 px-3 py-2 border border-gray-300 rounded-lg 
-													focus:ring-2 focus:ring-sky-400 focus:border-transparent"
+													className="flex-1 px-3 py-2 border border-border rounded-lg
+													focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
 													autoFocus
 												/>
 												<button
 													onClick={handleSaveEdit}
-													className="p-2 text-green-600 hover:bg-green-100 rounded-lg 
+													className="p-2 text-green-500 hover:bg-green-500/10 rounded-lg
 													transition-colors duration-200"
 													title="Save"
 												>
@@ -167,7 +167,7 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ isOpen, onClos
 												</button>
 												<button
 													onClick={handleCancelEdit}
-													className="p-2 text-gray-600 hover:bg-gray-200 rounded-lg 
+													className="p-2 text-muted-foreground hover:bg-accent rounded-lg
 													transition-colors duration-200"
 													title="Cancel"
 												>
@@ -177,17 +177,17 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ isOpen, onClos
 										) : (
 											<>
 												<div
-													className="w-8 h-8 rounded-lg border-2 border-gray-300"
+													className="w-8 h-8 rounded-lg border-2 border-border"
 													style={{
 														backgroundColor: categoryColors[category],
 													}}
 												/>
-												<span className="flex-1 font-medium text-gray-800">
+												<span className="flex-1 font-medium text-foreground">
 													{category}
 												</span>
 												<button
 													onClick={() => handleStartEdit(category)}
-													className="p-2 text-sky-600 hover:bg-sky-100 rounded-lg 
+													className="p-2 text-primary hover:bg-primary/10 rounded-lg
 													transition-colors duration-200"
 													title="Edit"
 												>
@@ -195,7 +195,7 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ isOpen, onClos
 												</button>
 												<button
 													onClick={() => handleDeleteClick(category)}
-													className="p-2 text-red-600 hover:bg-red-100 rounded-lg 
+													className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg
 													transition-colors duration-200"
 													title="Delete"
 												>
@@ -217,23 +217,23 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ isOpen, onClos
 					className="fixed inset-0 bg-black/50 flex items-center justify-center z-60 animate-fadeIn"
 					style={{ margin: 0, padding: 0 }}
 				>
-					<div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4 animate-slideUp">
+					<div className="bg-card rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4 animate-slideUp">
 						<div className="flex justify-between items-center mb-4">
-							<h3 className="text-lg font-bold text-gray-800">Confirm Deletion</h3>
+							<h3 className="text-lg font-bold text-card-foreground">Confirm Deletion</h3>
 							<button
 								onClick={handleDeleteCancel}
-								className="p-1 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+								className="p-1 hover:bg-accent rounded-lg transition-colors duration-200 text-muted-foreground hover:text-foreground"
 							>
 								<X size={20} />
 							</button>
 						</div>
 
-						<p className="text-gray-600 mb-6">
+						<p className="text-muted-foreground mb-6">
 							Are you sure you want to delete the category{" "}
-							<strong>"{deleteModal.category}"</strong>?
+							<strong className="text-foreground">"{deleteModal.category}"</strong>?
 							<br />
 							<br />
-							<span className="text-sm text-orange-600">
+							<span className="text-sm text-orange-500">
 								⚠️ Expenses in this category will be moved to "Other".
 							</span>
 						</p>
@@ -241,7 +241,7 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ isOpen, onClos
 						<div className="flex gap-3">
 							<button
 								onClick={handleDeleteConfirm}
-								className="flex-1 bg-red-500 text-white py-2 px-4 rounded-lg 
+								className="flex-1 bg-red-500 text-white py-2 px-4 rounded-lg
 									hover:bg-red-600 transition-colors duration-200 font-medium
 									hover:scale-105 active:scale-95 transform"
 							>
@@ -249,8 +249,8 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ isOpen, onClos
 							</button>
 							<button
 								onClick={handleDeleteCancel}
-								className="flex-1 bg-gray-200 text-gray-700 py-2 px-4 rounded-lg 
-									hover:bg-gray-300 transition-colors duration-200 font-medium
+								className="flex-1 bg-secondary text-secondary-foreground py-2 px-4 rounded-lg
+									hover:bg-secondary/80 transition-colors duration-200 font-medium
 									hover:scale-105 active:scale-95 transform"
 							>
 								Cancel

@@ -106,14 +106,14 @@ export const UpcomingExpenses = () => {
 	const CustomTooltip = ({ active, payload }: any) => {
 		if (active && payload && payload[0]) {
 			return (
-				<div className="bg-white p-3 rounded-lg shadow-lg border border-gray-100">
-					<p className="font-medium text-gray-800">{payload[0].name}</p>
-					<p className="text-sky-600 font-bold">
+				<div className="bg-popover p-3 rounded-lg shadow-lg border border-border">
+					<p className="font-medium text-popover-foreground">{payload[0].name}</p>
+					<p className="text-primary font-bold">
 						{isPlaceholder ? "Example: " : ""}
 						{formatCurrency(payload[0].value, expenseCurrency)}
 					</p>
 					{!isPlaceholder && total > 0 && (
-						<p className="text-xs text-gray-500">
+						<p className="text-xs text-muted-foreground">
 							{((payload[0].value / total) * 100).toFixed(1)}% of total
 						</p>
 					)}
@@ -144,18 +144,18 @@ export const UpcomingExpenses = () => {
 
 	return (
 		<>
-			<div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 animate-slideUp">
+			<div className="bg-card rounded-xl shadow-lg p-4 sm:p-6 animate-slideUp">
 				{/* Header */}
 				<div className="pb-4">
 					<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-						<h3 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2">
-							<Clock className="text-sky-500" size={24} />
+						<h3 className="text-lg sm:text-xl font-bold text-card-foreground flex items-center gap-2">
+							<Clock className="text-primary" size={24} />
 							Upcoming Expenses
 						</h3>
 
 						{/* Time Range Selector */}
-						<div className="bg-gray-50 rounded-lg p-4 w-full sm:w-auto">
-							<label className="block text-sm font-medium text-gray-700 mb-3">
+						<div className="bg-muted rounded-lg p-4 w-full sm:w-auto">
+							<label className="block text-sm font-medium text-foreground mb-3">
 								Show expenses due within:
 							</label>
 							<div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
@@ -176,7 +176,7 @@ export const UpcomingExpenses = () => {
 												setUpcomingTimeAmount(val);
 											}
 										}}
-										className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+										className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-primary"
 										aria-label="Number of time units"
 									/>
 								</div>
@@ -198,16 +198,16 @@ export const UpcomingExpenses = () => {
 						{/* Left side - Total and Stats */}
 						<div className="lg:w-80 flex flex-col gap-4">
 							{/* Total Display */}
-							<div className="bg-linear-to-br from-sky-50 to-sky-200 rounded-lg p-6 flex-1 flex flex-col justify-center">
+							<div className="bg-linear-to-br from-secondary to-accent rounded-lg p-6 flex-1 flex flex-col justify-center">
 								<div className="text-center">
-									<p className="text-sm text-gray-600 mb-2">Total Unpaid</p>
+									<p className="text-sm text-muted-foreground mb-2">Total Unpaid</p>
 									<div className="flex items-center justify-center gap-2">
-										<span className="text-sky-600 text-2xl font-bold">{currencySymbol}</span>
-										<p className="text-2xl sm:text-4xl font-bold text-sky-600">
+										<span className="text-primary text-2xl font-bold">{currencySymbol}</span>
+										<p className="text-2xl sm:text-4xl font-bold text-primary">
 											{formatCurrency(total, expenseCurrency).replace(/^[^0-9]+/, "")}
 										</p>
 									</div>
-									<p className="text-xs text-gray-500 mt-2">
+									<p className="text-xs text-muted-foreground mt-2">
 										{upcomingExpenses.filter((e) => !e.isPaid).length} unpaid
 										expenses
 									</p>
@@ -216,8 +216,8 @@ export const UpcomingExpenses = () => {
 
 							{/* Category breakdown stats */}
 							{chartData.length > 0 && (
-								<div className="bg-gray-50 rounded-lg p-4">
-									<p className="text-xs font-bold text-gray-700 mb-2">
+								<div className="bg-muted rounded-lg p-4">
+									<p className="text-xs font-bold text-foreground mb-2">
 										Top Categories:
 									</p>
 									{chartData
@@ -228,8 +228,8 @@ export const UpcomingExpenses = () => {
 												key={category.name}
 												className="flex items-center justify-between text-xs mb-1"
 											>
-												<span className="text-gray-700">{category.name}</span>
-												<span className="font-medium text-gray-800">
+												<span className="text-muted-foreground">{category.name}</span>
+												<span className="font-medium text-foreground">
 													{((category.value / total) * 100).toFixed(0)}%
 												</span>
 											</div>
@@ -241,7 +241,7 @@ export const UpcomingExpenses = () => {
 						{/* Right side - Chart and Legend */}
 						<div className="flex-1 min-w-0">
 							{isPlaceholder && (
-								<p className="text-center text-gray-500 text-sm mb-4">
+								<p className="text-center text-muted-foreground text-sm mb-4">
 									Example distribution - Add expenses to see your data
 								</p>
 							)}
@@ -302,10 +302,10 @@ export const UpcomingExpenses = () => {
 														"#93C5FD",
 												}}
 											/>
-											<span className="text-sm font-medium text-gray-700">
+											<span className="text-sm font-medium text-muted-foreground">
 												{entry.name}
 											</span>
-											<span className="text-sm font-bold text-gray-800 whitespace-nowrap">
+											<span className="text-sm font-bold text-foreground whitespace-nowrap">
 												{isPlaceholder && "ex: "}
 												{formatCurrency(entry.value, expenseCurrency)}
 											</span>
@@ -317,15 +317,15 @@ export const UpcomingExpenses = () => {
 					</div>
 
 					{/* Expense Table */}
-					<div className="mt-8 pt-6 border-t border-gray-200">
+					<div className="mt-8 pt-6 border-t border-border">
 						<div className="flex items-center justify-between mx-2 mb-4">
 							<div className="flex flex-col items-baseline gap-2">
-								<h4 className="text-lg font-semibold text-gray-800 mb-2 flex items-center gap-2">
-									<TrendingUp size={20} className="text-sky-500" />
+								<h4 className="text-lg font-semibold text-card-foreground mb-2 flex items-center gap-2">
+									<TrendingUp size={20} className="text-primary" />
 									Expense Details
 								</h4>
 								{/* Summary Text */}
-								<div className="flex items-center gap-2 text-sm text-gray-600">
+								<div className="flex items-center gap-2 text-sm text-muted-foreground">
 									<Calendar size={16} />
 									<span className="font-medium">Next {getTimeRangeText()}</span>
 								</div>

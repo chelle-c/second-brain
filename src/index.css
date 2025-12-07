@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Theme System - Import theme files */
+@import "./styles/themes/base.css";
+@import "./styles/themes/sky-cyan.css";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -42,74 +46,9 @@
 	--color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* Base radius variable - used by theme inline */
 :root {
 	--radius: 0.625rem;
-	--background: oklch(1 0 0);
-	--foreground: oklch(0.145 0 0);
-	--card: oklch(1 0 0);
-	--card-foreground: oklch(0.145 0 0);
-	--popover: oklch(1 0 0);
-	--popover-foreground: oklch(0.145 0 0);
-	--primary: oklch(0.205 0 0);
-	--primary-foreground: oklch(0.985 0 0);
-	--secondary: oklch(0.97 0 0);
-	--secondary-foreground: oklch(0.205 0 0);
-	--muted: oklch(0.97 0 0);
-	--muted-foreground: oklch(0.556 0 0);
-	--accent: oklch(0.97 0 0);
-	--accent-foreground: oklch(0.205 0 0);
-	--destructive: oklch(0.577 0.245 27.325);
-	--border: oklch(0.922 0 0);
-	--input: oklch(0.922 0 0);
-	--ring: oklch(0.708 0 0);
-	--chart-1: oklch(0.646 0.222 41.116);
-	--chart-2: oklch(0.6 0.118 184.704);
-	--chart-3: oklch(0.398 0.07 227.392);
-	--chart-4: oklch(0.828 0.189 84.429);
-	--chart-5: oklch(0.769 0.188 70.08);
-	--sidebar-background: var(--color-sky-900);
-	--sidebar-background-hover: var(--color-cyan-600);
-	--sidebar-foreground: oklch(1 0 0);
-	--sidebar-primary: 240 5.9% 10%;
-	--sidebar-primary-foreground: 0 0% 98%;
-	--sidebar-accent: 240 4.8% 95.9%;
-	--sidebar-accent-foreground: 240 5.9% 10%;
-	--sidebar-border: 220 13% 91%;
-	--sidebar-ring: 217.2 91.2% 59.8%;
-}
-
-.dark {
-	--background: oklch(0.145 0 0);
-	--foreground: oklch(0.985 0 0);
-	--card: oklch(0.205 0 0);
-	--card-foreground: oklch(0.985 0 0);
-	--popover: oklch(0.205 0 0);
-	--popover-foreground: oklch(0.985 0 0);
-	--primary: oklch(0.922 0 0);
-	--primary-foreground: oklch(0.205 0 0);
-	--secondary: oklch(0.269 0 0);
-	--secondary-foreground: oklch(0.985 0 0);
-	--muted: oklch(0.269 0 0);
-	--muted-foreground: oklch(0.708 0 0);
-	--accent: oklch(0.269 0 0);
-	--accent-foreground: oklch(0.985 0 0);
-	--destructive: oklch(0.704 0.191 22.216);
-	--border: oklch(1 0 0 / 10%);
-	--input: oklch(1 0 0 / 15%);
-	--ring: oklch(0.556 0 0);
-	--chart-1: oklch(0.488 0.243 264.376);
-	--chart-2: oklch(0.696 0.17 162.48);
-	--chart-3: oklch(0.769 0.188 70.08);
-	--chart-4: oklch(0.627 0.265 303.9);
-	--chart-5: oklch(0.645 0.246 16.439);
-	--sidebar-background: 240 5.9% 10%;
-	--sidebar-foreground: 240 4.8% 95.9%;
-	--sidebar-primary: 0 0% 98%;
-	--sidebar-primary-foreground: 240 5.9% 10%;
-	--sidebar-accent: 240 3.7% 15.9%;
-	--sidebar-accent-foreground: 240 4.8% 95.9%;
-	--sidebar-border: 240 3.7% 15.9%;
-	--sidebar-ring: 217.2 91.2% 59.8%;
 }
 
 @layer base {
@@ -186,7 +125,7 @@
 
 .toggle-indicator {
 	position: absolute;
-	background: white;
+	background: var(--card);
 	border-radius: 0.375rem;
 	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 	box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
@@ -203,7 +142,7 @@
 /* Custom scrollbar - only show when needed */
 .scrollbar-thin {
 	scrollbar-width: thin;
-	scrollbar-color: #93c5fd #f1f1f1;
+	scrollbar-color: var(--ring) var(--muted);
 }
 
 .scrollbar-thin::-webkit-scrollbar {
@@ -212,17 +151,17 @@
 }
 
 .scrollbar-thin::-webkit-scrollbar-track {
-	background: #f1f1f1;
+	background: var(--muted);
 	border-radius: 10px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
-	background: #93c5fd;
+	background: var(--ring);
 	border-radius: 10px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-	background: #60a5fa;
+	background: var(--primary);
 }
 
 /* Only show scrollbar when content overflows */
@@ -235,7 +174,7 @@
 /* Focus styles */
 *:focus {
 	outline: none;
-	box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.3);
+	box-shadow: 0 0 0 3px oklch(from var(--ring) l c h / 0.3);
 }
 
 /* Sticky table styles */
@@ -251,7 +190,7 @@ thead {
 }
 
 thead th {
-	background-color: white;
+	background-color: var(--card);
 }
 
 /* Sticky columns - both header and body cells */
@@ -260,7 +199,7 @@ td:first-child {
 	position: sticky;
 	left: 0;
 	z-index: 20;
-	background-color: white;
+	background-color: var(--card);
 }
 
 th:nth-child(2),
@@ -268,7 +207,7 @@ td:nth-child(2) {
 	position: sticky;
 	left: 52px;
 	z-index: 20;
-	background-color: white;
+	background-color: var(--card);
 }
 
 /* Ensure sticky header cells have higher z-index */
@@ -283,7 +222,7 @@ thead th:nth-child(2) {
 /* Row hover state for sticky columns */
 tr:hover td:first-child,
 tr:hover td:nth-child(2) {
-	background-color: inherit;
+	background-color: var(--accent);
 }
 
 /* Add shadow to sticky columns */
@@ -295,6 +234,10 @@ td:nth-child(2)::after {
 	bottom: 0;
 	width: 1px;
 	background: linear-gradient(to right, rgba(0, 0, 0, 0.08), transparent);
+}
+
+.dark td:nth-child(2)::after {
+	background: linear-gradient(to right, rgba(255, 255, 255, 0.05), transparent);
 }
 
 /* Responsive improvements */
@@ -335,4 +278,220 @@ html {
 /* Ensure containers don't cause overflow */
 * {
 	box-sizing: border-box;
+}
+
+/* Yoopta Editor Dark Mode Overrides */
+.dark .yoopta-editor-wrapper {
+	color: var(--card-foreground);
+}
+
+.dark .yoopta-editor-wrapper [data-slate-editor="true"] {
+	color: var(--card-foreground);
+}
+
+.dark .yoopta-editor-wrapper [data-slate-placeholder="true"] {
+	color: var(--muted-foreground) !important;
+	opacity: 1 !important;
+}
+
+.dark .yoopta-editor-wrapper h1,
+.dark .yoopta-editor-wrapper h2,
+.dark .yoopta-editor-wrapper h3,
+.dark .yoopta-editor-wrapper p,
+.dark .yoopta-editor-wrapper li,
+.dark .yoopta-editor-wrapper span {
+	color: inherit;
+}
+
+.dark .yoopta-editor-wrapper blockquote {
+	border-left-color: var(--border);
+	color: var(--muted-foreground);
+}
+
+.dark .yoopta-editor-wrapper code {
+	background-color: var(--muted);
+	color: var(--foreground);
+}
+
+.dark .yoopta-editor-wrapper pre {
+	background-color: var(--muted) !important;
+}
+
+.dark .yoopta-editor-wrapper table {
+	border-color: var(--border);
+}
+
+.dark .yoopta-editor-wrapper th,
+.dark .yoopta-editor-wrapper td {
+	border-color: var(--border);
+	background-color: var(--card);
+}
+
+/* Yoopta Toolbar Dark Mode */
+.dark [data-yoopta-toolbar],
+.dark .yoopta-toolbar,
+.dark [class*="yoopta-toolbar"] {
+	background-color: var(--popover) !important;
+	border-color: var(--border) !important;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+}
+
+.dark [data-yoopta-toolbar] button,
+.dark .yoopta-toolbar button,
+.dark [class*="yoopta-toolbar"] button {
+	color: var(--popover-foreground) !important;
+}
+
+.dark [data-yoopta-toolbar] button:hover,
+.dark .yoopta-toolbar button:hover,
+.dark [class*="yoopta-toolbar"] button:hover {
+	background-color: var(--accent) !important;
+	color: var(--accent-foreground) !important;
+}
+
+.dark [data-yoopta-toolbar] button[data-state="on"],
+.dark .yoopta-toolbar button[data-state="on"],
+.dark [class*="yoopta-toolbar"] button[data-active="true"] {
+	background-color: var(--primary) !important;
+	color: var(--primary-foreground) !important;
+}
+
+/* Yoopta Action Menu Dark Mode */
+.dark [data-yoopta-action-menu],
+.dark .yoopta-action-menu,
+.dark [class*="yoopta-action-menu"],
+.dark [class*="ActionMenu"] {
+	background-color: var(--popover) !important;
+	border-color: var(--border) !important;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+}
+
+.dark [data-yoopta-action-menu] [class*="item"],
+.dark .yoopta-action-menu [class*="item"],
+.dark [class*="yoopta-action-menu"] [class*="item"],
+.dark [class*="ActionMenu"] [class*="item"] {
+	color: var(--popover-foreground) !important;
+}
+
+.dark [data-yoopta-action-menu] [class*="item"]:hover,
+.dark .yoopta-action-menu [class*="item"]:hover,
+.dark [class*="yoopta-action-menu"] [class*="item"]:hover,
+.dark [class*="ActionMenu"] [class*="item"]:hover {
+	background-color: var(--accent) !important;
+	color: var(--accent-foreground) !important;
+}
+
+.dark [data-yoopta-action-menu] [class*="title"],
+.dark [data-yoopta-action-menu] [class*="label"],
+.dark [class*="ActionMenu"] [class*="title"],
+.dark [class*="ActionMenu"] [class*="label"] {
+	color: var(--muted-foreground) !important;
+}
+
+/* Yoopta Block Actions (drag handle, menu button) Dark Mode */
+.dark [data-yoopta-block-actions],
+.dark [class*="block-actions"],
+.dark [class*="BlockActions"] {
+	background-color: var(--popover) !important;
+	border-color: var(--border) !important;
+}
+
+.dark [data-yoopta-block-actions] button,
+.dark [class*="block-actions"] button,
+.dark [class*="BlockActions"] button {
+	color: var(--muted-foreground) !important;
+}
+
+.dark [data-yoopta-block-actions] button:hover,
+.dark [class*="block-actions"] button:hover,
+.dark [class*="BlockActions"] button:hover {
+	color: var(--foreground) !important;
+	background-color: var(--accent) !important;
+}
+
+/* Yoopta drag handle and plus button */
+.dark [class*="yoopta"] [class*="drag"],
+.dark [class*="yoopta"] [class*="Drag"],
+.dark [class*="yoopta"] [class*="plus"],
+.dark [class*="yoopta"] [class*="Plus"],
+.dark [class*="yoopta"] [class*="add"],
+.dark [class*="yoopta"] [class*="Add"] {
+	color: var(--muted-foreground) !important;
+}
+
+.dark [class*="yoopta"] [class*="drag"]:hover,
+.dark [class*="yoopta"] [class*="Drag"]:hover,
+.dark [class*="yoopta"] [class*="plus"]:hover,
+.dark [class*="yoopta"] [class*="Plus"]:hover,
+.dark [class*="yoopta"] [class*="add"]:hover,
+.dark [class*="yoopta"] [class*="Add"]:hover {
+	color: var(--foreground) !important;
+	background-color: var(--accent) !important;
+}
+
+/* Yoopta Link Tool Dark Mode */
+.dark [data-yoopta-link-tool],
+.dark [class*="link-tool"],
+.dark [class*="LinkTool"] {
+	background-color: var(--popover) !important;
+	border-color: var(--border) !important;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+}
+
+.dark [data-yoopta-link-tool] input,
+.dark [class*="link-tool"] input,
+.dark [class*="LinkTool"] input {
+	background-color: var(--input) !important;
+	border-color: var(--border) !important;
+	color: var(--foreground) !important;
+}
+
+.dark [data-yoopta-link-tool] button,
+.dark [class*="link-tool"] button,
+.dark [class*="LinkTool"] button {
+	color: var(--foreground) !important;
+}
+
+/* Yoopta dropdown menus */
+.dark [class*="yoopta"] [role="menu"],
+.dark [class*="yoopta"] [role="listbox"],
+.dark [class*="yoopta"] [class*="dropdown"],
+.dark [class*="yoopta"] [class*="Dropdown"] {
+	background-color: var(--popover) !important;
+	border-color: var(--border) !important;
+}
+
+.dark [class*="yoopta"] [role="menuitem"],
+.dark [class*="yoopta"] [role="option"] {
+	color: var(--popover-foreground) !important;
+}
+
+.dark [class*="yoopta"] [role="menuitem"]:hover,
+.dark [class*="yoopta"] [role="option"]:hover,
+.dark [class*="yoopta"] [role="menuitem"][data-highlighted],
+.dark [class*="yoopta"] [role="option"][data-highlighted] {
+	background-color: var(--accent) !important;
+}
+
+/* Yoopta callout blocks */
+.dark .yoopta-editor-wrapper [class*="callout"],
+.dark .yoopta-editor-wrapper [class*="Callout"] {
+	background-color: var(--muted) !important;
+	border-color: var(--border) !important;
+}
+
+/* Yoopta accordion */
+.dark .yoopta-editor-wrapper [class*="accordion"],
+.dark .yoopta-editor-wrapper [class*="Accordion"] {
+	border-color: var(--border) !important;
+}
+
+/* Generic fallback for any Yoopta UI components */
+.dark [class*="yoopta-"][class*="menu"],
+.dark [class*="yoopta-"][class*="popup"],
+.dark [class*="yoopta-"][class*="popover"],
+.dark [class*="yoopta-"][class*="modal"] {
+	background-color: var(--popover) !important;
+	border-color: var(--border) !important;
+	color: var(--popover-foreground) !important;
 }

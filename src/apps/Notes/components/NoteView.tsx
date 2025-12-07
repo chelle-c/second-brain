@@ -87,9 +87,9 @@ export const NoteView = ({ note, tags, onBack }: NoteViewProps) => {
 				onCancel={() => setShowDeleteConfirm(false)}
 			/>
 
-			<div className="h-full flex flex-col bg-white">
+			<div className="h-full flex flex-col bg-card">
 				{/* Header */}
-				<div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+				<div className="flex items-center justify-between px-6 py-4 border-b border-border">
 					<Button onClick={onBack} variant="ghost" className="flex items-center gap-2">
 						<ArrowLeft size={20} />
 						Back to notes
@@ -144,12 +144,12 @@ export const NoteView = ({ note, tags, onBack }: NoteViewProps) => {
 										setIsEditingTitle(false);
 									}
 								}}
-								className="w-full text-4xl font-bold text-gray-800 outline-none border-b-2 border-sky-400 pb-2 mb-4"
+								className="w-full text-4xl font-bold text-card-foreground outline-none border-b-2 border-primary pb-2 mb-4 bg-transparent"
 							/>
 						) : (
 							<h1
 								onClick={() => setIsEditingTitle(true)}
-								className="text-4xl font-bold text-gray-800 cursor-text hover:bg-gray-50 rounded p-2 -m-2 transition-colors mb-4"
+								className="text-4xl font-bold text-card-foreground cursor-text hover:bg-accent rounded p-2 -m-2 transition-colors mb-4"
 							>
 								{editedTitle || "Untitled"}
 							</h1>
@@ -157,7 +157,7 @@ export const NoteView = ({ note, tags, onBack }: NoteViewProps) => {
 
 						{/* Metadata and Tags */}
 						<div className="mb-6 space-y-3">
-							<div className="flex items-center gap-4 text-sm text-gray-500">
+							<div className="flex items-center gap-4 text-sm text-muted-foreground">
 								<span>Created: {formatDate(note.createdAt)}</span>
 								{note.updatedAt &&
 									new Date(note.updatedAt).getTime() !==
@@ -168,7 +168,7 @@ export const NoteView = ({ note, tags, onBack }: NoteViewProps) => {
 
 							{/* Tags selector */}
 							<div className="flex items-center gap-2">
-								<Hash size={16} className="text-gray-400" />
+								<Hash size={16} className="text-muted-foreground" />
 								<div className="flex flex-wrap gap-2">
 									{Object.entries(tags).map(([tagId, tag]) => {
 										const isSelected = selectedTags.includes(tagId);
@@ -179,8 +179,8 @@ export const NoteView = ({ note, tags, onBack }: NoteViewProps) => {
 												onClick={() => handleTagToggle(tagId)}
 												className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
 													isSelected
-														? `bg-sky-100 text-sky-700 border border-sky-300`
-														: `bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-300`
+														? `bg-primary/10 text-primary border border-primary/30`
+														: `bg-muted text-muted-foreground hover:bg-accent border border-border`
 												}`}
 											>
 												{typeof Icon === "function" && <Icon size={12} />}
@@ -192,7 +192,7 @@ export const NoteView = ({ note, tags, onBack }: NoteViewProps) => {
 							</div>
 						</div>
 
-						<div className="border-t pt-6">
+						<div className="border-t border-border pt-6">
 							{/* Yoopta Editor */}
 							<EditorSetup note={note} />
 						</div>

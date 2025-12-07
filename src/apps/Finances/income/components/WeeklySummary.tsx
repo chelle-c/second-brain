@@ -72,15 +72,15 @@ const WeeklySummary: React.FC<WeeklySummaryProps> = ({ weeklyTotal, selectedWeek
 	};
 
 	return (
-		<div className="bg-white rounded-xl shadow-lg p-4 h-full flex flex-col items-stretch">
+		<div className="bg-card rounded-xl shadow-lg p-4 h-full flex flex-col items-stretch">
 			<div className="pb-2">
 				<div className="flex items-center justify-between">
-					<span className="text-xs text-gray-500 uppercase tracking-wider font-medium">
+					<span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
 						Weekly Target
 					</span>
 					{!editingTarget ? (
 						<div className="flex items-center gap-1.5">
-							<span className="text-lg font-bold text-sky-600">
+							<span className="text-lg font-bold text-primary">
 								{currencySymbol}{savedWeeklyTarget.toFixed(0)}
 							</span>
 							<Button
@@ -95,7 +95,7 @@ const WeeklySummary: React.FC<WeeklySummaryProps> = ({ weeklyTotal, selectedWeek
 					) : (
 						<div className="flex items-center gap-2">
 							<div className="flex items-center">
-								<span className="text-gray-500 text-sm mr-1">{currencySymbol}</span>
+								<span className="text-muted-foreground text-sm mr-1">{currencySymbol}</span>
 								<Input
 									type="number"
 									step="0.01"
@@ -119,14 +119,14 @@ const WeeklySummary: React.FC<WeeklySummaryProps> = ({ weeklyTotal, selectedWeek
 			</div>
 			<div className="flex-1 flex flex-col justify-center">
 				{/* Progress Bar */}
-				<div className="flex justify-between text-sm font-medium text-gray-500 mb-1.5">
+				<div className="flex justify-between text-sm font-medium text-muted-foreground mb-1.5">
 					<span>{currencySymbol}{weeklyTotal.toFixed(0)} earned</span>
 					<span>{Math.min(targetProgress, 100).toFixed(0)}%</span>
 				</div>
-				<div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+				<div className="w-full bg-muted rounded-full h-2.5 overflow-hidden">
 					<div
 						className={`h-full rounded-full transition-all duration-300 ${
-							isTargetReached ? "bg-emerald-500" : "bg-sky-500"
+							isTargetReached ? "bg-emerald-500" : "bg-primary"
 						}`}
 						style={{ width: `${Math.min(targetProgress, 100)}%` }}
 					/>
@@ -135,19 +135,19 @@ const WeeklySummary: React.FC<WeeklySummaryProps> = ({ weeklyTotal, selectedWeek
 				{/* Status */}
 				<div className="mt-3">
 					{isTargetReached ? (
-						<div className="flex items-center justify-center gap-1.5 text-emerald-600 bg-emerald-50 rounded-md py-2 px-3">
+						<div className="flex items-center justify-center gap-1.5 text-emerald-500 bg-emerald-500/10 rounded-md py-2 px-3">
 							<CheckCircle className="w-4 h-4" />
 							<span className="text-md font-medium">Target reached!</span>
 						</div>
 					) : weeklyTotal > 0 ? (
-						<div className="text-center text-xs text-gray-500 bg-gray-50 rounded-md py-2 px-3">
-							<span className="font-medium text-sky-600">
+						<div className="text-center text-xs text-muted-foreground bg-muted rounded-md py-2 px-3">
+							<span className="font-medium text-primary">
 								{currencySymbol}{remainingAmount.toFixed(0)}
 							</span>{" "}
 							remaining
 						</div>
 					) : (
-						<div className="text-center text-xs text-gray-500 bg-gray-50 rounded-md py-2 px-3">
+						<div className="text-center text-xs text-muted-foreground bg-muted rounded-md py-2 px-3">
 							No earnings yet
 						</div>
 					)}
