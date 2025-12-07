@@ -4,6 +4,7 @@ import { useExpenseStore } from "@/stores/useExpenseStore";
 import { ExpenseTable } from "./ExpenseTable";
 import { isSameMonth } from "date-fns";
 import { DollarSign, Calendar, Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export const ExpenseList: React.FC = () => {
 	const {
@@ -97,17 +98,17 @@ export const ExpenseList: React.FC = () => {
 	if (visibleCount === 0) {
 		return (
 			<>
-				<h3 className="text-xl font-bold text-gray-800 mb-4">
+				<h3 className="text-xl font-bold text-foreground mb-4">
 					Monthly Expenses{getFilterLabel()}
 				</h3>
 				{(overviewMode !== "all" || !showPaidExpenses) && monthlyExpenses.length > 0 && (
-					<p className="text-sm text-gray-500 mb-4">
+					<p className="text-sm text-muted-foreground mb-4">
 						Showing 0 of {monthlyExpenses.length} expenses
 					</p>
 				)}
 				<div className="text-center py-12">
-					<DollarSign className="mx-auto text-gray-300 mb-4" size={48} />
-					<p className="text-gray-500">
+					<DollarSign className="mx-auto text-muted-foreground/30 mb-4" size={48} />
+					<p className="text-muted-foreground">
 						{overviewMode === "remaining"
 							? "All expenses are paid!"
 							: overviewMode === "required"
@@ -119,7 +120,7 @@ export const ExpenseList: React.FC = () => {
 							: "All expenses are paid!"}
 					</p>
 					{overviewMode === "all" && showPaidExpenses && (
-						<p className="text-gray-400 text-sm mt-2">
+						<p className="text-muted-foreground/70 text-sm mt-2">
 							Click the + button to add your first expense.
 						</p>
 					)}
@@ -159,32 +160,33 @@ export const ExpenseList: React.FC = () => {
 			<div className="mb-6">
 				<div className="flex items-center justify-between">
 					<div>
-						<h3 className="text-xl font-bold text-gray-800">
+						<h3 className="text-xl font-bold text-foreground">
 							Monthly Expenses{getFilterLabel()}
 						</h3>
 						{(overviewMode !== "all" || !showPaidExpenses) && (
-							<p className="text-sm text-gray-500 mt-1">
+							<p className="text-sm text-muted-foreground mt-1">
 								Showing {visibleCount} of {monthlyExpenses.length} expenses
 							</p>
 						)}
 					</div>
-					<button
+					<Button
+						variant="secondary"
+						size="sm"
 						onClick={() => setShowMonthlyRelativeDates(!showMonthlyRelativeDates)}
-						className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
 						title={showMonthlyRelativeDates ? "Show actual dates" : "Show relative dates"}
 					>
 						{showMonthlyRelativeDates ? (
 							<>
-								<Calendar size={14} />
+								<Calendar size={14} className="mr-2" />
 								<span>Show Dates</span>
 							</>
 						) : (
 							<>
-								<Clock size={14} />
+								<Clock size={14} className="mr-2" />
 								<span>Show Relative</span>
 							</>
 						)}
-					</button>
+					</Button>
 				</div>
 			</div>
 

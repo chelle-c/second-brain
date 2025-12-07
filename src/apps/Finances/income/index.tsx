@@ -1,21 +1,22 @@
 import React, { useState, useEffect } from "react";
-import { years } from "@/lib/dateUtils";
 import { useIncomeStore } from "@/stores/useIncomeStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
 import WeekNavigation from "./components/WeekNavigation";
 import IncomeEntriesList from "./components/IncomeEntriesList";
 import WeeklySummary from "./components/WeeklySummary";
 import IncomeChart from "./components/IncomeChart";
-import ViewTabs from "./components/ViewTabs";
 import MonthlyView from "./components/MonthlyView";
 import YearlyView from "./components/YearlyView";
+import { AnimatedToggle } from "@/components/AnimatedToggle";
 import type { IncomeWeekSelection, IncomeDayData } from "@/types/income";
+import { years } from "@/lib/dateUtils";
 import { isSameDay, parseISO, startOfDay, endOfDay, format } from "date-fns";
 
 export const IncomeTracker: React.FC = () => {
 	const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-	const { incomeEntries, incomeViewType, setIncomeViewType } = useIncomeStore();
+	const { incomeEntries, incomeViewType, setIncomeViewType, updateIncomeViewType } =
+		useIncomeStore();
 	const { incomeDefaultView, incomeWeekStartDay } = useSettingsStore();
 
 	// Set default view from settings on mount
@@ -96,12 +97,30 @@ export const IncomeTracker: React.FC = () => {
 	const weeklyData = getWeeklyData();
 	const weeklyTotal = weeklyData.reduce((sum, day) => sum + day.amount, 0);
 
+	const viewModeOptions = [
+		{
+			value: "weekly" as const,
+			label: "Weekly",
+			ariaLabel: "Show weekly summary",
+		},
+		{
+			value: "monthly" as const,
+			label: "Monthly",
+			ariaLabel: "Show monthly summary",
+		},
+		{ value: "yearly" as const, label: "Yearly", ariaLabel: "Show yearly summary" },
+	];
+
 	return (
 		<div className="flex-1 overflow-y-auto max-h-[98vh] p-2 w-full min-h-screen">
 			<div className="w-full max-w-7xl mx-auto animate-slideUp">
 				{/* Header */}
-				<div className="mb-4">
-					<ViewTabs />
+				<div className="w-min mb-4">
+					<AnimatedToggle
+						options={viewModeOptions}
+						value={incomeViewType}
+						onChange={updateIncomeViewType}
+					/>
 				</div>
 
 				{incomeViewType === "weekly" ? (

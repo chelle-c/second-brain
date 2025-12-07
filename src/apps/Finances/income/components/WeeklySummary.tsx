@@ -2,6 +2,9 @@ import React, { useState, useEffect } from "react";
 import { useIncomeStore } from "@/stores/useIncomeStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
 import { getCurrencySymbol } from "@/lib/currencyUtils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Check, X, Pencil, CheckCircle } from "lucide-react";
 
 interface WeeklySummaryProps {
 	weeklyTotal: number;
@@ -69,99 +72,58 @@ const WeeklySummary: React.FC<WeeklySummaryProps> = ({ weeklyTotal, selectedWeek
 	};
 
 	return (
-		<div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 h-full flex flex-col">
-			{/* Header Row - Title and Target on same line */}
-			<div className="flex items-center justify-between mb-4">
-				<span className="text-xs text-gray-500 uppercase tracking-wider font-medium">
-					Weekly Target
-				</span>
-				{!editingTarget ? (
-					<div className="flex items-center gap-1.5">
-						<span className="text-lg font-bold text-sky-600">
-							{currencySymbol}{savedWeeklyTarget.toFixed(0)}
-						</span>
-						<button
-							onClick={startEditingTarget}
-							className="p-1 text-sky-700 hover:text-sky-800 hover:bg-sky-50 rounded transition-colors cursor-pointer"
-							title="Edit target"
-						>
-							<svg
-								className="w-3.5 h-3.5"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
+		<div className="bg-white rounded-xl shadow-lg p-4 h-full flex flex-col items-stretch">
+			<div className="pb-2">
+				<div className="flex items-center justify-between">
+					<span className="text-xs text-gray-500 uppercase tracking-wider font-medium">
+						Weekly Target
+					</span>
+					{!editingTarget ? (
+						<div className="flex items-center gap-1.5">
+							<span className="text-lg font-bold text-sky-600">
+								{currencySymbol}{savedWeeklyTarget.toFixed(0)}
+							</span>
+							<Button
+								variant="ghost"
+								size="icon-sm"
+								onClick={startEditingTarget}
+								title="Edit target"
 							>
-								<path
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									strokeWidth={2}
-									d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-								/>
-							</svg>
-						</button>
-					</div>
-				) : (
-					<div className="flex items-center gap-2">
-						<div className="flex items-center">
-							<span className="text-gray-400 text-sm mr-1">{currencySymbol}</span>
-							<input
-								type="number"
-								step="0.01"
-								min="0"
-								value={newTargetAmount}
-								onChange={(e) => setNewTargetAmount(e.target.value)}
-								onKeyDown={handleKeyPress}
-								className="w-20 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
-								autoFocus
-							/>
+								<Pencil className="w-3.5 h-3.5" />
+							</Button>
 						</div>
-						<button
-							onClick={handleUpdateTarget}
-							className="p-1 text-sky-600 hover:bg-sky-50 rounded cursor-pointer"
-						>
-							<svg
-								className="w-4 h-4"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-							>
-								<path
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									strokeWidth={2}
-									d="M5 13l4 4L19 7"
+					) : (
+						<div className="flex items-center gap-2">
+							<div className="flex items-center">
+								<span className="text-gray-500 text-sm mr-1">{currencySymbol}</span>
+								<Input
+									type="number"
+									step="0.01"
+									min="0"
+									value={newTargetAmount}
+									onChange={(e) => setNewTargetAmount(e.target.value)}
+									onKeyDown={handleKeyPress}
+									className="w-20 h-8"
+									autoFocus
 								/>
-							</svg>
-						</button>
-						<button
-							onClick={cancelEditingTarget}
-							className="p-1 text-gray-400 hover:bg-gray-100 rounded cursor-pointer"
-						>
-							<svg
-								className="w-4 h-4"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-							>
-								<path
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									strokeWidth={2}
-									d="M6 18L18 6M6 6l12 12"
-								/>
-							</svg>
-						</button>
-					</div>
-				)}
+							</div>
+							<Button variant="ghost" size="icon-sm" onClick={handleUpdateTarget}>
+								<Check className="w-4 h-4" />
+							</Button>
+							<Button variant="ghost" size="icon-sm" onClick={cancelEditingTarget}>
+								<X className="w-4 h-4" />
+							</Button>
+						</div>
+					)}
+				</div>
 			</div>
-
-			{/* Progress Bar */}
 			<div className="flex-1 flex flex-col justify-center">
-				<div className="flex justify-between text-xs text-gray-500 mb-1.5">
+				{/* Progress Bar */}
+				<div className="flex justify-between text-sm font-medium text-gray-500 mb-1.5">
 					<span>{currencySymbol}{weeklyTotal.toFixed(0)} earned</span>
 					<span>{Math.min(targetProgress, 100).toFixed(0)}%</span>
 				</div>
-				<div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+				<div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
 					<div
 						className={`h-full rounded-full transition-all duration-300 ${
 							isTargetReached ? "bg-emerald-500" : "bg-sky-500"
@@ -174,20 +136,8 @@ const WeeklySummary: React.FC<WeeklySummaryProps> = ({ weeklyTotal, selectedWeek
 				<div className="mt-3">
 					{isTargetReached ? (
 						<div className="flex items-center justify-center gap-1.5 text-emerald-600 bg-emerald-50 rounded-md py-2 px-3">
-							<svg
-								className="w-4 h-4"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-							>
-								<path
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									strokeWidth={2}
-									d="M5 13l4 4L19 7"
-								/>
-							</svg>
-							<span className="text-sm font-medium">Target reached! 🎉</span>
+							<CheckCircle className="w-4 h-4" />
+							<span className="text-md font-medium">Target reached!</span>
 						</div>
 					) : weeklyTotal > 0 ? (
 						<div className="text-center text-xs text-gray-500 bg-gray-50 rounded-md py-2 px-3">
@@ -197,7 +147,7 @@ const WeeklySummary: React.FC<WeeklySummaryProps> = ({ weeklyTotal, selectedWeek
 							remaining
 						</div>
 					) : (
-						<div className="text-center text-xs text-gray-400 bg-gray-50 rounded-md py-2 px-3">
+						<div className="text-center text-xs text-gray-500 bg-gray-50 rounded-md py-2 px-3">
 							No earnings yet
 						</div>
 					)}

@@ -80,12 +80,25 @@ export const AllExpenses: React.FC = () => {
 		setSelectedYear(year);
 	};
 
+	const archiveToggleOptions = [
+		{
+			value: "active" as const,
+			label: `Active (${activeCount})`,
+			ariaLabel: "Show active expenses",
+		},
+		{
+			value: "archived" as const,
+			label: `Archived (${archivedCount})`,
+			ariaLabel: "Show archived expenses",
+		},
+	];
+
 	const totalExpenseCount = activeCount + archivedCount;
 
 	if (totalExpenseCount === 0) {
 		return (
-			<div className="bg-white rounded-xl shadow-lg p-8 animate-slideUp">
-				<h3 className="text-xl font-bold text-gray-800 mb-4">All Expenses</h3>
+			<div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 animate-slideUp">
+				<h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-4">All Expenses</h3>
 				<div className="text-center py-12">
 					<DollarSign className="mx-auto text-gray-300 mb-4" size={48} />
 					<p className="text-gray-500">No expenses found.</p>
@@ -100,54 +113,49 @@ export const AllExpenses: React.FC = () => {
 	return (
 		<>
 			<div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 animate-slideUp">
-				<div className="flex flex-col gap-4 mb-6">
+				<div className="pb-4">
 					<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-						<h3 className="text-xl font-bold text-gray-800">All Expenses</h3>
+						<h3 className="text-lg sm:text-xl font-bold text-gray-800">All Expenses</h3>
 
 						{/* Archive Toggle */}
 						<AnimatedToggle
-							options={[
-								{ value: "active" as const, label: `Active (${activeCount})` },
-								{
-									value: "archived" as const,
-									label: `Archived (${archivedCount})`,
-								},
-							]}
+							options={archiveToggleOptions}
 							value={showArchived ? "archived" : "active"}
 							onChange={(value) => setShowArchived(value === "archived")}
-							className="w-full sm:w-auto"
 						/>
 					</div>
 				</div>
 
-				{filteredExpenses.length === 0 ? (
-					<div className="text-center py-8 text-gray-500">
-						{showArchived
-							? `No archived expenses found${
-									selectedYear !== "all" ? ` for ${selectedYear}` : ""
-							  }.`
-							: `No active expenses found${
-									selectedYear !== "all" ? ` for ${selectedYear}` : ""
-							  }.`}
-					</div>
-				) : (
-					<ExpenseTable
-						key={`all-${expenses.length}-${selectedYear}-${showArchived}`}
-						expensesToDisplay={filteredExpenses}
-						isCurrentMonth={false}
-						selectedMonth={new Date()}
-						onDelete={handleDeleteClick}
-						onArchive={archiveExpense}
-						onUnarchive={unarchiveExpense}
-						onTogglePaid={handleTogglePaid}
-						onDuplicate={handleDuplicate}
-						showArchiveActions={true}
-						isAllExpensesView={true}
-						showRelativeDates={false}
-						onSelectedYearChange={handleSelectedYearChange}
-						categoryColors={categoryColors}
-					/>
-				)}
+				<div>
+					{filteredExpenses.length === 0 ? (
+						<div className="text-center py-8 text-gray-500">
+							{showArchived
+								? `No archived expenses found${
+										selectedYear !== "all" ? ` for ${selectedYear}` : ""
+								  }.`
+								: `No active expenses found${
+										selectedYear !== "all" ? ` for ${selectedYear}` : ""
+								  }.`}
+						</div>
+					) : (
+						<ExpenseTable
+							key={`all-${expenses.length}-${selectedYear}-${showArchived}`}
+							expensesToDisplay={filteredExpenses}
+							isCurrentMonth={false}
+							selectedMonth={new Date()}
+							onDelete={handleDeleteClick}
+							onArchive={archiveExpense}
+							onUnarchive={unarchiveExpense}
+							onTogglePaid={handleTogglePaid}
+							onDuplicate={handleDuplicate}
+							showArchiveActions={true}
+							isAllExpensesView={true}
+							showRelativeDates={false}
+							onSelectedYearChange={handleSelectedYearChange}
+							categoryColors={categoryColors}
+						/>
+					)}
+				</div>
 			</div>
 
 			<DeleteModal

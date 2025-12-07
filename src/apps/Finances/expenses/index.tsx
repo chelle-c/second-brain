@@ -20,10 +20,7 @@ export const ExpensesTracker = () => {
 
 	return (
 		<>
-			<Layout
-				currentView={currentView}
-				setCurrentView={setCurrentView}
-			>
+			<Layout currentView={currentView} setCurrentView={setCurrentView}>
 				<div className="space-y-3 overflow-y-auto">
 					{currentView === "monthly" ? (
 						<div className="bg-white rounded-xl shadow-lg p-6 animate-slideUp">

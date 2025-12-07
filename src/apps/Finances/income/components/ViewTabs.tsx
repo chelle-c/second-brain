@@ -1,26 +1,23 @@
-import React from "react";
-import { useIncomeStore } from "@/stores/useIncomeStore";
-import { AnimatedToggle } from "@/components/AnimatedToggle";
+// import React from "react";
+// import { useIncomeStore } from "@/stores/useIncomeStore";
+// import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+// import type { IncomeViewType } from "@/types/income";
 
-const viewModeOptions = [
-	{ value: "weekly" as const, label: "Weekly", ariaLabel: "Show Weekly Income Summary" },
-	{ value: "monthly" as const, label: "Monthly", ariaLabel: "Show Monthly Income Summary" },
-	{ value: "yearly" as const, label: "Yearly", ariaLabel: "Show Yearly Income Summary" },
-];
+// const ViewTabs: React.FC = () => {
+// 	const { incomeViewType, updateIncomeViewType } = useIncomeStore();
 
-const ViewTabs: React.FC = () => {
-	const { incomeViewType, updateIncomeViewType } = useIncomeStore();
+// 	return (
+// 		<Tabs
+// 			value={incomeViewType}
+// 			onValueChange={(value) => updateIncomeViewType(value as IncomeViewType)}
+// 		>
+// 			<TabsList>
+// 				<TabsTrigger value="weekly">Weekly</TabsTrigger>
+// 				<TabsTrigger value="monthly">Monthly</TabsTrigger>
+// 				<TabsTrigger value="yearly">Yearly</TabsTrigger>
+// 			</TabsList>
+// 		</Tabs>
+// 	);
+// };
 
-	return (
-		<div className="bg-white rounded-lg shadow-sm border border-gray-100 p-1.5 inline-flex">
-			<AnimatedToggle
-				options={viewModeOptions}
-				value={incomeViewType}
-				onChange={updateIncomeViewType}
-				className="w-auto"
-			/>
-		</div>
-	);
-};
-
-export default ViewTabs;
+// export default ViewTabs;

@@ -77,7 +77,7 @@ export function AnimatedToggle<T extends string>({
 					}}
 					onClick={() => onChange(option.value)}
 					className={`flex-1 px-3 sm:px-4 py-3 rounded-md text-sm font-medium transition-colors duration-200 cursor-pointer whitespace-nowrap ${
-						value === option.value ? "text-sky-600" : "text-gray-600"
+						value === option.value ? "text-sky-700" : "text-gray-600"
 					}`}
 					aria-label={option.ariaLabel || `Select ${option.label}`}
 					aria-pressed={value === option.value}

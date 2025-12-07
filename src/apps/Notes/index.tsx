@@ -202,12 +202,21 @@ export function NotesApp() {
 			{viewState === "list" && (
 				<Portal>
 					<button
-						type="button"
 						onClick={handleCreateNote}
-						className="fixed bottom-6 right-6 w-14 h-14 bg-sky-500 hover:bg-sky-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all flex items-center justify-center cursor-pointer z-50 animate-fadeIn"
+						className="fixed bottom-8 right-12 bg-sky-500 text-white p-4 rounded-full
+						shadow-xl hover:bg-sky-600 hover:scale-110 transition-all duration-200
+						active:scale-95 z-40 group"
 						title="New Note (Ctrl/Cmd + =)"
 					>
-						<Plus size={28} />
+						<Plus size={24} />
+						<span
+							className="absolute right-full mr-3 top-1/2 -translate-y-1/2
+							bg-gray-800 text-white px-3 py-1 rounded-lg text-sm
+							opacity-0 group-hover:opacity-100 transition-opacity duration-200
+							whitespace-nowrap"
+						>
+							New Note
+						</span>
 					</button>
 				</Portal>
 			)}

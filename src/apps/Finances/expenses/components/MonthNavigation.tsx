@@ -10,6 +10,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 
 export const MonthNavigation: React.FC = () => {
 	const { selectedMonth, setSelectedMonth, expenses } = useExpenseStore();
@@ -76,13 +77,14 @@ export const MonthNavigation: React.FC = () => {
 
 	return (
 		<div className="flex items-center justify-center gap-2">
-			<button
+			<Button
+				variant="ghost"
+				size="icon-sm"
 				onClick={handlePreviousMonth}
-				className="hover:bg-gray-100 rounded-lg transition-colors duration-200"
 				title="Previous month"
 			>
-				<ChevronLeft size={20} className="text-gray-600" />
-			</button>
+				<ChevronLeft size={20} />
+			</Button>
 
 			<div className="flex items-center gap-2">
 				{/* Month Dropdown */}
@@ -106,13 +108,12 @@ export const MonthNavigation: React.FC = () => {
 				</Select>
 
 				{/* Year Dropdown */}
-
 				<Select
 					value={selectedMonth.getFullYear().toString()}
 					onValueChange={(value) => handleYearChange({ target: { value } } as any)}
 				>
 					<SelectTrigger className="w-[92px]">
-						<SelectValue placeholder="Select month" />
+						<SelectValue placeholder="Select year" />
 					</SelectTrigger>
 					<SelectContent>
 						<SelectGroup>
@@ -127,13 +128,14 @@ export const MonthNavigation: React.FC = () => {
 				</Select>
 			</div>
 
-			<button
+			<Button
+				variant="ghost"
+				size="icon-sm"
 				onClick={handleNextMonth}
-				className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
 				title="Next month"
 			>
-				<ChevronRight size={20} className="text-gray-600" />
-			</button>
+				<ChevronRight size={20} />
+			</Button>
 		</div>
 	);
 };
