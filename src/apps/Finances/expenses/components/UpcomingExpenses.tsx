@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import { DeleteModal } from "./DeleteModal";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { useExpenseStore } from "@/stores/useExpenseStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
 import { ExpenseTable } from "./ExpenseTable";
@@ -11,6 +10,7 @@ import { TrendingUp, Calendar, Clock } from "lucide-react";
 import { addDays, addWeeks, addMonths, addYears, isWithinInterval, startOfDay } from "date-fns";
 import { AnimatedToggle } from "@/components/AnimatedToggle";
 import { Button } from "@/components/ui/button";
+import { PieChart, type PieChartData } from "@/components/charts";
 
 export const UpcomingExpenses = () => {
 	const {
@@ -82,12 +82,12 @@ export const UpcomingExpenses = () => {
 		[categoryTotals]
 	);
 
-	const chartData = Object.entries(categoryTotals).map(([category, amount]) => ({
+	const chartData: PieChartData[] = Object.entries(categoryTotals).map(([category, amount]) => ({
 		name: category,
 		value: amount,
 	}));
 
-	const placeholderData = [
+	const placeholderData: PieChartData[] = [
 		{ name: "Housing", value: 1200 },
 		{ name: "Food", value: 400 },
 		{ name: "Transportation", value: 300 },
@@ -95,6 +95,7 @@ export const UpcomingExpenses = () => {
 
 	const isPlaceholder = chartData.length === 0;
 	const displayData = isPlaceholder ? placeholderData : chartData;
+	const allColors = { ...DEFAULT_CATEGORY_COLORS, ...categoryColors };
 
 	const timeUnitOptions = [
 		{ value: "days" as const, label: "Days", ariaLabel: "Show expenses due in days" },
@@ -103,25 +104,20 @@ export const UpcomingExpenses = () => {
 		{ value: "years" as const, label: "Years", ariaLabel: "Show expenses due in years" },
 	];
 
-	const CustomTooltip = ({ active, payload }: any) => {
-		if (active && payload && payload[0]) {
-			return (
-				<div className="bg-popover p-3 rounded-lg shadow-lg border border-border">
-					<p className="font-medium text-popover-foreground">{payload[0].name}</p>
-					<p className="text-primary font-bold">
-						{isPlaceholder ? "Example: " : ""}
-						{formatCurrency(payload[0].value, expenseCurrency)}
-					</p>
-					{!isPlaceholder && total > 0 && (
-						<p className="text-xs text-muted-foreground">
-							{((payload[0].value / total) * 100).toFixed(1)}% of total
-						</p>
-					)}
-				</div>
-			);
-		}
-		return null;
-	};
+	const renderTooltip = (datum: PieChartData, tooltipTotal: number) => (
+		<>
+			<p className="font-medium text-popover-foreground">{datum.name}</p>
+			<p className="text-primary font-bold">
+				{isPlaceholder ? "Example: " : ""}
+				{formatCurrency(datum.value, expenseCurrency)}
+			</p>
+			{!isPlaceholder && tooltipTotal > 0 && (
+				<p className="text-xs text-muted-foreground">
+					{((datum.value / tooltipTotal) * 100).toFixed(1)}% of total
+				</p>
+			)}
+		</>
+	);
 
 	const handleDeleteClick = (id: string, name: string) => {
 		setDeleteModal({ isOpen: true, id, name });
@@ -252,38 +248,12 @@ export const UpcomingExpenses = () => {
 								}`}
 							>
 								<div className="h-48 sm:h-64">
-									<ResponsiveContainer
-										width="100%"
-										height="100%"
-										initialDimension={{ width: 320, height: 320 }}
-									>
-										<PieChart>
-											<Pie
-												data={displayData}
-												cx="50%"
-												cy="50%"
-												labelLine={false}
-												outerRadius="80%"
-												fill="#8884d8"
-												dataKey="value"
-												animationBegin={0}
-												animationDuration={800}
-											>
-												{displayData.map((entry, index) => (
-													<Cell
-														key={`cell-${index}`}
-														fill={
-															categoryColors[entry.name] ||
-															DEFAULT_CATEGORY_COLORS[entry.name] ||
-															"#93C5FD"
-														}
-														opacity={isPlaceholder ? 0.5 : 1}
-													/>
-												))}
-											</Pie>
-											<Tooltip content={<CustomTooltip />} />
-										</PieChart>
-									</ResponsiveContainer>
+									<PieChart
+										data={displayData}
+										colors={allColors}
+										opacity={isPlaceholder ? 0.5 : 1}
+										renderTooltip={renderTooltip}
+									/>
 								</div>
 
 								{/* Custom Legend */}

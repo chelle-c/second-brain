@@ -1,15 +1,17 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { NotesApp } from "@/apps/Notes";
-import { ExpensesTracker } from "@/apps/Finances/expenses";
-import { IncomeTracker } from "@/apps/Finances/income";
-import { MindMapApp } from "@/apps/MindMap";
-import { Settings } from "@/apps/Settings";
 import { DebugConsole } from "@/components/DebugConsole";
 import useAppStore from "@/stores/useAppStore";
 import { useBackupStore } from "@/stores/useBackupStore";
+
+// Lazy load route modules for code splitting
+const NotesApp = lazy(() => import("@/apps/Notes").then((m) => ({ default: m.NotesApp })));
+const ExpensesTracker = lazy(() => import("@/apps/Finances/expenses").then((m) => ({ default: m.ExpensesTracker })));
+const IncomeTracker = lazy(() => import("@/apps/Finances/income").then((m) => ({ default: m.IncomeTracker })));
+const MindMapApp = lazy(() => import("@/apps/MindMap").then((m) => ({ default: m.MindMapApp })));
+const Settings = lazy(() => import("@/apps/Settings").then((m) => ({ default: m.Settings })));
 
 function App() {
 	const [isDevEnv, setIsDevEnv] = useState(false);
@@ -40,11 +42,11 @@ function App() {
 					<Routes>
 						<Route path="/" element={<AppLayout />}>
 							<Route index element={<Navigate to="/brain" replace />} />
-							<Route path="brain" element={<NotesApp />} />
-							<Route path="income" element={<IncomeTracker />} />
-							<Route path="expenses" element={<ExpensesTracker />} />
-							<Route path="mindmap" element={<MindMapApp />} />
-							<Route path="settings" element={<Settings />} />
+							<Route path="brain" element={<Suspense fallback={<div>Loading...</div>}><NotesApp /></Suspense>} />
+							<Route path="income" element={<Suspense fallback={<div>Loading...</div>}><IncomeTracker /></Suspense>} />
+							<Route path="expenses" element={<Suspense fallback={<div>Loading...</div>}><ExpensesTracker /></Suspense>} />
+							<Route path="mindmap" element={<Suspense fallback={<div>Loading...</div>}><MindMapApp /></Suspense>} />
+							<Route path="settings" element={<Suspense fallback={<div>Loading...</div>}><Settings /></Suspense>} />
 						</Route>
 					</Routes>
 				</BrowserRouter>

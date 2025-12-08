@@ -2,20 +2,12 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tsconfigPaths from "vite-tsconfig-paths";
 import tailwindcss from "@tailwindcss/vite";
-import { chunkSplitPlugin } from "vite-plugin-chunk-split";
 
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vite.dev/config/
 export default defineConfig(async () => ({
-	plugins: [
-		react(),
-		tailwindcss(),
-		tsconfigPaths(),
-		chunkSplitPlugin({
-			strategy: "default",
-		}),
-	],
+	plugins: [react(), tailwindcss(), tsconfigPaths()],
 
 	// Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
 	//
@@ -39,6 +31,25 @@ export default defineConfig(async () => ({
 		},
 	},
 	build: {
-		chunkSizeWarningLimit: 2000,
+		rollupOptions: {
+			output: {
+				manualChunks: {
+					// Core React vendor chunk
+					"vendor-react": ["react", "react-dom", "react-router"],
+					// UI framework chunk
+					"vendor-radix": [
+						"@radix-ui/react-dialog",
+						"@radix-ui/react-dropdown-menu",
+						"@radix-ui/react-tabs",
+						"@radix-ui/react-tooltip",
+						"@radix-ui/react-scroll-area",
+						"@radix-ui/react-select",
+						"@radix-ui/react-slot",
+					],
+					// State management
+					"vendor-zustand": ["zustand"],
+				},
+			},
+		},
 	},
 }));

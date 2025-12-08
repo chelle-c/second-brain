@@ -1,4 +1,3 @@
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { MonthNavigation } from "./MonthNavigation";
 import { useExpenseStore } from "@/stores/useExpenseStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
@@ -7,6 +6,7 @@ import { getCurrencySymbol } from "@/lib/currencyUtils";
 import { DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
 import { TrendingUp } from "lucide-react";
 import { AnimatedToggle } from "@/components/AnimatedToggle";
+import { PieChart, type PieChartData } from "@/components/charts";
 
 export const ExpenseOverview: React.FC = () => {
 	const {
@@ -30,12 +30,12 @@ export const ExpenseOverview: React.FC = () => {
 	);
 	const monthlyTotal = getMonthlyTotalFiltered(selectedMonth, overviewMode, showPaidExpenses);
 
-	const data = Object.entries(categoryTotals).map(([category, amount]) => ({
+	const data: PieChartData[] = Object.entries(categoryTotals).map(([category, amount]) => ({
 		name: category,
 		value: amount,
 	}));
 
-	const placeholderData = [
+	const placeholderData: PieChartData[] = [
 		{ name: "Housing", value: 1200 },
 		{ name: "Food", value: 400 },
 		{ name: "Transportation", value: 300 },
@@ -57,29 +57,25 @@ export const ExpenseOverview: React.FC = () => {
 		{ value: "all" as const, label: "All", ariaLabel: "Show all expenses" },
 	];
 
-	const CustomTooltip = ({ active, payload }: any) => {
-		if (active && payload && payload[0]) {
-			const isPlaceholder = data.length === 0;
-			return (
-				<div className="bg-popover p-3 rounded-lg shadow-lg border border-border">
-					<p className="font-medium text-popover-foreground">{payload[0].name}</p>
-					<p className="text-primary font-bold">
-						{isPlaceholder ? "Example: " : ""}
-						{formatCurrency(payload[0].value, expenseCurrency)}
-					</p>
-					{!isPlaceholder && monthlyTotal > 0 && (
-						<p className="text-xs text-muted-foreground">
-							{((payload[0].value / monthlyTotal) * 100).toFixed(1)}% of total
-						</p>
-					)}
-				</div>
-			);
-		}
-		return null;
-	};
-
 	const chartData = data.length > 0 ? data : placeholderData;
 	const isPlaceholder = data.length === 0;
+
+	const allColors = { ...DEFAULT_CATEGORY_COLORS, ...categoryColors };
+
+	const renderTooltip = (datum: PieChartData, total: number) => (
+		<>
+			<p className="font-medium text-popover-foreground">{datum.name}</p>
+			<p className="text-primary font-bold">
+				{isPlaceholder ? "Example: " : ""}
+				{formatCurrency(datum.value, expenseCurrency)}
+			</p>
+			{!isPlaceholder && total > 0 && (
+				<p className="text-xs text-muted-foreground">
+					{((datum.value / total) * 100).toFixed(1)}% of total
+				</p>
+			)}
+		</>
+	);
 
 	return (
 		<>
@@ -170,38 +166,12 @@ export const ExpenseOverview: React.FC = () => {
 
 					<div className={`flex flex-col space-y-4 ${isPlaceholder ? "opacity-60" : ""}`}>
 						<div className="h-48 sm:h-64">
-							<ResponsiveContainer
-								width="100%"
-								height="100%"
-								initialDimension={{ width: 320, height: 320 }}
-							>
-								<PieChart>
-									<Pie
-										data={chartData}
-										cx="50%"
-										cy="50%"
-										labelLine={false}
-										outerRadius="80%"
-										fill="#8884d8"
-										dataKey="value"
-										animationBegin={0}
-										animationDuration={800}
-									>
-										{chartData.map((entry, index) => (
-											<Cell
-												key={`cell-${index}`}
-												fill={
-													categoryColors[entry.name] ||
-													DEFAULT_CATEGORY_COLORS[entry.name] ||
-													"#93C5FD"
-												}
-												opacity={isPlaceholder ? 0.5 : 1}
-											/>
-										))}
-									</Pie>
-									<Tooltip content={<CustomTooltip />} />
-								</PieChart>
-							</ResponsiveContainer>
+							<PieChart
+								data={chartData}
+								colors={allColors}
+								opacity={isPlaceholder ? 0.5 : 1}
+								renderTooltip={renderTooltip}
+							/>
 						</div>
 
 						{/* Custom Legend */}

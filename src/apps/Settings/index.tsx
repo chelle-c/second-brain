@@ -113,9 +113,10 @@ export const Settings = () => {
 		<div className="flex-1 overflow-y-auto max-h-[98vh] p-4 w-full min-h-screen">
 			<div className="w-full max-w-4xl mx-auto my-6 animate-slideUp space-y-6">
 				{/* Title */}
-				<h1 className="sr-only">
-					Settings
-				</h1>
+				<h1 className="sr-only">Settings</h1>
+
+				{/* Backup & Data Management */}
+				<BackupSettings />
 
 				{/* General Settings */}
 				<Card>
@@ -480,9 +481,6 @@ export const Settings = () => {
 						</div>
 					</CardContent>
 				</Card>
-
-				{/* Backup & Data Management */}
-				<BackupSettings />
 			</div>
 
 			{/* Category Manager Modal */}
