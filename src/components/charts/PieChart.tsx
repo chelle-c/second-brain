@@ -1,9 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { Group } from "@visx/group";
 import { Pie } from "@visx/shape";
 import { scaleOrdinal } from "@visx/scale";
 import { ParentSize } from "@visx/responsive";
-import { useThemeStore } from "@/stores/useThemeStore";
 
 export interface PieChartData {
 	name: string;
@@ -33,11 +32,9 @@ const PieChartInner = ({
 		y: number;
 	} | null>(null);
 	const [animationProgress, setAnimationProgress] = useState(0);
-	const { resolvedTheme } = useThemeStore();
-	const isDark = resolvedTheme === "dark";
 
 	// Divider color: white in dark mode, black in light mode
-	const dividerColor = isDark ? "#2e2e2e" : "#ffffff";
+	const dividerColor = "#ffffff";
 
 	// Animate from 0 to 1 over 500ms
 	useEffect(() => {
@@ -78,7 +75,11 @@ const PieChartInner = ({
 	return (
 		<div style={{ position: "relative", width, height }}>
 			<svg width={width} height={height}>
-				<Group top={centerY} left={centerX}>
+				<Group
+					top={centerY}
+					left={centerX}
+					className="drop-shadow-md drop-shadow-accent-foreground/30"
+				>
 					<Pie
 						data={data}
 						pieValue={(d) => d.value}
@@ -91,42 +92,54 @@ const PieChartInner = ({
 						{(pie) => (
 							<>
 								{pie.arcs.map((arc, i) => (
-									<path
-										key={`arc-${i}`}
-										d={pie.path(arc) || ""}
-										fill={colorScale(arc.data.name)}
-										opacity={opacity}
-										style={{ cursor: "pointer" }}
-										onMouseMove={(event) => {
-											setTooltip({
-												data: arc.data,
-												x: event.clientX,
-												y: event.clientY,
-											});
-										}}
-										onMouseLeave={() => setTooltip(null)}
-									/>
-								))}
-								{/* Draw divider lines from center to edge at each arc boundary */}
-								{data.length > 1 && pie.arcs.map((arc, i) => {
-									const outerRadius = radius * 0.8;
-									// Line from center to outer edge at start angle
-									const x = Math.cos(arc.startAngle - Math.PI / 2) * outerRadius;
-									const y = Math.sin(arc.startAngle - Math.PI / 2) * outerRadius;
-									return (
-										<line
-											key={`divider-${i}`}
-											x1={0}
-											y1={0}
-											x2={x}
-											y2={y}
+									<Fragment key={`arc-${i}`}>
+										<path
+											d={pie.path(arc) || ""}
+											fill={colorScale(arc.data.name)}
+											opacity={opacity}
+											style={{ cursor: "pointer" }}
+											onMouseMove={(event) => {
+												setTooltip({
+													data: arc.data,
+													x: event.clientX,
+													y: event.clientY,
+												});
+											}}
+											onMouseLeave={() => setTooltip(null)}
+										/>
+										<path
+											d={pie.path(arc) || ""}
+											fill="none"
 											stroke={dividerColor}
 											strokeWidth={2}
 											pointerEvents="none"
-											shapeRendering="geometricPrecision"
+											shapeRendering="auto"
 										/>
-									);
-								})}
+									</Fragment>
+								))}
+								{/* Draw divider lines from center to edge at each arc boundary */}
+								{data.length > 1 &&
+									pie.arcs.map((arc, i) => {
+										const outerRadius = radius * 0.8;
+										// Line from center to outer edge at start angle
+										const x =
+											Math.cos(arc.startAngle - Math.PI / 2) * outerRadius;
+										const y =
+											Math.sin(arc.startAngle - Math.PI / 2) * outerRadius;
+										return (
+											<line
+												key={`divider-${i}`}
+												x1={0}
+												y1={0}
+												x2={x}
+												y2={y}
+												stroke={dividerColor}
+												strokeWidth={2}
+												pointerEvents="none"
+												shapeRendering="auto"
+											/>
+										);
+									})}
 							</>
 						)}
 					</Pie>

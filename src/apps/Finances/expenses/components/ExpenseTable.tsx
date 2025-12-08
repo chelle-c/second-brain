@@ -5,7 +5,8 @@ import {
 	getRelativeDateText,
 	getDueDateColor,
 } from "@/lib/dateHelpers";
-import { DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
+import { DEFAULT_CATEGORY_COLORS, getCategoryDisplayColor } from "@/lib/expenseHelpers";
+import { useThemeStore } from "@/stores/useThemeStore";
 import { Expense, ImportanceLevel } from "@/types/expense";
 import { RecurringExpenseRow } from "./RecurringExpenseRow";
 import { useExpenseStore } from "@/stores/useExpenseStore";
@@ -63,19 +64,6 @@ type SortKey =
 	| "isPaid";
 type SortDirection = "asc" | "desc";
 
-const darkenColor = (hex: string, amount: number = 0.4): string => {
-	const num = parseInt(hex.replace("#", ""), 16);
-	const r = Math.max(0, ((num >> 16) & 255) * (1 - amount));
-	const g = Math.max(0, ((num >> 8) & 255) * (1 - amount));
-	const b = Math.max(0, (num & 255) * (1 - amount));
-	return (
-		"#" +
-		((1 << 24) + (Math.round(r) << 16) + (Math.round(g) << 8) + Math.round(b))
-			.toString(16)
-			.slice(1)
-	);
-};
-
 const ImportanceIcon: React.FC<{ level: ImportanceLevel }> = ({ level }) => {
 	switch (level) {
 		case "critical":
@@ -106,6 +94,8 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 }) => {
 	const { expenses, showPaidExpenses, setShowPaidExpenses, setEditingExpense } = useExpenseStore();
 	const { expenseCurrency } = useSettingsStore();
+	const { resolvedTheme } = useThemeStore();
+	const isDarkMode = resolvedTheme === "dark";
 	const [sortKey, setSortKey] = useState<SortKey>("dueDate");
 	const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 	const [searchQuery, setSearchQuery] = useState("");
@@ -364,7 +354,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 
 			{/* Table */}
 			<div className="overflow-x-auto scrollbar-thin">
-				<table className="w-full min-w-[900px]">
+				<table className="expense-table w-full min-w-[900px]">
 					<thead>
 						<tr className="border-b border-border text-xs">
 							<th className="text-center py-3 px-2 font-medium text-muted-foreground">
@@ -469,13 +459,15 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 								categoryColors[expense.category] ||
 								DEFAULT_CATEGORY_COLORS[expense.category] ||
 								"#6b7280";
-							const darkCategoryColor = darkenColor(categoryColor);
+							const displayColor = getCategoryDisplayColor(categoryColor, isDarkMode);
 
 							return (
 								<tr
 									key={expense.id}
-									className={`border-b border-border hover:bg-accent  ${
-										expense.isPaid ? "opacity-60" : ""
+									className={`border-b border-border ${
+										expense.isPaid
+											? "expense-paid bg-green-500/15 dark:bg-green-500/20 hover:bg-green-500/25 dark:hover:bg-green-500/30"
+											: "hover:bg-accent"
 									}`}
 								>
 									<td className="py-3 px-2">
@@ -502,11 +494,16 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 										<div className="flex items-center gap-2">
 											<span
 												className={`font-medium text-foreground text-sm ${
-													expense.isPaid ? "line-through" : ""
+													expense.isPaid ? "line-through opacity-60" : ""
 												}`}
 											>
 												{expense.name}
 											</span>
+											{expense.isPaid && (
+												<span className="px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-green-500/20 text-green-600 dark:text-green-400 rounded">
+													Paid
+												</span>
+											)}
 											{expense.isRecurring && !isAllExpensesView && (
 												<span className="text-primary" title="Recurring">
 													<RefreshCw size={12} />
@@ -522,7 +519,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 											className="px-3 py-0.5 rounded-full text-xs font-semibold text-center"
 											style={{
 												backgroundColor: `${categoryColor}20`,
-												color: darkCategoryColor,
+												color: displayColor,
 												border: `1px solid ${categoryColor}40`,
 											}}
 										>
@@ -543,7 +540,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 									<td className="py-3 px-3">
 										<span
 											className={`font-semibold text-primary text-sm ${
-												expense.isPaid ? "line-through" : ""
+												expense.isPaid ? "line-through opacity-60" : ""
 											}`}
 										>
 											{formatCurrency(expense.amount, expenseCurrency)}

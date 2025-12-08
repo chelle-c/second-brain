@@ -675,17 +675,19 @@ export const BackupSettings = () => {
 					<AlertDialogContent>
 						<AlertDialogHeader>
 							<AlertDialogTitle>Seed Test Database</AlertDialogTitle>
-							<AlertDialogDescription>
-								This will clear all existing data in the test database and replace
-								it with sample data including:
-								<ul className="list-disc list-inside mt-2 space-y-1">
-									<li>7 sample notes across different folders</li>
-									<li>10 sample expenses (recurring and one-time)</li>
-									<li>Income entries for the past 4 weeks</li>
-								</ul>
-								<span className="block mt-2 font-medium">
-									This action cannot be undone.
-								</span>
+							<AlertDialogDescription asChild>
+								<div>
+									This will clear all existing data in the test database and replace
+									it with sample data including:
+									<ul className="list-disc list-inside mt-2 space-y-1">
+										<li>7 sample notes across different folders</li>
+										<li>10 sample expenses (recurring and one-time)</li>
+										<li>Income entries for the past 4 weeks</li>
+									</ul>
+									<span className="block mt-2 font-medium">
+										This action cannot be undone.
+									</span>
+								</div>
 							</AlertDialogDescription>
 						</AlertDialogHeader>
 						<AlertDialogFooter>

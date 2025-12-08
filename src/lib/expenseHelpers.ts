@@ -139,3 +139,29 @@ export const getAvailableColor = (usedColors: string[]): string => {
 	// If all colors are used, return a random color from the pool
 	return COLOR_POOL[Math.floor(Math.random() * COLOR_POOL.length)];
 };
+
+// Darken a hex color by a given amount (0-1)
+export const darkenColor = (hex: string, amount: number = 0.4): string => {
+	const num = parseInt(hex.replace("#", ""), 16);
+	const r = Math.max(0, ((num >> 16) & 255) * (1 - amount));
+	const g = Math.max(0, ((num >> 8) & 255) * (1 - amount));
+	const b = Math.max(0, (num & 255) * (1 - amount));
+	return `#${Math.round(r).toString(16).padStart(2, "0")}${Math.round(g).toString(16).padStart(2, "0")}${Math.round(b).toString(16).padStart(2, "0")}`;
+};
+
+// Lighten a hex color by a given amount (0-1)
+export const lightenColor = (hex: string, amount: number = 0.4): string => {
+	const num = parseInt(hex.replace("#", ""), 16);
+	const r = Math.min(255, ((num >> 16) & 255) + (255 - ((num >> 16) & 255)) * amount);
+	const g = Math.min(255, ((num >> 8) & 255) + (255 - ((num >> 8) & 255)) * amount);
+	const b = Math.min(255, (num & 255) + (255 - (num & 255)) * amount);
+	return `#${Math.round(r).toString(16).padStart(2, "0")}${Math.round(g).toString(16).padStart(2, "0")}${Math.round(b).toString(16).padStart(2, "0")}`;
+};
+
+// Get the adjusted color for category display based on theme
+export const getCategoryDisplayColor = (
+	baseColor: string,
+	isDarkMode: boolean
+): string => {
+	return isDarkMode ? lightenColor(baseColor, 0.3) : darkenColor(baseColor, 0.4);
+};

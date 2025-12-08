@@ -64,7 +64,9 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Welcome to Second Brain",
-			content: createYooptaContent("This is a test note in your second brain app. Use it to capture ideas, thoughts, and important information."),
+			content: createYooptaContent(
+				"This is a test note in your second brain app. Use it to capture ideas, thoughts, and important information."
+			),
 			tags: [],
 			folder: "inbox",
 			createdAt: daysAgo(7),
@@ -74,7 +76,9 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Project Planning",
-			content: createYooptaContent("Key milestones for Q1:\n- Complete feature design\n- Implement core functionality\n- User testing phase\n- Launch preparation"),
+			content: createYooptaContent(
+				"Key milestones for Q1:\n- Complete feature design\n- Implement core functionality\n- User testing phase\n- Launch preparation"
+			),
 			tags: [],
 			folder: "work",
 			createdAt: daysAgo(5),
@@ -84,7 +88,9 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Meeting Notes - Team Sync",
-			content: createYooptaContent("Discussed roadmap priorities. Action items: Review competitor analysis, prepare demo for stakeholders, schedule follow-up meeting."),
+			content: createYooptaContent(
+				"Discussed roadmap priorities. Action items: Review competitor analysis, prepare demo for stakeholders, schedule follow-up meeting."
+			),
 			tags: [],
 			folder: "work",
 			createdAt: daysAgo(3),
@@ -94,7 +100,9 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Book Recommendations",
-			content: createYooptaContent("Books to read:\n- Atomic Habits by James Clear\n- Deep Work by Cal Newport\n- The Psychology of Money by Morgan Housel"),
+			content: createYooptaContent(
+				"Books to read:\n- Atomic Habits by James Clear\n- Deep Work by Cal Newport\n- The Psychology of Money by Morgan Housel"
+			),
 			tags: [],
 			folder: "personal",
 			createdAt: daysAgo(10),
@@ -104,7 +112,9 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "App Feature Ideas",
-			content: createYooptaContent("Potential features to explore:\n- Dark mode themes\n- Export to PDF\n- Cloud sync\n- Mobile companion app\n- AI-powered suggestions"),
+			content: createYooptaContent(
+				"Potential features to explore:\n- Dark mode themes\n- Export to PDF\n- Cloud sync\n- Mobile companion app\n- AI-powered suggestions"
+			),
 			tags: [],
 			folder: "ideas",
 			createdAt: daysAgo(14),
@@ -114,7 +124,9 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Grocery List Template",
-			content: createYooptaContent("Weekly essentials:\n- Fruits and vegetables\n- Dairy products\n- Bread\n- Proteins\n- Snacks"),
+			content: createYooptaContent(
+				"Weekly essentials:\n- Fruits and vegetables\n- Dairy products\n- Bread\n- Proteins\n- Snacks"
+			),
 			tags: [],
 			folder: "personal",
 			createdAt: daysAgo(20),
@@ -124,7 +136,9 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Old Project Notes",
-			content: createYooptaContent("These are archived notes from a completed project. Kept for reference."),
+			content: createYooptaContent(
+				"These are archived notes from a completed project. Kept for reference."
+			),
 			tags: [],
 			folder: "archive",
 			createdAt: daysAgo(60),
@@ -134,111 +148,187 @@ const createSampleNotes = (): Note[] => {
 	];
 };
 
+// Helper to generate recurring expense occurrences
+const generateRecurringOccurrences = (
+	parentId: string,
+	baseExpense: Omit<Expense, "id" | "dueDate" | "isPaid" | "paymentDate" | "parentExpenseId">,
+	dayOfMonth: number,
+	months: number = 12,
+	paidCount: number = 0
+): Expense[] => {
+	const now = new Date();
+	return Array.from({ length: months }, (_, i) => i).map((month) => {
+		const dueDate = new Date(now.getFullYear(), now.getMonth() + month, dayOfMonth);
+		const isPaid = month < paidCount;
+		return {
+			...baseExpense,
+			id: generateId(),
+			dueDate,
+			isPaid,
+			paymentDate: isPaid ? dueDate : undefined,
+			parentExpenseId: parentId,
+		};
+	}) satisfies Expense[];
+};
+
 // Sample expenses
 const createSampleExpenses = (): Expense[] => {
 	const now = new Date();
 
+	// Parent expense IDs
+	const rentId = generateId();
+	const electricityId = generateId();
+	const internetId = generateId();
+	const phonePlanId = generateId();
+	const streamingId = generateId();
+	const gymId = generateId();
+
+	// Base expense configurations
+	const rentBase = {
+		name: "Rent",
+		amount: 1500,
+		category: "Housing",
+		isRecurring: true,
+		recurrence: { frequency: "monthly" as const },
+		isArchived: false,
+		type: "need" as const,
+		importance: "critical" as const,
+		createdAt: daysAgo(90),
+		updatedAt: daysAgo(5),
+		monthlyOverrides: {},
+	};
+
+	const electricityBase = {
+		name: "Electricity",
+		amount: 120,
+		category: "Utilities",
+		isRecurring: true,
+		recurrence: { frequency: "monthly" as const },
+		isArchived: false,
+		type: "need" as const,
+		importance: "critical" as const,
+		createdAt: daysAgo(90),
+		updatedAt: daysAgo(10),
+		monthlyOverrides: {},
+	};
+
+	const internetBase = {
+		name: "Internet",
+		amount: 79.99,
+		category: "Utilities",
+		isRecurring: true,
+		recurrence: { frequency: "monthly" as const },
+		isArchived: false,
+		type: "need" as const,
+		importance: "high" as const,
+		createdAt: daysAgo(60),
+		updatedAt: daysAgo(15),
+		monthlyOverrides: {},
+	};
+
+	const phonePlanBase = {
+		name: "Phone Plan",
+		amount: 55,
+		category: "Utilities",
+		isRecurring: true,
+		recurrence: { frequency: "monthly" as const },
+		isArchived: false,
+		type: "need" as const,
+		importance: "high" as const,
+		createdAt: daysAgo(120),
+		updatedAt: daysAgo(20),
+		monthlyOverrides: {},
+	};
+
+	const streamingBase = {
+		name: "Streaming Services",
+		amount: 45.97,
+		category: "Entertainment",
+		isRecurring: true,
+		recurrence: { frequency: "monthly" as const },
+		isArchived: false,
+		type: "want" as const,
+		importance: "none" as const,
+		createdAt: daysAgo(180),
+		updatedAt: daysAgo(5),
+		monthlyOverrides: {},
+	};
+
+	const gymBase = {
+		name: "Gym Membership",
+		amount: 49.99,
+		category: "Health",
+		isRecurring: true,
+		recurrence: { frequency: "monthly" as const },
+		isArchived: false,
+		type: "want" as const,
+		importance: "medium" as const,
+		createdAt: daysAgo(200),
+		updatedAt: daysAgo(10),
+		monthlyOverrides: {},
+	};
+
+	// Generate 12 months of occurrences for each recurring expense (with first 1-2 marked as paid)
+	const rentOccurrences = generateRecurringOccurrences(rentId, rentBase, 1, 12, 2);
+	const electricityOccurrences = generateRecurringOccurrences(electricityId, electricityBase, 15, 12, 1);
+	const internetOccurrences = generateRecurringOccurrences(internetId, internetBase, 20, 12, 2);
+	const phonePlanOccurrences = generateRecurringOccurrences(phonePlanId, phonePlanBase, 25, 12, 1);
+	const streamingOccurrences = generateRecurringOccurrences(streamingId, streamingBase, 10, 12, 2);
+	const gymOccurrences = generateRecurringOccurrences(gymId, gymBase, 5, 12, 1);
+
 	return [
-		// Recurring monthly expenses
+		// Parent recurring expenses (current month)
 		{
-			id: generateId(),
-			name: "Rent",
-			amount: 1500,
-			category: "Housing",
+			id: rentId,
+			...rentBase,
 			dueDate: new Date(now.getFullYear(), now.getMonth(), 1),
-			isRecurring: true,
-			recurrence: { frequency: "monthly" },
-			isArchived: false,
 			isPaid: true,
 			paymentDate: new Date(now.getFullYear(), now.getMonth(), 1),
-			type: "need",
-			importance: "critical",
-			createdAt: daysAgo(90),
-			updatedAt: daysAgo(5),
-			monthlyOverrides: {},
 		},
+		...rentOccurrences,
+
 		{
-			id: generateId(),
-			name: "Electricity",
-			amount: 120,
-			category: "Utilities",
+			id: electricityId,
+			...electricityBase,
 			dueDate: new Date(now.getFullYear(), now.getMonth(), 15),
-			isRecurring: true,
-			recurrence: { frequency: "monthly" },
-			isArchived: false,
 			isPaid: false,
-			type: "need",
-			importance: "critical",
-			createdAt: daysAgo(90),
-			updatedAt: daysAgo(10),
-			monthlyOverrides: {},
 		},
+		...electricityOccurrences,
+
 		{
-			id: generateId(),
-			name: "Internet",
-			amount: 79.99,
-			category: "Utilities",
+			id: internetId,
+			...internetBase,
 			dueDate: new Date(now.getFullYear(), now.getMonth(), 20),
-			isRecurring: true,
-			recurrence: { frequency: "monthly" },
-			isArchived: false,
 			isPaid: false,
-			type: "need",
-			importance: "high",
-			createdAt: daysAgo(60),
-			updatedAt: daysAgo(15),
-			monthlyOverrides: {},
 		},
+		...internetOccurrences,
+
 		{
-			id: generateId(),
-			name: "Phone Plan",
-			amount: 55,
-			category: "Utilities",
+			id: phonePlanId,
+			...phonePlanBase,
 			dueDate: new Date(now.getFullYear(), now.getMonth(), 25),
-			isRecurring: true,
-			recurrence: { frequency: "monthly" },
-			isArchived: false,
 			isPaid: false,
-			type: "need",
-			importance: "high",
-			createdAt: daysAgo(120),
-			updatedAt: daysAgo(20),
-			monthlyOverrides: {},
 		},
+		...phonePlanOccurrences,
+
 		{
-			id: generateId(),
-			name: "Streaming Services",
-			amount: 45.97,
-			category: "Entertainment",
+			id: streamingId,
+			...streamingBase,
 			dueDate: new Date(now.getFullYear(), now.getMonth(), 10),
-			isRecurring: true,
-			recurrence: { frequency: "monthly" },
-			isArchived: false,
 			isPaid: true,
 			paymentDate: daysAgo(5),
-			type: "want",
-			importance: "none",
-			createdAt: daysAgo(180),
-			updatedAt: daysAgo(5),
-			monthlyOverrides: {},
 		},
+		...streamingOccurrences,
+
 		{
-			id: generateId(),
-			name: "Gym Membership",
-			amount: 49.99,
-			category: "Health",
+			id: gymId,
+			...gymBase,
 			dueDate: new Date(now.getFullYear(), now.getMonth(), 5),
-			isRecurring: true,
-			recurrence: { frequency: "monthly" },
-			isArchived: false,
 			isPaid: true,
 			paymentDate: daysAgo(10),
-			type: "want",
-			importance: "medium",
-			createdAt: daysAgo(200),
-			updatedAt: daysAgo(10),
-			monthlyOverrides: {},
 		},
+		...gymOccurrences,
+
 		// One-time expenses
 		{
 			id: generateId(),
@@ -313,7 +403,7 @@ const createSampleIncomeEntries = (): IncomeEntry[] => {
 		// Work days (Mon-Fri) with some variation
 		for (let day = 1; day <= 5; day++) {
 			const date = new Date();
-			date.setDate(date.getDate() - (week * 7) - (7 - day));
+			date.setDate(date.getDate() - week * 7 - (7 - day));
 
 			// Skip some days randomly for realism
 			if (Math.random() > 0.85) continue;
@@ -337,9 +427,7 @@ const createSampleIncomeEntries = (): IncomeEntry[] => {
 };
 
 // Sample weekly targets
-const createSampleWeeklyTargets = (): IncomeWeeklyTargets[] => [
-	{ id: generateId(), amount: 800 },
-];
+const createSampleWeeklyTargets = (): IncomeWeeklyTargets[] => [{ id: generateId(), amount: 800 }];
 
 // Main seed function
 export const seedTestDatabase = async (): Promise<void> => {

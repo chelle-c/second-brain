@@ -13,10 +13,11 @@ import {
 	Copy,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/dateHelpers";
-import { DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
+import { DEFAULT_CATEGORY_COLORS, getCategoryDisplayColor } from "@/lib/expenseHelpers";
 import { Expense, ImportanceLevel } from "@/types/expense";
 import { useExpenseStore } from "@/stores/useExpenseStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
+import { useThemeStore } from "@/stores/useThemeStore";
 
 interface RecurringExpenseRowProps {
 	parentExpense: Expense;
@@ -29,19 +30,6 @@ interface RecurringExpenseRowProps {
 	categoryColors: Record<string, string>;
 	showPaid?: boolean;
 }
-
-const darkenColor = (hex: string, amount: number = 0.4): string => {
-	const num = parseInt(hex.replace("#", ""), 16);
-	const r = Math.max(0, ((num >> 16) & 255) * (1 - amount));
-	const g = Math.max(0, ((num >> 8) & 255) * (1 - amount));
-	const b = Math.max(0, (num & 255) * (1 - amount));
-	return (
-		"#" +
-		((1 << 24) + (Math.round(r) << 16) + (Math.round(g) << 8) + Math.round(b))
-			.toString(16)
-			.slice(1)
-	);
-};
 
 const ImportanceIcon: React.FC<{ level: ImportanceLevel }> = ({ level }) => {
 	switch (level) {
@@ -92,12 +80,14 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 	const [isExpanded, setIsExpanded] = useState(false);
 	const { toggleExpensePaid, resetOccurrence, setEditingExpense } = useExpenseStore();
 	const { expenseCurrency } = useSettingsStore();
+	const { resolvedTheme } = useThemeStore();
+	const isDarkMode = resolvedTheme === "dark";
 
 	const categoryColor =
 		categoryColors[parentExpense.category] ||
 		DEFAULT_CATEGORY_COLORS[parentExpense.category] ||
 		"#6b7280";
-	const darkCategoryColor = darkenColor(categoryColor);
+	const displayColor = getCategoryDisplayColor(categoryColor, isDarkMode);
 
 	// Sort occurrences by due date and filter based on showPaid
 	const sortedOccurrences = [...occurrences]
@@ -185,7 +175,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 						className="px-2 py-0.5 rounded-full text-xs font-semibold inline-flex items-center"
 						style={{
 							backgroundColor: `${categoryColor}20`,
-							color: darkCategoryColor,
+							color: displayColor,
 							border: `1px solid ${categoryColor}40`,
 						}}
 					>
@@ -303,9 +293,11 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 				sortedOccurrences.map((occurrence, index) => (
 					<tr
 						key={occurrence.id}
-						className={`border-b border-border/50 hover:bg-accent
-						${occurrence.isPaid ? "opacity-60" : ""}
-						animate-fadeIn`}
+						className={`border-b border-border/50 animate-fadeIn ${
+							occurrence.isPaid
+								? "expense-paid bg-green-500/15 dark:bg-green-500/20 hover:bg-green-500/25 dark:hover:bg-green-500/30"
+								: "hover:bg-accent"
+						}`}
 					>
 						{/* Column 1: Paid checkbox */}
 						<td className="py-2 px-2">
@@ -329,17 +321,24 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 
 						{/* Column 2: Instance info */}
 						<td className="py-2 px-3 pl-8">
-							<span className="text-xs text-muted-foreground">
-								Occurrence #{index + 1}
-								{occurrence.isModified && (
-									<span
-										className="ml-1 text-primary"
-										title="This occurrence has been modified"
-									>
-										(edited)
+							<div className="flex items-center gap-2">
+								<span className={`text-xs text-muted-foreground ${occurrence.isPaid ? "line-through opacity-60" : ""}`}>
+									Occurrence #{index + 1}
+									{occurrence.isModified && (
+										<span
+											className="ml-1 text-primary"
+											title="This occurrence has been modified"
+										>
+											(edited)
+										</span>
+									)}
+								</span>
+								{occurrence.isPaid && (
+									<span className="px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-green-500/20 text-green-600 dark:text-green-400 rounded">
+										Paid
 									</span>
 								)}
-							</span>
+							</div>
 						</td>
 
 						{/* Column 3: Importance (inherited) */}
@@ -362,7 +361,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 							<span
 								className={`font-medium text-sm ${
 									occurrence.isPaid
-										? "line-through text-muted-foreground"
+										? "line-through text-muted-foreground opacity-60"
 										: occurrence.amount !== parentExpense.amount
 										? "text-orange-500"
 										: "text-primary"
