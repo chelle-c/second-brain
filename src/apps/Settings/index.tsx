@@ -13,6 +13,7 @@ import {
 	Sun,
 	Moon,
 } from "lucide-react";
+import { BackupSettings } from "./BackupSettings";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -479,6 +480,9 @@ export const Settings = () => {
 						</div>
 					</CardContent>
 				</Card>
+
+				{/* Backup & Data Management */}
+				<BackupSettings />
 			</div>
 
 			{/* Category Manager Modal */}

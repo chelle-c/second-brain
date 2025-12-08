@@ -1,5 +1,6 @@
 import Database from "@tauri-apps/plugin-sql";
-import { appDataDir } from "@tauri-apps/api/path";
+import { appDataDir, sep } from "@tauri-apps/api/path";
+import { invoke } from "@tauri-apps/api/core";
 import { AppData, AppMetadata, AppToSave } from "@/types/";
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
 import { DatabaseContext, StorageCache, DATA_VERSION } from "../../types/storage";
@@ -8,8 +9,24 @@ import { ExpensesStorage } from "./expensesStorage";
 import { IncomeStorage } from "./incomeStorage";
 import { AppSettings, DEFAULT_SETTINGS } from "@/types/settings";
 import { ThemeSettings, DEFAULT_THEME_SETTINGS } from "@/types/theme";
+import { DatabaseEnvironment } from "@/types/backup";
 
-const DB_NAME = "appdata.db";
+const DB_NAME_PRODUCTION = "appdata.db";
+const DB_NAME_TEST = "appdata-test.db";
+
+// Helper to join paths with proper separator
+const joinPath = (...parts: string[]): string => {
+	return parts.join(sep());
+};
+
+// Check if running in dev mode
+const checkIsDevMode = async (): Promise<boolean> => {
+	try {
+		return await invoke<boolean>("is_dev");
+	} catch {
+		return false;
+	}
+};
 
 class SqlStorage {
 	private initialized = false;
@@ -18,11 +35,20 @@ class SqlStorage {
 	private appDataPath: string | null = null;
 	private operationQueue: Promise<any> = Promise.resolve();
 	private cache: StorageCache = {};
+	private currentEnvironment: DatabaseEnvironment = "production";
 
 	// Sub-storage modules
 	private notesStorage!: NotesStorage;
 	private expensesStorage!: ExpensesStorage;
 	private incomeStorage!: IncomeStorage;
+
+	private getDatabaseFileName(): string {
+		return this.currentEnvironment === "production" ? DB_NAME_PRODUCTION : DB_NAME_TEST;
+	}
+
+	getCurrentEnvironment(): DatabaseEnvironment {
+		return this.currentEnvironment;
+	}
 
 	async getDataPath(): Promise<string> {
 		if (!this.appDataPath) {
@@ -49,7 +75,13 @@ class SqlStorage {
 		};
 	}
 
-	async initialize() {
+	async initialize(environment?: DatabaseEnvironment) {
+		// If environment is specified and different from current, force re-initialization
+		if (environment && environment !== this.currentEnvironment) {
+			await this.close();
+			this.currentEnvironment = environment;
+		}
+
 		if (this.initialized) return;
 		if (this.initializing) {
 			while (this.initializing) {
@@ -61,8 +93,15 @@ class SqlStorage {
 		this.initializing = true;
 
 		try {
+			// Auto-detect environment from Rust is_dev if not explicitly provided
+			if (!environment) {
+				const isDev = await checkIsDevMode();
+				this.currentEnvironment = isDev ? "test" : "production";
+			}
+
 			const dataPath = await this.getDataPath();
-			const dbPath = `${dataPath}/${DB_NAME}`;
+			const dbFileName = this.getDatabaseFileName();
+			const dbPath = joinPath(dataPath, dbFileName);
 
 			this.db = await Database.load(`sqlite:${dbPath}`);
 
@@ -80,7 +119,7 @@ class SqlStorage {
 			this.incomeStorage = new IncomeStorage(this.getContext());
 
 			this.initialized = true;
-			console.log("Database initialized");
+			console.log(`Database initialized (${this.currentEnvironment} environment, file: ${dbFileName})`);
 		} catch (error) {
 			console.error("Failed to initialize database:", error);
 			throw error;
@@ -515,6 +554,35 @@ class SqlStorage {
 
 		this.cache = {};
 		console.log("All data cleared");
+	}
+
+	// Close database connection
+	async close(): Promise<void> {
+		if (this.db) {
+			await this.db.close();
+			this.db = null;
+		}
+		this.initialized = false;
+		this.initializing = false;
+		this.cache = {};
+	}
+
+	// Switch between production and test environments
+	async switchEnvironment(environment: DatabaseEnvironment): Promise<void> {
+		if (environment === this.currentEnvironment && this.initialized) {
+			return;
+		}
+
+		console.log(`Switching database environment to: ${environment}`);
+		await this.close();
+		this.currentEnvironment = environment;
+		await this.initialize();
+	}
+
+	// Get current database file path
+	async getDatabaseFilePath(): Promise<string> {
+		const dataPath = await this.getDataPath();
+		return joinPath(dataPath, this.getDatabaseFileName());
 	}
 }
 

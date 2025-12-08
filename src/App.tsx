@@ -9,15 +9,18 @@ import { MindMapApp } from "@/apps/MindMap";
 import { Settings } from "@/apps/Settings";
 import { DebugConsole } from "@/components/DebugConsole";
 import useAppStore from "@/stores/useAppStore";
+import { useBackupStore } from "@/stores/useBackupStore";
 
 function App() {
 	const [isDevEnv, setIsDevEnv] = useState(false);
 	const loadFromFile = useAppStore((state: { loadFromFile: any }) => state.loadFromFile);
 	const isLoading = useAppStore((state: { isLoading: any }) => state.isLoading);
+	const initializeBackup = useBackupStore((state) => state.initialize);
 
 	const initializeApp = async () => {
 		try {
 			setIsDevEnv(await invoke("is_dev"));
+			await initializeBackup();
 			await loadFromFile();
 		} catch (error) {
 			console.error("Failed to initialize app:", error);

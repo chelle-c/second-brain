@@ -58,4 +58,11 @@ See `tests/README.md` for detailed test documentation.
 ## Planned Features
 
 - Mind map
-- Settings page
+- Dashboard
+
+## How to Add New Theme Palettes:
+1.	Create a new CSS file (e.g., src/styles/themes/rose-pink.css)
+2.	Define all --theme-* variables for both :root and .dark
+3.	Import it in src/index.css
+4.	Add the palette value to ThemePalette type
+5.	Add it to THEME_PALETTE_OPTIONS in src/types/theme.ts
