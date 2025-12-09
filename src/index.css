@@ -512,8 +512,14 @@ html {
 .dark [class*="yoopta-"][class*="menu"],
 .dark [class*="yoopta-"][class*="popup"],
 .dark [class*="yoopta-"][class*="popover"],
-.dark [class*="yoopta-"][class*="modal"] {
+.dark [class*="yoopta-"][class*="modal"],
+.dark [class*="yoopta-"][class*="toolbar"],
+.dark [class*="yoopta-"][class*="action-menu"] > div[class*="yoo-action-menu-bg-"] {
 	background-color: var(--popover) !important;
 	border-color: var(--border) !important;
 	color: var(--popover-foreground) !important;
+}
+
+.dark [class*="yoo-"][class*="toolbar-bg"] {
+	background-color: var(--popover) !important;
 }

@@ -1,7 +1,6 @@
 import { useState, useRef, useMemo, useEffect } from "react";
 import { useNotesStore } from "@/stores/useNotesStore";
 import { Tag, NotesFolder, Subfolder } from "@/types/notes";
-import { ArrowLeft, Hash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmationModal } from "@/components/ConfirmationModal";
 import YooptaEditor, { createYooptaEditor } from "@yoopta/editor";
@@ -20,6 +19,7 @@ import Code from "@yoopta/code";
 import LinkTool, { DefaultLinkToolRender } from "@yoopta/link-tool";
 import ActionMenu, { DefaultActionMenuRender } from "@yoopta/action-menu-list";
 import Toolbar, { DefaultToolbarRender } from "@yoopta/toolbar";
+import { ArrowLeft, Hash, Save } from "lucide-react";
 
 interface NoteCreateProps {
 	tags: Record<string, Tag>;
@@ -235,22 +235,20 @@ export const NoteCreate = ({ tags, activeFolder, onBack, onNoteCreated }: NoteCr
 				}}
 			/>
 
-			<div className="h-full flex flex-col bg-white animate-slideIn">
+			<div className="h-full flex flex-col bg-card animate-slideIn">
 				{/* Header */}
-				<div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+				<div className="flex items-center justify-between px-6 py-4 border-b border-border">
 					<Button
 						onClick={handleBack}
 						variant="ghost"
-						className="flex items-center gap-2 cursor-pointer"
+						className="flex items-center gap-2"
 					>
 						<ArrowLeft size={20} />
 						Cancel
 					</Button>
 
-					<Button
-						onClick={handleSave}
-						className="bg-sky-500 hover:bg-sky-600 text-white cursor-pointer"
-					>
+					<Button onClick={handleSave} className="bg-primary/80 text-base">
+						<Save size={20} />
 						Save Note
 					</Button>
 				</div>
@@ -280,10 +278,10 @@ export const NoteCreate = ({ tags, activeFolder, onBack, onNoteCreated }: NoteCr
 											key={tagId}
 											type="button"
 											onClick={() => handleTagToggle(tagId)}
-											className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer ${
+											className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
 												isSelected
-													? "bg-sky-100 text-sky-700 border border-sky-300"
-													: "bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-300"
+													? `bg-primary/10 text-primary border border-primary/30`
+													: `bg-muted text-muted-foreground hover:bg-accent border border-border`
 											}`}
 										>
 											{typeof Icon === "function" && <Icon size={12} />}

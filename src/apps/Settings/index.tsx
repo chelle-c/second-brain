@@ -12,7 +12,6 @@ import {
 	Monitor,
 	Sun,
 	Moon,
-	Database,
 } from "lucide-react";
 import { BackupSettings } from "./BackupSettings";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
