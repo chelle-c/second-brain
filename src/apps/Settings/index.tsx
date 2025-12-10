@@ -12,6 +12,7 @@ import {
 	Monitor,
 	Sun,
 	Moon,
+	Database
 } from "lucide-react";
 import { BackupSettings } from "./BackupSettings";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -72,6 +73,7 @@ export const Settings = () => {
 		{ id: "notes", label: "Notes", icon: StickyNote },
 		{ id: "expenses", label: "Expense Tracker", icon: DollarSign },
 		{ id: "income", label: "Income Tracker", icon: TrendingUp },
+		{ id: "backup", label: "Backup", icon: Database },
 	];
 
 	// Track active section based on scroll position

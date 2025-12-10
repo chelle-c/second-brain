@@ -433,7 +433,7 @@ export const FolderNav = ({
 						return (
 							<div key={key}>
 								<div
-									className={`group flex items-center rounded-lg transition-colors ${
+									className={`group pl-1 flex items-center rounded-lg transition-colors ${
 										activeFolder && activeFolder.id === key
 											? "bg-primary/10 text-primary"
 											: "hover:bg-accent"
