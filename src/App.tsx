@@ -3,6 +3,7 @@ import { useState, useEffect, lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { DebugConsole } from "@/components/DebugConsole";
+import { Loading, PageLoading } from "@/components/ui/loading";
 import useAppStore from "@/stores/useAppStore";
 import { useBackupStore } from "@/stores/useBackupStore";
 
@@ -36,17 +37,17 @@ function App() {
 	return (
 		<>
 			{isLoading ? (
-				<div>Loading...</div>
+				<Loading fullScreen size="lg" />
 			) : (
 				<BrowserRouter>
 					<Routes>
 						<Route path="/" element={<AppLayout />}>
 							<Route index element={<Navigate to="/brain" replace />} />
-							<Route path="brain" element={<Suspense fallback={<div>Loading...</div>}><NotesApp /></Suspense>} />
-							<Route path="income" element={<Suspense fallback={<div>Loading...</div>}><IncomeTracker /></Suspense>} />
-							<Route path="expenses" element={<Suspense fallback={<div>Loading...</div>}><ExpensesTracker /></Suspense>} />
-							<Route path="mindmap" element={<Suspense fallback={<div>Loading...</div>}><MindMapApp /></Suspense>} />
-							<Route path="settings" element={<Suspense fallback={<div>Loading...</div>}><Settings /></Suspense>} />
+							<Route path="brain" element={<Suspense fallback={<PageLoading />}><NotesApp /></Suspense>} />
+							<Route path="income" element={<Suspense fallback={<PageLoading />}><IncomeTracker /></Suspense>} />
+							<Route path="expenses" element={<Suspense fallback={<PageLoading />}><ExpensesTracker /></Suspense>} />
+							<Route path="mindmap" element={<Suspense fallback={<PageLoading />}><MindMapApp /></Suspense>} />
+							<Route path="settings" element={<Suspense fallback={<PageLoading />}><Settings /></Suspense>} />
 						</Route>
 					</Routes>
 				</BrowserRouter>

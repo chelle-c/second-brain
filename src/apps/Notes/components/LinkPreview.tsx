@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { PluginElementRenderProps, YooptaPlugin } from "@yoopta/editor";
 import { invoke } from "@tauri-apps/api/core";
+import { Loading } from "@/components/ui/loading";
 
 interface LinkMetadata {
 	title?: string | null;
@@ -40,7 +41,7 @@ const LinkPreview = new YooptaPlugin({
 
 				return (
 					<div {...attributes} className="link-preview-block">
-						{loading && <div>Loading...</div>}
+						{loading && <Loading size="sm" className="py-4" />}
 						{metadata && (
 							<div className="preview-card">
 								{metadata.image && (
