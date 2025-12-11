@@ -1,20 +1,22 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { FolderNav } from "./components/FolderNav";
 import { NotesCard } from "./components/NotesCard";
 import { NoteView } from "./components/NoteView";
 import { NoteCreate } from "./components/NoteCreate";
 import { NotesLayout } from "./components/NotesLayout";
+import { NotesBreadcrumb } from "./components/NotesBreadcrumb";
 import { useNotesStore } from "@/stores/useNotesStore";
 import { useHistoryStore } from "@/stores/useHistoryStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
 import { Tag, NotesFolder, NotesFolders, Subfolder } from "@/types/notes";
-import { CheckCircle, Lightbulb, BookOpen, FileWarning, Plus } from "lucide-react";
-import { Portal } from "@/components/Portal";
+import { CheckCircle, Lightbulb, BookOpen, FileWarning, Plus, Save, Archive, ArchiveRestore, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ConfirmationModal } from "@/components/ConfirmationModal";
 
 type ViewState = "list" | "view" | "create";
 
 export function NotesApp() {
-	const { notes, notesFolders, tags, undo, redo } = useNotesStore();
+	const { notes, notesFolders, tags, undo, redo, archiveNote, unarchiveNote, deleteNote } = useNotesStore();
 	const { canUndo, canRedo } = useHistoryStore();
 	const { notesDefaultFolder } = useSettingsStore();
 
@@ -23,6 +25,7 @@ export function NotesApp() {
 	const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
 	const [viewMode, setViewMode] = useState<"active" | "archived">("active");
 	const [viewState, setViewState] = useState<ViewState>("list");
+	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
 	const defaultTags: Record<string, Tag> = {
 		actions: { id: "actions", name: "Actions", icon: CheckCircle, color: "#3b82f6" },
@@ -143,21 +146,139 @@ export function NotesApp() {
 
 	const selectedNote = notes.find((n) => n.id === selectedNoteId);
 
+	// Note action handlers for breadcrumb
+	const handleArchiveToggle = useCallback(() => {
+		if (!selectedNote) return;
+		if (selectedNote.archived) {
+			unarchiveNote(selectedNote.id);
+		} else {
+			archiveNote(selectedNote.id);
+		}
+		handleBackToList();
+	}, [selectedNote, archiveNote, unarchiveNote]);
+
+	const handleDeleteNote = useCallback(() => {
+		setShowDeleteConfirm(true);
+	}, []);
+
+	const confirmDelete = useCallback(() => {
+		if (selectedNote) {
+			deleteNote(selectedNote.id);
+			setShowDeleteConfirm(false);
+			handleBackToList();
+		}
+	}, [selectedNote, deleteNote]);
+
+	// Store handlers from NoteCreate for use by breadcrumb
+	const createBackHandlerRef = useRef<(() => void) | null>(null);
+	const createSaveHandlerRef = useRef<(() => void) | null>(null);
+
+	const registerCreateBackHandler = useCallback((handler: () => void) => {
+		createBackHandlerRef.current = handler;
+	}, []);
+
+	const registerCreateSaveHandler = useCallback((handler: () => void) => {
+		createSaveHandlerRef.current = handler;
+	}, []);
+
+	const handleCreateBack = useCallback(() => {
+		if (createBackHandlerRef.current) {
+			createBackHandlerRef.current();
+		} else {
+			handleBackToList();
+		}
+	}, []);
+
+	const handleCreateSave = useCallback(() => {
+		if (createSaveHandlerRef.current) {
+			createSaveHandlerRef.current();
+		}
+	}, []);
+
+	const showSidebar = viewState === "list";
+
 	const renderContent = () => {
 		switch (viewState) {
 			case "create":
 				return (
-					<NoteCreate
-						tags={allTags}
-						activeFolder={activeFolder}
-						onBack={handleBackToList}
-						onNoteCreated={handleNoteCreated}
-					/>
+					<div className="h-full flex flex-col">
+						<NotesBreadcrumb
+							activeFolder={activeFolder}
+							allFolders={allFolders}
+							isCreating
+							onBack={handleCreateBack}
+							canUndo={canUndo}
+							canRedo={canRedo}
+							onUndo={undo}
+							onRedo={redo}
+							actions={
+								<Button onClick={handleCreateSave} className="bg-primary/80 text-base">
+									<Save size={20} />
+									Save Note
+								</Button>
+							}
+						/>
+						<div className="flex-1 overflow-hidden">
+							<NoteCreate
+								tags={allTags}
+								activeFolder={activeFolder}
+								onBack={handleBackToList}
+								onNoteCreated={handleNoteCreated}
+								registerBackHandler={registerCreateBackHandler}
+								registerSaveHandler={registerCreateSaveHandler}
+							/>
+						</div>
+					</div>
 				);
 			case "view":
 				if (selectedNote) {
 					return (
-						<NoteView note={selectedNote} tags={allTags} onBack={handleBackToList} />
+						<div className="h-full flex flex-col">
+							<NotesBreadcrumb
+								activeFolder={activeFolder}
+								allFolders={allFolders}
+								noteTitle={selectedNote.title}
+								onBack={handleBackToList}
+								canUndo={canUndo}
+								canRedo={canRedo}
+								onUndo={undo}
+								onRedo={redo}
+								actions={
+									<div className="flex items-center gap-2">
+										<Button
+											onClick={handleArchiveToggle}
+											variant="ghost"
+											size="sm"
+											className="flex items-center gap-2"
+										>
+											{selectedNote.archived ? (
+												<>
+													<ArchiveRestore size={16} />
+													Unarchive
+												</>
+											) : (
+												<>
+													<Archive size={16} />
+													Archive
+												</>
+											)}
+										</Button>
+										<Button
+											onClick={handleDeleteNote}
+											variant="ghost"
+											size="sm"
+											className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+										>
+											<Trash2 size={16} />
+											Delete
+										</Button>
+									</div>
+								}
+							/>
+							<div className="flex-1 overflow-hidden">
+								<NoteView note={selectedNote} tags={allTags} onBack={handleBackToList} />
+							</div>
+						</div>
 					);
 				}
 				return null;
@@ -175,32 +296,49 @@ export function NotesApp() {
 						setActiveTags={setActiveTags}
 						onSelectNote={handleSelectNote}
 						viewMode={viewMode}
+						setViewMode={setViewMode}
+						canUndo={canUndo}
+						canRedo={canRedo}
+						onUndo={undo}
+						onRedo={redo}
 					/>
 				);
 		}
 	};
 
 	return (
-		<div className="w-full h-full animate-fadeIn relative">
-			<NotesLayout
-				sidebar={
-					<FolderNav
-						allFolders={allFolders}
-						activeFolder={activeFolder}
-						setActiveFolder={setActiveFolder}
-						getCurrentFolder={getCurrentFolder}
-						setActiveTags={setActiveTags}
-						getNoteCount={getNoteCount}
-						viewMode={viewMode}
-						setViewMode={setViewMode}
-					/>
-				}
-				content={<div className="h-full">{renderContent()}</div>}
+		<>
+			<ConfirmationModal
+				isOpen={showDeleteConfirm}
+				title="Delete Note"
+				message={`Are you sure you want to delete "${
+					selectedNote?.title || "Untitled"
+				}"? This action cannot be undone.`}
+				confirmLabel="Delete"
+				cancelLabel="Cancel"
+				variant="danger"
+				onConfirm={confirmDelete}
+				onCancel={() => setShowDeleteConfirm(false)}
 			/>
 
-			{/* Floating New Note Button */}
-			{viewState === "list" && (
-				<Portal>
+			<div className="w-full h-full animate-fadeIn relative">
+				<NotesLayout
+					showSidebar={showSidebar}
+					sidebar={
+						<FolderNav
+							allFolders={allFolders}
+							activeFolder={activeFolder}
+							setActiveFolder={setActiveFolder}
+							getCurrentFolder={getCurrentFolder}
+							setActiveTags={setActiveTags}
+							getNoteCount={getNoteCount}
+						/>
+					}
+					content={<div className="h-full">{renderContent()}</div>}
+				/>
+
+				{/* Floating New Note Button */}
+				{viewState === "list" && (
 					<button
 						onClick={handleCreateNote}
 						className="fixed bottom-8 right-12 bg-sky-500 text-white p-4 rounded-full
@@ -218,8 +356,8 @@ export function NotesApp() {
 							New Note
 						</span>
 					</button>
-				</Portal>
-			)}
-		</div>
+				)}
+			</div>
+		</>
 	);
 }

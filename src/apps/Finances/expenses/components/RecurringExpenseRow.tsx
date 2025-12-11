@@ -12,7 +12,7 @@ import {
 	RotateCcw,
 	Copy,
 } from "lucide-react";
-import { formatCurrency, formatDate } from "@/lib/dateHelpers";
+import { formatCurrency, formatDate } from "@/lib/dateUtils";
 import { DEFAULT_CATEGORY_COLORS, getCategoryDisplayColor } from "@/lib/expenseHelpers";
 import { Expense, ImportanceLevel } from "@/types/expense";
 import { useExpenseStore } from "@/stores/useExpenseStore";

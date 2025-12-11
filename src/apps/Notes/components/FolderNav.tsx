@@ -11,8 +11,8 @@ import {
 	MoreVertical,
 	Check,
 	X,
-	Undo2,
-	Redo2,
+	Download,
+	Upload,
 } from "lucide-react";
 import {
 	DropdownMenu,
@@ -21,9 +21,14 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useNotesStore } from "@/stores/useNotesStore";
-import { useHistoryStore } from "@/stores/useHistoryStore";
-import { AnimatedToggle } from "@/components/AnimatedToggle";
 import { ConfirmationModal } from "@/components/ConfirmationModal";
+import {
+	downloadNotesAsJson,
+	parseImportedNotes,
+	validateAndConvertNotes,
+	readFileAsText,
+} from "@/lib/notesExportImport";
+import { toast } from "sonner";
 
 interface FolderNavProps {
 	allFolders: Record<string, NotesFolder>;
@@ -32,8 +37,6 @@ interface FolderNavProps {
 	getCurrentFolder: (id: string) => NotesFolder | Subfolder;
 	setActiveTags: (tags: string[]) => void;
 	getNoteCount: (folderId: string, archived?: boolean) => number;
-	viewMode: "active" | "archived";
-	setViewMode: (mode: "active" | "archived") => void;
 }
 
 interface DeleteConfirmation {
@@ -50,21 +53,18 @@ export const FolderNav = ({
 	setActiveFolder,
 	setActiveTags,
 	getNoteCount,
-	viewMode,
-	setViewMode,
 }: FolderNavProps) => {
 	const {
+		notes,
 		addFolder,
 		updateFolder,
 		deleteFolder,
 		addSubFolder,
 		updateSubFolder,
 		removeSubfolder,
-		undo,
-		redo,
+		restoreNote,
 	} = useNotesStore();
-
-	const { canUndo, canRedo } = useHistoryStore();
+	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	const [expandedFolders, setExpandedFolders] = useState(new Set<string>());
 	const [editingFolder, setEditingFolder] = useState<string | null>(null);
@@ -291,6 +291,68 @@ export const FolderNav = ({
 		}
 	};
 
+	const handleExportNotes = async () => {
+		if (notes.length === 0) {
+			toast.error("No notes to export");
+			return;
+		}
+		try {
+			const saved = await downloadNotesAsJson(notes);
+			if (saved) {
+				toast.success(`Exported ${notes.length} notes`);
+			}
+		} catch (error) {
+			toast.error("Failed to export notes");
+			console.error("Export error:", error);
+		}
+	};
+
+	const handleImportClick = () => {
+		fileInputRef.current?.click();
+	};
+
+	const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		if (!file) return;
+
+		try {
+			const content = await readFileAsText(file);
+			const { data, error } = parseImportedNotes(content);
+
+			if (error || !data) {
+				toast.error(error || "Failed to parse import file");
+				return;
+			}
+
+			const existingIds = new Set(notes.map((n) => n.id));
+			const { validNotes, errors, skipped } = validateAndConvertNotes(data, existingIds);
+
+			if (validNotes.length === 0 && errors.length > 0) {
+				toast.error(`Import failed: ${errors[0]}`);
+				return;
+			}
+
+			// Import valid notes
+			for (const note of validNotes) {
+				restoreNote(note);
+			}
+
+			if (validNotes.length > 0) {
+				toast.success(`Imported ${validNotes.length} notes${skipped > 0 ? `, skipped ${skipped} duplicates` : ""}`);
+			}
+
+			if (errors.length > 0) {
+				console.warn("Import errors:", errors);
+			}
+		} catch (err) {
+			toast.error("Failed to read import file");
+			console.error("Import error:", err);
+		}
+
+		// Reset file input
+		e.target.value = "";
+	};
+
 	return (
 		<>
 			<ConfirmationModal
@@ -309,43 +371,6 @@ export const FolderNav = ({
 			/>
 
 			<div className="h-full flex flex-col p-3 relative">
-				{/* View Mode Toggle */}
-				<div className="mb-3">
-					<AnimatedToggle
-						options={[
-							{ value: "active", label: "Active" },
-							{ value: "archived", label: "Archived" },
-						]}
-						value={viewMode}
-						onChange={(value) => setViewMode(value as "active" | "archived")}
-						className="w-full"
-					/>
-				</div>
-
-				{/* Undo/Redo buttons */}
-				<div className="flex gap-1 mb-3">
-					<button
-						type="button"
-						onClick={undo}
-						disabled={!canUndo}
-						className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-secondary text-secondary-foreground hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors cursor-pointer"
-						title="Undo (Ctrl+Z)"
-					>
-						<Undo2 size={14} />
-						Undo
-					</button>
-					<button
-						type="button"
-						onClick={redo}
-						disabled={!canRedo}
-						className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-secondary text-secondary-foreground hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors cursor-pointer"
-						title="Redo (Ctrl+Y)"
-					>
-						<Redo2 size={14} />
-						Redo
-					</button>
-				</div>
-
 				<div className="flex justify-between items-center mb-3">
 					<h3 className="font-semibold text-foreground text-sm">Folders</h3>
 					<button
@@ -418,7 +443,7 @@ export const FolderNav = ({
 							<span className="text-sm font-medium">Inbox</span>
 						</div>
 						<span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-							{getNoteCount("inbox", viewMode === "archived")}
+							{getNoteCount("inbox")}
 						</span>
 					</button>
 
@@ -492,7 +517,7 @@ export const FolderNav = ({
 											</div>
 											<div className="flex items-center gap-1 shrink-0">
 												<span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-													{getNoteCount(key, viewMode === "archived")}
+													{getNoteCount(key)}
 												</span>
 												{!isAnyEditMode && (
 													<DropdownMenu>
@@ -659,10 +684,7 @@ export const FolderNav = ({
 														</div>
 														<div className="flex items-center gap-1 shrink-0">
 															<span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-																{getNoteCount(
-																	subfolder.id,
-																	viewMode === "archived"
-																)}
+																{getNoteCount(subfolder.id)}
 															</span>
 															{!isAnyEditMode && (
 																<DropdownMenu>
@@ -720,6 +742,36 @@ export const FolderNav = ({
 							</div>
 						);
 					})}
+				</div>
+
+				{/* Export/Import buttons at bottom */}
+				<div className="flex gap-1 mt-3 pt-3 border-t border-border">
+					<button
+						type="button"
+						onClick={handleExportNotes}
+						disabled={notes.length === 0}
+						className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-secondary text-secondary-foreground hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors cursor-pointer"
+						title="Export all notes to JSON"
+					>
+						<Download size={14} />
+						Export
+					</button>
+					<button
+						type="button"
+						onClick={handleImportClick}
+						className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-secondary text-secondary-foreground hover:bg-accent rounded transition-colors cursor-pointer"
+						title="Import notes from JSON"
+					>
+						<Upload size={14} />
+						Import
+					</button>
+					<input
+						ref={fileInputRef}
+						type="file"
+						accept=".json"
+						onChange={handleFileSelect}
+						className="hidden"
+					/>
 				</div>
 			</div>
 		</>

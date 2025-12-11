@@ -1,7 +1,6 @@
-import { useState, useRef, useMemo, useEffect } from "react";
+import { useState, useRef, useMemo, useEffect, useCallback } from "react";
 import { useNotesStore } from "@/stores/useNotesStore";
 import { Tag, NotesFolder, Subfolder } from "@/types/notes";
-import { Button } from "@/components/ui/button";
 import { ConfirmationModal } from "@/components/ConfirmationModal";
 import YooptaEditor, { createYooptaEditor } from "@yoopta/editor";
 import Paragraph from "@yoopta/paragraph";
@@ -19,13 +18,15 @@ import Code from "@yoopta/code";
 import LinkTool, { DefaultLinkToolRender } from "@yoopta/link-tool";
 import ActionMenu, { DefaultActionMenuRender } from "@yoopta/action-menu-list";
 import Toolbar, { DefaultToolbarRender } from "@yoopta/toolbar";
-import { ArrowLeft, Hash, Save } from "lucide-react";
+import { Hash } from "lucide-react";
 
 interface NoteCreateProps {
 	tags: Record<string, Tag>;
 	activeFolder: NotesFolder | Subfolder | null;
 	onBack: () => void;
 	onNoteCreated: (noteId: string) => void;
+	registerBackHandler?: (handler: () => void) => void;
+	registerSaveHandler?: (handler: () => void) => void;
 }
 
 const MARKS = [Bold, Italic, CodeMark, Underline, Strike, Highlight];
@@ -71,7 +72,7 @@ const getVideoDimensions = (file: File): Promise<{ width: number; height: number
 	});
 };
 
-export const NoteCreate = ({ tags, activeFolder, onBack, onNoteCreated }: NoteCreateProps) => {
+export const NoteCreate = ({ tags, activeFolder, onBack, onNoteCreated, registerBackHandler, registerSaveHandler }: NoteCreateProps) => {
 	const { addNote } = useNotesStore();
 	const editor = useMemo(() => createYooptaEditor(), []);
 	const selectionRef = useRef<HTMLDivElement>(null);
@@ -160,30 +161,30 @@ export const NoteCreate = ({ tags, activeFolder, onBack, onNoteCreated }: NoteCr
 		[]
 	);
 
-	const hasContent = () => {
+	const hasContent = useCallback(() => {
 		if (title.trim()) return true;
 		const content = JSON.stringify(editorValue);
 		// Check if editor has meaningful content
 		return content !== "{}" && content !== '{"":{"id":"","value":[],"type":"Paragraph"}}';
-	};
+	}, [title, editorValue]);
 
-	const handleBack = () => {
+	const handleBack = useCallback(() => {
 		if (hasContent()) {
 			setPendingBack(true);
 			setShowDiscardModal(true);
 		} else {
 			onBack();
 		}
-	};
+	}, [hasContent, onBack]);
 
-	const handleDiscard = () => {
-		setShowDiscardModal(false);
-		if (pendingBack) {
-			onBack();
+	// Register handlers for external use (e.g., breadcrumb buttons)
+	useEffect(() => {
+		if (registerBackHandler) {
+			registerBackHandler(handleBack);
 		}
-	};
+	}, [registerBackHandler, handleBack]);
 
-	const handleSave = () => {
+	const handleSave = useCallback(() => {
 		const content = JSON.stringify(editor.getEditorValue());
 		const folderId = activeFolder?.id || "inbox";
 
@@ -195,6 +196,19 @@ export const NoteCreate = ({ tags, activeFolder, onBack, onNoteCreated }: NoteCr
 		});
 
 		onNoteCreated(noteId);
+	}, [editor, activeFolder, title, selectedTags, addNote, onNoteCreated]);
+
+	useEffect(() => {
+		if (registerSaveHandler) {
+			registerSaveHandler(handleSave);
+		}
+	}, [registerSaveHandler, handleSave]);
+
+	const handleDiscard = () => {
+		setShowDiscardModal(false);
+		if (pendingBack) {
+			onBack();
+		}
 	};
 
 	const handleTagToggle = (tagId: string) => {
@@ -236,23 +250,6 @@ export const NoteCreate = ({ tags, activeFolder, onBack, onNoteCreated }: NoteCr
 			/>
 
 			<div className="h-full flex flex-col bg-card animate-slideIn">
-				{/* Header */}
-				<div className="flex items-center justify-between px-6 py-4 border-b border-border">
-					<Button
-						onClick={handleBack}
-						variant="ghost"
-						className="flex items-center gap-2"
-					>
-						<ArrowLeft size={20} />
-						Cancel
-					</Button>
-
-					<Button onClick={handleSave} className="bg-primary/80 text-base">
-						<Save size={20} />
-						Save Note
-					</Button>
-				</div>
-
 				{/* Content */}
 				<div className="flex-1 overflow-y-auto">
 					<div className="max-w-4xl mx-auto px-8 py-6">

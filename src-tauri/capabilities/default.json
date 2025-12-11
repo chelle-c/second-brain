@@ -12,6 +12,7 @@
     "sql:default",
     "sql:allow-execute",
     "fs:default",
+    "dialog:default",
     {
       "identifier": "opener:allow-open-path",
       "allow": [

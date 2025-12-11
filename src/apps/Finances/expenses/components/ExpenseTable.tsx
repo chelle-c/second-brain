@@ -4,7 +4,7 @@ import {
 	formatDate,
 	getRelativeDateText,
 	getDueDateColor,
-} from "@/lib/dateHelpers";
+} from "@/lib/dateUtils";
 import { DEFAULT_CATEGORY_COLORS, getCategoryDisplayColor } from "@/lib/expenseHelpers";
 import { useThemeStore } from "@/stores/useThemeStore";
 import { Expense, ImportanceLevel } from "@/types/expense";

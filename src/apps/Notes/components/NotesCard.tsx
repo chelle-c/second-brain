@@ -3,7 +3,8 @@ import { useNotesStore } from "@/stores/useNotesStore";
 import { NotesDropdownMenu } from "./NotesDropdownMenu";
 import { TagFilter } from "./TagFilter";
 import { Note, NotesFolder, NotesFolders, Subfolder, Tag } from "@/types/notes";
-import { Inbox, Calendar, Search, Folder, ChevronRight } from "lucide-react";
+import { Inbox, Calendar, Search, Folder, ChevronRight, Undo2, Redo2 } from "lucide-react";
+import { AnimatedToggle } from "@/components/AnimatedToggle";
 
 interface NotesCardProps {
 	allFolders: NotesFolders;
@@ -16,6 +17,11 @@ interface NotesCardProps {
 	setActiveTags: React.Dispatch<React.SetStateAction<string[]>>;
 	onSelectNote: (noteId: string) => void;
 	viewMode: "active" | "archived";
+	setViewMode: (mode: "active" | "archived") => void;
+	canUndo: boolean;
+	canRedo: boolean;
+	onUndo: () => void;
+	onRedo: () => void;
 }
 
 export const NotesCard: React.FC<NotesCardProps> = ({
@@ -28,6 +34,11 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 	setActiveTags,
 	onSelectNote,
 	viewMode,
+	setViewMode,
+	canUndo,
+	canRedo,
+	onUndo,
+	onRedo,
 }) => {
 	const { notes } = useNotesStore();
 	const [searchTerm, setSearchTerm] = useState("");
@@ -179,6 +190,38 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 		<div className="h-full flex flex-col p-6 animate-fadeIn">
 			{/* Header */}
 			<div className="space-y-4 mb-6">
+				{/* Top bar with toggle and undo/redo */}
+				<div className="flex items-center justify-between">
+					<AnimatedToggle
+						options={[
+							{ value: "active", label: "Active" },
+							{ value: "archived", label: "Archived" },
+						]}
+						value={viewMode}
+						onChange={(value) => setViewMode(value as "active" | "archived")}
+					/>
+					<div className="flex items-center gap-1">
+						<button
+							type="button"
+							onClick={onUndo}
+							disabled={!canUndo}
+							className="p-1.5 hover:bg-accent rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+							title="Undo (Ctrl+Z)"
+						>
+							<Undo2 size={18} />
+						</button>
+						<button
+							type="button"
+							onClick={onRedo}
+							disabled={!canRedo}
+							className="p-1.5 hover:bg-accent rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+							title="Redo (Ctrl+Y)"
+						>
+							<Redo2 size={18} />
+						</button>
+					</div>
+				</div>
+
 				{/* Folder title */}
 				<div className="flex items-center gap-2">
 					{parentFolderName && (

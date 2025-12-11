@@ -22,6 +22,8 @@ export interface HistoryAction {
 		before?: any;
 		after?: any;
 		parentId?: string;
+		affectedNotes?: { id: string; folder: string }[];
+		affectedSubfolders?: any[];
 	};
 }
 

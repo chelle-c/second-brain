@@ -3,7 +3,7 @@ import { DeleteModal } from "./DeleteModal";
 import { useExpenseStore } from "@/stores/useExpenseStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
 import { ExpenseTable } from "./ExpenseTable";
-import { formatCurrency } from "@/lib/dateHelpers";
+import { formatCurrency } from "@/lib/dateUtils";
 import { getCurrencySymbol } from "@/lib/currencyUtils";
 import { DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
 import { TrendingUp, Calendar, Clock } from "lucide-react";

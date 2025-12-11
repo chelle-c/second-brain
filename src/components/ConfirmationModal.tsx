@@ -1,7 +1,15 @@
 import { useEffect, useRef } from "react";
-import { AlertTriangle, X } from "lucide-react";
+import { AlertTriangle, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Portal } from "@/components/Portal";
+import {
+	Dialog,
+	DialogContent,
+	DialogHeader,
+	DialogTitle,
+	DialogDescription,
+	DialogFooter,
+} from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 interface ConfirmationModalProps {
 	isOpen: boolean;
@@ -24,101 +32,66 @@ export function ConfirmationModal({
 	onConfirm,
 	onCancel,
 }: ConfirmationModalProps) {
-	const confirmButtonRef = useRef<HTMLButtonElement>(null);
 	const cancelButtonRef = useRef<HTMLButtonElement>(null);
 
 	useEffect(() => {
 		if (isOpen) {
-			cancelButtonRef.current?.focus();
+			// Focus the cancel button when modal opens
+			setTimeout(() => cancelButtonRef.current?.focus(), 0);
 		}
 	}, [isOpen]);
 
-	useEffect(() => {
-		const handleKeyDown = (e: KeyboardEvent) => {
-			if (!isOpen) return;
-
-			if (e.key === "Escape") {
-				onCancel();
-			}
-		};
-
-		document.addEventListener("keydown", handleKeyDown);
-		return () => document.removeEventListener("keydown", handleKeyDown);
-	}, [isOpen, onCancel]);
-
-	if (!isOpen) return null;
-
-	const variantStyles = {
+	const variantConfig = {
 		danger: {
-			icon: "text-red-500",
-			button: "bg-red-500 hover:bg-red-600 text-white",
+			icon: AlertTriangle,
+			iconClass: "text-red-500",
+			buttonVariant: "destructive" as const,
 		},
 		warning: {
-			icon: "text-amber-500",
-			button: "bg-amber-500 hover:bg-amber-600 text-white",
+			icon: AlertTriangle,
+			iconClass: "text-amber-500",
+			buttonVariant: "default" as const,
+			buttonClass: "bg-amber-500 hover:bg-amber-600 text-white",
 		},
 		default: {
-			icon: "text-sky-500",
-			button: "bg-sky-500 hover:bg-sky-600 text-white",
+			icon: Info,
+			iconClass: "text-sky-500",
+			buttonVariant: "default" as const,
+			buttonClass: "bg-sky-500 hover:bg-sky-600 text-white",
 		},
 	};
 
-	const styles = variantStyles[variant];
+	const config = variantConfig[variant];
+	const Icon = config.icon;
 
 	return (
-		<Portal>
-			{/* Overlay */}
-			<div className="fixed inset-0 bg-black/50 z-100" onClick={onCancel} />
-
-			{/* Modal */}
-			<div className="fixed inset-0 z-101 flex items-center justify-center p-4">
-				<div
-					className="bg-white rounded-lg shadow-xl w-full max-w-md animate-fadeIn"
-					role="dialog"
-					aria-modal="true"
-					aria-labelledby="modal-title"
-				>
-					{/* Header */}
-					<div className="flex items-center justify-between p-4 border-b">
-						<div className="flex items-center gap-3">
-							<AlertTriangle className={styles.icon} size={24} />
-							<h2 id="modal-title" className="text-lg font-semibold">
-								{title}
-							</h2>
-						</div>
-						<button
-							onClick={onCancel}
-							className="p-1 hover:bg-gray-100 rounded transition-colors cursor-pointer"
-						>
-							<X size={20} />
-						</button>
+		<Dialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
+			<DialogContent className="sm:max-w-md" showCloseButton={false}>
+				<DialogHeader>
+					<div className="flex items-center gap-3">
+						<Icon className={config.iconClass} size={24} />
+						<DialogTitle>{title}</DialogTitle>
 					</div>
+					<DialogDescription className="pt-2">{message}</DialogDescription>
+				</DialogHeader>
 
-					{/* Content */}
-					<div className="p-4">
-						<p className="text-gray-600">{message}</p>
-					</div>
-
-					{/* Footer */}
-					<div className="flex justify-end gap-3 p-4 border-t">
-						<Button
-							ref={cancelButtonRef}
-							variant="outline"
-							onClick={onCancel}
-							className="cursor-pointer"
-						>
-							{cancelLabel}
-						</Button>
-						<Button
-							ref={confirmButtonRef}
-							className={`${styles.button} cursor-pointer`}
-							onClick={onConfirm}
-						>
-							{confirmLabel}
-						</Button>
-					</div>
-				</div>
-			</div>
-		</Portal>
+				<DialogFooter className="mt-4">
+					<Button
+						ref={cancelButtonRef}
+						variant="outline"
+						onClick={onCancel}
+					>
+						{cancelLabel}
+					</Button>
+					<Button
+						variant={config.buttonVariant}
+						className={cn("buttonClass" in config && config.buttonClass)}
+						onClick={onConfirm}
+					>
+						{confirmLabel}
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
 	);
 }
