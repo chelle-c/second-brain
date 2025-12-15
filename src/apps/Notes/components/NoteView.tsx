@@ -51,7 +51,7 @@ export const NoteView = ({ note, tags }: NoteViewProps) => {
 	};
 
 	return (
-		<div className="h-full flex flex-col bg-card">
+		<div className="h-full flex flex-col bg-card border border-border">
 				{/* Content */}
 				<div className="flex-1 overflow-y-auto">
 					<div className="max-w-4xl mx-auto px-8 py-6">

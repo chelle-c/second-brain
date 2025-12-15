@@ -81,11 +81,17 @@ export function NotesApp() {
 					redo();
 				}
 			}
+
+			// Escape to go back to list when viewing a note
+			if (e.key === "Escape" && viewState === "view") {
+				e.preventDefault();
+				handleBackToList();
+			}
 		};
 
 		document.addEventListener("keydown", handleKeyDown);
 		return () => document.removeEventListener("keydown", handleKeyDown);
-	}, [canUndo, canRedo, undo, redo]);
+	}, [canUndo, canRedo, undo, redo, viewState]);
 
 	const getSubfolderIds = (folderId: string): string[] => {
 		const folder = allFolders[folderId];

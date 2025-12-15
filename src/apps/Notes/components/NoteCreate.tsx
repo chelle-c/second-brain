@@ -18,6 +18,8 @@ import Code from "@yoopta/code";
 import LinkTool, { DefaultLinkToolRender } from "@yoopta/link-tool";
 import ActionMenu, { DefaultActionMenuRender } from "@yoopta/action-menu-list";
 import Toolbar, { DefaultToolbarRender } from "@yoopta/toolbar";
+import LinkPreviewPlugin from "./LinkPreview";
+import { useLinkPreviewAutoConvert } from "../hooks/useLinkPreviewAutoConvert";
 import { Hash } from "lucide-react";
 
 interface NoteCreateProps {
@@ -84,6 +86,9 @@ export const NoteCreate = ({ tags, activeFolder, onBack, onNoteCreated, register
 	const [showDiscardModal, setShowDiscardModal] = useState(false);
 	const [pendingBack, setPendingBack] = useState(false);
 
+	// Enable automatic URL to LinkPreview conversion
+	useLinkPreviewAutoConvert(editor);
+
 	useEffect(() => {
 		titleRef.current?.focus();
 	}, []);
@@ -148,6 +153,7 @@ export const NoteCreate = ({ tags, activeFolder, onBack, onNoteCreated, register
 					},
 				},
 			}),
+			LinkPreviewPlugin,
 		],
 		[]
 	);
@@ -249,7 +255,7 @@ export const NoteCreate = ({ tags, activeFolder, onBack, onNoteCreated, register
 				}}
 			/>
 
-			<div className="h-full flex flex-col bg-card animate-slideIn">
+			<div className="h-full flex flex-col bg-card border border-border animate-slideIn">
 				{/* Content */}
 				<div className="flex-1 overflow-y-auto">
 					<div className="max-w-4xl mx-auto px-8 py-6">

@@ -1,7 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { useNotesStore } from "@/stores/useNotesStore";
 import { Note } from "@/types/notes";
-import { invoke } from "@tauri-apps/api/core";
 
 import YooptaEditor, { createYooptaEditor } from "@yoopta/editor";
 import Paragraph from "@yoopta/paragraph";
@@ -22,6 +21,8 @@ import Divider from "@yoopta/divider";
 import ActionMenuList, { DefaultActionMenuRender } from "@yoopta/action-menu-list";
 import Toolbar, { DefaultToolbarRender } from "@yoopta/toolbar";
 import LinkTool, { DefaultLinkToolRender } from "@yoopta/link-tool";
+import LinkPreviewPlugin from "./LinkPreview";
+import { useLinkPreviewAutoConvert } from "../hooks/useLinkPreviewAutoConvert";
 
 const fileToBase64 = (file: File): Promise<string> => {
 	return new Promise((resolve, reject) => {
@@ -165,6 +166,7 @@ const plugins = [
 			},
 		},
 	}),
+	LinkPreviewPlugin,
 ];
 
 const TOOLS = {
@@ -200,40 +202,11 @@ export const EditorSetup = ({ note }: EditorSetupProps) => {
 	const editor = useMemo(() => createYooptaEditor(), []);
 	const selectionRef = useRef(null);
 
-	// TODO: Fix this to create link preview block when adding a link
-	const onChange = async (value: any, options: any) => {
+	// Enable automatic URL to LinkPreview conversion
+	useLinkPreviewAutoConvert(editor);
+
+	const onChange = async (value: any) => {
 		setValue(value);
-
-		// Check if new content was added
-		if (options.action === "insert") {
-			// Look for paragraph blocks with URLs
-			Object.entries(value).forEach(async ([blockId, block]: any) => {
-				if (block.type === "Paragraph") {
-					const text = block.value[0]?.children[0]?.text;
-					const urlRegex = /(https?:\/\/[^\s]+)/g;
-					const matches = text?.match(urlRegex);
-
-					if (matches && matches.length > 0) {
-						const url = matches[0];
-
-						// Fetch metadata
-						const metadata = await invoke("fetch_link_metadata", { url });
-
-						// Transform the paragraph into a link preview block
-						// (You'll need to use editor methods to do this)
-						editor.insertBlock("LinkPreview", {
-							blockData: {
-								id: blockId,
-								value: [url, metadata],
-							},
-						});
-
-						// Delete the original paragraph
-						editor.deleteBlock({ blockId });
-					}
-				}
-			});
-		}
 
 		const content = JSON.stringify(value);
 		if (content !== note.content) {
