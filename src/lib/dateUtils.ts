@@ -175,7 +175,7 @@ export const getRelativeDateText = (dueDate: Date, currentMonth: Date): string =
 
 export const getDueDateColor = (dueDate: Date, currentMonth: Date): string => {
 	if (!isSameMonth(dueDate, currentMonth) || !isSameMonth(currentMonth, new Date())) {
-		return "text-gray-600";
+		return "text-muted-foreground";
 	}
 
 	const today = new Date();

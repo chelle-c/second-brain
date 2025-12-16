@@ -141,7 +141,7 @@ const UrlInputModal = ({
 									e.stopPropagation();
 									onCancel();
 								}}
-								className="px-4 py-2 text-sm font-medium text-muted-foreground bg-secondary rounded-md hover:bg-secondary/80"
+								className="px-4 py-2 text-sm font-medium text-secondary-foreground bg-secondary rounded-md hover:bg-secondary/80"
 							>
 								Cancel
 							</button>

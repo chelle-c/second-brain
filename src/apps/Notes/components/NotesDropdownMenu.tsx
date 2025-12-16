@@ -51,11 +51,11 @@ export const NotesDropdownMenu: React.FC<NotesDropdownMenuProps> = ({
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild className="relative flex items-center gap-1">
 				<button
-					className="p-1 hover:bg-gray-100 rounded transition-colors cursor-pointer duration-200"
+					className="p-1 hover:bg-accent rounded transition-colors cursor-pointer duration-200"
 					title="Actions"
 					type="button"
 				>
-					<MoreVertical size={16} className="text-gray-600" />
+					<MoreVertical size={16} className="text-muted-foreground" />
 				</button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end">

@@ -347,9 +347,9 @@ export function NotesApp() {
 				{viewState === "list" && (
 					<button
 						onClick={handleCreateNote}
-						className="fixed bottom-8 right-12 bg-sky-500 text-white p-4 rounded-full
-						shadow-xl hover:bg-sky-600 hover:scale-110 transition-all duration-200
-						active:scale-95 z-40 group"
+						className="fixed bottom-8 right-12 bg-primary text-primary-foreground p-4 rounded-full
+							shadow-xl hover:bg-primary/90 hover:scale-110 transition-all duration-200
+							active:scale-95 z-40 group"
 						title="New Note (Ctrl/Cmd + =)"
 					>
 						<Plus size={24} />

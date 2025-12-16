@@ -266,12 +266,12 @@ export const NoteCreate = ({ tags, activeFolder, onBack, onNoteCreated, register
 							value={title}
 							onChange={(e) => setTitle(e.target.value)}
 							placeholder="Untitled"
-							className="w-full text-4xl font-bold text-gray-800 outline-none mb-4 placeholder:text-gray-400"
+							className="w-full text-4xl font-bold text-card-foreground outline-none mb-4 placeholder:text-muted-foreground bg-transparent"
 						/>
 
 						{/* Tags selector */}
 						<div className="flex items-center gap-2 mb-6">
-							<Hash size={16} className="text-gray-400" />
+							<Hash size={16} className="text-muted-foreground" />
 							<div className="flex flex-wrap gap-2">
 								{Object.entries(tags).map(([tagId, tag]) => {
 									const isSelected = selectedTags.includes(tagId);
