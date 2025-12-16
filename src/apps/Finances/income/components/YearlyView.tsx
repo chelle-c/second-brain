@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { useIncomeStore } from "@/stores/useIncomeStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
 import { useThemeStore } from "@/stores/useThemeStore";
@@ -7,14 +7,17 @@ import { getCurrencySymbol } from "@/lib/currencyUtils";
 import { FileText } from "lucide-react";
 import { BarChart, type BarChartData } from "@/components/charts";
 
-const SKY_500 = "#0EA5E9";
-
 const YearlyView: React.FC<{}> = () => {
 	const { incomeEntries } = useIncomeStore();
 	const { incomeCurrency } = useSettingsStore();
 	const currencySymbol = getCurrencySymbol(incomeCurrency);
-	const { resolvedTheme } = useThemeStore();
+	const { resolvedTheme, palette } = useThemeStore();
 	const isDark = resolvedTheme === "dark";
+
+	// Get theme-aware bar color from CSS variable
+	const barColor = useMemo(() => {
+		return getComputedStyle(document.documentElement).getPropertyValue("--primary").trim();
+	}, [resolvedTheme, palette]);
 
 	// Theme-aware colors
 	const textColor = isDark ? "#e2e8f0" : "#374151";
@@ -75,7 +78,7 @@ const YearlyView: React.FC<{}> = () => {
 							<div className="w-full" style={{ height: "280px" }}>
 								<BarChart
 									data={chartData}
-									barColor={SKY_500}
+									barColor={barColor}
 									showLabels={true}
 									labelFormatter={(v) => `${currencySymbol}${v.toFixed(0)}`}
 									yAxisFormatter={(v) => `${currencySymbol}${v}`}

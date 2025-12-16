@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import type { IncomeDayData } from "@/types/income";
 import { useSettingsStore } from "@/stores/useSettingsStore";
 import { getCurrencySymbol } from "@/lib/currencyUtils";
@@ -9,13 +9,16 @@ interface IncomeChartProps {
 	weeklyData: IncomeDayData[];
 }
 
-const SKY_500 = "#0EA5E9";
-
 const IncomeChart: React.FC<IncomeChartProps> = ({ weeklyData }) => {
 	const { incomeCurrency } = useSettingsStore();
 	const currencySymbol = getCurrencySymbol(incomeCurrency);
-	const { resolvedTheme } = useThemeStore();
+	const { resolvedTheme, palette } = useThemeStore();
 	const isDark = resolvedTheme === "dark";
+
+	// Get theme-aware bar color from CSS variable
+	const barColor = useMemo(() => {
+		return getComputedStyle(document.documentElement).getPropertyValue("--primary").trim();
+	}, [resolvedTheme, palette]);
 
 	// Theme-aware colors
 	const textColor = isDark ? "#e2e8f0" : "#374151";
@@ -44,7 +47,7 @@ const IncomeChart: React.FC<IncomeChartProps> = ({ weeklyData }) => {
 				<div className="w-full" style={{ height: "320px" }}>
 					<BarChart
 						data={chartData}
-						barColor={SKY_500}
+						barColor={barColor}
 						showLabels={true}
 						labelFormatter={(v) => `${currencySymbol}${v.toFixed(0)}`}
 						yAxisFormatter={(v) => `${currencySymbol}${v}`}

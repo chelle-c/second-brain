@@ -1,0 +1,111 @@
+/* Indigo-Violet Theme Palette
+ * Theme using Tailwind's indigo and violet color palettes
+ * Light mode: Light backgrounds with indigo/violet accents
+ * Dark mode: Dark backgrounds with vibrant indigo/violet accents
+ */
+
+/* Light Theme - Indigo/Violet */
+:root[data-palette="indigo-violet"] {
+	/* Core UI colors */
+	--background: oklch(0.97 0.015 274.039); /* subtle indigo tint */
+	--foreground: oklch(0.145 0 0);
+	--card: oklch(1 0 0);
+	--card-foreground: oklch(0.145 0 0);
+	--popover: oklch(1 0 0);
+	--popover-foreground: oklch(0.145 0 0);
+
+	/* Primary - Indigo */
+	--primary: oklch(0.511 0.262 276.966); /* indigo-600 */
+	--primary-foreground: oklch(0.985 0 0);
+
+	/* Secondary - Light indigo */
+	--secondary: oklch(0.943 0.029 294.588); /* indigo-100 */
+	--secondary-foreground: oklch(0.357 0.144 278.697); /* indigo-800 */
+
+	/* Muted - Subtle gray with indigo tint */
+	--muted: oklch(0.967 0.003 264.542); /* slate-100 */
+	--muted-foreground: oklch(0.556 0.022 257.417); /* slate-500 */
+
+	/* Accent - Violet */
+	--accent: oklch(0.943 0.029 294.588); /* violet-100 */
+	--accent-foreground: oklch(0.386 0.156 293.745); /* violet-800 */
+
+	/* Destructive - Red */
+	--destructive: oklch(0.577 0.245 27.325);
+
+	/* Borders & Inputs */
+	--border: oklch(0.87 0.065 274.039); /* indigo-200 */
+	--input: oklch(0.87 0.065 274.039); /* indigo-200 */
+	--ring: oklch(0.585 0.233 277.117); /* indigo-500 */
+
+	/* Charts - Indigo/Violet spectrum */
+	--chart-1: oklch(0.585 0.233 277.117); /* indigo-500 */
+	--chart-2: oklch(0.702 0.183 293.541); /* violet-400 */
+	--chart-3: oklch(0.541 0.281 293.009); /* violet-600 */
+	--chart-4: oklch(0.757 0.151 274.039); /* indigo-300 */
+	--chart-5: oklch(0.386 0.156 293.745); /* violet-800 */
+
+	/* Sidebar - Deep indigo */
+	--theme-sidebar-bg: oklch(0.303 0.147 279.391); /* indigo-900 */
+	--theme-sidebar-hover: oklch(0.541 0.281 293.009); /* violet-600 */
+	--theme-sidebar-fg: oklch(1 0 0);
+	--theme-sidebar-primary: oklch(0.205 0 0);
+	--theme-sidebar-primary-fg: oklch(0.985 0 0);
+	--theme-sidebar-accent: oklch(0.357 0.144 278.697); /* indigo-800 */
+	--theme-sidebar-accent-fg: oklch(0.98 0.012 274.039); /* near white with indigo tint */
+	--theme-sidebar-border: oklch(0.357 0.144 278.697); /* indigo-800 */
+	--theme-sidebar-ring: oklch(0.585 0.233 277.117); /* indigo-500 */
+}
+
+/* Dark Theme - Indigo/Violet */
+:root[data-palette="indigo-violet"].dark {
+	/* Core UI colors */
+	--background: oklch(0.145 0.014 254.604); /* slate-950 */
+	--foreground: oklch(0.985 0.003 247.858); /* slate-50 */
+	--card: oklch(0.208 0.021 255.118); /* slate-900 */
+	--card-foreground: oklch(0.985 0.003 247.858); /* slate-50 */
+	--popover: oklch(0.208 0.021 255.118); /* slate-900 */
+	--popover-foreground: oklch(0.985 0.003 247.858); /* slate-50 */
+
+	/* Primary - Vibrant indigo */
+	--primary: oklch(0.585 0.233 277.117); /* indigo-500 */
+	--primary-foreground: oklch(0.985 0 0);
+
+	/* Secondary - Dark indigo */
+	--secondary: oklch(0.234 0.085 279.391); /* indigo-950 */
+	--secondary-foreground: oklch(0.943 0.029 294.588); /* indigo-100 */
+
+	/* Muted - Dark slate */
+	--muted: oklch(27.8% 0.033 256.848); /* slate-900 */
+	--muted-foreground: oklch(0.704 0.022 261.325); /* slate-400 */
+
+	/* Accent - Dark violet */
+	--accent: oklch(0.245 0.086 293.745); /* violet-950 */
+	--accent-foreground: oklch(0.943 0.029 294.588); /* violet-100 */
+
+	/* Destructive - Bright red */
+	--destructive: oklch(0.704 0.191 22.216);
+
+	/* Borders & Inputs */
+	--border: oklch(0.303 0.147 279.391 / 40%); /* indigo-900 with transparency */
+	--input: oklch(0.303 0.147 279.391 / 50%); /* indigo-900 with transparency */
+	--ring: oklch(0.702 0.183 293.541); /* violet-400 */
+
+	/* Charts - Vibrant indigo/violet spectrum */
+	--chart-1: oklch(0.702 0.183 293.541); /* violet-400 */
+	--chart-2: oklch(0.585 0.233 277.117); /* indigo-500 */
+	--chart-3: oklch(0.541 0.281 293.009); /* violet-600 */
+	--chart-4: oklch(0.757 0.151 274.039); /* indigo-300 */
+	--chart-5: oklch(0.811 0.111 293.571); /* violet-300 */
+
+	/* Sidebar - Deep dark indigo */
+	--theme-sidebar-bg: oklch(0.208 0.021 255.118); /* slate-900 */
+	--theme-sidebar-hover: oklch(0.541 0.281 293.009); /* violet-600 */
+	--theme-sidebar-fg: oklch(0.943 0.029 294.588); /* indigo-100 */
+	--theme-sidebar-primary: oklch(0.985 0 0);
+	--theme-sidebar-primary-fg: oklch(0.208 0.021 255.118); /* slate-900 */
+	--theme-sidebar-accent: oklch(0.234 0.085 279.391); /* indigo-950 */
+	--theme-sidebar-accent-fg: oklch(0.98 0.012 294.588); /* lighter indigo */
+	--theme-sidebar-border: oklch(0.303 0.147 279.391 / 40%); /* indigo-900 */
+	--theme-sidebar-ring: oklch(0.702 0.183 293.541); /* violet-400 */
+}

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { useIncomeStore } from "@/stores/useIncomeStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
 import { useThemeStore } from "@/stores/useThemeStore";
@@ -22,14 +22,17 @@ interface MonthlyViewProps {
 	years: number[];
 }
 
-const SKY_500 = "#0EA5E9";
-
 const MonthlyView: React.FC<MonthlyViewProps> = ({ selectedYear, onYearChange, years }) => {
 	const { incomeEntries } = useIncomeStore();
 	const { incomeCurrency } = useSettingsStore();
 	const currencySymbol = getCurrencySymbol(incomeCurrency);
-	const { resolvedTheme } = useThemeStore();
+	const { resolvedTheme, palette } = useThemeStore();
 	const isDark = resolvedTheme === "dark";
+
+	// Get theme-aware bar color from CSS variable
+	const barColor = useMemo(() => {
+		return getComputedStyle(document.documentElement).getPropertyValue("--primary").trim();
+	}, [resolvedTheme, palette]);
 
 	// Theme-aware colors
 	const textColor = isDark ? "#e2e8f0" : "#374151";
@@ -109,7 +112,7 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ selectedYear, onYearChange, y
 							<div className="w-full" style={{ height: "280px" }}>
 								<BarChart
 									data={chartData}
-									barColor={SKY_500}
+									barColor={barColor}
 									showLabels={true}
 									labelFormatter={(v) => `${currencySymbol}${v.toFixed(0)}`}
 									yAxisFormatter={(v) => `${currencySymbol}${v}`}

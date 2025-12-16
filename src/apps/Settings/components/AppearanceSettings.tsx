@@ -8,7 +8,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { ThemeMode, THEME_MODE_OPTIONS } from "@/types/theme";
+import { ThemeMode, ThemePalette, THEME_MODE_OPTIONS, THEME_PALETTE_OPTIONS } from "@/types/theme";
 import { useThemeStore } from "@/stores/useThemeStore";
 
 const getThemeModeIcon = (mode: ThemeMode) => {
@@ -23,7 +23,7 @@ const getThemeModeIcon = (mode: ThemeMode) => {
 };
 
 export const AppearanceSettings = () => {
-	const { mode: themeMode, setMode: setThemeMode } = useThemeStore();
+	const { mode: themeMode, setMode: setThemeMode, palette, setPalette } = useThemeStore();
 
 	return (
 		<Card id="appearance" className="scroll-mt-6">
@@ -59,6 +59,35 @@ export const AppearanceSettings = () => {
 									<div className="flex items-center gap-2">
 										{getThemeModeIcon(option.value)}
 										{option.label}
+									</div>
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</div>
+				<div className="flex items-center justify-between">
+					<div className="space-y-0.5">
+						<Label className="text-base font-medium">Color Scheme</Label>
+						<p className="text-sm text-muted-foreground">
+							Select your preferred color palette
+						</p>
+					</div>
+					<Select
+						value={palette}
+						onValueChange={(value) => setPalette(value as ThemePalette)}
+					>
+						<SelectTrigger className="w-[200px]">
+							<SelectValue placeholder="Select color scheme" />
+						</SelectTrigger>
+						<SelectContent>
+							{THEME_PALETTE_OPTIONS.map((option) => (
+								<SelectItem key={option.value} value={option.value}>
+									<div className="flex items-center gap-2">
+										<span
+											className="w-3 h-3 rounded-full shrink-0"
+											style={{ backgroundColor: option.color }}
+										/>
+										<span>{option.label}</span>
 									</div>
 								</SelectItem>
 							))}

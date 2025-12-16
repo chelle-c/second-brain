@@ -4,6 +4,12 @@
 /* Theme System - Import theme files */
 @import "./styles/themes/base.css";
 @import "./styles/themes/sky-cyan.css";
+@import "./styles/themes/rose-red.css";
+@import "./styles/themes/amber-orange.css";
+@import "./styles/themes/lime-green.css";
+@import "./styles/themes/teal-emerald.css";
+@import "./styles/themes/indigo-violet.css";
+@import "./styles/themes/fuchsia-pink.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -58,12 +64,12 @@
 	body {
 		@apply bg-background text-foreground;
 	}
+}
 
-	/* Text selection styling */
-	*::selection {
-		background-color: var(--primary);
-		color: var(--primary-foreground);
-	}
+/* Text selection styling - outside layer for higher specificity */
+::selection {
+	background-color: var(--primary) !important;
+	color: var(--primary-foreground) !important;
 }
 
 @keyframes slideDown {

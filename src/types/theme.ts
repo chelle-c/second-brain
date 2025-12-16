@@ -1,6 +1,13 @@
 export type ThemeMode = "system" | "light" | "dark";
 
-export type ThemePalette = "sky-cyan"; // Add more palettes here as needed
+export type ThemePalette =
+	| "sky-cyan"
+	| "rose-red"
+	| "amber-orange"
+	| "lime-green"
+	| "teal-emerald"
+	| "indigo-violet"
+	| "fuchsia-pink";
 
 export interface ThemeSettings {
 	mode: ThemeMode;
@@ -21,12 +28,41 @@ export const THEME_MODE_OPTIONS: { value: ThemeMode; label: string }[] = [
 export const THEME_PALETTE_OPTIONS: {
 	value: ThemePalette;
 	label: string;
-	description: string;
+	color: string;
 }[] = [
 	{
 		value: "sky-cyan",
-		label: "Sky & Cyan",
-		description: "Default blue theme",
+		label: "Sky",
+		color: "#0284C7",
 	},
-	// Add more palettes here as needed
+	{
+		value: "rose-red",
+		label: "Rose",
+		color: "#E11D48",
+	},
+	{
+		value: "amber-orange",
+		label: "Amber",
+		color: "#D97706",
+	},
+	{
+		value: "lime-green",
+		label: "Lime",
+		color: "#65A30D",
+	},
+	{
+		value: "teal-emerald",
+		label: "Teal",
+		color: "#0D9488",
+	},
+	{
+		value: "indigo-violet",
+		label: "Indigo",
+		color: "#4F46E5",
+	},
+	{
+		value: "fuchsia-pink",
+		label: "Fuchsia",
+		color: "#C026D3",
+	},
 ];

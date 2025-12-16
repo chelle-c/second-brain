@@ -65,8 +65,8 @@ export function AppSidebar() {
 	return (
 		<Sidebar variant="inset" collapsible="offcanvas">
 			<SidebarHeader className="px-6 py-5 flex flex-row items-center gap-3 border-b border-sidebar-border">
-				<div className="p-2 bg-primary/10 rounded-lg">
-					<Brain size={28} className="text-primary" />
+				<div className="p-2 bg-sidebar-accent rounded-lg">
+					<Brain size={28} className="text-sidebar-accent-foreground" />
 				</div>
 				<div>
 					<h1 className="text-2xl font-bold tracking-tight">Lunite</h1>
@@ -88,15 +88,15 @@ export function AppSidebar() {
 									>
 										<SidebarMenuItem>
 											<CollapsibleTrigger asChild>
-												<SidebarMenuButton className="cursor-pointer h-10 px-3 hover:bg-sidebar-accent rounded-lg transition-colors">
+												<SidebarMenuButton className="group/btn cursor-pointer h-10 px-3 hover:bg-sidebar-accent rounded-lg transition-colors">
 													<div className="w-full flex items-center gap-3">
-														<item.icon size={18} className="text-sidebar-foreground/70" />
-														<span className="flex-1 text-sm font-medium">
+														<item.icon size={18} className="text-sidebar-foreground/70 group-hover/btn:text-sidebar-accent-foreground transition-colors" />
+														<span className="flex-1 text-sm font-medium group-hover/btn:text-sidebar-accent-foreground transition-colors">
 															{item.title}
 														</span>
 														<ChevronRight
 															size={16}
-															className="text-sidebar-foreground/50 transition-transform group-data-[state=open]/collapsible:rotate-90"
+															className="text-sidebar-foreground/50 group-hover/btn:text-sidebar-accent-foreground transition-transform group-data-[state=open]/collapsible:rotate-90"
 														/>
 													</div>
 												</SidebarMenuButton>
@@ -107,27 +107,29 @@ export function AppSidebar() {
 														<SidebarMenuSubItem key={subItem.title}>
 															<NavLink
 																to={`/${subItem.url}`}
-																className={({ isActive }) =>
-																	`block ${isActive ? "text-primary" : ""}`
-																}
+																className="block"
 															>
 																{({ isActive }) => (
 																	<SidebarMenuButton
-																		className={`cursor-pointer h-9 px-3 rounded-lg transition-colors ${
+																		className={`group/btn cursor-pointer h-9 px-3 rounded-lg transition-colors ${
 																			isActive
-																				? "bg-primary/10"
+																				? "bg-sidebar-accent"
 																				: "hover:bg-sidebar-accent"
 																		}`}
 																	>
 																		<subItem.icon
 																			size={16}
-																			className={
+																			className={`transition-colors ${
 																				isActive
-																					? "text-primary"
-																					: "text-sidebar-foreground/70"
-																			}
+																					? "text-sidebar-accent-foreground"
+																					: "text-sidebar-foreground/70 group-hover/btn:text-sidebar-accent-foreground"
+																			}`}
 																		/>
-																		<span className="text-sm font-medium">
+																		<span className={`text-sm font-medium transition-colors ${
+																			isActive
+																				? "text-sidebar-accent-foreground"
+																				: "group-hover/btn:text-sidebar-accent-foreground"
+																		}`}>
 																			{subItem.title}
 																		</span>
 																	</SidebarMenuButton>
@@ -143,27 +145,29 @@ export function AppSidebar() {
 									<SidebarMenuItem key={item.title}>
 										<NavLink
 											to={`/${item.url}`}
-											className={({ isActive }) =>
-												`block ${isActive ? "text-primary" : ""}`
-											}
+											className="block"
 										>
 											{({ isActive }) => (
 												<SidebarMenuButton
-													className={`cursor-pointer h-10 px-3 rounded-lg transition-colors ${
+													className={`group/btn cursor-pointer h-10 px-3 rounded-lg transition-colors ${
 														isActive
-															? "bg-primary/10"
+															? "bg-sidebar-accent"
 															: "hover:bg-sidebar-accent"
 													}`}
 												>
 													<item.icon
 														size={18}
-														className={
+														className={`transition-colors ${
 															isActive
-																? "text-primary"
-																: "text-sidebar-foreground/70"
-														}
+																? "text-sidebar-accent-foreground"
+																: "text-sidebar-foreground/70 group-hover/btn:text-sidebar-accent-foreground"
+														}`}
 													/>
-													<span className="text-sm font-medium">{item.title}</span>
+													<span className={`text-sm font-medium transition-colors ${
+														isActive
+															? "text-sidebar-accent-foreground"
+															: "group-hover/btn:text-sidebar-accent-foreground"
+													}`}>{item.title}</span>
 												</SidebarMenuButton>
 											)}
 										</NavLink>

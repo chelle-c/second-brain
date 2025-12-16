@@ -1,0 +1,111 @@
+/* Teal-Emerald Theme Palette
+ * Theme using Tailwind's teal and emerald color palettes
+ * Light mode: Light backgrounds with teal/emerald accents
+ * Dark mode: Dark backgrounds with vibrant teal/emerald accents
+ */
+
+/* Light Theme - Teal/Emerald */
+:root[data-palette="teal-emerald"] {
+	/* Core UI colors */
+	--background: oklch(0.97 0.02 180.801); /* subtle teal tint */
+	--foreground: oklch(0.145 0 0);
+	--card: oklch(1 0 0);
+	--card-foreground: oklch(0.145 0 0);
+	--popover: oklch(1 0 0);
+	--popover-foreground: oklch(0.145 0 0);
+
+	/* Primary - Teal */
+	--primary: oklch(0.6 0.118 184.704); /* teal-600 */
+	--primary-foreground: oklch(0.985 0 0);
+
+	/* Secondary - Light teal */
+	--secondary: oklch(0.953 0.051 180.801); /* teal-100 */
+	--secondary-foreground: oklch(0.386 0.095 186.391); /* teal-800 */
+
+	/* Muted - Subtle gray with teal tint */
+	--muted: oklch(0.967 0.003 264.542); /* slate-100 */
+	--muted-foreground: oklch(0.556 0.022 257.417); /* slate-500 */
+
+	/* Accent - Emerald */
+	--accent: oklch(0.95 0.052 163.051); /* emerald-100 */
+	--accent-foreground: oklch(0.405 0.117 162.788); /* emerald-800 */
+
+	/* Destructive - Red */
+	--destructive: oklch(0.577 0.245 27.325);
+
+	/* Borders & Inputs */
+	--border: oklch(0.91 0.096 180.426); /* teal-200 */
+	--input: oklch(0.91 0.096 180.426); /* teal-200 */
+	--ring: oklch(0.704 0.14 182.503); /* teal-500 */
+
+	/* Charts - Teal/Emerald spectrum */
+	--chart-1: oklch(0.704 0.14 182.503); /* teal-500 */
+	--chart-2: oklch(0.765 0.177 163.223); /* emerald-400 */
+	--chart-3: oklch(0.596 0.145 163.255); /* emerald-600 */
+	--chart-4: oklch(0.845 0.143 179.417); /* teal-300 */
+	--chart-5: oklch(0.405 0.117 162.788); /* emerald-800 */
+
+	/* Sidebar - Deep teal */
+	--theme-sidebar-bg: oklch(0.318 0.08 188.216); /* teal-900 */
+	--theme-sidebar-hover: oklch(0.596 0.145 163.255); /* emerald-600 */
+	--theme-sidebar-fg: oklch(1 0 0);
+	--theme-sidebar-primary: oklch(0.205 0 0);
+	--theme-sidebar-primary-fg: oklch(0.985 0 0);
+	--theme-sidebar-accent: oklch(0.386 0.095 186.391); /* teal-800 */
+	--theme-sidebar-accent-fg: oklch(0.98 0.02 180.801); /* near white with teal tint */
+	--theme-sidebar-border: oklch(0.386 0.095 186.391); /* teal-800 */
+	--theme-sidebar-ring: oklch(0.704 0.14 182.503); /* teal-500 */
+}
+
+/* Dark Theme - Teal/Emerald */
+:root[data-palette="teal-emerald"].dark {
+	/* Core UI colors */
+	--background: oklch(0.145 0.014 254.604); /* slate-950 */
+	--foreground: oklch(0.985 0.003 247.858); /* slate-50 */
+	--card: oklch(0.208 0.021 255.118); /* slate-900 */
+	--card-foreground: oklch(0.985 0.003 247.858); /* slate-50 */
+	--popover: oklch(0.208 0.021 255.118); /* slate-900 */
+	--popover-foreground: oklch(0.985 0.003 247.858); /* slate-50 */
+
+	/* Primary - Vibrant teal */
+	--primary: oklch(0.704 0.14 182.503); /* teal-500 */
+	--primary-foreground: oklch(0.145 0.014 254.604); /* slate-950 */
+
+	/* Secondary - Dark teal */
+	--secondary: oklch(0.225 0.058 192.391); /* teal-950 */
+	--secondary-foreground: oklch(0.953 0.051 180.801); /* teal-100 */
+
+	/* Muted - Dark slate */
+	--muted: oklch(27.8% 0.033 256.848); /* slate-900 */
+	--muted-foreground: oklch(0.704 0.022 261.325); /* slate-400 */
+
+	/* Accent - Dark emerald */
+	--accent: oklch(0.219 0.061 166.913); /* emerald-950 */
+	--accent-foreground: oklch(0.95 0.052 163.051); /* emerald-100 */
+
+	/* Destructive - Bright red */
+	--destructive: oklch(0.704 0.191 22.216);
+
+	/* Borders & Inputs */
+	--border: oklch(0.318 0.08 188.216 / 40%); /* teal-900 with transparency */
+	--input: oklch(0.318 0.08 188.216 / 50%); /* teal-900 with transparency */
+	--ring: oklch(0.777 0.152 181.912); /* teal-400 */
+
+	/* Charts - Vibrant teal/emerald spectrum */
+	--chart-1: oklch(0.777 0.152 181.912); /* teal-400 */
+	--chart-2: oklch(0.704 0.14 182.503); /* teal-500 */
+	--chart-3: oklch(0.596 0.145 163.255); /* emerald-600 */
+	--chart-4: oklch(0.845 0.143 179.417); /* teal-300 */
+	--chart-5: oklch(0.845 0.143 164.978); /* emerald-300 */
+
+	/* Sidebar - Deep dark teal */
+	--theme-sidebar-bg: oklch(0.208 0.021 255.118); /* slate-900 */
+	--theme-sidebar-hover: oklch(0.596 0.145 163.255); /* emerald-600 */
+	--theme-sidebar-fg: oklch(0.953 0.051 180.801); /* teal-100 */
+	--theme-sidebar-primary: oklch(0.985 0 0);
+	--theme-sidebar-primary-fg: oklch(0.208 0.021 255.118); /* slate-900 */
+	--theme-sidebar-accent: oklch(0.225 0.058 192.391); /* teal-950 */
+	--theme-sidebar-accent-fg: oklch(0.98 0.02 180.801); /* lighter teal */
+	--theme-sidebar-border: oklch(0.318 0.08 188.216 / 40%); /* teal-900 */
+	--theme-sidebar-ring: oklch(0.777 0.152 181.912); /* teal-400 */
+}

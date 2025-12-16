@@ -43,6 +43,13 @@ const applyTheme = (theme: "light" | "dark") => {
 	}
 };
 
+// Apply palette to document
+const applyPalette = (palette: ThemePalette) => {
+	if (typeof document !== "undefined") {
+		document.documentElement.setAttribute("data-palette", palette);
+	}
+};
+
 // Resolve the actual theme from mode
 const resolveTheme = (mode: ThemeMode): "light" | "dark" => {
 	if (mode === "system") {
@@ -58,7 +65,9 @@ export const useThemeStore = create<ThemeStore>()(
 
 		setThemeSettings: (settings, skipSave = false) => {
 			const currentMode = get().mode;
+			const currentPalette = get().palette;
 			const newMode = settings.mode ?? currentMode;
+			const newPalette = settings.palette ?? currentPalette;
 			const newResolvedTheme = resolveTheme(newMode);
 
 			set({
@@ -66,8 +75,9 @@ export const useThemeStore = create<ThemeStore>()(
 				resolvedTheme: newResolvedTheme,
 			});
 
-			// Apply the theme to DOM
+			// Apply the theme and palette to DOM
 			applyTheme(newResolvedTheme);
+			applyPalette(newPalette);
 
 			if (!skipSave && useAppStore.getState().autoSaveEnabled) {
 				useAppStore.getState().saveToFile(AppToSave.All);
@@ -89,16 +99,20 @@ export const useThemeStore = create<ThemeStore>()(
 		setPalette: (palette) => {
 			set({ palette });
 
+			// Apply the palette to DOM
+			applyPalette(palette);
+
 			if (useAppStore.getState().autoSaveEnabled) {
 				useAppStore.getState().saveToFile(AppToSave.All);
 			}
 		},
 
 		initializeTheme: () => {
-			const { mode } = get();
+			const { mode, palette } = get();
 			const resolvedTheme = resolveTheme(mode);
 			set({ resolvedTheme });
 			applyTheme(resolvedTheme);
+			applyPalette(palette);
 
 			// Listen for system theme changes
 			if (typeof window !== "undefined" && window.matchMedia) {
@@ -124,6 +138,7 @@ export const useThemeStore = create<ThemeStore>()(
 				resolvedTheme,
 			});
 			applyTheme(resolvedTheme);
+			applyPalette(DEFAULT_THEME_SETTINGS.palette);
 
 			if (useAppStore.getState().autoSaveEnabled) {
 				useAppStore.getState().saveToFile(AppToSave.All);
