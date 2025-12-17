@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Layout } from "./components/Layout";
 import { ExpenseOverview } from "./components/ExpenseOverview";
 import { ExpenseForm } from "./components/ExpenseForm";
@@ -6,21 +6,55 @@ import { ExpenseList } from "./components/ExpenseList";
 import { AllExpenses } from "./components/AllExpenses";
 import { UpcomingExpenses } from "./components/UpcomingExpenses";
 import { useExpenseStore } from "@/stores/useExpenseStore";
+import { useHistoryStore } from "@/stores/useHistoryStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
 
 export const ExpensesTracker = () => {
 	const { expenseDefaultView } = useSettingsStore();
 	const [currentView, setCurrentView] = useState<"monthly" | "all" | "upcoming">(expenseDefaultView);
 
-	const { editingExpense, setEditingExpense } = useExpenseStore();
+	const { editingExpense, setEditingExpense, undo, redo } = useExpenseStore();
+	const { canUndo, canRedo } = useHistoryStore();
 
 	const handleCloseEdit = () => {
 		setEditingExpense(null);
 	};
 
+	// Keyboard shortcuts for undo/redo
+	useEffect(() => {
+		const handleKeyDown = (e: KeyboardEvent) => {
+			const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
+			const modKey = isMac ? e.metaKey : e.ctrlKey;
+
+			// Ctrl/Cmd + Z to undo
+			if (modKey && e.key === "z" && !e.shiftKey && canUndo) {
+				e.preventDefault();
+				undo();
+			}
+
+			// Ctrl/Cmd + Shift + Z or Ctrl/Cmd + Y to redo
+			if ((modKey && e.shiftKey && e.key === "z") || (modKey && e.key === "y")) {
+				if (canRedo) {
+					e.preventDefault();
+					redo();
+				}
+			}
+		};
+
+		document.addEventListener("keydown", handleKeyDown);
+		return () => document.removeEventListener("keydown", handleKeyDown);
+	}, [canUndo, canRedo, undo, redo]);
+
 	return (
 		<>
-			<Layout currentView={currentView} setCurrentView={setCurrentView}>
+			<Layout
+				currentView={currentView}
+				setCurrentView={setCurrentView}
+				canUndo={canUndo}
+				canRedo={canRedo}
+				onUndo={undo}
+				onRedo={redo}
+			>
 				<div className="space-y-3 overflow-y-auto">
 					{currentView === "monthly" ? (
 						<div className="bg-card rounded-xl shadow-lg p-6 animate-slideUp">

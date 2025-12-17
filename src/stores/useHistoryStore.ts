@@ -1,6 +1,7 @@
 import { create } from "zustand";
 
 export type HistoryActionType =
+	// Notes actions
 	| "CREATE_NOTE"
 	| "UPDATE_NOTE"
 	| "DELETE_NOTE"
@@ -12,7 +13,21 @@ export type HistoryActionType =
 	| "DELETE_FOLDER"
 	| "CREATE_SUBFOLDER"
 	| "UPDATE_SUBFOLDER"
-	| "DELETE_SUBFOLDER";
+	| "DELETE_SUBFOLDER"
+	// Expense actions
+	| "CREATE_EXPENSE"
+	| "UPDATE_EXPENSE"
+	| "DELETE_EXPENSE"
+	| "ARCHIVE_EXPENSE"
+	| "UNARCHIVE_EXPENSE"
+	| "TOGGLE_EXPENSE_PAID"
+	// Income actions
+	| "CREATE_INCOME_ENTRY"
+	| "UPDATE_INCOME_ENTRY"
+	| "DELETE_INCOME_ENTRY"
+	| "CREATE_WEEKLY_TARGET"
+	| "UPDATE_WEEKLY_TARGET"
+	| "DELETE_WEEKLY_TARGET";
 
 export interface HistoryAction {
 	type: HistoryActionType;
@@ -24,6 +39,8 @@ export interface HistoryAction {
 		parentId?: string;
 		affectedNotes?: { id: string; folder: string }[];
 		affectedSubfolders?: any[];
+		// For expenses with recurring occurrences
+		relatedExpenses?: any[];
 	};
 }
 

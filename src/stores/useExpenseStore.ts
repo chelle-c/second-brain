@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import useAppStore from "./useAppStore";
+import { useHistoryStore, HistoryAction } from "./useHistoryStore";
 import { Expense, ExpenseFormData, OverviewMode } from "@/types/expense";
 import {
 	generateRecurringExpenses,
@@ -67,6 +68,10 @@ interface ExpenseStore {
 	addCategory: (name: string, color: string) => void;
 	updateCategory: (oldName: string, newName: string, newColor: string) => void;
 	deleteCategory: (name: string) => void;
+
+	// Undo/Redo
+	undo: () => void;
+	redo: () => void;
 }
 
 const getMonthKey = (date: Date): string => {
@@ -150,20 +155,30 @@ export const useExpenseStore = create<ExpenseStore>()(
 				monthlyOverrides: {},
 			};
 
-			const expenses: Expense[] = [];
+			const newExpenses: Expense[] = [];
 
 			if (expenseData.isRecurring && expenseData.recurrence && expenseData.dueDate) {
 				// Generate all occurrences including the first one
 				const allOccurrences = generateRecurringExpenses(parentExpense, true);
-				expenses.push(parentExpense, ...allOccurrences);
+				newExpenses.push(parentExpense, ...allOccurrences);
 			} else {
 				// Non-recurring expense
-				expenses.push(parentExpense);
+				newExpenses.push(parentExpense);
 			}
 
 			set((state) => ({
-				expenses: [...state.expenses, ...expenses],
+				expenses: [...state.expenses, ...newExpenses],
 			}));
+
+			// Record history
+			useHistoryStore.getState().pushAction({
+				type: "CREATE_EXPENSE",
+				data: {
+					id: parentId,
+					after: parentExpense,
+					relatedExpenses: newExpenses.length > 1 ? newExpenses.slice(1) : undefined,
+				},
+			});
 
 			if (useAppStore.getState().autoSaveEnabled) {
 				useAppStore.getState().saveToFile(AppToSave.Expenses);
@@ -196,6 +211,9 @@ export const useExpenseStore = create<ExpenseStore>()(
 			const existingExpense = expenses.find((e) => e.id === id);
 
 			if (!existingExpense) return;
+
+			// Store before state for history
+			const beforeExpense = { ...existingExpense };
 
 			// Handle instance-specific edits
 			if (existingExpense.parentExpenseId && !isGlobalEdit) {
@@ -234,6 +252,13 @@ export const useExpenseStore = create<ExpenseStore>()(
 				});
 
 				set({ expenses: updatedExpenses });
+
+				// Record history
+				const afterExpense = updatedExpenses.find((e) => e.id === id);
+				useHistoryStore.getState().pushAction({
+					type: "UPDATE_EXPENSE",
+					data: { id, before: beforeExpense, after: afterExpense },
+				});
 				return;
 			}
 
@@ -297,10 +322,24 @@ export const useExpenseStore = create<ExpenseStore>()(
 						.concat([updatedParent, ...mergedOccurrences]);
 
 					set({ expenses: updatedExpenses });
+
+					// Record history with all related expenses
+					useHistoryStore.getState().pushAction({
+						type: "UPDATE_EXPENSE",
+						data: {
+							id,
+							before: beforeExpense,
+							after: updatedParent,
+							relatedExpenses: [...existingOccurrences],
+						},
+					});
 					return;
 				}
 
 				// No regeneration needed, just update fields
+				// Capture all related expenses for history
+				const relatedOccurrences = expenses.filter((e) => e.parentExpenseId === id);
+
 				const updatedExpenses = expenses.map((expense) => {
 					// Update the parent
 					if (expense.id === id) {
@@ -372,6 +411,18 @@ export const useExpenseStore = create<ExpenseStore>()(
 				});
 
 				set({ expenses: updatedExpenses });
+
+				// Record history
+				const afterExpense = updatedExpenses.find((e) => e.id === id);
+				useHistoryStore.getState().pushAction({
+					type: "UPDATE_EXPENSE",
+					data: {
+						id,
+						before: beforeExpense,
+						after: afterExpense,
+						relatedExpenses: relatedOccurrences,
+					},
+				});
 				return;
 			}
 
@@ -393,6 +444,13 @@ export const useExpenseStore = create<ExpenseStore>()(
 
 			set({ expenses: updatedExpenses });
 
+			// Record history
+			const afterExpense = updatedExpenses.find((e) => e.id === id);
+			useHistoryStore.getState().pushAction({
+				type: "UPDATE_EXPENSE",
+				data: { id, before: beforeExpense, after: afterExpense },
+			});
+
 			if (useAppStore.getState().autoSaveEnabled) {
 				useAppStore.getState().saveToFile(AppToSave.Expenses);
 			}
@@ -410,14 +468,29 @@ export const useExpenseStore = create<ExpenseStore>()(
 			const { expenses } = get();
 			const expense = expenses.find((e) => e.id === id);
 
+			if (!expense) return;
+
 			// If deleting a parent recurring expense, delete all instances
-			if (expense && expense.isRecurring && !expense.parentExpenseId) {
+			if (expense.isRecurring && !expense.parentExpenseId) {
+				const relatedExpenses = expenses.filter((e) => e.parentExpenseId === id);
 				set({
 					expenses: expenses.filter((e) => e.id !== id && e.parentExpenseId !== id),
 				});
+
+				// Record history with related expenses
+				useHistoryStore.getState().pushAction({
+					type: "DELETE_EXPENSE",
+					data: { id, before: expense, relatedExpenses },
+				});
 			} else {
 				set({
-					expenses: expenses.filter((expense) => expense.id !== id),
+					expenses: expenses.filter((e) => e.id !== id),
+				});
+
+				// Record history
+				useHistoryStore.getState().pushAction({
+					type: "DELETE_EXPENSE",
+					data: { id, before: expense },
 				});
 			}
 
@@ -430,8 +503,11 @@ export const useExpenseStore = create<ExpenseStore>()(
 			const { expenses } = get();
 			const expense = expenses.find((e) => e.id === id);
 
+			if (!expense) return;
+
 			// If archiving a parent recurring expense, archive all instances
-			if (expense && expense.isRecurring && !expense.parentExpenseId) {
+			if (expense.isRecurring && !expense.parentExpenseId) {
+				const relatedExpenses = expenses.filter((e) => e.parentExpenseId === id);
 				set({
 					expenses: expenses.map((e) =>
 						e.id === id || e.parentExpenseId === id
@@ -439,11 +515,23 @@ export const useExpenseStore = create<ExpenseStore>()(
 							: e
 					),
 				});
+
+				// Record history
+				useHistoryStore.getState().pushAction({
+					type: "ARCHIVE_EXPENSE",
+					data: { id, before: expense, relatedExpenses },
+				});
 			} else {
 				set({
 					expenses: expenses.map((e) =>
 						e.id === id ? { ...e, isArchived: true, updatedAt: new Date() } : e
 					),
+				});
+
+				// Record history
+				useHistoryStore.getState().pushAction({
+					type: "ARCHIVE_EXPENSE",
+					data: { id, before: expense },
 				});
 			}
 
@@ -456,8 +544,11 @@ export const useExpenseStore = create<ExpenseStore>()(
 			const { expenses } = get();
 			const expense = expenses.find((e) => e.id === id);
 
+			if (!expense) return;
+
 			// If unarchiving a parent recurring expense, unarchive all instances
-			if (expense && expense.isRecurring && !expense.parentExpenseId) {
+			if (expense.isRecurring && !expense.parentExpenseId) {
+				const relatedExpenses = expenses.filter((e) => e.parentExpenseId === id);
 				set({
 					expenses: expenses.map((e) =>
 						e.id === id || e.parentExpenseId === id
@@ -465,11 +556,23 @@ export const useExpenseStore = create<ExpenseStore>()(
 							: e
 					),
 				});
+
+				// Record history
+				useHistoryStore.getState().pushAction({
+					type: "UNARCHIVE_EXPENSE",
+					data: { id, before: expense, relatedExpenses },
+				});
 			} else {
 				set({
 					expenses: expenses.map((e) =>
 						e.id === id ? { ...e, isArchived: false, updatedAt: new Date() } : e
 					),
+				});
+
+				// Record history
+				useHistoryStore.getState().pushAction({
+					type: "UNARCHIVE_EXPENSE",
+					data: { id, before: expense },
 				});
 			}
 
@@ -556,8 +659,11 @@ export const useExpenseStore = create<ExpenseStore>()(
 			const { expenses } = get();
 			const expense = expenses.find((e) => e.id === id);
 
+			if (!expense) return;
+
 			// If toggling a parent recurring expense, toggle all instances
-			if (expense && expense.isRecurring && !expense.parentExpenseId) {
+			if (expense.isRecurring && !expense.parentExpenseId) {
+				const relatedExpenses = expenses.filter((e) => e.parentExpenseId === id);
 				const newIsPaid = !expense.isPaid;
 				set({
 					expenses: expenses.map((e) => {
@@ -572,6 +678,12 @@ export const useExpenseStore = create<ExpenseStore>()(
 						}
 						return e;
 					}),
+				});
+
+				// Record history
+				useHistoryStore.getState().pushAction({
+					type: "TOGGLE_EXPENSE_PAID",
+					data: { id, before: expense, relatedExpenses },
 				});
 			} else {
 				// Toggle single expense
@@ -589,6 +701,12 @@ export const useExpenseStore = create<ExpenseStore>()(
 						}
 						return e;
 					}),
+				});
+
+				// Record history
+				useHistoryStore.getState().pushAction({
+					type: "TOGGLE_EXPENSE_PAID",
+					data: { id, before: expense },
 				});
 			}
 
@@ -817,6 +935,254 @@ export const useExpenseStore = create<ExpenseStore>()(
 				categoryColors: updatedColors,
 				expenses: updatedExpenses,
 			});
+
+			if (useAppStore.getState().autoSaveEnabled) {
+				useAppStore.getState().saveToFile(AppToSave.Expenses);
+			}
+		},
+
+		// Undo/Redo
+		undo: () => {
+			const action = useHistoryStore.getState().undo();
+			if (!action) return;
+
+			const { type, data }: Omit<HistoryAction, "timestamp"> = action;
+
+			switch (type) {
+				case "CREATE_EXPENSE":
+					// Undo create = delete expense and all related occurrences
+					set((state) => ({
+						expenses: state.expenses.filter(
+							(e) => e.id !== data.id && e.parentExpenseId !== data.id
+						),
+					}));
+					break;
+
+				case "UPDATE_EXPENSE":
+					// Undo update = restore previous state
+					if (data.before) {
+						set((state) => {
+							// Restore the main expense
+							let updatedExpenses = state.expenses.map((e) =>
+								e.id === data.id ? data.before : e
+							);
+
+							// If there were related expenses (for recurring), restore them too
+							if (data.relatedExpenses && Array.isArray(data.relatedExpenses)) {
+								const relatedMap = new Map(
+									data.relatedExpenses.map((re: Expense) => [re.id, re])
+								);
+								updatedExpenses = updatedExpenses.map((e) => {
+									const related = relatedMap.get(e.id);
+									return related ? related : e;
+								});
+							}
+
+							return { expenses: updatedExpenses };
+						});
+					}
+					break;
+
+				case "DELETE_EXPENSE":
+					// Undo delete = restore expense and all related occurrences
+					if (data.before) {
+						set((state) => {
+							let newExpenses = [...state.expenses, data.before];
+
+							// Restore related expenses (for recurring)
+							if (data.relatedExpenses && Array.isArray(data.relatedExpenses)) {
+								newExpenses = [...newExpenses, ...data.relatedExpenses];
+							}
+
+							return { expenses: newExpenses };
+						});
+					}
+					break;
+
+				case "ARCHIVE_EXPENSE":
+				case "UNARCHIVE_EXPENSE":
+					// Undo archive/unarchive = toggle back isArchived state
+					if (data.before) {
+						set((state) => {
+							let updatedExpenses = state.expenses.map((e) =>
+								e.id === data.id
+									? { ...e, isArchived: data.before.isArchived }
+									: e
+							);
+
+							// Handle related expenses (for recurring)
+							if (data.relatedExpenses && Array.isArray(data.relatedExpenses)) {
+								const relatedMap = new Map(
+									data.relatedExpenses.map((re: Expense) => [re.id, re.isArchived])
+								);
+								updatedExpenses = updatedExpenses.map((e) => {
+									const wasArchived = relatedMap.get(e.id);
+									return wasArchived !== undefined
+										? { ...e, isArchived: wasArchived }
+										: e;
+								});
+							}
+
+							return { expenses: updatedExpenses };
+						});
+					}
+					break;
+
+				case "TOGGLE_EXPENSE_PAID":
+					// Undo toggle paid = restore previous paid state
+					if (data.before) {
+						set((state) => {
+							let updatedExpenses = state.expenses.map((e) =>
+								e.id === data.id
+									? {
+											...e,
+											isPaid: data.before.isPaid,
+											paymentDate: data.before.paymentDate,
+									  }
+									: e
+							);
+
+							// Handle related expenses (for recurring)
+							if (data.relatedExpenses && Array.isArray(data.relatedExpenses)) {
+								const relatedMap = new Map(
+									data.relatedExpenses.map((re: Expense) => [
+										re.id,
+										{ isPaid: re.isPaid, paymentDate: re.paymentDate },
+									])
+								);
+								updatedExpenses = updatedExpenses.map((e) => {
+									const state = relatedMap.get(e.id);
+									return state
+										? { ...e, isPaid: state.isPaid, paymentDate: state.paymentDate }
+										: e;
+								});
+							}
+
+							return { expenses: updatedExpenses };
+						});
+					}
+					break;
+			}
+
+			if (useAppStore.getState().autoSaveEnabled) {
+				useAppStore.getState().saveToFile(AppToSave.Expenses);
+			}
+		},
+
+		redo: () => {
+			const action = useHistoryStore.getState().redo();
+			if (!action) return;
+
+			const { type, data } = action;
+
+			switch (type) {
+				case "CREATE_EXPENSE":
+					// Redo create = add expense and all related occurrences back
+					if (data.after) {
+						set((state) => {
+							let newExpenses = [...state.expenses, data.after];
+
+							// Add related expenses (for recurring)
+							if (data.relatedExpenses && Array.isArray(data.relatedExpenses)) {
+								newExpenses = [...newExpenses, ...data.relatedExpenses];
+							}
+
+							return { expenses: newExpenses };
+						});
+					}
+					break;
+
+				case "UPDATE_EXPENSE":
+					// Redo update = apply new state
+					if (data.after) {
+						set((state) => ({
+							expenses: state.expenses.map((e) =>
+								e.id === data.id ? data.after : e
+							),
+						}));
+					}
+					break;
+
+				case "DELETE_EXPENSE":
+					// Redo delete = remove expense and all related occurrences
+					set((state) => ({
+						expenses: state.expenses.filter(
+							(e) => e.id !== data.id && e.parentExpenseId !== data.id
+						),
+					}));
+					break;
+
+				case "ARCHIVE_EXPENSE":
+					// Redo archive = set isArchived to true
+					set((state) => {
+						let updatedExpenses = state.expenses.map((e) =>
+							e.id === data.id ? { ...e, isArchived: true } : e
+						);
+
+						// Handle related expenses (for recurring)
+						if (data.relatedExpenses && Array.isArray(data.relatedExpenses)) {
+							const relatedIds = new Set(
+								data.relatedExpenses.map((re: Expense) => re.id)
+							);
+							updatedExpenses = updatedExpenses.map((e) =>
+								relatedIds.has(e.id) ? { ...e, isArchived: true } : e
+							);
+						}
+
+						return { expenses: updatedExpenses };
+					});
+					break;
+
+				case "UNARCHIVE_EXPENSE":
+					// Redo unarchive = set isArchived to false
+					set((state) => {
+						let updatedExpenses = state.expenses.map((e) =>
+							e.id === data.id ? { ...e, isArchived: false } : e
+						);
+
+						// Handle related expenses (for recurring)
+						if (data.relatedExpenses && Array.isArray(data.relatedExpenses)) {
+							const relatedIds = new Set(
+								data.relatedExpenses.map((re: Expense) => re.id)
+							);
+							updatedExpenses = updatedExpenses.map((e) =>
+								relatedIds.has(e.id) ? { ...e, isArchived: false } : e
+							);
+						}
+
+						return { expenses: updatedExpenses };
+					});
+					break;
+
+				case "TOGGLE_EXPENSE_PAID":
+					// Redo toggle paid = toggle paid state again
+					set((state) => {
+						const expense = state.expenses.find((e) => e.id === data.id);
+						if (!expense) return state;
+
+						const newIsPaid = !data.before.isPaid;
+						let updatedExpenses = state.expenses.map((e) =>
+							e.id === data.id
+								? { ...e, isPaid: newIsPaid, paymentDate: newIsPaid ? new Date() : null }
+								: e
+						);
+
+						// Handle related expenses (for recurring)
+						if (data.relatedExpenses && Array.isArray(data.relatedExpenses)) {
+							const relatedIds = new Set(
+								data.relatedExpenses.map((re: Expense) => re.id)
+							);
+							updatedExpenses = updatedExpenses.map((e) =>
+								relatedIds.has(e.id)
+									? { ...e, isPaid: newIsPaid, paymentDate: newIsPaid ? new Date() : null }
+									: e
+							);
+						}
+
+						return { expenses: updatedExpenses };
+					});
+					break;
+			}
 
 			if (useAppStore.getState().autoSaveEnabled) {
 				useAppStore.getState().saveToFile(AppToSave.Expenses);

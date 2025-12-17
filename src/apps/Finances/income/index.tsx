@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useIncomeStore } from "@/stores/useIncomeStore";
+import { useHistoryStore } from "@/stores/useHistoryStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
 import WeekNavigation from "./components/WeekNavigation";
 import IncomeEntriesList from "./components/IncomeEntriesList";
@@ -8,6 +9,7 @@ import IncomeChart from "./components/IncomeChart";
 import MonthlyView from "./components/MonthlyView";
 import YearlyView from "./components/YearlyView";
 import { AnimatedToggle } from "@/components/AnimatedToggle";
+import { Undo2, Redo2 } from "lucide-react";
 import type { IncomeWeekSelection, IncomeDayData } from "@/types/income";
 import { years } from "@/lib/dateUtils";
 import { isSameDay, parseISO, startOfDay, endOfDay, format } from "date-fns";
@@ -15,14 +17,40 @@ import { isSameDay, parseISO, startOfDay, endOfDay, format } from "date-fns";
 export const IncomeTracker: React.FC = () => {
 	const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-	const { incomeEntries, incomeViewType, setIncomeViewType, updateIncomeViewType } =
+	const { incomeEntries, incomeViewType, setIncomeViewType, updateIncomeViewType, undo, redo } =
 		useIncomeStore();
+	const { canUndo, canRedo } = useHistoryStore();
 	const { incomeDefaultView, incomeWeekStartDay } = useSettingsStore();
 
 	// Set default view from settings on mount
 	useEffect(() => {
 		setIncomeViewType(incomeDefaultView);
 	}, []);
+
+	// Keyboard shortcuts for undo/redo
+	useEffect(() => {
+		const handleKeyDown = (e: KeyboardEvent) => {
+			const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
+			const modKey = isMac ? e.metaKey : e.ctrlKey;
+
+			// Ctrl/Cmd + Z to undo
+			if (modKey && e.key === "z" && !e.shiftKey && canUndo) {
+				e.preventDefault();
+				undo();
+			}
+
+			// Ctrl/Cmd + Shift + Z or Ctrl/Cmd + Y to redo
+			if ((modKey && e.shiftKey && e.key === "z") || (modKey && e.key === "y")) {
+				if (canRedo) {
+					e.preventDefault();
+					redo();
+				}
+			}
+		};
+
+		document.addEventListener("keydown", handleKeyDown);
+		return () => document.removeEventListener("keydown", handleKeyDown);
+	}, [canUndo, canRedo, undo, redo]);
 
 	const getWeekStartDate = (date: Date, weekStartDay: number): Date => {
 		const dayOfWeek = date.getDay();
@@ -115,12 +143,34 @@ export const IncomeTracker: React.FC = () => {
 		<div className="flex-1 overflow-y-auto max-h-[98vh] p-2 w-full min-h-screen">
 			<div className="w-full max-w-7xl mx-auto animate-slideUp">
 				{/* Header */}
-				<div className="w-min mb-4">
-					<AnimatedToggle
-						options={viewModeOptions}
-						value={incomeViewType}
-						onChange={updateIncomeViewType}
-					/>
+				<div className="flex items-center justify-between mb-4">
+					<div className="w-min">
+						<AnimatedToggle
+							options={viewModeOptions}
+							value={incomeViewType}
+							onChange={updateIncomeViewType}
+						/>
+					</div>
+					<div className="flex items-center gap-1">
+						<button
+							type="button"
+							onClick={undo}
+							disabled={!canUndo}
+							className="p-1.5 hover:bg-accent rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+							title="Undo (Ctrl+Z)"
+						>
+							<Undo2 size={18} />
+						</button>
+						<button
+							type="button"
+							onClick={redo}
+							disabled={!canRedo}
+							className="p-1.5 hover:bg-accent rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+							title="Redo (Ctrl+Y)"
+						>
+							<Redo2 size={18} />
+						</button>
+					</div>
 				</div>
 
 				{incomeViewType === "weekly" ? (
