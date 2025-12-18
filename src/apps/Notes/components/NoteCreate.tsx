@@ -2,7 +2,7 @@ import { useState, useRef, useMemo, useEffect, useCallback } from "react";
 import { useNotesStore } from "@/stores/useNotesStore";
 import { Tag, NotesFolder, Subfolder } from "@/types/notes";
 import { ConfirmationModal } from "@/components/ConfirmationModal";
-import YooptaEditor, { createYooptaEditor } from "@yoopta/editor";
+import YooptaEditor, { createYooptaEditor, YooptaPlugin, SlateElement } from "@yoopta/editor";
 import Paragraph from "@yoopta/paragraph";
 import Blockquote from "@yoopta/blockquote";
 import Embed from "@yoopta/embed";
@@ -15,6 +15,7 @@ import { HeadingOne, HeadingThree, HeadingTwo } from "@yoopta/headings";
 import { NumberedList, BulletedList, TodoList } from "@yoopta/lists";
 import { Bold, Italic, CodeMark, Underline, Strike, Highlight } from "@yoopta/marks";
 import Code from "@yoopta/code";
+import Table from "@yoopta/table";
 import LinkTool, { DefaultLinkToolRender } from "@yoopta/link-tool";
 import ActionMenu, { DefaultActionMenuRender } from "@yoopta/action-menu-list";
 import Toolbar, { DefaultToolbarRender } from "@yoopta/toolbar";
@@ -105,6 +106,7 @@ export const NoteCreate = ({ tags, activeFolder, onBack, onNoteCreated, register
 			BulletedList,
 			TodoList,
 			Code,
+			Table as unknown as YooptaPlugin<Record<string, SlateElement>, Record<string, unknown>>,
 			Link.extend({
 				elementProps: {
 					link: (props: LinkElementProps) => ({

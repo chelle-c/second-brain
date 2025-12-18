@@ -355,10 +355,13 @@ html {
 	border-color: var(--border);
 }
 
-.dark .yoopta-editor-wrapper th,
-.dark .yoopta-editor-wrapper td {
-	border-color: var(--border);
-	background-color: var(--card);
+.yoopta-table-data-cell, .dark .yoopta-table-data-cell {
+	border: 1px solid var(--accent-foreground) !important;
+}
+
+.dark .yoopta-table-data-cell-head {
+	background-color: var(--background) !important;
+	color: var(--primary) !important;
 }
 
 /* Yoopta Toolbar Dark Mode */
