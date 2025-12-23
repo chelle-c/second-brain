@@ -20,6 +20,7 @@ interface SettingsStore extends AppSettings {
 	setIncomeDefaultView: (view: IncomeViewType) => void;
 	setIncomeWeekStartDay: (day: WeekStartDay) => void;
 	setIncomeCurrency: (currency: string) => void;
+	setIncomeDefaultWeeklyTarget: (amount: number) => void;
 	resetToDefaults: () => void;
 }
 
@@ -98,6 +99,14 @@ export const useSettingsStore = create<SettingsStore>()(
 
 		setIncomeCurrency: (currency) => {
 			set({ incomeCurrency: currency });
+
+			if (useAppStore.getState().autoSaveEnabled) {
+				useAppStore.getState().saveToFile(AppToSave.All);
+			}
+		},
+
+		setIncomeDefaultWeeklyTarget: (amount) => {
+			set({ incomeDefaultWeeklyTarget: amount });
 
 			if (useAppStore.getState().autoSaveEnabled) {
 				useAppStore.getState().saveToFile(AppToSave.All);

@@ -17,6 +17,7 @@ describe('ExpenseForm', () => {
   const mockAddExpense = vi.fn();
   const mockUpdateExpense = vi.fn();
   const mockCategories = ['Housing', 'Food', 'Transport', 'Utilities'];
+  const mockPaymentMethods = ['Cash', 'Credit Card', 'Debit Card'];
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -26,6 +27,8 @@ describe('ExpenseForm', () => {
       addExpense: mockAddExpense,
       updateExpense: mockUpdateExpense,
       categories: mockCategories,
+      categoryColors: {},
+      paymentMethods: mockPaymentMethods,
     } as any);
   });
 
@@ -55,7 +58,7 @@ describe('ExpenseForm', () => {
       const wantButton = screen.getByRole('button', { name: /^want$/i });
       await user.click(wantButton);
 
-      expect(wantButton).toHaveClass('bg-white');
+      expect(wantButton).toHaveClass('bg-card');
     });
 
     it('should close form on cancel', async () => {

@@ -18,6 +18,7 @@ export interface AppSettings {
 	incomeDefaultView: IncomeViewType;
 	incomeWeekStartDay: WeekStartDay;
 	incomeCurrency: string;
+	incomeDefaultWeeklyTarget: number;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -28,6 +29,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
 	incomeDefaultView: "monthly",
 	incomeWeekStartDay: 1, // Monday
 	incomeCurrency: "USD",
+	incomeDefaultWeeklyTarget: 1000,
 };
 
 export const CURRENCY_OPTIONS = [

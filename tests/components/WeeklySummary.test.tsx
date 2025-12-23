@@ -3,8 +3,10 @@ import { render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import WeeklySummary from '../../src/apps/Finances/income/components/WeeklySummary';
 import { useIncomeStore } from '../../src/stores/useIncomeStore';
+import { useSettingsStore } from '../../src/stores/useSettingsStore';
 
 vi.mock('../../src/stores/useIncomeStore');
+vi.mock('../../src/stores/useSettingsStore');
 
 describe('WeeklySummary', () => {
   const mockAddIncomeWeeklyTarget = vi.fn();
@@ -15,10 +17,15 @@ describe('WeeklySummary', () => {
 
     vi.mocked(useIncomeStore).mockReturnValue({
       incomeWeeklyTargets: [
-        { id: '1', amount: 575 },
+        { id: '1', amount: 1000 },
       ],
       addIncomeWeeklyTarget: mockAddIncomeWeeklyTarget,
       updateIncomeWeeklyTarget: mockUpdateIncomeWeeklyTarget,
+    } as any);
+
+    vi.mocked(useSettingsStore).mockReturnValue({
+      incomeCurrency: 'USD',
+      incomeDefaultWeeklyTarget: 1000,
     } as any);
   });
 
@@ -29,7 +36,7 @@ describe('WeeklySummary', () => {
 
   it('should display target amount', () => {
     render(<WeeklySummary weeklyTotal={300} selectedWeek={1} />);
-    expect(screen.getByText('$575')).toBeInTheDocument();
+    expect(screen.getByText('$1000')).toBeInTheDocument();
   });
 
   it('should display amount earned', () => {
@@ -39,19 +46,19 @@ describe('WeeklySummary', () => {
 
   it('should display progress percentage', () => {
     render(<WeeklySummary weeklyTotal={300} selectedWeek={1} />);
-    // 300/575 = 52.17%
-    expect(screen.getByText(/52%/i)).toBeInTheDocument();
+    // 300/1000 = 30%
+    expect(screen.getByText(/30%/i)).toBeInTheDocument();
   });
 
   it('should display remaining amount when target not reached', () => {
     render(<WeeklySummary weeklyTotal={300} selectedWeek={1} />);
-    // 575 - 300 = 275
-    expect(screen.getByText(/\$275/i)).toBeInTheDocument();
+    // 1000 - 300 = 700
+    expect(screen.getByText(/\$700/i)).toBeInTheDocument();
     expect(screen.getByText(/remaining/i)).toBeInTheDocument();
   });
 
   it('should show success message when target reached', () => {
-    render(<WeeklySummary weeklyTotal={600} selectedWeek={1} />);
+    render(<WeeklySummary weeklyTotal={1200} selectedWeek={1} />);
     expect(screen.getByText(/target reached/i)).toBeInTheDocument();
   });
 
@@ -76,7 +83,7 @@ describe('WeeklySummary', () => {
     // Input should appear
     const input = screen.getByRole('spinbutton');
     expect(input).toBeInTheDocument();
-    expect(input).toHaveValue(575);
+    expect(input).toHaveValue(1000);
   });
 
   it('should show save and cancel buttons when editing', async () => {
@@ -92,8 +99,8 @@ describe('WeeklySummary', () => {
   });
 
   it('should cap progress bar at 100%', () => {
-    render(<WeeklySummary weeklyTotal={1000} selectedWeek={1} />);
-    // 1000/575 = 173.91%, should display as 100%
+    render(<WeeklySummary weeklyTotal={1500} selectedWeek={1} />);
+    // 1500/1000 = 150%, should display as 100%
     expect(screen.getByText(/100%/i)).toBeInTheDocument();
   });
 
@@ -105,7 +112,79 @@ describe('WeeklySummary', () => {
     } as any);
 
     render(<WeeklySummary weeklyTotal={200} selectedWeek={5} />);
-    // Default target should be 575
-    expect(screen.getByText('$575')).toBeInTheDocument();
+    // Default target should be 1000
+    expect(screen.getByText('$1000')).toBeInTheDocument();
+  });
+
+  describe('custom default weekly target from settings', () => {
+    it('should use custom default target from settings', () => {
+      vi.mocked(useIncomeStore).mockReturnValue({
+        incomeWeeklyTargets: [],
+        addIncomeWeeklyTarget: mockAddIncomeWeeklyTarget,
+        updateIncomeWeeklyTarget: mockUpdateIncomeWeeklyTarget,
+      } as any);
+
+      vi.mocked(useSettingsStore).mockReturnValue({
+        incomeCurrency: 'USD',
+        incomeDefaultWeeklyTarget: 750,
+      } as any);
+
+      render(<WeeklySummary weeklyTotal={300} selectedWeek={5} />);
+      expect(screen.getByText('$750')).toBeInTheDocument();
+    });
+
+    it('should calculate progress based on custom default target', () => {
+      vi.mocked(useIncomeStore).mockReturnValue({
+        incomeWeeklyTargets: [],
+        addIncomeWeeklyTarget: mockAddIncomeWeeklyTarget,
+        updateIncomeWeeklyTarget: mockUpdateIncomeWeeklyTarget,
+      } as any);
+
+      vi.mocked(useSettingsStore).mockReturnValue({
+        incomeCurrency: 'USD',
+        incomeDefaultWeeklyTarget: 500,
+      } as any);
+
+      render(<WeeklySummary weeklyTotal={250} selectedWeek={5} />);
+      // 250/500 = 50%
+      expect(screen.getByText(/50%/i)).toBeInTheDocument();
+    });
+
+    it('should calculate remaining amount based on custom default target', () => {
+      vi.mocked(useIncomeStore).mockReturnValue({
+        incomeWeeklyTargets: [],
+        addIncomeWeeklyTarget: mockAddIncomeWeeklyTarget,
+        updateIncomeWeeklyTarget: mockUpdateIncomeWeeklyTarget,
+      } as any);
+
+      vi.mocked(useSettingsStore).mockReturnValue({
+        incomeCurrency: 'USD',
+        incomeDefaultWeeklyTarget: 800,
+      } as any);
+
+      render(<WeeklySummary weeklyTotal={300} selectedWeek={5} />);
+      // 800 - 300 = 500 remaining
+      expect(screen.getByText(/\$500/i)).toBeInTheDocument();
+      expect(screen.getByText(/remaining/i)).toBeInTheDocument();
+    });
+
+    it('should prefer saved target over default from settings', () => {
+      vi.mocked(useIncomeStore).mockReturnValue({
+        incomeWeeklyTargets: [
+          { id: '5', amount: 1500 },
+        ],
+        addIncomeWeeklyTarget: mockAddIncomeWeeklyTarget,
+        updateIncomeWeeklyTarget: mockUpdateIncomeWeeklyTarget,
+      } as any);
+
+      vi.mocked(useSettingsStore).mockReturnValue({
+        incomeCurrency: 'USD',
+        incomeDefaultWeeklyTarget: 1000,
+      } as any);
+
+      render(<WeeklySummary weeklyTotal={300} selectedWeek={5} />);
+      // Should use saved target (1500), not default (1000)
+      expect(screen.getByText('$1500')).toBeInTheDocument();
+    });
   });
 });

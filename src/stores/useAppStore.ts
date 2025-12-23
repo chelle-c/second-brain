@@ -150,6 +150,7 @@ const useAppStore = create<AppStore>()(
 							incomeDefaultView: settingsState.incomeDefaultView,
 							incomeWeekStartDay: settingsState.incomeWeekStartDay,
 							incomeCurrency: settingsState.incomeCurrency,
+							incomeDefaultWeeklyTarget: settingsState.incomeDefaultWeeklyTarget,
 						},
 						theme: {
 							mode: themeState.mode,

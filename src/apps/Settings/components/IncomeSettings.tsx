@@ -10,6 +10,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
 	Select,
 	SelectContent,
@@ -55,9 +56,11 @@ export const IncomeSettings = () => {
 		incomeDefaultView,
 		incomeWeekStartDay,
 		incomeCurrency,
+		incomeDefaultWeeklyTarget,
 		setIncomeDefaultView,
 		setIncomeWeekStartDay,
 		setIncomeCurrency,
+		setIncomeDefaultWeeklyTarget,
 	} = useSettingsStore();
 
 	const { incomeEntries, incomeWeeklyTargets, setIncomeEntries, setIncomeWeeklyTargets } =
@@ -287,6 +290,30 @@ export const IncomeSettings = () => {
 								))}
 							</SelectContent>
 						</Select>
+					</div>
+
+					<Separator />
+
+					<div className="flex items-center justify-between">
+						<div className="space-y-0.5">
+							<Label className="text-base font-medium">Default Weekly Target</Label>
+							<p className="text-sm text-muted-foreground">
+								Default target for weeks that haven't been customized
+							</p>
+						</div>
+						<Input
+							type="number"
+							min="0"
+							step="1"
+							value={incomeDefaultWeeklyTarget}
+							onChange={(e) => {
+								const value = parseFloat(e.target.value);
+								if (!isNaN(value) && value >= 0) {
+									setIncomeDefaultWeeklyTarget(value);
+								}
+							}}
+							className="w-[200px]"
+						/>
 					</div>
 
 					<Separator />

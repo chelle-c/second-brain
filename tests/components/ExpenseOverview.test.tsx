@@ -22,13 +22,9 @@ vi.mock('../../src/components/AnimatedToggle', () => ({
   ),
 }));
 
-// Mock Recharts to avoid rendering issues in tests
-vi.mock('recharts', () => ({
-  PieChart: ({ children }: any) => <div data-testid="pie-chart">{children}</div>,
-  Pie: ({ data }: any) => <div data-testid="pie">{data.length} categories</div>,
-  Cell: () => <div>Cell</div>,
-  ResponsiveContainer: ({ children }: any) => <div>{children}</div>,
-  Tooltip: () => <div>Tooltip</div>,
+// Mock custom PieChart component
+vi.mock('../../src/components/charts', () => ({
+  PieChart: ({ data }: any) => <div data-testid="pie-chart">{data?.length || 0} categories</div>,
 }));
 
 describe('ExpenseOverview', () => {

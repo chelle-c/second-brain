@@ -12,21 +12,21 @@ interface WeeklySummaryProps {
 }
 
 const WeeklySummary: React.FC<WeeklySummaryProps> = ({ weeklyTotal, selectedWeek }) => {
-	const [weeklyTarget, setWeeklyTarget] = useState({ amount: 575 });
-	const [editingTarget, setEditingTarget] = useState(false);
-	const [newTargetAmount, setNewTargetAmount] = useState(weeklyTarget.amount.toString());
-
 	const { incomeWeeklyTargets, addIncomeWeeklyTarget, updateIncomeWeeklyTarget } =
 		useIncomeStore();
-	const { incomeCurrency } = useSettingsStore();
+	const { incomeCurrency, incomeDefaultWeeklyTarget } = useSettingsStore();
 	const currencySymbol = getCurrencySymbol(incomeCurrency);
+
+	const [weeklyTarget, setWeeklyTarget] = useState({ amount: incomeDefaultWeeklyTarget });
+	const [editingTarget, setEditingTarget] = useState(false);
+	const [newTargetAmount, setNewTargetAmount] = useState(weeklyTarget.amount.toString());
 
 	useEffect(() => {
 		const savedTarget =
 			incomeWeeklyTargets?.find((target) => target.id === selectedWeek.toString())?.amount ||
-			575;
+			incomeDefaultWeeklyTarget;
 		setWeeklyTarget({ amount: savedTarget });
-	}, [incomeWeeklyTargets, selectedWeek]);
+	}, [incomeWeeklyTargets, selectedWeek, incomeDefaultWeeklyTarget]);
 
 	useEffect(() => {
 		setNewTargetAmount(weeklyTarget.amount.toString());
@@ -37,7 +37,8 @@ const WeeklySummary: React.FC<WeeklySummaryProps> = ({ weeklyTotal, selectedWeek
 	const isTargetReached = weeklyTotal >= weeklyTarget.amount;
 
 	const savedWeeklyTarget =
-		incomeWeeklyTargets?.find((target) => target.id === selectedWeek.toString())?.amount || 575;
+		incomeWeeklyTargets?.find((target) => target.id === selectedWeek.toString())?.amount ||
+		incomeDefaultWeeklyTarget;
 
 	const handleUpdateTarget = () => {
 		const amount = parseFloat(newTargetAmount);

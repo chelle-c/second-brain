@@ -61,7 +61,7 @@ describe('TagFilter', () => {
     );
 
     const ideasButton = screen.getByRole('button', { name: /ideas/i });
-    expect(ideasButton).toHaveClass('bg-sky-100');
+    expect(ideasButton).toHaveClass('bg-primary/10');
   });
 
   it('should not highlight inactive tags', () => {
@@ -74,7 +74,7 @@ describe('TagFilter', () => {
     );
 
     const actionsButton = screen.getByRole('button', { name: /actions/i });
-    expect(actionsButton).toHaveClass('bg-gray-100');
+    expect(actionsButton).toHaveClass('bg-muted');
   });
 
   it('should call setActiveTags when tag is clicked', async () => {
@@ -154,9 +154,9 @@ describe('TagFilter', () => {
     const actionsButton = screen.getByRole('button', { name: /actions/i });
     const referenceButton = screen.getByRole('button', { name: /reference/i });
 
-    expect(ideasButton).toHaveClass('bg-sky-100');
-    expect(actionsButton).toHaveClass('bg-sky-100');
-    expect(referenceButton).toHaveClass('bg-sky-100');
+    expect(ideasButton).toHaveClass('bg-primary/10');
+    expect(actionsButton).toHaveClass('bg-primary/10');
+    expect(referenceButton).toHaveClass('bg-primary/10');
   });
 
   it('should render with empty tags object', () => {

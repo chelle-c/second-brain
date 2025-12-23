@@ -171,17 +171,29 @@ const BarChartInner = ({
 					{data.map((d, i) => {
 						const x = (xScale(d.label) || 0) + xScale.bandwidth() / 2;
 						return (
-							<Text
-								key={`x-label-${i}`}
-								x={x}
-								y={innerHeight + 16}
-								textAnchor="middle"
-								fill={theme.textColor}
-								fontSize={13}
-								fontWeight={500}
-							>
-								{d.label}
-							</Text>
+							<Group key={`x-label-${i}`}>
+								<Text
+									x={x}
+									y={innerHeight + 16}
+									textAnchor="middle"
+									fill={theme.textColor}
+									fontSize={13}
+									fontWeight={500}
+								>
+									{d.label}
+								</Text>
+								{d.secondaryLabel && (
+									<Text
+										x={x}
+										y={innerHeight + 30}
+										textAnchor="middle"
+										fill={theme.mutedTextColor}
+										fontSize={11}
+									>
+										{d.secondaryLabel}
+									</Text>
+								)}
+							</Group>
 						);
 					})}
 				</Group>

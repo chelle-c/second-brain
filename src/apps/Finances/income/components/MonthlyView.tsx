@@ -186,6 +186,29 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ selectedYear, onYearChange, y
 				</>
 			) : (
 				<div className="bg-card rounded-xl shadow-lg p-4">
+					<div className="flex items-center justify-between pb-2">
+						<h3 className="text-sm font-semibold text-card-foreground">
+							Monthly Overview
+						</h3>
+						<Select
+							value={selectedYear.toString()}
+							onValueChange={(value) => onYearChange(parseInt(value))}
+						>
+							<SelectTrigger className="w-24 h-8 text-sm">
+								<SelectValue placeholder="Year" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectGroup>
+									<SelectLabel>Year</SelectLabel>
+									{years.map((year) => (
+										<SelectItem key={year} value={year.toString()}>
+											{year}
+										</SelectItem>
+									))}
+								</SelectGroup>
+							</SelectContent>
+						</Select>
+					</div>
 					<div className="p-8 flex flex-col items-center">
 						<FileText className="w-10 h-10 text-muted-foreground/30 mb-3" />
 						<p className="text-sm text-muted-foreground">

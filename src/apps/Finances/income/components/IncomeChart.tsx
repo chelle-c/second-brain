@@ -4,6 +4,7 @@ import { useSettingsStore } from "@/stores/useSettingsStore";
 import { getCurrencySymbol } from "@/lib/currencyUtils";
 import { useThemeStore } from "@/stores/useThemeStore";
 import { BarChart, type BarChartData } from "@/components/charts";
+import { format } from "date-fns";
 
 interface IncomeChartProps {
 	weeklyData: IncomeDayData[];
@@ -27,6 +28,7 @@ const IncomeChart: React.FC<IncomeChartProps> = ({ weeklyData }) => {
 
 	const chartData: BarChartData[] = weeklyData.map((day) => ({
 		label: day.name,
+		secondaryLabel: format(day.date, "M/d"),
 		value: day.amount,
 		...day,
 	}));
@@ -54,7 +56,7 @@ const IncomeChart: React.FC<IncomeChartProps> = ({ weeklyData }) => {
 						renderTooltip={renderTooltip}
 						theme={{ textColor, mutedTextColor, gridColor }}
 						barSize={50}
-						margin={{ top: 25, right: 20, bottom: 30, left: 50 }}
+						margin={{ top: 25, right: 20, bottom: 45, left: 50 }}
 					/>
 				</div>
 			</div>
