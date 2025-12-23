@@ -21,7 +21,7 @@ import {
 	MigrationStep,
 	ExpenseExportData,
 } from "@/types/backup";
-import { DATA_VERSION, DEFAULT_PAYMENT_METHODS } from "@/types/storage";
+import { DATA_VERSION, APP_VERSION, DEFAULT_PAYMENT_METHODS } from "@/types/storage";
 import { Expense } from "@/types/expense";
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
 
@@ -280,14 +280,11 @@ class BackupService {
 		categoryColors: Record<string, string>,
 		paymentMethods: string[],
 		selectedMonth: Date,
-		overviewMode: string,
-		description?: string
+		overviewMode: string
 	): ExpenseExportData {
 		return {
-			version: DATA_VERSION,
+			version: APP_VERSION,
 			exportedAt: new Date().toISOString(),
-			environment: this.settings.databaseEnvironment,
-			description,
 			data: {
 				expenses: expenses.map((e) => ({
 					...e,
@@ -525,8 +522,7 @@ class BackupService {
 					expenseData.categoryColors,
 					expenseData.paymentMethods,
 					expenseData.selectedMonth,
-					expenseData.overviewMode,
-					description
+					expenseData.overviewMode
 				);
 
 				hasExpenseExport = await this.exportExpensesToJson(exportData, expenseExportPath);

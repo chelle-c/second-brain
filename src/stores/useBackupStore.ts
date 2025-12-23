@@ -217,8 +217,7 @@ export const useBackupStore = create<BackupStore>()(
 					expenseStore.categoryColors,
 					expenseStore.paymentMethods,
 					expenseStore.selectedMonth || new Date(),
-					expenseStore.overviewMode,
-					"Manual export"
+					expenseStore.overviewMode
 				);
 
 				const success = await backupService.exportExpensesToJson(exportData, filePath);

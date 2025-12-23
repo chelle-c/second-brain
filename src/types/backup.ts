@@ -56,8 +56,6 @@ export interface RestoreResult {
 export interface ExpenseExportData {
 	version: string;
 	exportedAt: string;
-	environment: DatabaseEnvironment;
-	description?: string;
 	data: {
 		expenses: any[];
 		categories: string[];

@@ -1,6 +1,7 @@
 import { Note } from "@/types/notes";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
+import { APP_VERSION } from "@/types/storage";
 
 export interface NotesExport {
 	version: string;
@@ -25,8 +26,6 @@ export interface ImportResult {
 	skipped: number;
 	errors: string[];
 }
-
-const EXPORT_VERSION = "1.0";
 
 const NOTE_REQUIRED_KEYS: (keyof ExportedNote)[] = [
 	"id",
@@ -113,7 +112,7 @@ export function exportNotes(notes: Note[]): NotesExport {
 	}));
 
 	return {
-		version: EXPORT_VERSION,
+		version: APP_VERSION,
 		exportedAt: new Date().toISOString(),
 		notes: exportedNotes,
 	};

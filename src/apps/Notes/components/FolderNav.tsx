@@ -11,8 +11,6 @@ import {
 	MoreVertical,
 	Check,
 	X,
-	Download,
-	Upload,
 } from "lucide-react";
 import {
 	DropdownMenu,
@@ -22,13 +20,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useNotesStore } from "@/stores/useNotesStore";
 import { ConfirmationModal } from "@/components/ConfirmationModal";
-import {
-	downloadNotesAsJson,
-	parseImportedNotes,
-	validateAndConvertNotes,
-	readFileAsText,
-} from "@/lib/notesExportImport";
-import { toast } from "sonner";
 
 interface FolderNavProps {
 	allFolders: Record<string, NotesFolder>;
@@ -55,16 +46,13 @@ export const FolderNav = ({
 	getNoteCount,
 }: FolderNavProps) => {
 	const {
-		notes,
 		addFolder,
 		updateFolder,
 		deleteFolder,
 		addSubFolder,
 		updateSubFolder,
 		removeSubfolder,
-		restoreNote,
 	} = useNotesStore();
-	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	const [expandedFolders, setExpandedFolders] = useState(new Set<string>());
 	const [editingFolder, setEditingFolder] = useState<string | null>(null);
@@ -289,68 +277,6 @@ export const FolderNav = ({
 			e.preventDefault();
 			cancelCreating();
 		}
-	};
-
-	const handleExportNotes = async () => {
-		if (notes.length === 0) {
-			toast.error("No notes to export");
-			return;
-		}
-		try {
-			const saved = await downloadNotesAsJson(notes);
-			if (saved) {
-				toast.success(`Exported ${notes.length} notes`);
-			}
-		} catch (error) {
-			toast.error("Failed to export notes");
-			console.error("Export error:", error);
-		}
-	};
-
-	const handleImportClick = () => {
-		fileInputRef.current?.click();
-	};
-
-	const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-		const file = e.target.files?.[0];
-		if (!file) return;
-
-		try {
-			const content = await readFileAsText(file);
-			const { data, error } = parseImportedNotes(content);
-
-			if (error || !data) {
-				toast.error(error || "Failed to parse import file");
-				return;
-			}
-
-			const existingIds = new Set(notes.map((n) => n.id));
-			const { validNotes, errors, skipped } = validateAndConvertNotes(data, existingIds);
-
-			if (validNotes.length === 0 && errors.length > 0) {
-				toast.error(`Import failed: ${errors[0]}`);
-				return;
-			}
-
-			// Import valid notes
-			for (const note of validNotes) {
-				restoreNote(note);
-			}
-
-			if (validNotes.length > 0) {
-				toast.success(`Imported ${validNotes.length} notes${skipped > 0 ? `, skipped ${skipped} duplicates` : ""}`);
-			}
-
-			if (errors.length > 0) {
-				console.warn("Import errors:", errors);
-			}
-		} catch (err) {
-			toast.error("Failed to read import file");
-			console.error("Import error:", err);
-		}
-
-		// Reset file input
-		e.target.value = "";
 	};
 
 	return (
@@ -742,36 +668,6 @@ export const FolderNav = ({
 							</div>
 						);
 					})}
-				</div>
-
-				{/* Export/Import buttons at bottom */}
-				<div className="flex gap-1 mt-3 pt-3 border-t border-border">
-					<button
-						type="button"
-						onClick={handleExportNotes}
-						disabled={notes.length === 0}
-						className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-secondary text-secondary-foreground hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors cursor-pointer"
-						title="Export all notes to JSON"
-					>
-						<Download size={14} />
-						Export
-					</button>
-					<button
-						type="button"
-						onClick={handleImportClick}
-						className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-secondary text-secondary-foreground hover:bg-accent rounded transition-colors cursor-pointer"
-						title="Import notes from JSON"
-					>
-						<Upload size={14} />
-						Import
-					</button>
-					<input
-						ref={fileInputRef}
-						type="file"
-						accept=".json"
-						onChange={handleFileSelect}
-						className="hidden"
-					/>
 				</div>
 			</div>
 		</>
