@@ -5,7 +5,7 @@ export const generateRecurringExpenses = (
 	baseExpense: Expense,
 	includeFirst: boolean = true
 ): Expense[] => {
-	const { recurrence, dueDate, id } = baseExpense;
+	const { recurrence, dueDate, id, paymentMethod } = baseExpense;
 	if (!recurrence || !dueDate) return [];
 
 	const recurringExpenses: Expense[] = [];
@@ -57,6 +57,7 @@ export const generateRecurringExpenses = (
 			initialState: {
 				amount: baseExpense.amount,
 				dueDate: occurrenceDate,
+				paymentMethod: paymentMethod || "None",
 			},
 		});
 	}

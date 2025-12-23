@@ -5,6 +5,7 @@ export interface ExpensesData {
 		overviewMode: OverviewMode;
 		categories: string[];
 		categoryColors: Record<string, string>;
+		paymentMethods: string[];
 	};
 	version: string;
 }
@@ -14,6 +15,7 @@ export interface Expense {
 	name: string;
 	amount: number;
 	category: string;
+	paymentMethod: string;
 	dueDate: Date | null;
 	isRecurring: boolean;
 	recurrence?: RecurrenceSettings;
@@ -27,13 +29,14 @@ export interface Expense {
 	parentExpenseId?: string;
 	monthlyOverrides?: { [key: string]: Partial<Expense> };
 	isModified?: boolean;
-	initialState?: OccurrenceInitialState; // Track original values
+	initialState?: OccurrenceInitialState;
 }
 
 export interface ExpenseFormData {
 	name: string;
 	amount: number;
 	category: string;
+	paymentMethod: string;
 	dueDate: Date | null;
 	isRecurring: boolean;
 	recurrence?: RecurrenceSettings;
@@ -65,4 +68,5 @@ export interface RecurrenceSettings {
 export interface OccurrenceInitialState {
 	amount: number;
 	dueDate: Date | null;
+	paymentMethod: string;
 }

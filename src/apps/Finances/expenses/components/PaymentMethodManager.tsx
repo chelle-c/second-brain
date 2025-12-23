@@ -1,130 +1,122 @@
 import { useState, useRef, useEffect } from "react";
-import { Plus, Edit2, Trash2, X, Save, Tag } from "lucide-react";
+import { Plus, Edit2, Trash2, X, Save, CreditCard } from "lucide-react";
 import { useExpenseStore } from "@/stores/useExpenseStore";
 
-interface CategoryManagerProps {
+interface PaymentMethodManagerProps {
 	isOpen: boolean;
 	onClose: () => void;
 }
 
-export const CategoryManager: React.FC<CategoryManagerProps> = ({ isOpen, onClose }) => {
-	const { categories, categoryColors, addCategory, updateCategory, deleteCategory } =
+export const PaymentMethodManager: React.FC<PaymentMethodManagerProps> = ({ isOpen, onClose }) => {
+	const { paymentMethods, addPaymentMethod, updatePaymentMethod, deletePaymentMethod } =
 		useExpenseStore();
 
-	const [editingCategory, setEditingCategory] = useState<string | null>(null);
+	const [editingMethod, setEditingMethod] = useState<string | null>(null);
 	const [editName, setEditName] = useState("");
-	const [editColor, setEditColor] = useState("");
 	const [isAddingNew, setIsAddingNew] = useState(false);
-	const [newCategoryName, setNewCategoryName] = useState("");
-	const [newCategoryColor, setNewCategoryColor] = useState("#3b82f6");
-	const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; category: string }>({
+	const [newMethodName, setNewMethodName] = useState("");
+	const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; method: string }>({
 		isOpen: false,
-		category: "",
+		method: "",
 	});
 
 	const addInputRef = useRef<HTMLInputElement>(null);
 	const editInputRef = useRef<HTMLInputElement>(null);
 
-	// Focus input when adding new category
+	// Focus input when adding new method
 	useEffect(() => {
 		if (isAddingNew && addInputRef.current) {
 			addInputRef.current.focus();
 		}
 	}, [isAddingNew]);
 
-	// Focus input when editing category
+	// Focus input when editing method
 	useEffect(() => {
-		if (editingCategory && editInputRef.current) {
+		if (editingMethod && editInputRef.current) {
 			editInputRef.current.focus();
 		}
-	}, [editingCategory]);
+	}, [editingMethod]);
 
 	if (!isOpen) return null;
 
-	// Sort categories alphabetically
-	const sortedCategories = [...categories].sort((a, b) =>
+	// Sort methods alphabetically
+	const sortedMethods = [...paymentMethods].sort((a, b) =>
 		a.toLowerCase().localeCompare(b.toLowerCase())
 	);
 
 	const handleStartAddNew = () => {
 		// Cancel any editing in progress
-		if (editingCategory) {
+		if (editingMethod) {
 			handleCancelEdit();
 		}
 		setIsAddingNew(true);
-		setNewCategoryName("");
-		setNewCategoryColor("#3b82f6");
+		setNewMethodName("");
 	};
 
-	const handleAddCategory = () => {
-		if (newCategoryName.trim()) {
-			addCategory(newCategoryName.trim(), newCategoryColor);
-			setNewCategoryName("");
-			setNewCategoryColor("#3b82f6");
+	const handleAddMethod = () => {
+		if (newMethodName.trim()) {
+			addPaymentMethod(newMethodName.trim());
+			setNewMethodName("");
 			setIsAddingNew(false);
 		}
 	};
 
 	const handleCancelAdd = () => {
 		setIsAddingNew(false);
-		setNewCategoryName("");
-		setNewCategoryColor("#3b82f6");
+		setNewMethodName("");
 	};
 
 	const handleAddInputBlur = (e: React.FocusEvent) => {
 		// Check if the blur is going to another element within the add section
 		const relatedTarget = e.relatedTarget as HTMLElement;
-		if (relatedTarget?.closest(".add-category-section")) {
+		if (relatedTarget?.closest(".add-method-section")) {
 			return;
 		}
 		handleCancelAdd();
 	};
 
-	const handleStartEdit = (category: string) => {
+	const handleStartEdit = (method: string) => {
 		// Cancel adding if in progress
 		if (isAddingNew) {
 			handleCancelAdd();
 		}
-		setEditingCategory(category);
-		setEditName(category);
-		setEditColor(categoryColors[category] || "#3b82f6");
+		setEditingMethod(method);
+		setEditName(method);
 	};
 
 	const handleSaveEdit = () => {
-		if (editingCategory && editName.trim()) {
-			updateCategory(editingCategory, editName.trim(), editColor);
-			setEditingCategory(null);
+		if (editingMethod && editName.trim()) {
+			updatePaymentMethod(editingMethod, editName.trim());
+			setEditingMethod(null);
 			setEditName("");
-			setEditColor("");
 		}
 	};
 
 	const handleCancelEdit = () => {
-		setEditingCategory(null);
+		setEditingMethod(null);
 		setEditName("");
-		setEditColor("");
 	};
 
 	const handleEditInputBlur = (e: React.FocusEvent) => {
 		// Check if the blur is going to another element within the edit row
 		const relatedTarget = e.relatedTarget as HTMLElement;
-		if (relatedTarget?.closest(".edit-category-row")) {
+		if (relatedTarget?.closest(".edit-method-row")) {
 			return;
 		}
 		handleCancelEdit();
 	};
 
-	const handleDeleteClick = (category: string) => {
-		setDeleteModal({ isOpen: true, category });
+	const handleDeleteClick = (method: string) => {
+		setDeleteModal({ isOpen: true, method });
 	};
 
 	const handleDeleteConfirm = () => {
-		deleteCategory(deleteModal.category);
-		setDeleteModal({ isOpen: false, category: "" });
+		deletePaymentMethod(deleteModal.method);
+		setDeleteModal({ isOpen: false, method: "" });
 	};
 
 	const handleDeleteCancel = () => {
-		setDeleteModal({ isOpen: false, category: "" });
+		setDeleteModal({ isOpen: false, method: "" });
 	};
 
 	return (
@@ -140,8 +132,8 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ isOpen, onClos
 				>
 					<div className="flex justify-between items-center mb-6">
 						<h3 className="text-2xl font-bold text-card-foreground flex items-center gap-2">
-							<Tag className="text-primary" size={24} />
-							Manage Categories
+							<CreditCard className="text-primary" size={24} />
+							Manage Payment Methods
 						</h3>
 						<button
 							onClick={onClose}
@@ -151,40 +143,32 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ isOpen, onClos
 						</button>
 					</div>
 					<div className="flex flex-col h-full">
-						{/* Add New Category */}
-						<div className="bg-primary/10 rounded-lg p-4 mb-6 add-category-section">
+						{/* Add New Payment Method */}
+						<div className="bg-primary/10 rounded-lg p-4 mb-6 add-method-section">
 							<h4 className="text-sm font-semibold text-foreground mb-3">
-								Add New Category
+								Add New Payment Method
 							</h4>
 							{isAddingNew ? (
 								<div className="flex gap-3">
 									<input
 										ref={addInputRef}
-										id="categoryName"
+										id="methodName"
 										type="text"
-										placeholder="Category name"
-										value={newCategoryName}
-										onChange={(e) => setNewCategoryName(e.target.value)}
+										placeholder="Payment method name (e.g., Credit Card, PayPal)"
+										value={newMethodName}
+										onChange={(e) => setNewMethodName(e.target.value)}
 										onKeyDown={(e) => {
-											if (e.key === "Enter") handleAddCategory();
+											if (e.key === "Enter") handleAddMethod();
 											if (e.key === "Escape") handleCancelAdd();
 										}}
 										onBlur={handleAddInputBlur}
 										className="flex-1 px-3 py-2 bg-background border border-border rounded-lg
 										focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-muted-foreground text-foreground"
 									/>
-									<input
-										type="color"
-										value={newCategoryColor}
-										onChange={(e) => setNewCategoryColor(e.target.value)}
-										onBlur={handleAddInputBlur}
-										className="w-12 h-10 border border-border rounded-sm cursor-pointer"
-										title="Choose category color"
-									/>
 									<button
-										onClick={handleAddCategory}
+										onClick={handleAddMethod}
 										onBlur={handleAddInputBlur}
-										disabled={!newCategoryName.trim()}
+										disabled={!newMethodName.trim()}
 										className="px-4 py-2 bg-primary text-primary-foreground rounded-lg
 										hover:bg-primary/90 transition-colors duration-200
 										disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed
@@ -209,34 +193,28 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ isOpen, onClos
 									flex items-center gap-2"
 								>
 									<Plus size={18} />
-									Add New Category
+									Add New Payment Method
 								</button>
 							)}
 						</div>
 
-						{/* Categories List */}
+						{/* Payment Methods List */}
 						<div className="overflow-y-auto max-h-[60vh]">
 							<h4 className="text-sm font-semibold text-foreground mb-3">
-								Existing Categories ({categories.length})
+								Existing Payment Methods ({paymentMethods.length})
 							</h4>
 							<div className="space-y-2">
-								{sortedCategories.map((category) => (
+								{sortedMethods.map((method) => (
 									<div
-										key={category}
+										key={method}
 										className={`bg-muted rounded-lg p-3 flex items-center gap-3
 										hover:bg-accent transition-colors duration-200 ${
-											editingCategory === category ? "edit-category-row" : ""
+											editingMethod === method ? "edit-method-row" : ""
 										}`}
 									>
-										{editingCategory === category ? (
+										{editingMethod === method ? (
 											<>
-												<input
-													type="color"
-													value={editColor}
-													onChange={(e) => setEditColor(e.target.value)}
-													onBlur={handleEditInputBlur}
-													className="w-12 h-10 border border-border rounded-lg cursor-pointer"
-												/>
+												<CreditCard className="w-8 h-8 text-primary" />
 												<input
 													ref={editInputRef}
 													type="text"
@@ -270,17 +248,12 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ isOpen, onClos
 											</>
 										) : (
 											<>
-												<div
-													className="w-8 h-8 rounded-lg border-2 border-border"
-													style={{
-														backgroundColor: categoryColors[category],
-													}}
-												/>
+												<CreditCard className="w-8 h-8 text-muted-foreground" />
 												<span className="flex-1 font-medium text-foreground">
-													{category}
+													{method}
 												</span>
 												<button
-													onClick={() => handleStartEdit(category)}
+													onClick={() => handleStartEdit(method)}
 													className="p-2 text-primary hover:bg-primary/10 rounded-lg
 													transition-colors duration-200"
 													title="Edit"
@@ -288,7 +261,7 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ isOpen, onClos
 													<Edit2 size={16} />
 												</button>
 												<button
-													onClick={() => handleDeleteClick(category)}
+													onClick={() => handleDeleteClick(method)}
 													className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg
 													transition-colors duration-200"
 													title="Delete"
@@ -325,12 +298,12 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ isOpen, onClos
 						</div>
 
 						<p className="text-muted-foreground mb-6">
-							Are you sure you want to delete the category{" "}
-							<strong className="text-foreground">"{deleteModal.category}"</strong>?
+							Are you sure you want to delete the payment method{" "}
+							<strong className="text-foreground">"{deleteModal.method}"</strong>?
 							<br />
 							<br />
 							<span className="text-sm text-orange-500">
-								⚠️ Expenses in this category will be moved to "Other".
+								⚠️ Expenses using this method will be set to "None".
 							</span>
 						</p>
 

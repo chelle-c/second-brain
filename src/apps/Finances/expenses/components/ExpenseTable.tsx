@@ -1,10 +1,5 @@
 import { useState, useMemo } from "react";
-import {
-	formatCurrency,
-	formatDate,
-	getRelativeDateText,
-	getDueDateColor,
-} from "@/lib/dateUtils";
+import { formatCurrency, formatDate, getRelativeDateText, getDueDateColor } from "@/lib/dateUtils";
 import { DEFAULT_CATEGORY_COLORS, getCategoryDisplayColor } from "@/lib/expenseHelpers";
 import { useThemeStore } from "@/stores/useThemeStore";
 import { Expense, ImportanceLevel } from "@/types/expense";
@@ -35,6 +30,7 @@ import {
 	Eye,
 	EyeOff,
 	Copy,
+	CreditCard,
 } from "lucide-react";
 
 interface ExpenseTableProps {
@@ -55,6 +51,7 @@ interface ExpenseTableProps {
 
 type SortKey =
 	| "name"
+	| "paymentMethod"
 	| "importance"
 	| "category"
 	| "type"
@@ -92,7 +89,8 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 	onSelectedYearChange,
 	categoryColors = {},
 }) => {
-	const { expenses, showPaidExpenses, setShowPaidExpenses, setEditingExpense } = useExpenseStore();
+	const { expenses, showPaidExpenses, setShowPaidExpenses, setEditingExpense } =
+		useExpenseStore();
 	const { expenseCurrency } = useSettingsStore();
 	const { resolvedTheme } = useThemeStore();
 	const isDarkMode = resolvedTheme === "dark";
@@ -132,11 +130,9 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 
 		expensesToDisplay.forEach((expense) => {
 			if (expense.isRecurring && !expense.parentExpenseId) {
-				// This is a parent
 				parentExpenses.set(expense.id, expense);
 				occurrencesByParent.set(expense.id, []);
 			} else if (expense.parentExpenseId) {
-				// This is an occurrence
 				const occurrences = occurrencesByParent.get(expense.parentExpenseId) || [];
 				occurrences.push(expense);
 				occurrencesByParent.set(expense.parentExpenseId, occurrences);
@@ -151,17 +147,14 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 
 		expensesToDisplay.forEach((expense) => {
 			if (!expense.isRecurring && !expense.parentExpenseId) {
-				// Non-recurring expense
 				result.push({ type: "single", expense });
 			} else if (expense.isRecurring && !expense.parentExpenseId) {
-				// Parent recurring expense
 				result.push({
 					type: "recurring",
 					expense,
 					occurrences: occurrencesByParent.get(expense.id) || [],
 				});
 			}
-			// Skip occurrences as they're handled with their parent
 		});
 
 		return result;
@@ -170,11 +163,9 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 	const filteredAndSortedExpenses = useMemo(() => {
 		let filtered = [...processedExpenses];
 
-		// Apply paid/unpaid filter
 		if (!showPaidExpenses) {
 			filtered = filtered.filter((item) => {
 				if (item.type === "recurring") {
-					// For recurring expenses, show if any occurrence is unpaid
 					const hasUnpaid = item.occurrences?.some((occ) => !occ.isPaid);
 					return hasUnpaid || !item.expense.isPaid;
 				}
@@ -182,21 +173,21 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 			});
 		}
 
-		// Apply search filter
 		if (searchQuery) {
 			filtered = filtered.filter(
 				(item) =>
 					item.expense.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-					item.expense.category.toLowerCase().includes(searchQuery.toLowerCase())
+					item.expense.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+					(item.expense.paymentMethod || "")
+						.toLowerCase()
+						.includes(searchQuery.toLowerCase())
 			);
 		}
 
-		// Apply category filter
 		if (categoryFilter !== "all") {
 			filtered = filtered.filter((item) => item.expense.category === categoryFilter);
 		}
 
-		// Sort expenses
 		filtered.sort((a, b) => {
 			const expA = a.expense;
 			const expB = b.expense;
@@ -205,6 +196,11 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 			switch (sortKey) {
 				case "name":
 					compareValue = expA.name.localeCompare(expB.name);
+					break;
+				case "paymentMethod":
+					compareValue = (expA.paymentMethod || "").localeCompare(
+						expB.paymentMethod || ""
+					);
 					break;
 				case "importance":
 					const importanceOrder = { critical: 3, high: 2, medium: 1, none: 0 };
@@ -245,16 +241,13 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 	}, [processedExpenses, sortKey, sortDirection, searchQuery, categoryFilter, showPaidExpenses]);
 
 	const handleEditOccurrence = (expense: Expense) => {
-		// Pass the specific occurrence for editing
 		setEditingExpense(expense);
 	};
 
-	// Count paid and total expenses for the toggle button
 	const paidCount = expensesToDisplay.filter((e) => e.isPaid).length;
 	const totalCount = expensesToDisplay.length;
 	const hasPaidExpenses = paidCount > 0;
 
-	// Get all unique years from expenses
 	const availableYears = useMemo(() => {
 		const years = new Set<number>();
 		const currentYear = new Date().getFullYear();
@@ -289,7 +282,8 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 					<Select
 						name="all-expenses-year-select"
 						onValueChange={(value) => {
-							if (onSelectedYearChange) onSelectedYearChange(value === "all" ? "all" : Number(value));
+							if (onSelectedYearChange)
+								onSelectedYearChange(value === "all" ? "all" : Number(value));
 						}}
 					>
 						<SelectTrigger className="w-full sm:w-[180px]">
@@ -354,7 +348,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 
 			{/* Table */}
 			<div className="overflow-x-auto scrollbar-thin">
-				<table className="expense-table w-full min-w-[900px]">
+				<table className="expense-table w-full min-w-[1000px]">
 					<thead>
 						<tr className="border-b border-border text-xs">
 							<th className="text-center py-3 px-2 font-medium text-muted-foreground">
@@ -373,6 +367,16 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 								>
 									Name
 									<SortIcon column="name" />
+								</button>
+							</th>
+							<th className="text-left py-3 px-2 font-medium text-muted-foreground">
+								<button
+									onClick={() => handleSort("paymentMethod")}
+									className="flex items-center gap-1 hover:text-primary"
+								>
+									<CreditCard size={12} className="mr-1" />
+									<span className="hidden sm:inline">Payment</span>
+									<SortIcon column="paymentMethod" />
 								</button>
 							</th>
 							<th className="text-center py-3 px-2 font-medium text-muted-foreground">
@@ -510,6 +514,11 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 												</span>
 											)}
 										</div>
+									</td>
+									<td className="py-3 px-2">
+										<span className="text-xs text-muted-foreground">
+											{expense.paymentMethod || "None"}
+										</span>
 									</td>
 									<td className="py-3 px-2 text-center">
 										<ImportanceIcon level={expense.importance || "none"} />

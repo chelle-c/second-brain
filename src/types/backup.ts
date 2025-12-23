@@ -7,6 +7,7 @@ export interface BackupMetadata {
 	environment: DatabaseEnvironment;
 	description?: string;
 	fileSize?: number;
+	hasExpenseExport?: boolean; // Indicates if JSON export exists
 }
 
 export interface BackupSettings {
@@ -34,6 +35,7 @@ export interface BackupInfo {
 	filename: string;
 	metadata: BackupMetadata;
 	path: string;
+	expenseExportPath?: string; // Path to JSON export if it exists
 }
 
 export interface BackupResult {
@@ -48,6 +50,29 @@ export interface RestoreResult {
 	requiresMigration?: boolean;
 	sourceVersion?: string;
 	targetVersion?: string;
+}
+
+// Expense export types
+export interface ExpenseExportData {
+	version: string;
+	exportedAt: string;
+	environment: DatabaseEnvironment;
+	description?: string;
+	data: {
+		expenses: any[];
+		categories: string[];
+		categoryColors: Record<string, string>;
+		paymentMethods: string[];
+		selectedMonth: string;
+		overviewMode: string;
+	};
+}
+
+export interface ImportResult {
+	success: boolean;
+	error?: string;
+	importedCount?: number;
+	skippedCount?: number;
 }
 
 // Migration types for handling version differences

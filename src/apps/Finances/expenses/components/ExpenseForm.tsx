@@ -1,5 +1,15 @@
 import { useState, useEffect, useRef } from "react";
-import { Plus, X, Save, Calendar, DollarSign, Tag, RefreshCw, CheckCircle } from "lucide-react";
+import {
+	Plus,
+	X,
+	Save,
+	Calendar,
+	DollarSign,
+	Tag,
+	RefreshCw,
+	CheckCircle,
+	CreditCard,
+} from "lucide-react";
 import { useExpenseStore } from "@/stores/useExpenseStore";
 import { ExpenseFormData, RecurrenceSettings, Expense, ImportanceLevel } from "@/types/expense";
 import { ConfirmRegenerationModal } from "./ConfirmRegenerationModal";
@@ -25,7 +35,8 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 	onClose,
 	isGlobalEdit = false,
 }) => {
-	const { expenses, addExpense, updateExpense, categories } = useExpenseStore();
+	const { expenses, addExpense, updateExpense, categories, categoryColors, paymentMethods } =
+		useExpenseStore();
 	const [isOpen, setIsOpen] = useState(false);
 	const modalRef = useRef<HTMLDivElement>(null);
 	const isDraggingFromInput = useRef(false);
@@ -34,6 +45,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 		name: "",
 		amount: 0,
 		category: "",
+		paymentMethod: "None",
 		dueDate: null,
 		isRecurring: false,
 		recurrence: undefined,
@@ -65,6 +77,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 				name: editingExpense.name,
 				amount: editingExpense.amount,
 				category: editingExpense.category,
+				paymentMethod: editingExpense.paymentMethod || "None",
 				dueDate: editingExpense.dueDate,
 				isRecurring: editingExpense.isRecurring,
 				recurrence: editingExpense.recurrence,
@@ -89,6 +102,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 			setFormData((prev) => ({ ...prev, category: categories[0] }));
 		}
 	}, [categories, editingExpense, formData.category]);
+
 	useEffect(() => {
 		if (formData.isRecurring) {
 			setFormData((prev) => ({ ...prev, recurrence: recurrenceSettings }));
@@ -160,14 +174,12 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 		return needsRegeneration;
 	};
 
-	// Add function to count modified occurrences:
 	const getModifiedOccurrencesCount = (): number => {
 		if (!editingExpense?.id) return 0;
 		return expenses.filter((e) => e.parentExpenseId === editingExpense.id && e.isModified)
 			.length;
 	};
 
-	// Update the handleSubmit function:
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
 
@@ -190,14 +202,12 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 			isPaid: formData.isPaid,
 		};
 
-		// Check if we need to show regeneration warning
 		if (willRegenerateOccurrences(finalFormData)) {
 			setPendingFormData(finalFormData);
 			setShowRegenerationWarning(true);
 			return;
 		}
 
-		// Process the update directly if no warning needed
 		processUpdate(finalFormData);
 	};
 
@@ -209,6 +219,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 					{
 						amount: finalFormData.amount,
 						dueDate: finalFormData.dueDate,
+						paymentMethod: finalFormData.paymentMethod,
 						isPaid: finalFormData.isPaid,
 						paymentDate: finalFormData.paymentDate,
 					},
@@ -224,7 +235,6 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 		handleReset();
 	};
 
-	// Add handlers for confirmation modal:
 	const handleConfirmRegeneration = () => {
 		if (pendingFormData) {
 			processUpdate(pendingFormData);
@@ -243,6 +253,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 			name: "",
 			amount: 0,
 			category: "",
+			paymentMethod: "None",
 			dueDate: null,
 			isRecurring: false,
 			recurrence: undefined,
@@ -285,6 +296,9 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 			isDraggingFromInput.current = false;
 		}, 100);
 	};
+
+	// Build payment method options - always include "None" first
+	const paymentMethodOptions = ["None", ...paymentMethods.filter((m) => m !== "None")];
 
 	return (
 		<>
@@ -418,7 +432,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 											}
 										>
 											<SelectTrigger className="w-[180px]">
-												<SelectValue placeholder="Select a week" />
+												<SelectValue placeholder="Select importance" />
 											</SelectTrigger>
 											<SelectContent>
 												<SelectGroup>
@@ -486,7 +500,18 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 												<SelectGroup>
 													{categories.map((category) => (
 														<SelectItem key={category} value={category}>
-															{category}
+															<div className="flex items-center gap-2">
+																<span
+																	className="w-3 h-3 rounded-full shrink-0"
+																	style={{
+																		backgroundColor:
+																			categoryColors[
+																				category
+																			] || "#6b7280",
+																	}}
+																/>
+																{category}
+															</div>
 														</SelectItem>
 													))}
 												</SelectGroup>
@@ -494,6 +519,39 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 										</Select>
 									</div>
 								)}
+							</div>
+
+							{/* Payment Method - always visible in editing mode */}
+							<div className="flex flex-col items-start">
+								<label className="block text-sm font-medium text-foreground mb-2">
+									<span className="flex items-center gap-2">
+										<CreditCard size={16} />
+										Payment Method
+									</span>
+								</label>
+								<Select
+									value={formData.paymentMethod}
+									onValueChange={(value) =>
+										setFormData({
+											...formData,
+											paymentMethod: value,
+										})
+									}
+								>
+									<SelectTrigger className="w-[220px]">
+										<SelectValue placeholder="Select payment method" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectGroup>
+											<SelectLabel>Payment Methods</SelectLabel>
+											{paymentMethodOptions.map((method) => (
+												<SelectItem key={method} value={method}>
+													{method}
+												</SelectItem>
+											))}
+										</SelectGroup>
+									</SelectContent>
+								</Select>
 							</div>
 
 							{/* Recurrence settings - hide when editing occurrence */}
@@ -687,7 +745,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 											type="date"
 											value={
 												formData.paymentDate
-													? format(formData.paymentDate, "yyyy-MM-dd") // Fixed: was "form Data.paymentDate"
+													? format(formData.paymentDate, "yyyy-MM-dd")
 													: format(new Date(), "yyyy-MM-dd")
 											}
 											onChange={handlePaymentDateChange}

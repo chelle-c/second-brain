@@ -89,7 +89,6 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 		"#6b7280";
 	const displayColor = getCategoryDisplayColor(categoryColor, isDarkMode);
 
-	// Sort occurrences by due date and filter based on showPaid
 	const sortedOccurrences = [...occurrences]
 		.filter((occ) => showPaid || !occ.isPaid)
 		.sort((a, b) => {
@@ -97,13 +96,12 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 			return a.dueDate.getTime() - b.dueDate.getTime();
 		});
 
-	// Calculate summary stats
 	const paidCount = sortedOccurrences.filter((e) => e.isPaid).length;
 	const totalCount = sortedOccurrences.length;
 
 	return (
 		<>
-			{/* Parent Row - Must match table column structure */}
+			{/* Parent Row */}
 			<tr className={`border-b border-border cursor-pointer hover:bg-accent`}>
 				{/* Column 1: Paid checkbox (with expand button) */}
 				<td className="py-3 px-2">
@@ -164,12 +162,19 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 					</div>
 				</td>
 
-				{/* Column 3: Importance */}
+				{/* Column 3: Payment Method */}
+				<td className="py-3 px-2">
+					<span className="text-xs text-muted-foreground">
+						{parentExpense.paymentMethod || "None"}
+					</span>
+				</td>
+
+				{/* Column 4: Importance */}
 				<td className="py-3 px-2 text-center">
 					<ImportanceIcon level={parentExpense.importance || "none"} />
 				</td>
 
-				{/* Column 4: Category */}
+				{/* Column 5: Category */}
 				<td className="w-min py-3 px-2 text-center">
 					<span
 						className="px-2 py-0.5 rounded-full text-xs font-semibold inline-flex items-center"
@@ -183,7 +188,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 					</span>
 				</td>
 
-				{/* Column 5: Type */}
+				{/* Column 6: Type */}
 				<td className="py-3 px-3">
 					<span
 						className={`text-xs font-medium ${
@@ -196,7 +201,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 					</span>
 				</td>
 
-				{/* Column 6: Amount */}
+				{/* Column 7: Amount */}
 				<td className="py-3 px-3">
 					<span className="font-semibold text-primary text-sm">
 						{formatCurrency(parentExpense.amount, expenseCurrency)}
@@ -204,7 +209,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 					<div className="text-xs text-muted-foreground">base amount</div>
 				</td>
 
-				{/* Column 7: Due Date */}
+				{/* Column 8: Due Date */}
 				<td className="py-3 px-3">
 					<div className="text-sm text-foreground">
 						{sortedOccurrences.length > 0 && sortedOccurrences[0].dueDate
@@ -216,12 +221,12 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 					<div className="text-xs text-muted-foreground">first occurrence</div>
 				</td>
 
-				{/* Column 8: Payment Date */}
+				{/* Column 9: Payment Date */}
 				<td className="py-3 px-3">
 					<span className="text-sm text-muted-foreground">—</span>
 				</td>
 
-				{/* Column 9: Actions */}
+				{/* Column 10: Actions */}
 				<td className="py-3 px-3">
 					<div className="flex items-center justify-center gap-1">
 						<button
@@ -322,7 +327,11 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 						{/* Column 2: Instance info */}
 						<td className="py-2 px-3 pl-8">
 							<div className="flex items-center gap-2">
-								<span className={`text-xs text-muted-foreground ${occurrence.isPaid ? "line-through opacity-60" : ""}`}>
+								<span
+									className={`text-xs text-muted-foreground ${
+										occurrence.isPaid ? "line-through opacity-60" : ""
+									}`}
+								>
 									Occurrence #{index + 1}
 									{occurrence.isModified && (
 										<span
@@ -341,22 +350,35 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 							</div>
 						</td>
 
-						{/* Column 3: Importance (inherited) */}
+						{/* Column 3: Payment Method */}
+						<td className="py-2 px-2">
+							<span
+								className={`text-xs ${
+									occurrence.paymentMethod !== parentExpense.paymentMethod
+										? "text-orange-500"
+										: "text-muted-foreground"
+								}`}
+							>
+								{occurrence.paymentMethod || "None"}
+							</span>
+						</td>
+
+						{/* Column 4: Importance (inherited) */}
 						<td className="py-2 px-2 text-center">
 							<span className="text-muted-foreground text-xs">—</span>
 						</td>
 
-						{/* Column 4: Category (empty) */}
+						{/* Column 5: Category (empty) */}
 						<td className="py-2 px-3">
 							<span className="text-muted-foreground text-xs">—</span>
 						</td>
 
-						{/* Column 5: Type (empty) */}
+						{/* Column 6: Type (empty) */}
 						<td className="py-2 px-3">
 							<span className="text-muted-foreground text-xs">—</span>
 						</td>
 
-						{/* Column 6: Amount */}
+						{/* Column 7: Amount */}
 						<td className="py-2 px-3">
 							<span
 								className={`font-medium text-sm ${
@@ -371,14 +393,14 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 							</span>
 						</td>
 
-						{/* Column 7: Due Date */}
+						{/* Column 8: Due Date */}
 						<td className="py-2 px-3">
 							<span className="text-sm text-muted-foreground">
 								{occurrence.dueDate ? formatDate(occurrence.dueDate) : "No date"}
 							</span>
 						</td>
 
-						{/* Column 8: Payment Date */}
+						{/* Column 9: Payment Date */}
 						<td className="py-2 px-3">
 							{occurrence.isPaid && occurrence.paymentDate ? (
 								<span className="text-xs text-muted-foreground">
@@ -389,7 +411,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 							)}
 						</td>
 
-						{/* Column 9: Actions */}
+						{/* Column 10: Actions */}
 						<td className="py-2 px-3">
 							<div className="flex items-center justify-center gap-1">
 								<button

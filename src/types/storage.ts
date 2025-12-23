@@ -18,4 +18,6 @@ export interface DatabaseContext {
 	cache: StorageCache;
 }
 
-export const DATA_VERSION = "0.0.4";
+export const DATA_VERSION = "0.0.5";
+
+export const DEFAULT_PAYMENT_METHODS = ["Default"];

@@ -1,7 +1,7 @@
 import { Expense } from "@/types/expense";
 import { AppData } from "@/types/";
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
-import { DatabaseContext } from "../../types/storage";
+import { DatabaseContext, DEFAULT_PAYMENT_METHODS } from "../../types/storage";
 import { deepEqual } from "../utils";
 
 export class ExpensesStorage {
@@ -15,6 +15,7 @@ export class ExpensesStorage {
 		return expenses
 			.map((expense) => ({
 				...expense,
+				paymentMethod: expense.paymentMethod || "None",
 				dueDate:
 					expense.dueDate instanceof Date
 						? expense.dueDate.toISOString()
@@ -48,6 +49,7 @@ export class ExpensesStorage {
 			overviewMode: expenses.overviewMode,
 			categories: [...expenses.categories].sort(),
 			categoryColors: expenses.categoryColors,
+			paymentMethods: [...(expenses.paymentMethods || DEFAULT_PAYMENT_METHODS)].sort(),
 		};
 	}
 
@@ -62,12 +64,28 @@ export class ExpensesStorage {
 
 	async loadExpenses(): Promise<AppData["expenses"]> {
 		return this.context.queueOperation(async () => {
+			// First, check what columns exist in the expenses table
+			const tableInfo = await this.context.db.select<Array<{ name: string }>>(
+				"PRAGMA table_info(expenses)"
+			);
+			const existingColumns = new Set(tableInfo.map((col) => col.name));
+			const hasPaymentMethod = existingColumns.has("paymentMethod");
+
+			// Build the SELECT query based on available columns
+			const selectQuery = hasPaymentMethod
+				? "SELECT * FROM expenses"
+				: `SELECT id, name, amount, category, 'None' as paymentMethod, dueDate, isRecurring, 
+				   recurrence, isArchived, isPaid, paymentDate, type, importance, createdAt, 
+				   updatedAt, parentExpenseId, monthlyOverrides, isModified, initialState 
+				   FROM expenses`;
+
 			const expenses = await this.context.db.select<
 				Array<{
 					id: string;
 					name: string;
 					amount: number;
 					category: string;
+					paymentMethod: string | null;
 					dueDate: string | null;
 					isRecurring: number;
 					recurrence: string | null;
@@ -83,7 +101,7 @@ export class ExpensesStorage {
 					isModified: number | null;
 					initialState: string | null;
 				}>
-			>("SELECT * FROM expenses");
+			>(selectQuery);
 
 			const selectedMonthResult = await this.context.db.select<Array<{ value: string }>>(
 				"SELECT value FROM settings WHERE key = 'expense_selectedMonth'"
@@ -97,28 +115,42 @@ export class ExpensesStorage {
 			const categoryColorsResult = await this.context.db.select<Array<{ value: string }>>(
 				"SELECT value FROM settings WHERE key = 'expense_categoryColors'"
 			);
+			const paymentMethodsResult = await this.context.db.select<Array<{ value: string }>>(
+				"SELECT value FROM settings WHERE key = 'expense_paymentMethods'"
+			);
 
 			const expensesData = {
-				expenses: expenses.map((row) => ({
-					id: row.id,
-					name: row.name,
-					amount: row.amount,
-					category: row.category,
-					dueDate: row.dueDate ? new Date(row.dueDate) : null,
-					isRecurring: row.isRecurring === 1,
-					recurrence: row.recurrence ? JSON.parse(row.recurrence) : undefined,
-					isArchived: row.isArchived === 1,
-					isPaid: row.isPaid === 1,
-					paymentDate: row.paymentDate ? new Date(row.paymentDate) : null,
-					type: row.type as any,
-					importance: row.importance as any,
-					createdAt: new Date(row.createdAt),
-					updatedAt: new Date(row.updatedAt),
-					parentExpenseId: row.parentExpenseId || undefined,
-					monthlyOverrides: row.monthlyOverrides ? JSON.parse(row.monthlyOverrides) : {},
-					isModified: row.isModified === 1,
-					initialState: row.initialState ? JSON.parse(row.initialState) : undefined,
-				})),
+				expenses: expenses.map((row) => {
+					// Parse initialState and ensure paymentMethod exists
+					let initialState = row.initialState ? JSON.parse(row.initialState) : undefined;
+					if (initialState && !initialState.paymentMethod) {
+						initialState.paymentMethod = "None";
+					}
+
+					return {
+						id: row.id,
+						name: row.name,
+						amount: row.amount,
+						category: row.category,
+						paymentMethod: row.paymentMethod || "None",
+						dueDate: row.dueDate ? new Date(row.dueDate) : null,
+						isRecurring: row.isRecurring === 1,
+						recurrence: row.recurrence ? JSON.parse(row.recurrence) : undefined,
+						isArchived: row.isArchived === 1,
+						isPaid: row.isPaid === 1,
+						paymentDate: row.paymentDate ? new Date(row.paymentDate) : null,
+						type: row.type as any,
+						importance: row.importance as any,
+						createdAt: new Date(row.createdAt),
+						updatedAt: new Date(row.updatedAt),
+						parentExpenseId: row.parentExpenseId || undefined,
+						monthlyOverrides: row.monthlyOverrides
+							? JSON.parse(row.monthlyOverrides)
+							: {},
+						isModified: row.isModified === 1,
+						initialState,
+					};
+				}),
 				selectedMonth:
 					selectedMonthResult.length > 0
 						? new Date(selectedMonthResult[0].value)
@@ -135,6 +167,10 @@ export class ExpensesStorage {
 					categoryColorsResult.length > 0
 						? JSON.parse(categoryColorsResult[0].value)
 						: DEFAULT_CATEGORY_COLORS,
+				paymentMethods:
+					paymentMethodsResult.length > 0
+						? JSON.parse(paymentMethodsResult[0].value)
+						: DEFAULT_PAYMENT_METHODS,
 			};
 
 			this.context.cache.expenses = expensesData;
@@ -152,7 +188,6 @@ export class ExpensesStorage {
 			const oldIds = new Set(oldExpenses.map((e) => e.id));
 			const newIds = new Set(expenses.expenses.map((e) => e.id));
 
-			// Determine what changed in expenses list
 			const added = expenses.expenses.filter((e) => !oldIds.has(e.id));
 			const deleted = oldExpenses.filter((e) => !newIds.has(e.id));
 			const modified = expenses.expenses.filter((e) => {
@@ -164,15 +199,19 @@ export class ExpensesStorage {
 				return !deepEqual(normalizedOld, normalizedNew);
 			});
 
-			// Check if only settings changed
 			const oldData = this.context.cache.expenses;
 			const settingsChanged =
 				oldData &&
 				(oldData.overviewMode !== expenses.overviewMode ||
 					oldData.selectedMonth.toISOString() !== expenses.selectedMonth.toISOString() ||
 					!deepEqual([...oldData.categories].sort(), [...expenses.categories].sort()) ||
-					!deepEqual(oldData.categoryColors, expenses.categoryColors));
+					!deepEqual(oldData.categoryColors, expenses.categoryColors) ||
+					!deepEqual(
+						[...(oldData.paymentMethods || [])].sort(),
+						[...(expenses.paymentMethods || [])].sort()
+					));
 
+			// Delete all expenses and reinsert (simpler than tracking updates)
 			await this.context.db.execute("DELETE FROM expenses");
 
 			const seenIds = new Set<string>();
@@ -183,17 +222,24 @@ export class ExpensesStorage {
 				}
 				seenIds.add(expense.id);
 
+				// Ensure initialState has paymentMethod
+				let initialState = expense.initialState;
+				if (initialState && !initialState.paymentMethod) {
+					initialState = { ...initialState, paymentMethod: "None" };
+				}
+
 				await this.context.db.execute(
 					`INSERT INTO expenses (
-						id, name, amount, category, dueDate, isRecurring, recurrence,
+						id, name, amount, category, paymentMethod, dueDate, isRecurring, recurrence,
 						isArchived, isPaid, paymentDate, type, importance, createdAt,
 						updatedAt, parentExpenseId, monthlyOverrides, isModified, initialState
-					) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+					) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 					[
 						expense.id,
 						expense.name,
 						expense.amount,
 						expense.category,
+						expense.paymentMethod || "None",
 						expense.dueDate ? expense.dueDate.toISOString() : null,
 						expense.isRecurring ? 1 : 0,
 						expense.recurrence ? JSON.stringify(expense.recurrence) : null,
@@ -207,7 +253,7 @@ export class ExpensesStorage {
 						expense.parentExpenseId || null,
 						expense.monthlyOverrides ? JSON.stringify(expense.monthlyOverrides) : null,
 						expense.isModified ? 1 : 0,
-						expense.initialState ? JSON.stringify(expense.initialState) : null,
+						initialState ? JSON.stringify(initialState) : null,
 					]
 				);
 			}
@@ -228,10 +274,13 @@ export class ExpensesStorage {
 				`INSERT OR REPLACE INTO settings (key, value) VALUES ('expense_categoryColors', ?)`,
 				[JSON.stringify(expenses.categoryColors)]
 			);
+			await this.context.db.execute(
+				`INSERT OR REPLACE INTO settings (key, value) VALUES ('expense_paymentMethods', ?)`,
+				[JSON.stringify(expenses.paymentMethods || DEFAULT_PAYMENT_METHODS)]
+			);
 
 			this.context.cache.expenses = expenses;
 
-			// Log specific changes
 			if (added.length === 1) {
 				console.log(`Expense created: "${added[0].name}"`);
 			} else if (added.length > 1) {

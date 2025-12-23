@@ -16,6 +16,7 @@ export interface AppData {
 		overviewMode: OverviewMode;
 		categories: string[];
 		categoryColors: Record<string, string>;
+		paymentMethods: string[];
 	};
 
 	income: {

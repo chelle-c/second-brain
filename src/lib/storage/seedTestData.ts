@@ -3,6 +3,7 @@ import { Note, NotesFolders } from "@/types/notes";
 import { Expense } from "@/types/expense";
 import { IncomeEntry, IncomeWeeklyTargets } from "@/types/income";
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
+import { DEFAULT_PAYMENT_METHODS } from "@/types/storage";
 
 // Generate a simple UUID
 const generateId = (): string => {
@@ -132,7 +133,10 @@ const createSampleNotes = (): Note[] => {
 // Helper to generate recurring expense occurrences
 const generateRecurringOccurrences = (
 	parentId: string,
-	baseExpense: Omit<Expense, "id" | "dueDate" | "isPaid" | "paymentDate" | "parentExpenseId">,
+	baseExpense: Omit<
+		Expense,
+		"id" | "dueDate" | "isPaid" | "paymentDate" | "parentExpenseId" | "initialState"
+	>,
 	dayOfMonth: number,
 	months: number = 12,
 	paidCount: number = 0
@@ -148,6 +152,11 @@ const generateRecurringOccurrences = (
 			isPaid,
 			paymentDate: isPaid ? dueDate : undefined,
 			parentExpenseId: parentId,
+			initialState: {
+				amount: baseExpense.amount,
+				dueDate,
+				paymentMethod: baseExpense.paymentMethod || "None",
+			},
 		};
 	}) satisfies Expense[];
 };
@@ -169,6 +178,7 @@ const createSampleExpenses = (): Expense[] => {
 		name: "Rent",
 		amount: 1500,
 		category: "Housing",
+		paymentMethod: "Default",
 		isRecurring: true,
 		recurrence: { frequency: "monthly" as const },
 		isArchived: false,
@@ -183,6 +193,7 @@ const createSampleExpenses = (): Expense[] => {
 		name: "Electricity",
 		amount: 120,
 		category: "Utilities",
+		paymentMethod: "Default",
 		isRecurring: true,
 		recurrence: { frequency: "monthly" as const },
 		isArchived: false,
@@ -197,6 +208,7 @@ const createSampleExpenses = (): Expense[] => {
 		name: "Internet",
 		amount: 79.99,
 		category: "Utilities",
+		paymentMethod: "Default",
 		isRecurring: true,
 		recurrence: { frequency: "monthly" as const },
 		isArchived: false,
@@ -211,6 +223,7 @@ const createSampleExpenses = (): Expense[] => {
 		name: "Phone Plan",
 		amount: 55,
 		category: "Utilities",
+		paymentMethod: "Default",
 		isRecurring: true,
 		recurrence: { frequency: "monthly" as const },
 		isArchived: false,
@@ -225,6 +238,7 @@ const createSampleExpenses = (): Expense[] => {
 		name: "Streaming Services",
 		amount: 45.97,
 		category: "Entertainment",
+		paymentMethod: "Default",
 		isRecurring: true,
 		recurrence: { frequency: "monthly" as const },
 		isArchived: false,
@@ -239,6 +253,7 @@ const createSampleExpenses = (): Expense[] => {
 		name: "Gym Membership",
 		amount: 49.99,
 		category: "Health",
+		paymentMethod: "Default",
 		isRecurring: true,
 		recurrence: { frequency: "monthly" as const },
 		isArchived: false,
@@ -334,6 +349,7 @@ const createSampleExpenses = (): Expense[] => {
 			name: "New Headphones",
 			amount: 199.99,
 			category: "Shopping",
+			paymentMethod: "None",
 			dueDate: daysFromNow(7),
 			isRecurring: false,
 			isArchived: false,
@@ -349,6 +365,7 @@ const createSampleExpenses = (): Expense[] => {
 			name: "Car Insurance",
 			amount: 450,
 			category: "Transportation",
+			paymentMethod: "None",
 			dueDate: daysFromNow(14),
 			isRecurring: false,
 			isArchived: false,
@@ -364,6 +381,7 @@ const createSampleExpenses = (): Expense[] => {
 			name: "Birthday Gift",
 			amount: 75,
 			category: "Shopping",
+			paymentMethod: "None",
 			dueDate: daysFromNow(5),
 			isRecurring: false,
 			isArchived: false,
@@ -379,6 +397,7 @@ const createSampleExpenses = (): Expense[] => {
 			name: "Groceries",
 			amount: 150,
 			category: "Food",
+			paymentMethod: "None",
 			dueDate: null,
 			isRecurring: false,
 			isArchived: false,
@@ -454,6 +473,7 @@ export const seedTestDatabase = async (): Promise<void> => {
 			overviewMode: "remaining",
 			categories: DEFAULT_EXPENSE_CATEGORIES,
 			categoryColors: DEFAULT_CATEGORY_COLORS,
+			paymentMethods: DEFAULT_PAYMENT_METHODS,
 		});
 		console.log(`✓ ${expenses.length} expenses created`);
 
@@ -470,7 +490,7 @@ export const seedTestDatabase = async (): Promise<void> => {
 		// Save metadata
 		await sqlStorage.saveMetadata({
 			lastSaved: new Date(),
-			version: "0.0.4",
+			version: "0.0.5",
 		});
 
 		console.log("Test database seeded successfully!");

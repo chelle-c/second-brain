@@ -3,7 +3,7 @@ import { appDataDir, sep } from "@tauri-apps/api/path";
 import { invoke } from "@tauri-apps/api/core";
 import { AppData, AppMetadata, AppToSave } from "@/types/";
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
-import { DatabaseContext, StorageCache, DATA_VERSION } from "../../types/storage";
+import { DatabaseContext, StorageCache, DATA_VERSION, DEFAULT_PAYMENT_METHODS } from "../../types/storage";
 import { NotesStorage } from "./notesStorage";
 import { ExpensesStorage } from "./expensesStorage";
 import { IncomeStorage } from "./incomeStorage";
@@ -14,12 +14,10 @@ import { DatabaseEnvironment } from "@/types/backup";
 const DB_NAME_PRODUCTION = "appdata.db";
 const DB_NAME_TEST = "appdata-test.db";
 
-// Helper to join paths with proper separator
 const joinPath = (...parts: string[]): string => {
 	return parts.join(sep());
 };
 
-// Check if running in dev mode
 const checkIsDevMode = async (): Promise<boolean> => {
 	try {
 		return await invoke<boolean>("is_dev");
@@ -37,7 +35,6 @@ class SqlStorage {
 	private cache: StorageCache = {};
 	private currentEnvironment: DatabaseEnvironment = "production";
 
-	// Sub-storage modules
 	private notesStorage!: NotesStorage;
 	private expensesStorage!: ExpensesStorage;
 	private incomeStorage!: IncomeStorage;
@@ -75,7 +72,7 @@ class SqlStorage {
 		};
 	}
 
-	async initialize(environment?: DatabaseEnvironment) {
+	async initialize(environment?: DatabaseEnvironment): Promise<void> {
 		// If environment is specified and different from current, force re-initialization
 		if (environment && environment !== this.currentEnvironment) {
 			await this.close();
@@ -93,7 +90,6 @@ class SqlStorage {
 		this.initializing = true;
 
 		try {
-			// Auto-detect environment from Rust is_dev if not explicitly provided
 			if (!environment) {
 				const isDev = await checkIsDevMode();
 				this.currentEnvironment = isDev ? "test" : "production";
@@ -103,9 +99,9 @@ class SqlStorage {
 			const dbFileName = this.getDatabaseFileName();
 			const dbPath = joinPath(dataPath, dbFileName);
 
+			console.log(`Connecting to database: ${dbPath}`);
 			this.db = await Database.load(`sqlite:${dbPath}`);
 
-			// Database configuration
 			await this.db.execute("PRAGMA journal_mode=WAL");
 			await this.db.execute("PRAGMA synchronous=NORMAL");
 			await this.db.execute("PRAGMA busy_timeout=5000");
@@ -113,25 +109,34 @@ class SqlStorage {
 			// Create tables (for new installations or missing tables)
 			await this.createTables();
 
+			// Run migrations to update schema
+			await this.runMigrations();
+
+			// Verify schema after migrations
+			await this.verifySchema();
+
 			// Initialize sub-storage modules
 			this.notesStorage = new NotesStorage(this.getContext());
 			this.expensesStorage = new ExpensesStorage(this.getContext());
 			this.incomeStorage = new IncomeStorage(this.getContext());
 
 			this.initialized = true;
-			console.log(`Database initialized (${this.currentEnvironment} environment, file: ${dbFileName})`);
+			console.log(
+				`Database initialized (${this.currentEnvironment} environment, file: ${dbFileName}, version: ${DATA_VERSION})`
+			);
 		} catch (error) {
 			console.error("Failed to initialize database:", error);
+			this.initialized = false;
 			throw error;
 		} finally {
 			this.initializing = false;
 		}
 	}
 
-	private async createTables() {
+	private async createTables(): Promise<void> {
 		if (!this.db) throw new Error("Database not initialized");
 
-		// Create notes table with new schema (if it doesn't exist)
+		// Create notes table
 		await this.db.execute(`
 			CREATE TABLE IF NOT EXISTS notes (
 				id TEXT PRIMARY KEY,
@@ -161,6 +166,7 @@ class SqlStorage {
 			)
 		`);
 
+		// Note: paymentMethod column is added via migration for existing tables
 		await this.db.execute(`
 			CREATE TABLE IF NOT EXISTS expenses (
 				id TEXT PRIMARY KEY,
@@ -215,6 +221,145 @@ class SqlStorage {
 				version TEXT NOT NULL
 			)
 		`);
+	}
+
+	private async runMigrations(): Promise<void> {
+		if (!this.db) throw new Error("Database not initialized");
+
+		// Get current version from metadata
+		let currentVersion = "0.0.0";
+
+		try {
+			const versionResult = await this.db.select<Array<{ version: string }>>(
+				"SELECT version FROM metadata WHERE id = 1"
+			);
+			if (versionResult.length > 0 && versionResult[0].version) {
+				currentVersion = versionResult[0].version;
+			}
+		} catch (error) {
+			console.log("No metadata found, assuming version 0.0.0");
+		}
+
+		console.log(
+			`Database migration check: current version ${currentVersion}, target version ${DATA_VERSION}`
+		);
+
+		// Always check and add missing columns regardless of version
+		// This handles cases where version metadata might be incorrect
+		await this.ensureExpensesColumns();
+
+		// Update metadata version
+		if (currentVersion !== DATA_VERSION) {
+			try {
+				await this.db.execute(
+					`INSERT OR REPLACE INTO metadata (id, lastSaved, version) VALUES (1, ?, ?)`,
+					[new Date().toISOString(), DATA_VERSION]
+				);
+				console.log(`Updated database version to ${DATA_VERSION}`);
+			} catch (error) {
+				console.error("Failed to update metadata version:", error);
+			}
+		}
+	}
+
+	private async ensureExpensesColumns(): Promise<void> {
+		if (!this.db) throw new Error("Database not initialized");
+
+		try {
+			// Get current columns in expenses table
+			const tableInfo = await this.db.select<Array<{ name: string; type: string }>>(
+				"PRAGMA table_info(expenses)"
+			);
+
+			const existingColumns = new Set(tableInfo.map((col) => col.name));
+			console.log(`Expenses table columns: ${Array.from(existingColumns).join(", ")}`);
+
+			// Define columns that should exist with their defaults
+			const requiredColumns: Array<{ name: string; type: string; defaultValue: string }> = [
+				{ name: "paymentMethod", type: "TEXT", defaultValue: "'None'" },
+			];
+
+			// Add any missing columns
+			for (const column of requiredColumns) {
+				if (!existingColumns.has(column.name)) {
+					console.log(`Adding missing column: ${column.name}`);
+					try {
+						await this.db.execute(
+							`ALTER TABLE expenses ADD COLUMN ${column.name} ${column.type} DEFAULT ${column.defaultValue}`
+						);
+						console.log(`Successfully added column: ${column.name}`);
+					} catch (alterError) {
+						console.error(`Failed to add column ${column.name}:`, alterError);
+						throw alterError;
+					}
+				}
+			}
+
+			// Ensure payment methods setting exists
+			const paymentMethodsResult = await this.db.select<Array<{ value: string }>>(
+				"SELECT value FROM settings WHERE key = 'expense_paymentMethods'"
+			);
+
+			if (paymentMethodsResult.length === 0) {
+				await this.db.execute(
+					`INSERT OR REPLACE INTO settings (key, value) VALUES ('expense_paymentMethods', ?)`,
+					[JSON.stringify(DEFAULT_PAYMENT_METHODS)]
+				);
+				console.log("Added default payment methods setting");
+			}
+		} catch (error) {
+			console.error("Error ensuring expenses columns:", error);
+			throw error;
+		}
+	}
+
+	private async verifySchema(): Promise<void> {
+		if (!this.db) throw new Error("Database not initialized");
+
+		try {
+			// Verify expenses table has all required columns
+			const tableInfo = await this.db.select<Array<{ name: string }>>(
+				"PRAGMA table_info(expenses)"
+			);
+
+			const columns = new Set(tableInfo.map((col) => col.name));
+			const requiredColumns = [
+				"id",
+				"name",
+				"amount",
+				"category",
+				"dueDate",
+				"isRecurring",
+				"recurrence",
+				"isArchived",
+				"isPaid",
+				"paymentDate",
+				"type",
+				"importance",
+				"createdAt",
+				"updatedAt",
+				"parentExpenseId",
+				"monthlyOverrides",
+				"isModified",
+				"initialState",
+				"paymentMethod",
+			];
+
+			const missingColumns = requiredColumns.filter((col) => !columns.has(col));
+
+			if (missingColumns.length > 0) {
+				throw new Error(
+					`Schema verification failed. Missing columns in expenses table: ${missingColumns.join(
+						", "
+					)}`
+				);
+			}
+
+			console.log("Schema verification passed");
+		} catch (error) {
+			console.error("Schema verification failed:", error);
+			throw error;
+		}
 	}
 
 	// Public API - Notes
@@ -331,7 +476,7 @@ class SqlStorage {
 
 			const theme: Partial<ThemeSettings> = {};
 			for (const row of results) {
-				const key = row.key.replace('theme_', '') as keyof ThemeSettings;
+				const key = row.key.replace("theme_", "") as keyof ThemeSettings;
 				try {
 					(theme as any)[key] = JSON.parse(row.value);
 				} catch {
@@ -357,7 +502,6 @@ class SqlStorage {
 	}
 
 	hasThemeChanged(_theme: ThemeSettings): boolean {
-		// Theme changes are always saved immediately, no caching needed
 		return true;
 	}
 
@@ -442,6 +586,7 @@ class SqlStorage {
 					overviewMode: "remaining",
 					categories: DEFAULT_EXPENSE_CATEGORIES,
 					categoryColors: DEFAULT_CATEGORY_COLORS,
+					paymentMethods: DEFAULT_PAYMENT_METHODS,
 				},
 				income: {
 					entries: [],
@@ -558,10 +703,30 @@ class SqlStorage {
 
 	// Close database connection
 	async close(): Promise<void> {
+		// Wait for any pending operations to complete
+		try {
+			await this.operationQueue;
+		} catch {
+			// Ignore errors from pending operations
+		}
+
+		// Reset the operation queue
+		this.operationQueue = Promise.resolve();
+
 		if (this.db) {
-			await this.db.close();
+			try {
+				// Flush WAL to ensure all data is written to the main database file
+				console.log("Flushing WAL before close...");
+				await this.db.execute("PRAGMA wal_checkpoint(TRUNCATE)");
+
+				await this.db.close();
+				console.log("Database connection closed");
+			} catch (error) {
+				console.error("Error closing database:", error);
+			}
 			this.db = null;
 		}
+
 		this.initialized = false;
 		this.initializing = false;
 		this.cache = {};
@@ -569,14 +734,21 @@ class SqlStorage {
 
 	// Switch between production and test environments
 	async switchEnvironment(environment: DatabaseEnvironment): Promise<void> {
-		if (environment === this.currentEnvironment && this.initialized) {
-			return;
-		}
+		console.log(
+			`Switching database environment from ${this.currentEnvironment} to: ${environment}`
+		);
 
-		console.log(`Switching database environment to: ${environment}`);
+		// Always close and reinitialize when switching
 		await this.close();
 		this.currentEnvironment = environment;
-		await this.initialize();
+		await this.initialize(environment);
+	}
+
+	// Force reinitialize (useful after restore)
+	async reinitialize(): Promise<void> {
+		console.log("Force reinitializing database...");
+		await this.close();
+		await this.initialize(this.currentEnvironment);
 	}
 
 	// Get current database file path
