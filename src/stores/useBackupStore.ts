@@ -1,19 +1,41 @@
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import { backupService, sqlStorage } from "@/lib/storage";
+import { AppToSave } from "@/types";
+import type { Expense, OverviewMode } from "@/types/expense";
 import {
-	BackupSettings,
-	BackupInfo,
-	BackupResult,
-	RestoreResult,
-	DatabaseEnvironment,
+	type BackupInfo,
+	type BackupResult,
+	type BackupSettings,
+	type DatabaseEnvironment,
 	DEFAULT_BACKUP_SETTINGS,
-	ImportResult,
-	ExpenseExportData,
+	type ExpenseExportData,
+	type ImportResult,
+	type RestoreResult,
+	type SerializedExpense,
 } from "@/types/backup";
 import useAppStore from "./useAppStore";
 import { useExpenseStore } from "./useExpenseStore";
-import { AppToSave } from "@/types";
+
+// Helper to deserialize expenses from JSON (converts string dates to Date objects)
+const deserializeExpenses = (serialized: SerializedExpense[]): Expense[] => {
+	return serialized.map((e) => ({
+		...e,
+		dueDate: e.dueDate ? new Date(e.dueDate) : null,
+		paymentDate: e.paymentDate ? new Date(e.paymentDate) : null,
+		createdAt: new Date(e.createdAt),
+		updatedAt: new Date(e.updatedAt),
+		initialState: e.initialState
+			? {
+					amount: e.initialState.amount,
+					dueDate: e.initialState.dueDate
+						? new Date(e.initialState.dueDate)
+						: null,
+					paymentMethod: e.initialState.paymentMethod,
+				}
+			: undefined,
+	}));
+};
 
 interface BackupStore {
 	// State
@@ -31,18 +53,23 @@ interface BackupStore {
 	deleteBackup: (filename: string) => Promise<boolean>;
 	restoreFromBackup: (
 		filename: string,
-		targetEnvironment?: DatabaseEnvironment
+		targetEnvironment?: DatabaseEnvironment,
 	) => Promise<RestoreResult>;
 
 	// Import/Export
-	exportExpensesToFile: (filePath: string) => Promise<{ success: boolean; error?: string }>;
-	importExpensesFromFile: (filePath: string, mode: "replace" | "merge") => Promise<ImportResult>;
+	exportExpensesToFile: (
+		filePath: string,
+	) => Promise<{ success: boolean; error?: string }>;
+	importExpensesFromFile: (
+		filePath: string,
+		mode: "replace" | "merge",
+	) => Promise<ImportResult>;
 	getExpenseExportPath: (backupFilename: string) => Promise<string | null>;
 
 	// Validation
 	canRestoreToEnvironment: (
 		backup: BackupInfo,
-		targetEnvironment: DatabaseEnvironment
+		targetEnvironment: DatabaseEnvironment,
 	) => { allowed: boolean; reason?: string };
 
 	// Settings actions
@@ -127,14 +154,20 @@ export const useBackupStore = create<BackupStore>()(
 			}
 		},
 
-		canRestoreToEnvironment: (backup: BackupInfo, targetEnvironment: DatabaseEnvironment) => {
+		canRestoreToEnvironment: (
+			backup: BackupInfo,
+			targetEnvironment: DatabaseEnvironment,
+		) => {
 			return backupService.validateRestoreEnvironment(
 				backup.metadata.environment,
-				targetEnvironment
+				targetEnvironment,
 			);
 		},
 
-		restoreFromBackup: async (filename: string, targetEnvironment?: DatabaseEnvironment) => {
+		restoreFromBackup: async (
+			filename: string,
+			targetEnvironment?: DatabaseEnvironment,
+		) => {
 			set({ isLoading: true });
 			const currentEnvironment = get().settings.databaseEnvironment;
 
@@ -145,7 +178,7 @@ export const useBackupStore = create<BackupStore>()(
 				if (backup) {
 					const validation = backupService.validateRestoreEnvironment(
 						backup.metadata.environment,
-						actualTarget
+						actualTarget,
 					);
 					if (!validation.allowed) {
 						const result: RestoreResult = {
@@ -157,7 +190,9 @@ export const useBackupStore = create<BackupStore>()(
 					}
 				}
 
-				console.log(`Starting restore of ${filename} to ${actualTarget} environment...`);
+				console.log(
+					`Starting restore of ${filename} to ${actualTarget} environment...`,
+				);
 
 				await sqlStorage.close();
 
@@ -178,7 +213,7 @@ export const useBackupStore = create<BackupStore>()(
 					} catch (reinitError) {
 						console.error(
 							"Failed to recover database after failed restore:",
-							reinitError
+							reinitError,
 						);
 					}
 				}
@@ -211,16 +246,20 @@ export const useBackupStore = create<BackupStore>()(
 			try {
 				const expenseStore = useExpenseStore.getState();
 
-				const exportData: ExpenseExportData = backupService.createExpenseExportData(
-					expenseStore.expenses,
-					expenseStore.categories,
-					expenseStore.categoryColors,
-					expenseStore.paymentMethods,
-					expenseStore.selectedMonth || new Date(),
-					expenseStore.overviewMode
-				);
+				const exportData: ExpenseExportData =
+					backupService.createExpenseExportData(
+						expenseStore.expenses,
+						expenseStore.categories,
+						expenseStore.categoryColors,
+						expenseStore.paymentMethods,
+						expenseStore.selectedMonth || new Date(),
+						expenseStore.overviewMode,
+					);
 
-				const success = await backupService.exportExpensesToJson(exportData, filePath);
+				const success = await backupService.exportExpensesToJson(
+					exportData,
+					filePath,
+				);
 
 				set({ isLoading: false });
 
@@ -240,11 +279,15 @@ export const useBackupStore = create<BackupStore>()(
 		},
 
 		// Import expenses from a file
-		importExpensesFromFile: async (filePath: string, mode: "replace" | "merge") => {
+		importExpensesFromFile: async (
+			filePath: string,
+			mode: "replace" | "merge",
+		) => {
 			set({ isLoading: true });
 
 			try {
-				const importResult = await backupService.importExpensesFromJson(filePath);
+				const importResult =
+					await backupService.importExpensesFromJson(filePath);
 
 				if (!importResult.success || !importResult.data) {
 					const result: ImportResult = {
@@ -258,12 +301,17 @@ export const useBackupStore = create<BackupStore>()(
 				const exportData: ExpenseExportData = importResult.data;
 				const expenseStore = useExpenseStore.getState();
 
+				// Deserialize expenses (convert string dates to Date objects)
+				const deserializedExpenses = deserializeExpenses(
+					exportData.data.expenses,
+				);
+
 				if (mode === "replace") {
 					// Replace all expense data with imported data
 					expenseStore.setExpenseData({
-						expenses: exportData.data.expenses,
+						expenses: deserializedExpenses,
 						selectedMonth: new Date(exportData.data.selectedMonth),
-						overviewMode: exportData.data.overviewMode as any,
+						overviewMode: exportData.data.overviewMode as OverviewMode,
 						categories: exportData.data.categories,
 						categoryColors: exportData.data.categoryColors,
 						paymentMethods: exportData.data.paymentMethods,
@@ -282,13 +330,16 @@ export const useBackupStore = create<BackupStore>()(
 				} else {
 					// Merge mode - add new expenses, skip duplicates by ID
 					const existingIds = new Set(expenseStore.expenses.map((e) => e.id));
-					const newExpenses = exportData.data.expenses.filter(
-						(e: any) => !existingIds.has(e.id)
+					const newExpenses = deserializedExpenses.filter(
+						(e) => !existingIds.has(e.id),
 					);
 
 					// Merge categories and colors
 					const mergedCategories = Array.from(
-						new Set([...expenseStore.categories, ...exportData.data.categories])
+						new Set([
+							...expenseStore.categories,
+							...exportData.data.categories,
+						]),
 					).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
 
 					const mergedColors = {
@@ -297,7 +348,10 @@ export const useBackupStore = create<BackupStore>()(
 					};
 
 					const mergedPaymentMethods = Array.from(
-						new Set([...expenseStore.paymentMethods, ...exportData.data.paymentMethods])
+						new Set([
+							...expenseStore.paymentMethods,
+							...exportData.data.paymentMethods,
+						]),
 					).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
 
 					expenseStore.setExpenseData({
@@ -391,7 +445,11 @@ export const useBackupStore = create<BackupStore>()(
 		},
 
 		clearResults: () => {
-			set({ lastBackupResult: null, lastRestoreResult: null, lastImportResult: null });
+			set({
+				lastBackupResult: null,
+				lastRestoreResult: null,
+				lastImportResult: null,
+			});
 		},
-	}))
+	})),
 );

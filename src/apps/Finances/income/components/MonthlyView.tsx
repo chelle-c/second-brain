@@ -1,9 +1,7 @@
-import React, { useMemo } from "react";
-import { useIncomeStore } from "@/stores/useIncomeStore";
-import { useSettingsStore } from "@/stores/useSettingsStore";
-import { useThemeStore } from "@/stores/useThemeStore";
-import { getMonthlyData } from "@/lib/dateUtils";
-import { getCurrencySymbol } from "@/lib/currencyUtils";
+import { FileText } from "lucide-react";
+import type React from "react";
+import { useMemo } from "react";
+import { BarChart, type BarChartData } from "@/components/charts";
 import {
 	Select,
 	SelectContent,
@@ -13,8 +11,11 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { FileText } from "lucide-react";
-import { BarChart, type BarChartData } from "@/components/charts";
+import { getCurrencySymbol } from "@/lib/currencyUtils";
+import { getMonthlyData } from "@/lib/dateUtils";
+import { useIncomeStore } from "@/stores/useIncomeStore";
+import { useSettingsStore } from "@/stores/useSettingsStore";
+import { useThemeStore } from "@/stores/useThemeStore";
 
 interface MonthlyViewProps {
 	selectedYear: number;
@@ -22,17 +23,23 @@ interface MonthlyViewProps {
 	years: number[];
 }
 
-const MonthlyView: React.FC<MonthlyViewProps> = ({ selectedYear, onYearChange, years }) => {
+const MonthlyView: React.FC<MonthlyViewProps> = ({
+	selectedYear,
+	onYearChange,
+	years,
+}) => {
 	const { incomeEntries } = useIncomeStore();
 	const { incomeCurrency } = useSettingsStore();
 	const currencySymbol = getCurrencySymbol(incomeCurrency);
-	const { resolvedTheme, palette } = useThemeStore();
+	const { resolvedTheme } = useThemeStore();
 	const isDark = resolvedTheme === "dark";
 
 	// Get theme-aware bar color from CSS variable
 	const barColor = useMemo(() => {
-		return getComputedStyle(document.documentElement).getPropertyValue("--primary").trim();
-	}, [resolvedTheme, palette]);
+		return getComputedStyle(document.documentElement)
+			.getPropertyValue("--primary")
+			.trim();
+	}, []);
 
 	// Theme-aware colors
 	const textColor = isDark ? "#e2e8f0" : "#374151";
@@ -54,9 +61,12 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ selectedYear, onYearChange, y
 
 	const renderTooltip = (datum: BarChartData) => (
 		<>
-			<div className="font-medium">{datum.month}</div>
-			<div>Amount: {currencySymbol}{datum.value.toFixed(2)}</div>
-			<div>Hours: {datum.hours?.toFixed(1)}h</div>
+			<div className="font-medium">{String(datum.month)}</div>
+			<div>
+				Amount: {currencySymbol}
+				{datum.value.toFixed(2)}
+			</div>
+			<div>Hours: {(datum.hours as number | undefined)?.toFixed(1)}h</div>
 		</>
 	);
 
@@ -90,7 +100,7 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ selectedYear, onYearChange, y
 								</div>
 								<Select
 									value={selectedYear.toString()}
-									onValueChange={(value) => onYearChange(parseInt(value))}
+									onValueChange={(value) => onYearChange(parseInt(value, 10))}
 								>
 									<SelectTrigger className="w-24 h-8 text-sm">
 										<SelectValue placeholder="Year" />
@@ -155,30 +165,24 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ selectedYear, onYearChange, y
 														</span>
 													</div>
 													<div className="flex justify-between text-xs">
-														<span className="text-muted-foreground">
-															Hours
-														</span>
+														<span className="text-muted-foreground">Hours</span>
 														<span className="font-medium text-foreground">
 															{month.hours.toFixed(1)}h
 														</span>
 													</div>
 													<div className="flex justify-between text-xs">
-														<span className="text-muted-foreground">
-															Rate
-														</span>
+														<span className="text-muted-foreground">Rate</span>
 														<span className="font-medium text-emerald-500">
 															{currencySymbol}
 															{month.hours > 0
-																? (
-																		month.amount / month.hours
-																  ).toFixed(0)
+																? (month.amount / month.hours).toFixed(0)
 																: "0"}
 															/h
 														</span>
 													</div>
 												</div>
 											</div>
-										)
+										),
 								)}
 							</div>
 						</div>
@@ -192,7 +196,7 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({ selectedYear, onYearChange, y
 						</h3>
 						<Select
 							value={selectedYear.toString()}
-							onValueChange={(value) => onYearChange(parseInt(value))}
+							onValueChange={(value) => onYearChange(parseInt(value, 10))}
 						>
 							<SelectTrigger className="w-24 h-8 text-sm">
 								<SelectValue placeholder="Year" />

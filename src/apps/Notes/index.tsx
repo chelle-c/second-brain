@@ -1,26 +1,47 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { FolderNav } from "./components/FolderNav";
-import { NotesCard } from "./components/NotesCard";
-import { NoteView } from "./components/NoteView";
-import { NoteCreate } from "./components/NoteCreate";
-import { NotesLayout } from "./components/NotesLayout";
-import { NotesBreadcrumb } from "./components/NotesBreadcrumb";
-import { useNotesStore } from "@/stores/useNotesStore";
-import { useHistoryStore } from "@/stores/useHistoryStore";
-import { useSettingsStore } from "@/stores/useSettingsStore";
-import { Tag, NotesFolder, NotesFolders, Subfolder } from "@/types/notes";
-import { CheckCircle, Lightbulb, BookOpen, FileWarning, Plus, Save, Archive, ArchiveRestore, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import {
+	Archive,
+	ArchiveRestore,
+	BookOpen,
+	CheckCircle,
+	FileWarning,
+	Lightbulb,
+	Plus,
+	Save,
+	Trash2,
+} from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ConfirmationModal } from "@/components/ConfirmationModal";
+import { Button } from "@/components/ui/button";
+import { useHistoryStore } from "@/stores/useHistoryStore";
+import { useNotesStore } from "@/stores/useNotesStore";
+import { useSettingsStore } from "@/stores/useSettingsStore";
+import type { NotesFolder, NotesFolders, Subfolder, Tag } from "@/types/notes";
+import { FolderNav } from "./components/FolderNav";
+import { NoteCreate } from "./components/NoteCreate";
+import { NotesBreadcrumb } from "./components/NotesBreadcrumb";
+import { NotesCard } from "./components/NotesCard";
+import { NotesLayout } from "./components/NotesLayout";
+import { NoteView } from "./components/NoteView";
 
 type ViewState = "list" | "view" | "create";
 
 export function NotesApp() {
-	const { notes, notesFolders, tags, undo, redo, archiveNote, unarchiveNote, deleteNote } = useNotesStore();
+	const {
+		notes,
+		notesFolders,
+		tags,
+		undo,
+		redo,
+		archiveNote,
+		unarchiveNote,
+		deleteNote,
+	} = useNotesStore();
 	const { canUndo, canRedo } = useHistoryStore();
 	const { notesDefaultFolder } = useSettingsStore();
 
-	const [activeFolder, setActiveFolder] = useState<NotesFolder | Subfolder | null>(null);
+	const [activeFolder, setActiveFolder] = useState<
+		NotesFolder | Subfolder | null
+	>(null);
 	const [activeTags, setActiveTags] = useState<string[]>([]);
 	const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
 	const [viewMode, setViewMode] = useState<"active" | "archived">("active");
@@ -28,9 +49,19 @@ export function NotesApp() {
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
 	const defaultTags: Record<string, Tag> = {
-		actions: { id: "actions", name: "Actions", icon: CheckCircle, color: "#3b82f6" },
+		actions: {
+			id: "actions",
+			name: "Actions",
+			icon: CheckCircle,
+			color: "#3b82f6",
+		},
 		ideas: { id: "ideas", name: "Ideas", icon: Lightbulb, color: "#eab308" },
-		reference: { id: "reference", name: "Reference", icon: BookOpen, color: "#10b981" },
+		reference: {
+			id: "reference",
+			name: "Reference",
+			icon: BookOpen,
+			color: "#10b981",
+		},
 		uncategorized: {
 			id: "uncategorized",
 			name: "Uncategorized",
@@ -49,9 +80,9 @@ export function NotesApp() {
 			const defaultFolder = allFolders[notesDefaultFolder];
 			if (defaultFolder) {
 				setActiveFolder(defaultFolder);
-			} else if (allFolders["inbox"]) {
+			} else if (allFolders.inbox) {
 				// Fall back to inbox if default folder doesn't exist
-				setActiveFolder(allFolders["inbox"]);
+				setActiveFolder(allFolders.inbox);
 			}
 		}
 	}, [notesFolders, notesDefaultFolder]);
@@ -75,7 +106,10 @@ export function NotesApp() {
 			}
 
 			// Ctrl/Cmd + Shift + Z or Ctrl/Cmd + Y to redo
-			if ((modKey && e.shiftKey && e.key === "z") || (modKey && e.key === "y")) {
+			if (
+				(modKey && e.shiftKey && e.key === "z") ||
+				(modKey && e.key === "y")
+			) {
 				if (canRedo) {
 					e.preventDefault();
 					redo();
@@ -103,19 +137,24 @@ export function NotesApp() {
 
 	const isSubfolder = (folderId: string): boolean => {
 		return Object.values(allFolders).some((folder) =>
-			folder.children?.some((child) => child.id === folderId)
+			folder.children?.some((child) => child.id === folderId),
 		);
 	};
 
-	const getNoteCount = (folderId: string, archived: boolean = false): number => {
+	const getNoteCount = (
+		folderId: string,
+		archived: boolean = false,
+	): number => {
 		if (isSubfolder(folderId)) {
-			return notes.filter((n) => n.folder === folderId && n.archived === archived).length;
+			return notes.filter(
+				(n) => n.folder === folderId && n.archived === archived,
+			).length;
 		} else {
 			const subfolderIds = getSubfolderIds(folderId);
 			return notes.filter(
 				(n) =>
 					(n.folder === folderId || subfolderIds.includes(n.folder)) &&
-					n.archived === archived
+					n.archived === archived,
 			).length;
 		}
 	};
@@ -123,8 +162,8 @@ export function NotesApp() {
 	const getCurrentFolder = (id: string): NotesFolder | Subfolder => {
 		const currentFolder = Object.values(allFolders).find((f) => f.id === id);
 		if (currentFolder === undefined) {
-			const currentSubfolder = Object.values(allFolders).find(
-				(f) => f.children && f.children.find((c) => c.id === id)
+			const currentSubfolder = Object.values(allFolders).find((f) =>
+				f.children?.find((c) => c.id === id),
 			);
 			return currentSubfolder?.children?.find((c) => c.id === id) as Subfolder;
 		}
@@ -218,7 +257,10 @@ export function NotesApp() {
 							onUndo={undo}
 							onRedo={redo}
 							actions={
-								<Button onClick={handleCreateSave} className="bg-primary/80 text-base">
+								<Button
+									onClick={handleCreateSave}
+									className="bg-primary/80 text-base"
+								>
 									<Save size={20} />
 									Save Note
 								</Button>
@@ -282,13 +324,16 @@ export function NotesApp() {
 								}
 							/>
 							<div className="flex-1 overflow-hidden">
-								<NoteView note={selectedNote} tags={allTags} onBack={handleBackToList} />
+								<NoteView
+									note={selectedNote}
+									tags={allTags}
+									onBack={handleBackToList}
+								/>
 							</div>
 						</div>
 					);
 				}
 				return null;
-			case "list":
 			default:
 				return (
 					<NotesCard
@@ -346,6 +391,7 @@ export function NotesApp() {
 				{/* Floating New Note Button */}
 				{viewState === "list" && (
 					<button
+						type="button"
 						onClick={handleCreateNote}
 						className="fixed bottom-8 right-12 bg-primary text-primary-foreground p-4 rounded-full
 							shadow-xl hover:bg-primary/90 hover:scale-110 transition-all duration-200

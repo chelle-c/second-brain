@@ -1,23 +1,23 @@
 import {
-	format,
-	startOfWeek,
 	addDays,
-	parseISO,
-	parse,
-	isValid,
+	differenceInDays,
+	differenceInWeeks,
+	eachWeekOfInterval,
+	endOfMonth,
+	endOfYear,
+	format,
 	getWeek,
 	getYear,
-	startOfYear,
-	eachWeekOfInterval,
-	endOfYear,
-	startOfMonth,
-	endOfMonth,
-	differenceInDays,
+	isSameMonth,
 	isToday,
 	isTomorrow,
+	isValid,
 	isYesterday,
-	isSameMonth,
-	differenceInWeeks,
+	parse,
+	parseISO,
+	startOfMonth,
+	startOfWeek,
+	startOfYear,
 } from "date-fns";
 import type { IncomeParsedEntry } from "@/types/income";
 
@@ -25,7 +25,15 @@ import type { IncomeParsedEntry } from "@/types/income";
 // Constants
 // ============================================
 
-export const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+export const DAYS = [
+	"Monday",
+	"Tuesday",
+	"Wednesday",
+	"Thursday",
+	"Friday",
+	"Saturday",
+	"Sunday",
+];
 export const MONTHS = [
 	"January",
 	"February",
@@ -49,7 +57,10 @@ export const years = Array.from({ length: 10 }, (_, i) => CURRENT_YEAR - 5 + i);
 // Formatting Functions
 // ============================================
 
-export const formatCurrency = (amount: number, currency: string = "USD"): string => {
+export const formatCurrency = (
+	amount: number,
+	currency: string = "USD",
+): string => {
 	return new Intl.NumberFormat("en-US", {
 		style: "currency",
 		currency: currency,
@@ -87,7 +98,10 @@ export const getCurrentWeekRange = () => {
 	};
 };
 
-export const getWeeksForYear = (year: number, weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 1) => {
+export const getWeeksForYear = (
+	year: number,
+	weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 1,
+) => {
 	const start = startOfYear(new Date(year, 0, 1));
 	const end = endOfYear(new Date(year, 0, 1));
 	const weeks = eachWeekOfInterval({ start, end }, { weekStartsOn });
@@ -100,7 +114,7 @@ export const getWeeksForYear = (year: number, weekStartsOn: 0 | 1 | 2 | 3 | 4 | 
 			endDate: addDays(weekStart, 6),
 			label: `Week ${weekNumber} (${format(weekStart, "MMM d")} - ${format(
 				addDays(weekStart, 6),
-				"MMM d"
+				"MMM d",
 			)})`,
 		};
 	});
@@ -120,9 +134,15 @@ export const getAvailableDates = (startDate: Date) => {
 // Relative Date Functions
 // ============================================
 
-export const getRelativeDateText = (dueDate: Date, currentMonth: Date): string => {
+export const getRelativeDateText = (
+	dueDate: Date,
+	currentMonth: Date,
+): string => {
 	// Only show relative dates for current month
-	if (!isSameMonth(dueDate, currentMonth) || !isSameMonth(currentMonth, new Date())) {
+	if (
+		!isSameMonth(dueDate, currentMonth) ||
+		!isSameMonth(currentMonth, new Date())
+	) {
 		return formatDate(dueDate);
 	}
 
@@ -174,7 +194,10 @@ export const getRelativeDateText = (dueDate: Date, currentMonth: Date): string =
 };
 
 export const getDueDateColor = (dueDate: Date, currentMonth: Date): string => {
-	if (!isSameMonth(dueDate, currentMonth) || !isSameMonth(currentMonth, new Date())) {
+	if (
+		!isSameMonth(dueDate, currentMonth) ||
+		!isSameMonth(currentMonth, new Date())
+	) {
 		return "text-muted-foreground";
 	}
 
@@ -202,7 +225,8 @@ export const parsePasteText = (text: string, selectedYear: number) => {
 	for (let i = 0; i < lines.length; i++) {
 		const line = lines[i].trim();
 
-		const monthPattern = /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}/;
+		const monthPattern =
+			/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}/;
 		if (monthPattern.test(line)) {
 			if (currentEntry.date && currentEntry.amount !== undefined) {
 				entries.push({
@@ -223,7 +247,6 @@ export const parsePasteText = (text: string, selectedYear: number) => {
 				};
 			} else {
 				currentEntry = {};
-				continue;
 			}
 		} else if (line.startsWith("$")) {
 			const amountMatch = line.match(/\$?(\d+\.?\d*)/);
@@ -273,12 +296,17 @@ export const getMonthlyData = (incomeEntries: any[], year: number) => {
 		const uniqueEntries = monthEntries.reduce((acc, entry) => {
 			const entryDate = format(parseISO(entry.date), "yyyy-MM-dd");
 			const existingEntry = acc.find(
-				(e: { date: string }) => format(parseISO(e.date), "yyyy-MM-dd") === entryDate
+				(e: { date: string }) =>
+					format(parseISO(e.date), "yyyy-MM-dd") === entryDate,
 			);
 
-			if (!existingEntry || new Date(entry.date) > new Date(existingEntry.date)) {
+			if (
+				!existingEntry ||
+				new Date(entry.date) > new Date(existingEntry.date)
+			) {
 				acc = acc.filter(
-					(e: { date: string }) => format(parseISO(e.date), "yyyy-MM-dd") !== entryDate
+					(e: { date: string }) =>
+						format(parseISO(e.date), "yyyy-MM-dd") !== entryDate,
 				);
 				acc.push(entry);
 			}
@@ -288,7 +316,7 @@ export const getMonthlyData = (incomeEntries: any[], year: number) => {
 
 		const totalAmount = uniqueEntries.reduce(
 			(sum: any, entry: { amount: any }) => sum + entry.amount,
-			0
+			0,
 		);
 		const totalHours = uniqueEntries.reduce(
 			(sum: any, entry: { hours: number; minutes: number }) => {
@@ -296,7 +324,7 @@ export const getMonthlyData = (incomeEntries: any[], year: number) => {
 				const minutes = entry.minutes || 0;
 				return sum + hours + minutes / 60;
 			},
-			0
+			0,
 		);
 
 		monthlyData.push({
@@ -318,18 +346,25 @@ export const getYearlyData = (incomeEntries: any[]) => {
 	].sort();
 
 	for (const year of uniqueYears) {
-		const yearEntries = incomeEntries.filter((entry) => getYear(parseISO(entry.date)) === year);
+		const yearEntries = incomeEntries.filter(
+			(entry) => getYear(parseISO(entry.date)) === year,
+		);
 
 		// Get the latest entry for each day to avoid duplicates
 		const uniqueEntries = yearEntries.reduce((acc, entry) => {
 			const entryDate = format(parseISO(entry.date), "yyyy-MM-dd");
 			const existingEntry = acc.find(
-				(e: { date: string }) => format(parseISO(e.date), "yyyy-MM-dd") === entryDate
+				(e: { date: string }) =>
+					format(parseISO(e.date), "yyyy-MM-dd") === entryDate,
 			);
 
-			if (!existingEntry || new Date(entry.date) > new Date(existingEntry.date)) {
+			if (
+				!existingEntry ||
+				new Date(entry.date) > new Date(existingEntry.date)
+			) {
 				acc = acc.filter(
-					(e: { date: string }) => format(parseISO(e.date), "yyyy-MM-dd") !== entryDate
+					(e: { date: string }) =>
+						format(parseISO(e.date), "yyyy-MM-dd") !== entryDate,
 				);
 				acc.push(entry);
 			}
@@ -339,7 +374,7 @@ export const getYearlyData = (incomeEntries: any[]) => {
 
 		const totalAmount = uniqueEntries.reduce(
 			(sum: any, entry: { amount: any }) => sum + entry.amount,
-			0
+			0,
 		);
 		const totalHours = uniqueEntries.reduce(
 			(sum: any, entry: { hours: number; minutes: number }) => {
@@ -347,7 +382,7 @@ export const getYearlyData = (incomeEntries: any[]) => {
 				const minutes = entry.minutes || 0;
 				return sum + hours + minutes / 60;
 			},
-			0
+			0,
 		);
 
 		yearlyData.push({
@@ -364,12 +399,14 @@ export const getTotalHoursWorked = (incomeEntries: any[]) => {
 	const uniqueEntries = incomeEntries.reduce((acc, entry) => {
 		const entryDate = format(parseISO(entry.date), "yyyy-MM-dd");
 		const existingEntry = acc.find(
-			(e: { date: string }) => format(parseISO(e.date), "yyyy-MM-dd") === entryDate
+			(e: { date: string }) =>
+				format(parseISO(e.date), "yyyy-MM-dd") === entryDate,
 		);
 
 		if (!existingEntry || new Date(entry.date) > new Date(existingEntry.date)) {
 			acc = acc.filter(
-				(e: { date: string }) => format(parseISO(e.date), "yyyy-MM-dd") !== entryDate
+				(e: { date: string }) =>
+					format(parseISO(e.date), "yyyy-MM-dd") !== entryDate,
 			);
 			acc.push(entry);
 		}
@@ -377,23 +414,28 @@ export const getTotalHoursWorked = (incomeEntries: any[]) => {
 		return acc;
 	}, []);
 
-	return uniqueEntries.reduce((sum: any, entry: { hours: number; minutes: number }) => {
-		const hours = entry.hours || 0;
-		const minutes = entry.minutes || 0;
-		return sum + hours + minutes / 60;
-	}, 0);
+	return uniqueEntries.reduce(
+		(sum: any, entry: { hours: number; minutes: number }) => {
+			const hours = entry.hours || 0;
+			const minutes = entry.minutes || 0;
+			return sum + hours + minutes / 60;
+		},
+		0,
+	);
 };
 
 export const getTotalAmount = (incomeEntries: any[]) => {
 	const uniqueEntries = incomeEntries.reduce((acc, entry) => {
 		const entryDate = format(parseISO(entry.date), "yyyy-MM-dd");
 		const existingEntry = acc.find(
-			(e: { date: string }) => format(parseISO(e.date), "yyyy-MM-dd") === entryDate
+			(e: { date: string }) =>
+				format(parseISO(e.date), "yyyy-MM-dd") === entryDate,
 		);
 
 		if (!existingEntry || new Date(entry.date) > new Date(existingEntry.date)) {
 			acc = acc.filter(
-				(e: { date: string }) => format(parseISO(e.date), "yyyy-MM-dd") !== entryDate
+				(e: { date: string }) =>
+					format(parseISO(e.date), "yyyy-MM-dd") !== entryDate,
 			);
 			acc.push(entry);
 		}
@@ -401,5 +443,8 @@ export const getTotalAmount = (incomeEntries: any[]) => {
 		return acc;
 	}, []);
 
-	return uniqueEntries.reduce((sum: any, entry: { amount: any }) => sum + entry.amount, 0);
+	return uniqueEntries.reduce(
+		(sum: any, entry: { amount: any }) => sum + entry.amount,
+		0,
+	);
 };

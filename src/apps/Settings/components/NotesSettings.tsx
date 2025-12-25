@@ -1,22 +1,23 @@
-import { useState } from "react";
+import { documentDir } from "@tauri-apps/api/path";
+import { open, save } from "@tauri-apps/plugin-dialog";
+import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import {
-	StickyNote,
-	Download,
-	Upload,
-	Loader2,
 	CheckCircle,
+	Download,
+	Loader2,
+	StickyNote,
+	Upload,
 	XCircle,
 } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
 import {
 	Dialog,
 	DialogContent,
@@ -25,18 +26,22 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { useSettingsStore } from "@/stores/useSettingsStore";
-import { useNotesStore } from "@/stores/useNotesStore";
-import { save, open } from "@tauri-apps/plugin-dialog";
-import { readTextFile } from "@tauri-apps/plugin-fs";
-import { documentDir } from "@tauri-apps/api/path";
 import {
 	exportNotesToJson,
 	parseImportedNotes,
 	validateAndConvertNotes,
 } from "@/lib/notesExportImport";
-import { writeTextFile } from "@tauri-apps/plugin-fs";
+import { useNotesStore } from "@/stores/useNotesStore";
+import { useSettingsStore } from "@/stores/useSettingsStore";
 
 export const NotesSettings = () => {
 	const { notesDefaultFolder, setNotesDefaultFolder } = useSettingsStore();
@@ -46,12 +51,14 @@ export const NotesSettings = () => {
 	const [showImportDialog, setShowImportDialog] = useState(false);
 	const [importFilePath, setImportFilePath] = useState<string | null>(null);
 	const [importMode, setImportMode] = useState<"replace" | "merge">("merge");
-	const [exportResult, setExportResult] = useState<{ success: boolean; message: string } | null>(
-		null
-	);
-	const [importResult, setImportResult] = useState<{ success: boolean; message: string } | null>(
-		null
-	);
+	const [exportResult, setExportResult] = useState<{
+		success: boolean;
+		message: string;
+	} | null>(null);
+	const [importResult, setImportResult] = useState<{
+		success: boolean;
+		message: string;
+	} | null>(null);
 
 	const folderOptions = Object.values(notesFolders).map((folder) => ({
 		value: folder.id,
@@ -127,23 +134,33 @@ export const NotesSettings = () => {
 			if (error || !data) {
 				setShowImportDialog(false);
 				setImportFilePath(null);
-				setImportResult({ success: false, message: error || "Failed to parse import file" });
+				setImportResult({
+					success: false,
+					message: error || "Failed to parse import file",
+				});
 				setTimeout(() => setImportResult(null), 5000);
 				return;
 			}
 
 			// For replace mode, we would need to clear existing notes first
 			// For now, merge mode skips duplicates, replace mode uses empty set
-			const existingIds = importMode === "replace"
-				? new Set<string>()
-				: new Set(notes.map((n) => n.id));
+			const existingIds =
+				importMode === "replace"
+					? new Set<string>()
+					: new Set(notes.map((n) => n.id));
 
-			const { validNotes, errors, skipped } = validateAndConvertNotes(data, existingIds);
+			const { validNotes, errors, skipped } = validateAndConvertNotes(
+				data,
+				existingIds,
+			);
 
 			if (validNotes.length === 0 && errors.length > 0) {
 				setShowImportDialog(false);
 				setImportFilePath(null);
-				setImportResult({ success: false, message: `Import failed: ${errors[0]}` });
+				setImportResult({
+					success: false,
+					message: `Import failed: ${errors[0]}`,
+				});
 				setTimeout(() => setImportResult(null), 5000);
 				return;
 			}
@@ -348,7 +365,8 @@ export const NotesSettings = () => {
 
 						{importMode === "replace" && (
 							<div className="p-3 bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded-lg text-sm">
-								Note: This will import all notes from the file, potentially creating duplicates if notes with the same ID already exist.
+								Note: This will import all notes from the file, potentially
+								creating duplicates if notes with the same ID already exist.
 							</div>
 						)}
 					</div>
@@ -363,10 +381,7 @@ export const NotesSettings = () => {
 						>
 							Cancel
 						</Button>
-						<Button
-							onClick={handleImportConfirm}
-							disabled={isLoading}
-						>
+						<Button onClick={handleImportConfirm} disabled={isLoading}>
 							{isLoading ? (
 								<>
 									<Loader2 className="w-4 h-4 mr-2 animate-spin" />

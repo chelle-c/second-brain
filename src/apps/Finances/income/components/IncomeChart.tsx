@@ -1,10 +1,11 @@
-import React, { useMemo } from "react";
-import type { IncomeDayData } from "@/types/income";
-import { useSettingsStore } from "@/stores/useSettingsStore";
-import { getCurrencySymbol } from "@/lib/currencyUtils";
-import { useThemeStore } from "@/stores/useThemeStore";
-import { BarChart, type BarChartData } from "@/components/charts";
 import { format } from "date-fns";
+import type React from "react";
+import { useMemo } from "react";
+import { BarChart, type BarChartData } from "@/components/charts";
+import { getCurrencySymbol } from "@/lib/currencyUtils";
+import { useSettingsStore } from "@/stores/useSettingsStore";
+import { useThemeStore } from "@/stores/useThemeStore";
+import type { IncomeDayData } from "@/types/income";
 
 interface IncomeChartProps {
 	weeklyData: IncomeDayData[];
@@ -13,13 +14,15 @@ interface IncomeChartProps {
 const IncomeChart: React.FC<IncomeChartProps> = ({ weeklyData }) => {
 	const { incomeCurrency } = useSettingsStore();
 	const currencySymbol = getCurrencySymbol(incomeCurrency);
-	const { resolvedTheme, palette } = useThemeStore();
+	const { resolvedTheme } = useThemeStore();
 	const isDark = resolvedTheme === "dark";
 
 	// Get theme-aware bar color from CSS variable
 	const barColor = useMemo(() => {
-		return getComputedStyle(document.documentElement).getPropertyValue("--primary").trim();
-	}, [resolvedTheme, palette]);
+		return getComputedStyle(document.documentElement)
+			.getPropertyValue("--primary")
+			.trim();
+	}, []);
 
 	// Theme-aware colors
 	const textColor = isDark ? "#e2e8f0" : "#374151";
@@ -36,14 +39,19 @@ const IncomeChart: React.FC<IncomeChartProps> = ({ weeklyData }) => {
 	const renderTooltip = (datum: BarChartData) => (
 		<>
 			<div className="font-medium">{datum.label}</div>
-			<div>Amount: {currencySymbol}{datum.value.toFixed(2)}</div>
+			<div>
+				Amount: {currencySymbol}
+				{datum.value.toFixed(2)}
+			</div>
 		</>
 	);
 
 	return (
 		<div className="bg-card rounded-xl shadow-lg p-4">
 			<div className="pb-2">
-				<h3 className="text-base font-semibold text-card-foreground">Daily Income</h3>
+				<h3 className="text-base font-semibold text-card-foreground">
+					Daily Income
+				</h3>
 			</div>
 			<div>
 				<div className="w-full" style={{ height: "320px" }}>

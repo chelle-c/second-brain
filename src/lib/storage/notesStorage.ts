@@ -1,5 +1,5 @@
-import { Note, NotesFolders, Tag } from "@/types/notes";
-import { DatabaseContext } from "../../types/storage";
+import type { Note, NotesFolders, Tag } from "@/types/notes";
+import type { DatabaseContext } from "../../types/storage";
 import { deepEqual } from "../utils";
 
 export class NotesStorage {
@@ -14,9 +14,13 @@ export class NotesStorage {
 			.map((note) => ({
 				...note,
 				createdAt:
-					note.createdAt instanceof Date ? note.createdAt.toISOString() : note.createdAt,
+					note.createdAt instanceof Date
+						? note.createdAt.toISOString()
+						: note.createdAt,
 				updatedAt:
-					note.updatedAt instanceof Date ? note.updatedAt.toISOString() : note.updatedAt,
+					note.updatedAt instanceof Date
+						? note.updatedAt.toISOString()
+						: note.updatedAt,
 				tags: note.tags || [],
 				archived: note.archived || false,
 			}))
@@ -71,27 +75,67 @@ export class NotesStorage {
 				id: "personal",
 				name: "Personal",
 				children: [
-					{ id: "personal_health", name: "Health", parent: "personal", children: [] },
-					{ id: "personal_finance", name: "Finance", parent: "personal", children: [] },
-					{ id: "personal_home", name: "Home", parent: "personal", children: [] },
+					{
+						id: "personal_health",
+						name: "Health",
+						parent: "personal",
+						children: [],
+					},
+					{
+						id: "personal_finance",
+						name: "Finance",
+						parent: "personal",
+						children: [],
+					},
+					{
+						id: "personal_home",
+						name: "Home",
+						parent: "personal",
+						children: [],
+					},
 				],
 			},
 			work: {
 				id: "work",
 				name: "Work",
 				children: [
-					{ id: "work_meetings", name: "Meetings", parent: "work", children: [] },
+					{
+						id: "work_meetings",
+						name: "Meetings",
+						parent: "work",
+						children: [],
+					},
 					{ id: "work_tasks", name: "Tasks", parent: "work", children: [] },
-					{ id: "work_learning", name: "Learning", parent: "work", children: [] },
+					{
+						id: "work_learning",
+						name: "Learning",
+						parent: "work",
+						children: [],
+					},
 				],
 			},
 			projects: {
 				id: "projects",
 				name: "Projects",
 				children: [
-					{ id: "projects_active", name: "Active", parent: "projects", children: [] },
-					{ id: "projects_planning", name: "Planning", parent: "projects", children: [] },
-					{ id: "projects_someday", name: "Someday", parent: "projects", children: [] },
+					{
+						id: "projects_active",
+						name: "Active",
+						parent: "projects",
+						children: [],
+					},
+					{
+						id: "projects_planning",
+						name: "Planning",
+						parent: "projects",
+						children: [],
+					},
+					{
+						id: "projects_someday",
+						name: "Someday",
+						parent: "projects",
+						children: [],
+					},
 				],
 			},
 			resources: {
@@ -104,8 +148,18 @@ export class NotesStorage {
 						parent: "resources",
 						children: [],
 					},
-					{ id: "resources_books", name: "Books", parent: "resources", children: [] },
-					{ id: "resources_tools", name: "Tools", parent: "resources", children: [] },
+					{
+						id: "resources_books",
+						name: "Books",
+						parent: "resources",
+						children: [],
+					},
+					{
+						id: "resources_tools",
+						name: "Tools",
+						parent: "resources",
+						children: [],
+					},
 				],
 			},
 		};
@@ -124,7 +178,9 @@ export class NotesStorage {
 					updatedAt: string;
 					archived: number;
 				}>
-			>("SELECT id, title, content, tags, folder, createdAt, updatedAt, archived FROM notes");
+			>(
+				"SELECT id, title, content, tags, folder, createdAt, updatedAt, archived FROM notes",
+			);
 
 			const notes = results.map((row) => ({
 				id: row.id,
@@ -182,7 +238,7 @@ export class NotesStorage {
 								n.updatedAt instanceof Date
 									? n.updatedAt.toISOString()
 									: n.updatedAt,
-						}
+						},
 					)
 				);
 			});
@@ -206,7 +262,7 @@ export class NotesStorage {
 							? note.updatedAt.toISOString()
 							: note.updatedAt,
 						note.archived ? 1 : 0,
-					]
+					],
 				);
 			}
 
@@ -234,7 +290,7 @@ export class NotesStorage {
 	async loadFolders(): Promise<NotesFolders> {
 		return this.context.queueOperation(async () => {
 			const results = await this.context.db.select<Array<{ data: string }>>(
-				"SELECT data FROM folders WHERE id = 1"
+				"SELECT data FROM folders WHERE id = 1",
 			);
 
 			let folders: NotesFolders;
@@ -243,7 +299,7 @@ export class NotesStorage {
 				folders = this.createInitialFolders();
 				await this.context.db.execute(
 					`INSERT OR REPLACE INTO folders (id, data) VALUES (1, ?)`,
-					[JSON.stringify(folders)]
+					[JSON.stringify(folders)],
 				);
 			} else {
 				folders = JSON.parse(results[0].data);
@@ -262,7 +318,7 @@ export class NotesStorage {
 		return this.context.queueOperation(async () => {
 			await this.context.db.execute(
 				`INSERT OR REPLACE INTO folders (id, data) VALUES (1, ?)`,
-				[JSON.stringify(folders)]
+				[JSON.stringify(folders)],
 			);
 
 			this.context.cache.folders = folders;
@@ -272,14 +328,15 @@ export class NotesStorage {
 
 	async loadTags(): Promise<Record<string, Tag>> {
 		return this.context.queueOperation(async () => {
-			const results = await this.context.db.select<
-				Array<{
-					id: string;
-					name: string;
-					color: string;
-					icon: string;
-				}>
-			>("SELECT * FROM tags");
+			const results =
+				await this.context.db.select<
+					Array<{
+						id: string;
+						name: string;
+						color: string;
+						icon: string;
+					}>
+				>("SELECT * FROM tags");
 
 			const tags: Record<string, Tag> = {};
 			results.forEach((row) => {
@@ -314,7 +371,7 @@ export class NotesStorage {
 				await this.context.db.execute(
 					`INSERT INTO tags (id, name, color, icon)
 					VALUES (?, ?, ?, ?)`,
-					[tag.id, tag.name, tag.color, iconName]
+					[tag.id, tag.name, tag.color, iconName],
 				);
 			}
 

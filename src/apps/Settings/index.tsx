@@ -1,10 +1,10 @@
-import { Layout } from "./components/Layout";
-import { GeneralSettings } from "./components/GeneralSettings";
 import { AppearanceSettings } from "./components/AppearanceSettings";
-import { NotesSettings } from "./components/NotesSettings";
-import { ExpenseSettings } from "./components/ExpenseSettings";
-import { IncomeSettings } from "./components/IncomeSettings";
 import { BackupSettings } from "./components/BackupSettings";
+import { ExpenseSettings } from "./components/ExpenseSettings";
+import { GeneralSettings } from "./components/GeneralSettings";
+import { IncomeSettings } from "./components/IncomeSettings";
+import { Layout } from "./components/Layout";
+import { NotesSettings } from "./components/NotesSettings";
 
 export const Settings = () => {
 	return (

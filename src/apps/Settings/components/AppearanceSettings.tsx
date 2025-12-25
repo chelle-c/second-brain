@@ -1,5 +1,11 @@
-import { Palette, Monitor, Sun, Moon } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Monitor, Moon, Palette, Sun } from "lucide-react";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import {
 	Select,
@@ -8,8 +14,13 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { ThemeMode, ThemePalette, THEME_MODE_OPTIONS, THEME_PALETTE_OPTIONS } from "@/types/theme";
 import { useThemeStore } from "@/stores/useThemeStore";
+import {
+	THEME_MODE_OPTIONS,
+	THEME_PALETTE_OPTIONS,
+	type ThemeMode,
+	type ThemePalette,
+} from "@/types/theme";
 
 const getThemeModeIcon = (mode: ThemeMode) => {
 	switch (mode) {
@@ -23,7 +34,12 @@ const getThemeModeIcon = (mode: ThemeMode) => {
 };
 
 export const AppearanceSettings = () => {
-	const { mode: themeMode, setMode: setThemeMode, palette, setPalette } = useThemeStore();
+	const {
+		mode: themeMode,
+		setMode: setThemeMode,
+		palette,
+		setPalette,
+	} = useThemeStore();
 
 	return (
 		<Card id="appearance" className="scroll-mt-6">

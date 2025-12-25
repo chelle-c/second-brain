@@ -1,5 +1,11 @@
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface SectionCardProps {
 	title?: string;
@@ -33,14 +39,22 @@ export function SectionCard({
 							{icon && <span className="text-muted-foreground">{icon}</span>}
 							<div>
 								{title && <CardTitle className="text-base">{title}</CardTitle>}
-								{description && <CardDescription>{description}</CardDescription>}
+								{description && (
+									<CardDescription>{description}</CardDescription>
+								)}
 							</div>
 						</div>
 						{action && <div>{action}</div>}
 					</div>
 				</CardHeader>
 			)}
-			<CardContent className={cn(noPadding && "p-0", !hasHeader && "pt-6", contentClassName)}>
+			<CardContent
+				className={cn(
+					noPadding && "p-0",
+					!hasHeader && "pt-6",
+					contentClassName,
+				)}
+			>
 				{children}
 			</CardContent>
 		</Card>

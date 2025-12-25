@@ -1,6 +1,6 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { addMonths, subMonths } from "date-fns";
-import { useExpenseStore } from "@/stores/useExpenseStore";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
 	Select,
 	SelectContent,
@@ -10,7 +10,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
+import { useExpenseStore } from "@/stores/useExpenseStore";
 
 export const MonthNavigation: React.FC = () => {
 	const { selectedMonth, setSelectedMonth, expenses } = useExpenseStore();
@@ -27,13 +27,13 @@ export const MonthNavigation: React.FC = () => {
 
 	const handleMonthChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
 		const newDate = new Date(selectedMonth);
-		newDate.setMonth(parseInt(e.target.value));
+		newDate.setMonth(parseInt(e.target.value, 10));
 		setSelectedMonth(newDate);
 	};
 
 	const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
 		const newDate = new Date(selectedMonth);
-		newDate.setFullYear(parseInt(e.target.value));
+		newDate.setFullYear(parseInt(e.target.value, 10));
 		setSelectedMonth(newDate);
 	};
 
@@ -90,7 +90,11 @@ export const MonthNavigation: React.FC = () => {
 				{/* Month Dropdown */}
 				<Select
 					value={selectedMonth.getMonth().toString()}
-					onValueChange={(value) => handleMonthChange({ target: { value } } as any)}
+					onValueChange={(value) =>
+						handleMonthChange({
+							target: { value },
+						} as React.ChangeEvent<HTMLSelectElement>)
+					}
 				>
 					<SelectTrigger className="w-[132px]">
 						<SelectValue placeholder="Select month" />
@@ -99,7 +103,7 @@ export const MonthNavigation: React.FC = () => {
 						<SelectGroup>
 							<SelectLabel>Months</SelectLabel>
 							{months.map((month, index) => (
-								<SelectItem key={index} value={index.toString()}>
+								<SelectItem key={month.toLowerCase()} value={index.toString()}>
 									{month}
 								</SelectItem>
 							))}
@@ -110,7 +114,11 @@ export const MonthNavigation: React.FC = () => {
 				{/* Year Dropdown */}
 				<Select
 					value={selectedMonth.getFullYear().toString()}
-					onValueChange={(value) => handleYearChange({ target: { value } } as any)}
+					onValueChange={(value) =>
+						handleYearChange({
+							target: { value },
+						} as React.ChangeEvent<HTMLSelectElement>)
+					}
 				>
 					<SelectTrigger className="w-[92px]">
 						<SelectValue placeholder="Select year" />

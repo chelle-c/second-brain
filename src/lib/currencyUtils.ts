@@ -17,7 +17,10 @@ export function formatCurrency(amount: number, currencyCode: string): string {
 	return `${symbol}${formatted}`;
 }
 
-export function formatCurrencyCompact(amount: number, currencyCode: string): string {
+export function formatCurrencyCompact(
+	amount: number,
+	currencyCode: string,
+): string {
 	const symbol = getCurrencySymbol(currencyCode);
 
 	// For compact display, show whole numbers if no cents

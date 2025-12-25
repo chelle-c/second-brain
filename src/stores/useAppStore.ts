@@ -1,16 +1,20 @@
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
-import { useNotesStore } from "./useNotesStore";
-import { useIncomeStore } from "./useIncomeStore";
+import {
+	DEFAULT_CATEGORY_COLORS,
+	DEFAULT_EXPENSE_CATEGORIES,
+} from "@/lib/expenseHelpers";
+import { sqlStorage } from "@/lib/storage";
+import type { AppToSave } from "@/types";
+import type { Expense } from "@/types/expense";
+import { DEFAULT_SETTINGS } from "@/types/settings";
+import { DEFAULT_PAYMENT_METHODS } from "@/types/storage";
+import { DEFAULT_THEME_SETTINGS } from "@/types/theme";
 import { useExpenseStore } from "./useExpenseStore";
+import { useIncomeStore } from "./useIncomeStore";
+import { useNotesStore } from "./useNotesStore";
 import { useSettingsStore } from "./useSettingsStore";
 import { useThemeStore } from "./useThemeStore";
-import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
-import { DEFAULT_PAYMENT_METHODS } from "@/types/storage";
-import { AppToSave } from "@/types";
-import { sqlStorage } from "@/lib/storage";
-import { DEFAULT_SETTINGS } from "@/types/settings";
-import { DEFAULT_THEME_SETTINGS } from "@/types/theme";
 
 interface AppStore {
 	// -- Metadata
@@ -50,11 +54,15 @@ const useAppStore = create<AppStore>()(
 
 				// Use setters that don't trigger save for income
 				useIncomeStore.getState().setIncomeEntries(data.income.entries || []);
-				useIncomeStore.getState().setIncomeWeeklyTargets(data.income.weeklyTargets || []);
-				useIncomeStore.getState().setIncomeViewType(data.income.viewType || "weekly");
+				useIncomeStore
+					.getState()
+					.setIncomeWeeklyTargets(data.income.weeklyTargets || []);
+				useIncomeStore
+					.getState()
+					.setIncomeViewType(data.income.viewType || "weekly");
 
 				// Process expenses data
-				const processedExpenses = data.expenses.expenses.map((e: any) => ({
+				const processedExpenses = data.expenses.expenses.map((e: Expense) => ({
 					...e,
 					dueDate: e.dueDate ? new Date(e.dueDate) : null,
 					paymentDate: e.paymentDate ? new Date(e.paymentDate) : null,
@@ -74,7 +82,7 @@ const useAppStore = create<AppStore>()(
 									? new Date(e.initialState.dueDate)
 									: null,
 								paymentMethod: e.initialState.paymentMethod || "None",
-						  }
+							}
 						: undefined,
 				}));
 
@@ -86,8 +94,10 @@ const useAppStore = create<AppStore>()(
 						: new Date(),
 					overviewMode: data.expenses.overviewMode || "remaining",
 					categories: data.expenses.categories || DEFAULT_EXPENSE_CATEGORIES,
-					categoryColors: data.expenses.categoryColors || DEFAULT_CATEGORY_COLORS,
-					paymentMethods: data.expenses.paymentMethods || DEFAULT_PAYMENT_METHODS,
+					categoryColors:
+						data.expenses.categoryColors || DEFAULT_CATEGORY_COLORS,
+					paymentMethods:
+						data.expenses.paymentMethods || DEFAULT_PAYMENT_METHODS,
 				});
 
 				// Load settings (skipSave=true to avoid unnecessary save on load)
@@ -108,7 +118,7 @@ const useAppStore = create<AppStore>()(
 				console.log(
 					`Loaded ${processedExpenses.length} expenses, ${
 						Object.keys(data.expenses.categoryColors || {}).length
-					} category colors`
+					} category colors`,
 				);
 			} catch (error) {
 				console.error("Failed to load data:", error);
@@ -150,7 +160,8 @@ const useAppStore = create<AppStore>()(
 							incomeDefaultView: settingsState.incomeDefaultView,
 							incomeWeekStartDay: settingsState.incomeWeekStartDay,
 							incomeCurrency: settingsState.incomeCurrency,
-							incomeDefaultWeeklyTarget: settingsState.incomeDefaultWeeklyTarget,
+							incomeDefaultWeeklyTarget:
+								settingsState.incomeDefaultWeeklyTarget,
 						},
 						theme: {
 							mode: themeState.mode,
@@ -160,7 +171,7 @@ const useAppStore = create<AppStore>()(
 						lastSaved: new Date(),
 						autoSaveEnabled: state.autoSaveEnabled,
 					},
-					appToSave
+					appToSave,
 				);
 				set({ lastSaved: new Date() });
 			} catch (error) {
@@ -171,7 +182,7 @@ const useAppStore = create<AppStore>()(
 		toggleAutoSave: () => {
 			set((state) => ({ autoSaveEnabled: !state.autoSaveEnabled }));
 		},
-	}))
+	})),
 );
 
 export default useAppStore;

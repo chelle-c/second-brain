@@ -1,7 +1,7 @@
-import Database from "@tauri-apps/plugin-sql";
-import { Note, NotesFolders, Tag } from "@/types/notes";
-import { AppData } from "@/types/";
-import { AppSettings } from "@/types/settings";
+import type Database from "@tauri-apps/plugin-sql";
+import type { AppData } from "@/types/";
+import type { Note, NotesFolders, Tag } from "@/types/notes";
+import type { AppSettings } from "@/types/settings";
 
 export interface StorageCache {
 	notes?: Note[];

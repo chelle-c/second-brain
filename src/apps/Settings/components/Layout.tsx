@@ -1,13 +1,13 @@
-import { useEffect, useRef, useState, ReactNode } from "react";
 import {
+	Database,
+	DollarSign,
+	type LucideIcon,
+	Palette,
 	Settings as SettingsIcon,
 	StickyNote,
-	DollarSign,
 	TrendingUp,
-	Palette,
-	Database,
-	LucideIcon,
 } from "lucide-react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 
 interface Section {
 	id: string;
@@ -43,7 +43,8 @@ export const Layout = ({ children }: LayoutProps) => {
 			for (let i = sections.length - 1; i >= 0; i--) {
 				const section = document.getElementById(sections[i].id);
 				if (section) {
-					const sectionTop = section.offsetTop - containerRect.top - container.offsetTop;
+					const sectionTop =
+						section.offsetTop - containerRect.top - container.offsetTop;
 					if (scrollTop >= sectionTop - 150) {
 						setActiveSection(sections[i].id);
 						break;
@@ -64,7 +65,10 @@ export const Layout = ({ children }: LayoutProps) => {
 	};
 
 	return (
-		<div ref={scrollContainerRef} className="flex-1 overflow-y-auto max-h-[98vh] p-4 w-full min-h-screen">
+		<div
+			ref={scrollContainerRef}
+			className="flex-1 overflow-y-auto max-h-[98vh] p-4 w-full min-h-screen"
+		>
 			<div className="w-full max-w-5xl mx-auto my-6 animate-slideUp">
 				<h1 className="sr-only">Settings</h1>
 
@@ -78,6 +82,7 @@ export const Layout = ({ children }: LayoutProps) => {
 								const Icon = section.icon;
 								return (
 									<button
+										type="button"
 										key={section.id}
 										onClick={() => scrollToSection(section.id)}
 										className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left ${
@@ -94,9 +99,7 @@ export const Layout = ({ children }: LayoutProps) => {
 						</nav>
 					</aside>
 
-					<div className="flex-1 space-y-6 min-w-0">
-						{children}
-					</div>
+					<div className="flex-1 space-y-6 min-w-0">{children}</div>
 				</div>
 			</div>
 		</div>

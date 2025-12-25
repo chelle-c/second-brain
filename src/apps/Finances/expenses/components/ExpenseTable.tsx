@@ -1,11 +1,21 @@
-import { useState, useMemo } from "react";
-import { formatCurrency, formatDate, getRelativeDateText, getDueDateColor } from "@/lib/dateUtils";
-import { DEFAULT_CATEGORY_COLORS, getCategoryDisplayColor } from "@/lib/expenseHelpers";
-import { useThemeStore } from "@/stores/useThemeStore";
-import { Expense, ImportanceLevel } from "@/types/expense";
-import { RecurringExpenseRow } from "./RecurringExpenseRow";
-import { useExpenseStore } from "@/stores/useExpenseStore";
-import { useSettingsStore } from "@/stores/useSettingsStore";
+import {
+	Archive,
+	ArchiveRestore,
+	Calendar,
+	Check,
+	CheckCircle,
+	ChevronDown,
+	ChevronUp,
+	Copy,
+	CreditCard,
+	Edit2,
+	Eye,
+	EyeOff,
+	RefreshCw,
+	Search,
+	Trash2,
+} from "lucide-react";
+import { useMemo, useState } from "react";
 import {
 	Select,
 	SelectContent,
@@ -16,22 +26,20 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import {
-	Edit2,
-	Trash2,
-	Archive,
-	ArchiveRestore,
-	RefreshCw,
-	Calendar,
-	Check,
-	CheckCircle,
-	ChevronUp,
-	ChevronDown,
-	Search,
-	Eye,
-	EyeOff,
-	Copy,
-	CreditCard,
-} from "lucide-react";
+	formatCurrency,
+	formatDate,
+	getDueDateColor,
+	getRelativeDateText,
+} from "@/lib/dateUtils";
+import {
+	DEFAULT_CATEGORY_COLORS,
+	getCategoryDisplayColor,
+} from "@/lib/expenseHelpers";
+import { useExpenseStore } from "@/stores/useExpenseStore";
+import { useSettingsStore } from "@/stores/useSettingsStore";
+import { useThemeStore } from "@/stores/useThemeStore";
+import type { Expense, ImportanceLevel } from "@/types/expense";
+import { RecurringExpenseRow } from "./RecurringExpenseRow";
 
 interface ExpenseTableProps {
 	expensesToDisplay: Expense[];
@@ -122,7 +130,9 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 	// Group recurring expenses in All Expenses view
 	const processedExpenses = useMemo(() => {
 		if (!isAllExpensesView) {
-			return expensesToDisplay.map((e) => ({ type: "single", expense: e } as const));
+			return expensesToDisplay.map(
+				(e) => ({ type: "single", expense: e }) as const,
+			);
 		}
 
 		const parentExpenses = new Map<string, Expense>();
@@ -133,7 +143,8 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 				parentExpenses.set(expense.id, expense);
 				occurrencesByParent.set(expense.id, []);
 			} else if (expense.parentExpenseId) {
-				const occurrences = occurrencesByParent.get(expense.parentExpenseId) || [];
+				const occurrences =
+					occurrencesByParent.get(expense.parentExpenseId) || [];
 				occurrences.push(expense);
 				occurrencesByParent.set(expense.parentExpenseId, occurrences);
 			}
@@ -177,15 +188,19 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 			filtered = filtered.filter(
 				(item) =>
 					item.expense.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-					item.expense.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+					item.expense.category
+						.toLowerCase()
+						.includes(searchQuery.toLowerCase()) ||
 					(item.expense.paymentMethod || "")
 						.toLowerCase()
-						.includes(searchQuery.toLowerCase())
+						.includes(searchQuery.toLowerCase()),
 			);
 		}
 
 		if (categoryFilter !== "all") {
-			filtered = filtered.filter((item) => item.expense.category === categoryFilter);
+			filtered = filtered.filter(
+				(item) => item.expense.category === categoryFilter,
+			);
 		}
 
 		filtered.sort((a, b) => {
@@ -199,15 +214,16 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 					break;
 				case "paymentMethod":
 					compareValue = (expA.paymentMethod || "").localeCompare(
-						expB.paymentMethod || ""
+						expB.paymentMethod || "",
 					);
 					break;
-				case "importance":
+				case "importance": {
 					const importanceOrder = { critical: 3, high: 2, medium: 1, none: 0 };
 					compareValue =
 						(importanceOrder[expA.importance || "none"] || 0) -
 						(importanceOrder[expB.importance || "none"] || 0);
 					break;
+				}
 				case "category":
 					compareValue = expA.category.localeCompare(expB.category);
 					break;
@@ -227,7 +243,8 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 					if (!expA.paymentDate && !expB.paymentDate) return 0;
 					if (!expA.paymentDate) return 1;
 					if (!expB.paymentDate) return -1;
-					compareValue = expA.paymentDate.getTime() - expB.paymentDate.getTime();
+					compareValue =
+						expA.paymentDate.getTime() - expB.paymentDate.getTime();
 					break;
 				case "isPaid":
 					compareValue = (expA.isPaid ? 1 : 0) - (expB.isPaid ? 1 : 0);
@@ -238,7 +255,14 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 		});
 
 		return filtered;
-	}, [processedExpenses, sortKey, sortDirection, searchQuery, categoryFilter, showPaidExpenses]);
+	}, [
+		processedExpenses,
+		sortKey,
+		sortDirection,
+		searchQuery,
+		categoryFilter,
+		showPaidExpenses,
+	]);
 
 	const handleEditOccurrence = (expense: Expense) => {
 		setEditingExpense(expense);
@@ -268,7 +292,10 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 			{/* Search and Filter Controls */}
 			<div className="flex flex-col sm:flex-row gap-4 mb-4 items-center">
 				<div className="relative flex-1">
-					<Search className="absolute left-3 top-3 text-muted-foreground" size={18} />
+					<Search
+						className="absolute left-3 top-3 text-muted-foreground"
+						size={18}
+					/>
 					<input
 						type="text"
 						placeholder="Search expenses..."
@@ -325,15 +352,20 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 				</Select>
 				{hasPaidExpenses && (
 					<button
+						type="button"
 						onClick={() => setShowPaidExpenses(!showPaidExpenses)}
 						className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
 							showPaidExpenses
 								? "bg-primary/10 text-primary hover:bg-primary/20"
 								: "bg-muted text-muted-foreground hover:bg-accent"
 						}`}
-						title={showPaidExpenses ? "Hide paid expenses" : "Show paid expenses"}
+						title={
+							showPaidExpenses ? "Hide paid expenses" : "Show paid expenses"
+						}
 						aria-pressed={showPaidExpenses}
-						aria-label={showPaidExpenses ? "Hide paid expenses" : "Show paid expenses"}
+						aria-label={
+							showPaidExpenses ? "Hide paid expenses" : "Show paid expenses"
+						}
 					>
 						{showPaidExpenses ? <Eye size={18} /> : <EyeOff size={18} />}
 						<span className="hidden sm:inline">
@@ -353,6 +385,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 						<tr className="border-b border-border text-xs">
 							<th className="text-center py-3 px-2 font-medium text-muted-foreground">
 								<button
+									type="button"
 									onClick={() => handleSort("isPaid")}
 									className="flex items-center gap-1 hover:text-primary mx-auto"
 								>
@@ -362,6 +395,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 							</th>
 							<th className="text-left py-3 px-3 font-medium text-muted-foreground">
 								<button
+									type="button"
 									onClick={() => handleSort("name")}
 									className="flex items-center gap-1 hover:text-primary"
 								>
@@ -371,6 +405,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 							</th>
 							<th className="text-left py-3 px-2 font-medium text-muted-foreground">
 								<button
+									type="button"
 									onClick={() => handleSort("paymentMethod")}
 									className="flex items-center gap-1 hover:text-primary"
 								>
@@ -381,6 +416,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 							</th>
 							<th className="text-center py-3 px-2 font-medium text-muted-foreground">
 								<button
+									type="button"
 									onClick={() => handleSort("importance")}
 									className="flex items-center gap-1 hover:text-primary mx-auto"
 								>
@@ -391,6 +427,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 							</th>
 							<th className="text-center py-3 px-3 font-medium text-muted-foreground">
 								<button
+									type="button"
 									onClick={() => handleSort("category")}
 									className="flex items-center gap-1 hover:text-primary mx-auto"
 								>
@@ -400,6 +437,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 							</th>
 							<th className="text-left py-3 px-3 font-medium text-muted-foreground">
 								<button
+									type="button"
 									onClick={() => handleSort("type")}
 									className="flex items-center gap-1 hover:text-primary"
 								>
@@ -409,6 +447,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 							</th>
 							<th className="text-left py-3 px-3 font-medium text-muted-foreground">
 								<button
+									type="button"
 									onClick={() => handleSort("amount")}
 									className="flex items-center gap-1 hover:text-primary"
 								>
@@ -418,6 +457,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 							</th>
 							<th className="text-left py-3 px-3 font-medium text-muted-foreground">
 								<button
+									type="button"
 									onClick={() => handleSort("dueDate")}
 									className="flex items-center gap-1 hover:text-primary"
 								>
@@ -427,6 +467,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 							</th>
 							<th className="text-left py-3 px-3 font-medium text-muted-foreground">
 								<button
+									type="button"
 									onClick={() => handleSort("paymentDate")}
 									className="flex items-center gap-1 hover:text-primary"
 								>
@@ -463,7 +504,10 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 								categoryColors[expense.category] ||
 								DEFAULT_CATEGORY_COLORS[expense.category] ||
 								"#6b7280";
-							const displayColor = getCategoryDisplayColor(categoryColor, isDarkMode);
+							const displayColor = getCategoryDisplayColor(
+								categoryColor,
+								isDarkMode,
+							);
 
 							return (
 								<tr
@@ -476,6 +520,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 								>
 									<td className="py-3 px-2">
 										<button
+											type="button"
 											onClick={() => onTogglePaid(expense.id)}
 											className={`p-1.5 rounded-lg transition-all duration-200 hover:scale-110
 											${
@@ -483,9 +528,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 													? "text-green-500 bg-green-500/10 hover:bg-green-500/20"
 													: "text-muted-foreground bg-muted hover:bg-accent"
 											}`}
-											title={
-												expense.isPaid ? "Mark as unpaid" : "Mark as paid"
-											}
+											title={expense.isPaid ? "Mark as unpaid" : "Mark as paid"}
 										>
 											{expense.isPaid ? (
 												<CheckCircle size={18} />
@@ -569,10 +612,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 													<Calendar size={12} />
 												)}
 												{showRelativeDates
-													? getRelativeDateText(
-															expense.dueDate,
-															selectedMonth
-													  )
+													? getRelativeDateText(expense.dueDate, selectedMonth)
 													: formatDate(expense.dueDate)}
 											</span>
 										) : (
@@ -580,20 +620,14 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 												className={`${
 													!showRelativeDates
 														? "text-foreground"
-														: getDueDateColor(
-																expense.dueDate,
-																selectedMonth
-														  )
+														: getDueDateColor(expense.dueDate, selectedMonth)
 												} flex items-center gap-1 text-sm`}
 											>
 												{showRelativeDates && !isCurrentMonth && (
 													<Calendar size={12} />
 												)}
 												{showRelativeDates
-													? getRelativeDateText(
-															expense.dueDate,
-															selectedMonth
-													  )
+													? getRelativeDateText(expense.dueDate, selectedMonth)
 													: formatDate(expense.dueDate)}
 											</span>
 										)}
@@ -608,6 +642,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 									<td className="py-3 px-3">
 										<div className="flex items-center justify-center gap-1">
 											<button
+												type="button"
 												onClick={() => setEditingExpense(expense)}
 												className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10
 												 rounded-lg transition-all duration-200 hover:scale-110"
@@ -617,6 +652,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 											</button>
 											{onDuplicate && (
 												<button
+													type="button"
 													onClick={() => onDuplicate(expense.id)}
 													className="p-1.5 text-muted-foreground hover:text-purple-500 hover:bg-purple-500/10
 													 rounded-lg transition-all duration-200 hover:scale-110"
@@ -628,6 +664,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 											{showArchiveActions &&
 												(expense.isArchived ? (
 													<button
+														type="button"
 														onClick={() => onUnarchive(expense.id)}
 														className="p-1.5 text-muted-foreground hover:text-green-500 hover:bg-green-500/10
 														 rounded-lg transition-all duration-200 hover:scale-110"
@@ -637,6 +674,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 													</button>
 												) : (
 													<button
+														type="button"
 														onClick={() => onArchive(expense.id)}
 														className="p-1.5 text-muted-foreground hover:text-yellow-500 hover:bg-yellow-500/10
 														 rounded-lg transition-all duration-200 hover:scale-110"
@@ -646,6 +684,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 													</button>
 												))}
 											<button
+												type="button"
 												onClick={() => onDelete(expense.id, expense.name)}
 												className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-500/10
 												 rounded-lg transition-all duration-200 hover:scale-110"

@@ -1,9 +1,6 @@
-import React from "react";
+import type React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { IncomeEntry } from "@/types/income";
-import { useSettingsStore } from "@/stores/useSettingsStore";
-import { getCurrencySymbol } from "@/lib/currencyUtils";
 import {
 	Select,
 	SelectContent,
@@ -13,6 +10,9 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { getCurrencySymbol } from "@/lib/currencyUtils";
+import { useSettingsStore } from "@/stores/useSettingsStore";
+import type { IncomeEntry } from "@/types/income";
 
 interface ManualEntryFormProps {
 	newEntry: Omit<IncomeEntry, "id">;
@@ -32,7 +32,9 @@ const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
 	return (
 		<form onSubmit={onSubmit} className="space-y-4">
 			<div>
-				<Label className="text-sm text-muted-foreground mb-1.5 block">Day</Label>
+				<Label className="text-sm text-muted-foreground mb-1.5 block">
+					Day
+				</Label>
 				<Select onValueChange={(value) => onEntryChange("date", value)}>
 					<SelectTrigger className="w-full h-10">
 						<SelectValue placeholder="Select a day" />
@@ -51,13 +53,17 @@ const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
 			</div>
 
 			<div>
-				<Label className="text-sm text-muted-foreground mb-1.5 block">Amount ({currencySymbol})</Label>
+				<Label className="text-sm text-muted-foreground mb-1.5 block">
+					Amount ({currencySymbol})
+				</Label>
 				<Input
 					type="number"
 					step="0.01"
 					min="0"
 					value={newEntry.amount || ""}
-					onChange={(e) => onEntryChange("amount", parseFloat(e.target.value) || 0)}
+					onChange={(e) =>
+						onEntryChange("amount", parseFloat(e.target.value) || 0)
+					}
 					className="bg-background h-10"
 					placeholder="0.00"
 					required
@@ -66,27 +72,35 @@ const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
 
 			<div className="grid grid-cols-2 gap-3">
 				<div>
-					<Label className="text-sm text-muted-foreground mb-1.5 block">Hours</Label>
+					<Label className="text-sm text-muted-foreground mb-1.5 block">
+						Hours
+					</Label>
 					<Input
 						type="number"
 						step="0.1"
 						min="0"
 						max="24"
 						value={newEntry.hours || ""}
-						onChange={(e) => onEntryChange("hours", parseFloat(e.target.value) || 0)}
+						onChange={(e) =>
+							onEntryChange("hours", parseFloat(e.target.value) || 0)
+						}
 						className="bg-background h-10"
 						placeholder="0"
 					/>
 				</div>
 				<div>
-					<Label className="text-sm text-muted-foreground mb-1.5 block">Minutes</Label>
+					<Label className="text-sm text-muted-foreground mb-1.5 block">
+						Minutes
+					</Label>
 					<Input
 						type="number"
 						step="1"
 						min="0"
 						max="59"
 						value={newEntry.minutes || ""}
-						onChange={(e) => onEntryChange("minutes", parseInt(e.target.value) || 0)}
+						onChange={(e) =>
+							onEntryChange("minutes", parseInt(e.target.value, 10) || 0)
+						}
 						className="bg-background h-10"
 						placeholder="0"
 					/>
@@ -101,7 +115,13 @@ const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
 				type="submit"
 				className="w-full px-4 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/80 transition-colors duration-200 flex items-center justify-center gap-2 font-medium cursor-pointer shadow-sm"
 			>
-				<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<svg
+					className="w-4 h-4"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
+					<title>Add</title>
 					<path
 						strokeLinecap="round"
 						strokeLinejoin="round"

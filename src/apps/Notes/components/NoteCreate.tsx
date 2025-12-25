@@ -1,27 +1,38 @@
-import { useState, useRef, useMemo, useEffect, useCallback } from "react";
-import { useNotesStore } from "@/stores/useNotesStore";
-import { Tag, NotesFolder, Subfolder } from "@/types/notes";
-import { ConfirmationModal } from "@/components/ConfirmationModal";
-import YooptaEditor, { createYooptaEditor, YooptaPlugin, SlateElement } from "@yoopta/editor";
-import Paragraph from "@yoopta/paragraph";
+import ActionMenu, { DefaultActionMenuRender } from "@yoopta/action-menu-list";
 import Blockquote from "@yoopta/blockquote";
-import Embed from "@yoopta/embed";
-import Image from "@yoopta/image";
-import Link, { LinkElementProps } from "@yoopta/link";
 import Callout from "@yoopta/callout";
-import Video from "@yoopta/video";
+import Code from "@yoopta/code";
+import YooptaEditor, {
+	createYooptaEditor,
+	type SlateElement,
+	type YooptaPlugin,
+} from "@yoopta/editor";
+import Embed from "@yoopta/embed";
 import File from "@yoopta/file";
 import { HeadingOne, HeadingThree, HeadingTwo } from "@yoopta/headings";
-import { NumberedList, BulletedList, TodoList } from "@yoopta/lists";
-import { Bold, Italic, CodeMark, Underline, Strike, Highlight } from "@yoopta/marks";
-import Code from "@yoopta/code";
-import Table from "@yoopta/table";
+import Image from "@yoopta/image";
+import Link, { type LinkElementProps } from "@yoopta/link";
 import LinkTool, { DefaultLinkToolRender } from "@yoopta/link-tool";
-import ActionMenu, { DefaultActionMenuRender } from "@yoopta/action-menu-list";
+import { BulletedList, NumberedList, TodoList } from "@yoopta/lists";
+import {
+	Bold,
+	CodeMark,
+	Highlight,
+	Italic,
+	Strike,
+	Underline,
+} from "@yoopta/marks";
+import Paragraph from "@yoopta/paragraph";
+import Table from "@yoopta/table";
 import Toolbar, { DefaultToolbarRender } from "@yoopta/toolbar";
-import LinkPreviewPlugin from "./LinkPreview";
-import { useLinkPreviewAutoConvert } from "../hooks/useLinkPreviewAutoConvert";
+import Video from "@yoopta/video";
 import { Hash } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ConfirmationModal } from "@/components/ConfirmationModal";
+import { useNotesStore } from "@/stores/useNotesStore";
+import type { NotesFolder, Subfolder, Tag } from "@/types/notes";
+import { useLinkPreviewAutoConvert } from "../hooks/useLinkPreviewAutoConvert";
+import LinkPreviewPlugin from "./LinkPreview";
 
 interface NoteCreateProps {
 	tags: Record<string, Tag>;
@@ -43,7 +54,9 @@ const fileToBase64 = (file: File): Promise<string> => {
 	});
 };
 
-const getImageDimensions = (file: File): Promise<{ width: number; height: number }> => {
+const getImageDimensions = (
+	file: File,
+): Promise<{ width: number; height: number }> => {
 	return new Promise((resolve, reject) => {
 		const img = document.createElement("img");
 		const url = URL.createObjectURL(file);
@@ -59,7 +72,9 @@ const getImageDimensions = (file: File): Promise<{ width: number; height: number
 	});
 };
 
-const getVideoDimensions = (file: File): Promise<{ width: number; height: number }> => {
+const getVideoDimensions = (
+	file: File,
+): Promise<{ width: number; height: number }> => {
 	return new Promise((resolve, reject) => {
 		const video = document.createElement("video");
 		const url = URL.createObjectURL(file);
@@ -75,7 +90,14 @@ const getVideoDimensions = (file: File): Promise<{ width: number; height: number
 	});
 };
 
-export const NoteCreate = ({ tags, activeFolder, onBack, onNoteCreated, registerBackHandler, registerSaveHandler }: NoteCreateProps) => {
+export const NoteCreate = ({
+	tags,
+	activeFolder,
+	onBack,
+	onNoteCreated,
+	registerBackHandler,
+	registerSaveHandler,
+}: NoteCreateProps) => {
 	const { addNote } = useNotesStore();
 	const editor = useMemo(() => createYooptaEditor(), []);
 	const selectionRef = useRef<HTMLDivElement>(null);
@@ -106,7 +128,10 @@ export const NoteCreate = ({ tags, activeFolder, onBack, onNoteCreated, register
 			BulletedList,
 			TodoList,
 			Code,
-			Table as unknown as YooptaPlugin<Record<string, SlateElement>, Record<string, unknown>>,
+			Table as unknown as YooptaPlugin<
+				Record<string, SlateElement>,
+				Record<string, unknown>
+			>,
 			Link.extend({
 				elementProps: {
 					link: (props: LinkElementProps) => ({
@@ -157,7 +182,7 @@ export const NoteCreate = ({ tags, activeFolder, onBack, onNoteCreated, register
 			}),
 			LinkPreviewPlugin,
 		],
-		[]
+		[],
 	);
 
 	const TOOLS = useMemo(
@@ -166,14 +191,17 @@ export const NoteCreate = ({ tags, activeFolder, onBack, onNoteCreated, register
 			Toolbar: { render: DefaultToolbarRender, tool: Toolbar },
 			LinkTool: { render: DefaultLinkToolRender, tool: LinkTool },
 		}),
-		[]
+		[],
 	);
 
 	const hasContent = useCallback(() => {
 		if (title.trim()) return true;
 		const content = JSON.stringify(editorValue);
 		// Check if editor has meaningful content
-		return content !== "{}" && content !== '{"":{"id":"","value":[],"type":"Paragraph"}}';
+		return (
+			content !== "{}" &&
+			content !== '{"":{"id":"","value":[],"type":"Paragraph"}}'
+		);
 	}, [title, editorValue]);
 
 	const handleBack = useCallback(() => {
@@ -221,11 +249,11 @@ export const NoteCreate = ({ tags, activeFolder, onBack, onNoteCreated, register
 
 	const handleTagToggle = (tagId: string) => {
 		setSelectedTags((prev) =>
-			prev.includes(tagId) ? prev.filter((t) => t !== tagId) : [...prev, tagId]
+			prev.includes(tagId) ? prev.filter((t) => t !== tagId) : [...prev, tagId],
 		);
 	};
 
-	const handleEditorChange = (value: any) => {
+	const handleEditorChange = (value: Record<string, unknown>) => {
 		setEditorValue(value);
 	};
 

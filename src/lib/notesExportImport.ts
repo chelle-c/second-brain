@@ -1,6 +1,6 @@
-import { Note } from "@/types/notes";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
+import type { Note } from "@/types/notes";
 import { APP_VERSION } from "@/types/storage";
 
 export interface NotesExport {
@@ -60,7 +60,10 @@ function isValidNote(note: unknown): note is ExportedNote {
 	if (typeof noteObj.content !== "string") {
 		return false;
 	}
-	if (!Array.isArray(noteObj.tags) || !noteObj.tags.every((t) => typeof t === "string")) {
+	if (
+		!Array.isArray(noteObj.tags) ||
+		!noteObj.tags.every((t) => typeof t === "string")
+	) {
 		return false;
 	}
 	if (typeof noteObj.folder !== "string") {
@@ -106,8 +109,14 @@ export function exportNotes(notes: Note[]): NotesExport {
 		content: note.content,
 		tags: note.tags || [],
 		folder: note.folder,
-		createdAt: note.createdAt instanceof Date ? note.createdAt.toISOString() : note.createdAt,
-		updatedAt: note.updatedAt instanceof Date ? note.updatedAt.toISOString() : note.updatedAt,
+		createdAt:
+			note.createdAt instanceof Date
+				? note.createdAt.toISOString()
+				: note.createdAt,
+		updatedAt:
+			note.updatedAt instanceof Date
+				? note.updatedAt.toISOString()
+				: note.updatedAt,
 		archived: note.archived,
 	}));
 
@@ -133,19 +142,23 @@ export function parseImportedNotes(jsonString: string): {
 		if (!isValidExportFormat(parsed)) {
 			return {
 				data: null,
-				error: "Invalid export format. Missing required fields (version, exportedAt, notes).",
+				error:
+					"Invalid export format. Missing required fields (version, exportedAt, notes).",
 			};
 		}
 
 		return { data: parsed, error: null };
 	} catch {
-		return { data: null, error: "Invalid JSON format. Please check the file contents." };
+		return {
+			data: null,
+			error: "Invalid JSON format. Please check the file contents.",
+		};
 	}
 }
 
 export function validateAndConvertNotes(
 	exportData: NotesExport,
-	existingNoteIds: Set<string>
+	existingNoteIds: Set<string>,
 ): { validNotes: Note[]; errors: string[]; skipped: number } {
 	const validNotes: Note[] = [];
 	const errors: string[] = [];
@@ -155,7 +168,9 @@ export function validateAndConvertNotes(
 		const noteData = exportData.notes[i];
 
 		if (!isValidNote(noteData)) {
-			errors.push(`Note at index ${i}: Invalid structure or missing required fields.`);
+			errors.push(
+				`Note at index ${i}: Invalid structure or missing required fields.`,
+			);
 			continue;
 		}
 
@@ -194,9 +209,13 @@ export function validateAndConvertNotes(
 	return { validNotes, errors, skipped };
 }
 
-export async function downloadNotesAsJson(notes: Note[], filename?: string): Promise<boolean> {
+export async function downloadNotesAsJson(
+	notes: Note[],
+	filename?: string,
+): Promise<boolean> {
 	const jsonContent = exportNotesToJson(notes);
-	const defaultFilename = filename || `notes-export-${new Date().toISOString().split("T")[0]}.json`;
+	const defaultFilename =
+		filename || `notes-export-${new Date().toISOString().split("T")[0]}.json`;
 
 	try {
 		const filePath = await save({

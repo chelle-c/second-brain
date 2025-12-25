@@ -1,5 +1,5 @@
-import { Tag } from "@/types/notes";
 import { X } from "lucide-react";
+import type { Tag } from "@/types/notes";
 
 interface TagFilterProps {
 	tags: Record<string, Tag>;
@@ -7,7 +7,11 @@ interface TagFilterProps {
 	setActiveTags: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
-export const TagFilter = ({ tags, activeTags, setActiveTags }: TagFilterProps) => {
+export const TagFilter = ({
+	tags,
+	activeTags,
+	setActiveTags,
+}: TagFilterProps) => {
 	const toggleTag = (tagId: string) => {
 		if (activeTags.includes(tagId)) {
 			setActiveTags(activeTags.filter((t) => t !== tagId));
@@ -26,6 +30,7 @@ export const TagFilter = ({ tags, activeTags, setActiveTags }: TagFilterProps) =
 
 					return (
 						<button
+							type="button"
 							key={tagId}
 							onClick={() => toggleTag(tagId)}
 							className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
@@ -43,6 +48,7 @@ export const TagFilter = ({ tags, activeTags, setActiveTags }: TagFilterProps) =
 
 				{activeTags.length > 0 && (
 					<button
+						type="button"
 						onClick={() => setActiveTags([])}
 						className="text-xs text-muted-foreground hover:text-foreground"
 					>

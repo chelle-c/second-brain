@@ -1,5 +1,7 @@
-import { useState, useRef, useEffect } from "react";
-import { Plus, Edit2, Trash2, X, Save, Tag } from "lucide-react";
+import { Edit2, Plus, Save, Trash2, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ConfirmationModal } from "@/components/ConfirmationModal";
+import { Modal } from "@/components/Modal";
 import { useExpenseStore } from "@/stores/useExpenseStore";
 
 interface CategoryManagerProps {
@@ -7,9 +9,17 @@ interface CategoryManagerProps {
 	onClose: () => void;
 }
 
-export const CategoryManager: React.FC<CategoryManagerProps> = ({ isOpen, onClose }) => {
-	const { categories, categoryColors, addCategory, updateCategory, deleteCategory } =
-		useExpenseStore();
+export const CategoryManager: React.FC<CategoryManagerProps> = ({
+	isOpen,
+	onClose,
+}) => {
+	const {
+		categories,
+		categoryColors,
+		addCategory,
+		updateCategory,
+		deleteCategory,
+	} = useExpenseStore();
 
 	const [editingCategory, setEditingCategory] = useState<string | null>(null);
 	const [editName, setEditName] = useState("");
@@ -17,7 +27,10 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ isOpen, onClos
 	const [isAddingNew, setIsAddingNew] = useState(false);
 	const [newCategoryName, setNewCategoryName] = useState("");
 	const [newCategoryColor, setNewCategoryColor] = useState("#3b82f6");
-	const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; category: string }>({
+	const [deleteModal, setDeleteModal] = useState<{
+		isOpen: boolean;
+		category: string;
+	}>({
 		isOpen: false,
 		category: "",
 	});
@@ -39,11 +52,9 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ isOpen, onClos
 		}
 	}, [editingCategory]);
 
-	if (!isOpen) return null;
-
 	// Sort categories alphabetically
 	const sortedCategories = [...categories].sort((a, b) =>
-		a.toLowerCase().localeCompare(b.toLowerCase())
+		a.toLowerCase().localeCompare(b.toLowerCase()),
 	);
 
 	const handleStartAddNew = () => {
@@ -129,232 +140,184 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ isOpen, onClos
 
 	return (
 		<>
-			<div
-				className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fadeIn"
-				style={{ margin: 0, padding: 0 }}
-				onClick={onClose}
+			<Modal
+				isOpen={isOpen}
+				onClose={onClose}
+				title="Manage Categories"
+				className="max-w-2xl"
 			>
-				<div
-					className="bg-card rounded-xl shadow-2xl p-6 max-w-2xl w-full mx-4 animate-slideUp"
-					onClick={(e) => e.stopPropagation()}
-				>
-					<div className="flex justify-between items-center mb-6">
-						<h3 className="text-2xl font-bold text-card-foreground flex items-center gap-2">
-							<Tag className="text-primary" size={24} />
-							Manage Categories
-						</h3>
-						<button
-							onClick={onClose}
-							className="p-2 hover:bg-accent rounded-lg transition-colors duration-200 text-muted-foreground hover:text-foreground"
-						>
-							<X size={20} />
-						</button>
-					</div>
-					<div className="flex flex-col h-full">
-						{/* Add New Category */}
-						<div className="bg-primary/10 rounded-lg p-4 mb-6 add-category-section">
-							<h4 className="text-sm font-semibold text-foreground mb-3">
-								Add New Category
-							</h4>
-							{isAddingNew ? (
-								<div className="flex gap-3">
-									<input
-										ref={addInputRef}
-										id="categoryName"
-										type="text"
-										placeholder="Category name"
-										value={newCategoryName}
-										onChange={(e) => setNewCategoryName(e.target.value)}
-										onKeyDown={(e) => {
-											if (e.key === "Enter") handleAddCategory();
-											if (e.key === "Escape") handleCancelAdd();
-										}}
-										onBlur={handleAddInputBlur}
-										className="flex-1 px-3 py-2 bg-background border border-border rounded-lg
-										focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-muted-foreground text-foreground"
-									/>
-									<input
-										type="color"
-										value={newCategoryColor}
-										onChange={(e) => setNewCategoryColor(e.target.value)}
-										onBlur={handleAddInputBlur}
-										className="w-12 h-10 border border-border rounded-sm cursor-pointer"
-										title="Choose category color"
-									/>
-									<button
-										onClick={handleAddCategory}
-										onBlur={handleAddInputBlur}
-										disabled={!newCategoryName.trim()}
-										className="px-4 py-2 bg-primary text-primary-foreground rounded-lg
-										hover:bg-primary/90 transition-colors duration-200
-										disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed
-										flex items-center gap-2"
-									>
-										<Plus size={18} />
-										Add
-									</button>
-									<button
-										onClick={handleCancelAdd}
-										className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg
-										hover:bg-secondary/80 transition-colors duration-200"
-									>
-										Cancel
-									</button>
-								</div>
-							) : (
+				<div className="flex flex-col h-full">
+					{/* Add New Category */}
+					<div className="bg-primary/10 rounded-lg p-4 mb-6 add-category-section">
+						<h4 className="text-sm font-semibold text-foreground mb-3">
+							Add New Category
+						</h4>
+						{isAddingNew ? (
+							<div className="flex gap-3">
+								<input
+									ref={addInputRef}
+									id="categoryName"
+									type="text"
+									placeholder="Category name"
+									value={newCategoryName}
+									onChange={(e) => setNewCategoryName(e.target.value)}
+									onKeyDown={(e) => {
+										if (e.key === "Enter") handleAddCategory();
+										if (e.key === "Escape") handleCancelAdd();
+									}}
+									onBlur={handleAddInputBlur}
+									className="flex-1 px-3 py-2 bg-background border border-border rounded-lg
+									focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-muted-foreground text-foreground"
+								/>
+								<input
+									type="color"
+									value={newCategoryColor}
+									onChange={(e) => setNewCategoryColor(e.target.value)}
+									onBlur={handleAddInputBlur}
+									className="w-12 h-10 border border-border rounded-sm cursor-pointer"
+									title="Choose category color"
+								/>
 								<button
-									onClick={handleStartAddNew}
+									type="button"
+									onClick={handleAddCategory}
+									onBlur={handleAddInputBlur}
+									disabled={!newCategoryName.trim()}
 									className="px-4 py-2 bg-primary text-primary-foreground rounded-lg
 									hover:bg-primary/90 transition-colors duration-200
+									disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed
 									flex items-center gap-2"
 								>
 									<Plus size={18} />
-									Add New Category
+									Add
 								</button>
-							)}
-						</div>
-
-						{/* Categories List */}
-						<div className="overflow-y-auto max-h-[60vh]">
-							<h4 className="text-sm font-semibold text-foreground mb-3">
-								Existing Categories ({categories.length})
-							</h4>
-							<div className="space-y-2">
-								{sortedCategories.map((category) => (
-									<div
-										key={category}
-										className={`bg-muted rounded-lg p-3 flex items-center gap-3
-										hover:bg-accent transition-colors duration-200 ${
-											editingCategory === category ? "edit-category-row" : ""
-										}`}
-									>
-										{editingCategory === category ? (
-											<>
-												<input
-													type="color"
-													value={editColor}
-													onChange={(e) => setEditColor(e.target.value)}
-													onBlur={handleEditInputBlur}
-													className="w-12 h-10 border border-border rounded-lg cursor-pointer"
-												/>
-												<input
-													ref={editInputRef}
-													type="text"
-													value={editName}
-													onChange={(e) => setEditName(e.target.value)}
-													onKeyDown={(e) => {
-														if (e.key === "Enter") handleSaveEdit();
-														if (e.key === "Escape") handleCancelEdit();
-													}}
-													onBlur={handleEditInputBlur}
-													className="flex-1 px-3 py-2 border border-border rounded-lg
-													focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
-												/>
-												<button
-													onClick={handleSaveEdit}
-													onBlur={handleEditInputBlur}
-													className="p-2 text-green-500 hover:bg-green-500/10 rounded-lg
-													transition-colors duration-200"
-													title="Save"
-												>
-													<Save size={18} />
-												</button>
-												<button
-													onClick={handleCancelEdit}
-													className="p-2 text-muted-foreground hover:bg-accent rounded-lg
-													transition-colors duration-200"
-													title="Cancel"
-												>
-													<X size={18} />
-												</button>
-											</>
-										) : (
-											<>
-												<div
-													className="w-8 h-8 rounded-lg border-2 border-border"
-													style={{
-														backgroundColor: categoryColors[category],
-													}}
-												/>
-												<span className="flex-1 font-medium text-foreground">
-													{category}
-												</span>
-												<button
-													onClick={() => handleStartEdit(category)}
-													className="p-2 text-primary hover:bg-primary/10 rounded-lg
-													transition-colors duration-200"
-													title="Edit"
-												>
-													<Edit2 size={16} />
-												</button>
-												<button
-													onClick={() => handleDeleteClick(category)}
-													className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg
-													transition-colors duration-200"
-													title="Delete"
-												>
-													<Trash2 size={16} />
-												</button>
-											</>
-										)}
-									</div>
-								))}
+								<button
+									type="button"
+									onClick={handleCancelAdd}
+									className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg
+									hover:bg-secondary/80 transition-colors duration-200"
+								>
+									Cancel
+								</button>
 							</div>
+						) : (
+							<button
+								type="button"
+								onClick={handleStartAddNew}
+								className="px-4 py-2 bg-primary text-primary-foreground rounded-lg
+								hover:bg-primary/90 transition-colors duration-200
+								flex items-center gap-2"
+							>
+								<Plus size={18} />
+								Add New Category
+							</button>
+						)}
+					</div>
+
+					{/* Categories List */}
+					<div className="overflow-y-auto max-h-[60vh]">
+						<h4 className="text-sm font-semibold text-foreground mb-3">
+							Existing Categories ({categories.length})
+						</h4>
+						<div className="space-y-2">
+							{sortedCategories.map((category) => (
+								<div
+									key={category}
+									className={`bg-muted rounded-lg p-3 flex items-center gap-3
+									hover:bg-accent transition-colors duration-200 ${
+										editingCategory === category ? "edit-category-row" : ""
+									}`}
+								>
+									{editingCategory === category ? (
+										<>
+											<input
+												type="color"
+												value={editColor}
+												onChange={(e) => setEditColor(e.target.value)}
+												onBlur={handleEditInputBlur}
+												className="w-12 h-10 border border-border rounded-lg cursor-pointer"
+											/>
+											<input
+												ref={editInputRef}
+												type="text"
+												value={editName}
+												onChange={(e) => setEditName(e.target.value)}
+												onKeyDown={(e) => {
+													if (e.key === "Enter") handleSaveEdit();
+													if (e.key === "Escape") handleCancelEdit();
+												}}
+												onBlur={handleEditInputBlur}
+												className="flex-1 px-3 py-2 border border-border rounded-lg
+												focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
+											/>
+											<button
+												type="button"
+												onClick={handleSaveEdit}
+												onBlur={handleEditInputBlur}
+												className="p-2 text-green-500 hover:bg-green-500/10 rounded-lg
+												transition-colors duration-200"
+												title="Save"
+											>
+												<Save size={18} />
+											</button>
+											<button
+												type="button"
+												onClick={handleCancelEdit}
+												className="p-2 text-muted-foreground hover:bg-accent rounded-lg
+												transition-colors duration-200"
+												title="Cancel"
+											>
+												<X size={18} />
+											</button>
+										</>
+									) : (
+										<>
+											<div
+												className="w-8 h-8 rounded-lg border-2 border-border"
+												style={{
+													backgroundColor: categoryColors[category],
+												}}
+											/>
+											<span className="flex-1 font-medium text-foreground">
+												{category}
+											</span>
+											<button
+												type="button"
+												onClick={() => handleStartEdit(category)}
+												className="p-2 text-primary hover:bg-primary/10 rounded-lg
+												transition-colors duration-200"
+												title="Edit"
+											>
+												<Edit2 size={16} />
+											</button>
+											<button
+												type="button"
+												onClick={() => handleDeleteClick(category)}
+												className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg
+												transition-colors duration-200"
+												title="Delete"
+											>
+												<Trash2 size={16} />
+											</button>
+										</>
+									)}
+								</div>
+							))}
 						</div>
 					</div>
 				</div>
-			</div>
+			</Modal>
 
 			{/* Delete Confirmation Modal */}
-			{deleteModal.isOpen && (
-				<div
-					className="fixed inset-0 bg-black/50 flex items-center justify-center z-60 animate-fadeIn"
-					style={{ margin: 0, padding: 0 }}
-				>
-					<div className="bg-card rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4 animate-slideUp">
-						<div className="flex justify-between items-center mb-4">
-							<h3 className="text-lg font-bold text-card-foreground">
-								Confirm Deletion
-							</h3>
-							<button
-								onClick={handleDeleteCancel}
-								className="p-1 hover:bg-accent rounded-lg transition-colors duration-200 text-muted-foreground hover:text-foreground"
-							>
-								<X size={20} />
-							</button>
-						</div>
-
-						<p className="text-muted-foreground mb-6">
-							Are you sure you want to delete the category{" "}
-							<strong className="text-foreground">"{deleteModal.category}"</strong>?
-							<br />
-							<br />
-							<span className="text-sm text-orange-500">
-								⚠️ Expenses in this category will be moved to "Other".
-							</span>
-						</p>
-
-						<div className="flex gap-3">
-							<button
-								onClick={handleDeleteConfirm}
-								className="flex-1 bg-red-500 text-white py-2 px-4 rounded-lg
-									hover:bg-red-600 transition-colors duration-200 font-medium
-									hover:scale-105 active:scale-95 transform"
-							>
-								Delete
-							</button>
-							<button
-								onClick={handleDeleteCancel}
-								className="flex-1 bg-secondary text-secondary-foreground py-2 px-4 rounded-lg
-									hover:bg-secondary/80 transition-colors duration-200 font-medium
-									hover:scale-105 active:scale-95 transform"
-							>
-								Cancel
-							</button>
-						</div>
-					</div>
-				</div>
-			)}
+			<ConfirmationModal
+				isOpen={deleteModal.isOpen}
+				title="Confirm Deletion"
+				message={`Are you sure you want to delete the category "${deleteModal.category}"? Expenses in this category will be moved to "Other".`}
+				confirmLabel="Delete"
+				cancelLabel="Cancel"
+				variant="danger"
+				onConfirm={handleDeleteConfirm}
+				onCancel={handleDeleteCancel}
+			/>
 		</>
 	);
 };

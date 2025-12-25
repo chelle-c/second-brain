@@ -1,17 +1,17 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { NotesFolder, Subfolder } from "@/types/notes";
 import {
-	Inbox,
-	ChevronRight,
+	Check,
 	ChevronDown,
+	ChevronRight,
+	Edit2,
 	Folder,
 	FolderPlus,
-	Edit2,
-	Trash2,
+	Inbox,
 	MoreVertical,
-	Check,
+	Trash2,
 	X,
 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ConfirmationModal } from "@/components/ConfirmationModal";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -19,7 +19,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useNotesStore } from "@/stores/useNotesStore";
-import { ConfirmationModal } from "@/components/ConfirmationModal";
+import type { NotesFolder, Subfolder } from "@/types/notes";
 
 interface FolderNavProps {
 	allFolders: Record<string, NotesFolder>;
@@ -61,7 +61,8 @@ export const FolderNav = ({
 	const [showNewFolder, setShowNewFolder] = useState(false);
 	const [showNewSubfolder, setShowNewSubfolder] = useState<string | null>(null);
 	const [newSubfolderName, setNewSubfolderName] = useState("");
-	const [deleteConfirmation, setDeleteConfirmation] = useState<DeleteConfirmation | null>(null);
+	const [deleteConfirmation, setDeleteConfirmation] =
+		useState<DeleteConfirmation | null>(null);
 
 	const inputRef = useRef<HTMLInputElement>(null);
 	const newFolderContainerRef = useRef<HTMLDivElement>(null);
@@ -72,7 +73,10 @@ export const FolderNav = ({
 	const isAnyEditMode = isCreating || isEditing;
 
 	useEffect(() => {
-		if ((showNewFolder || showNewSubfolder || editingFolder) && inputRef.current) {
+		if (
+			(showNewFolder || showNewSubfolder || editingFolder) &&
+			inputRef.current
+		) {
 			inputRef.current.focus();
 			inputRef.current.select();
 		}
@@ -120,7 +124,9 @@ export const FolderNav = ({
 
 		const handleClickOutside = (e: MouseEvent) => {
 			const target = e.target as HTMLElement;
-			const containerRef = showNewFolder ? newFolderContainerRef : newSubfolderContainerRef;
+			const containerRef = showNewFolder
+				? newFolderContainerRef
+				: newSubfolderContainerRef;
 
 			if (containerRef.current && !containerRef.current.contains(target)) {
 				cancelCreating();
@@ -141,10 +147,15 @@ export const FolderNav = ({
 		if (!isCreating) return;
 
 		const handleFocusOut = (e: FocusEvent) => {
-			const containerRef = showNewFolder ? newFolderContainerRef : newSubfolderContainerRef;
+			const containerRef = showNewFolder
+				? newFolderContainerRef
+				: newSubfolderContainerRef;
 			const relatedTarget = e.relatedTarget as HTMLElement;
 
-			if (containerRef.current && !containerRef.current.contains(relatedTarget)) {
+			if (
+				containerRef.current &&
+				!containerRef.current.contains(relatedTarget)
+			) {
 				cancelCreating();
 			}
 		};
@@ -180,7 +191,11 @@ export const FolderNav = ({
 		setExpandedFolders(newExpanded);
 	};
 
-	const startEditingFolder = (folderId: string, currentName: string, e?: React.MouseEvent) => {
+	const startEditingFolder = (
+		folderId: string,
+		currentName: string,
+		e?: React.MouseEvent,
+	) => {
 		e?.stopPropagation();
 		setEditingFolder(folderId);
 		setEditFolderName(currentName);
@@ -197,7 +212,11 @@ export const FolderNav = ({
 		cancelEditing();
 	};
 
-	const handleDeleteFolder = (folderId: string, folderName: string, e?: React.MouseEvent) => {
+	const handleDeleteFolder = (
+		folderId: string,
+		folderName: string,
+		e?: React.MouseEvent,
+	) => {
 		e?.stopPropagation();
 		setDeleteConfirmation({
 			type: "folder",
@@ -210,7 +229,7 @@ export const FolderNav = ({
 		subfolderId: string,
 		subfolderName: string,
 		parentId: string,
-		e?: React.MouseEvent
+		e?: React.MouseEvent,
 	) => {
 		e?.stopPropagation();
 		setDeleteConfirmation({
@@ -227,11 +246,14 @@ export const FolderNav = ({
 		if (deleteConfirmation.type === "folder") {
 			deleteFolder(deleteConfirmation.id);
 			if (activeFolder?.id === deleteConfirmation.id) {
-				setActiveFolder(allFolders["inbox"]);
+				setActiveFolder(allFolders.inbox);
 			}
 		} else {
 			removeSubfolder(deleteConfirmation.id);
-			if (activeFolder?.id === deleteConfirmation.id && deleteConfirmation.parentId) {
+			if (
+				activeFolder?.id === deleteConfirmation.id &&
+				deleteConfirmation.parentId
+			) {
 				setActiveFolder(allFolders[deleteConfirmation.parentId]);
 			}
 		}
@@ -259,7 +281,11 @@ export const FolderNav = ({
 		}
 	};
 
-	const handleEditKeyDown = (e: React.KeyboardEvent, folderId: string, isSubfolder: boolean) => {
+	const handleEditKeyDown = (
+		e: React.KeyboardEvent,
+		folderId: string,
+		isSubfolder: boolean,
+	) => {
 		if (e.key === "Enter") {
 			e.preventDefault();
 			saveEditedFolder(folderId, isSubfolder);
@@ -353,7 +379,7 @@ export const FolderNav = ({
 						type="button"
 						onClick={() => {
 							if (!isAnyEditMode) {
-								setActiveFolder(allFolders["inbox"]);
+								setActiveFolder(allFolders.inbox);
 								setActiveTags([]);
 							}
 						}}
@@ -377,7 +403,8 @@ export const FolderNav = ({
 					{Object.entries(allFolders).map(([key, folder]) => {
 						if (key === "inbox") return null;
 						const folderType = folder as NotesFolder;
-						const hasSubfolders = folderType.children && folderType.children.length > 0;
+						const hasSubfolders =
+							folderType.children && folderType.children.length > 0;
 						const isExpanded = expandedFolders.has(key);
 						const isEditingThis = editingFolder === key;
 
@@ -396,7 +423,7 @@ export const FolderNav = ({
 								>
 									<button
 										type="button"
-										onClick={() => !isAnyEditMode && toggleFolder(key)}
+										onClick={() => toggleFolder(key)}
 										disabled={isAnyEditMode}
 										className="p-1 hover:bg-accent rounded shrink-0 cursor-pointer"
 									>
@@ -424,23 +451,29 @@ export const FolderNav = ({
 											/>
 										</div>
 									) : (
-										<div
-											onClick={() => {
-												if (!isAnyEditMode) {
-													setActiveFolder(getCurrentFolder(key));
-													setActiveTags([]);
-												}
-											}}
-											className={`flex-1 flex items-center justify-between px-1 py-1.5 cursor-pointer min-w-0 ${
-												isAnyEditMode ? "cursor-not-allowed" : ""
-											}`}
-										>
-											<div className="flex items-center gap-2 min-w-0">
+										<>
+											<button
+												type="button"
+												disabled={isAnyEditMode}
+												onClick={() => {
+													if (!isAnyEditMode) {
+														setActiveFolder(getCurrentFolder(key));
+														setActiveTags([]);
+														// Also expand the folder if it has subfolders
+														if (hasSubfolders && !isExpanded) {
+															toggleFolder(key);
+														}
+													}
+												}}
+												className={`flex-1 flex items-center gap-2 px-1 py-1.5 cursor-pointer min-w-0 text-left ${
+													isAnyEditMode ? "cursor-not-allowed" : ""
+												}`}
+											>
 												<Folder size={16} className="shrink-0" />
 												<span className="text-sm font-medium truncate">
 													{folderType.name}
 												</span>
-											</div>
+											</button>
 											<div className="flex items-center gap-1 shrink-0">
 												<span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
 													{getNoteCount(key)}
@@ -457,10 +490,7 @@ export const FolderNav = ({
 															<DropdownMenuItem
 																onClick={(e) => {
 																	e.stopPropagation();
-																	startEditingFolder(
-																		key,
-																		folderType.name
-																	);
+																	startEditingFolder(key, folderType.name);
 																}}
 																className="cursor-pointer"
 															>
@@ -474,33 +504,23 @@ export const FolderNav = ({
 																}}
 																className="cursor-pointer"
 															>
-																<FolderPlus
-																	size={14}
-																	className="mr-2"
-																/>
+																<FolderPlus size={14} className="mr-2" />
 																Add Subfolder
 															</DropdownMenuItem>
 															<DropdownMenuItem
 																onClick={(e) =>
-																	handleDeleteFolder(
-																		key,
-																		folderType.name,
-																		e
-																	)
+																	handleDeleteFolder(key, folderType.name, e)
 																}
 																className="text-red-600 cursor-pointer"
 															>
-																<Trash2
-																	size={14}
-																	className="mr-2"
-																/>
+																<Trash2 size={14} className="mr-2" />
 																Delete
 															</DropdownMenuItem>
 														</DropdownMenuContent>
 													</DropdownMenu>
 												)}
 											</div>
-										</div>
+										</>
 									)}
 								</div>
 
@@ -573,11 +593,7 @@ export const FolderNav = ({
 																setEditFolderName(e.target.value)
 															}
 															onKeyDown={(e) =>
-																handleEditKeyDown(
-																	e,
-																	subfolder.id,
-																	true
-																)
+																handleEditKeyDown(e, subfolder.id, true)
 															}
 															onBlur={() =>
 																saveEditedFolder(subfolder.id, true)
@@ -586,28 +602,25 @@ export const FolderNav = ({
 														/>
 													</div>
 												) : (
-													<div
-														onClick={() => {
-															if (!isAnyEditMode) {
-																setActiveFolder(subfolder);
-																setActiveTags([]);
-															}
-														}}
-														className={`flex-1 flex items-center justify-between px-2 py-1.5 cursor-pointer min-w-0 ${
-															isAnyEditMode
-																? "cursor-not-allowed"
-																: ""
-														}`}
-													>
-														<div className="flex items-center gap-2 min-w-0">
-															<Folder
-																size={14}
-																className="shrink-0"
-															/>
+													<>
+														<button
+															type="button"
+															disabled={isAnyEditMode}
+															onClick={() => {
+																if (!isAnyEditMode) {
+																	setActiveFolder(subfolder);
+																	setActiveTags([]);
+																}
+															}}
+															className={`flex-1 flex items-center gap-2 px-2 py-1.5 cursor-pointer min-w-0 text-left ${
+																isAnyEditMode ? "cursor-not-allowed" : ""
+															}`}
+														>
+															<Folder size={14} className="shrink-0" />
 															<span className="text-sm truncate">
 																{subfolder.name}
 															</span>
-														</div>
+														</button>
 														<div className="flex items-center gap-1 shrink-0">
 															<span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
 																{getNoteCount(subfolder.id)}
@@ -615,9 +628,7 @@ export const FolderNav = ({
 															{!isAnyEditMode && (
 																<DropdownMenu>
 																	<DropdownMenuTrigger
-																		onClick={(e) =>
-																			e.stopPropagation()
-																		}
+																		onClick={(e) => e.stopPropagation()}
 																		className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 hover:bg-accent rounded transition-all focus:ring-2 focus:ring-primary focus:outline-none cursor-pointer"
 																	>
 																		<MoreVertical size={14} />
@@ -628,15 +639,12 @@ export const FolderNav = ({
 																				e.stopPropagation();
 																				startEditingFolder(
 																					subfolder.id,
-																					subfolder.name
+																					subfolder.name,
 																				);
 																			}}
 																			className="cursor-pointer"
 																		>
-																			<Edit2
-																				size={14}
-																				className="mr-2"
-																			/>
+																			<Edit2 size={14} className="mr-2" />
 																			Rename
 																		</DropdownMenuItem>
 																		<DropdownMenuItem
@@ -645,22 +653,19 @@ export const FolderNav = ({
 																					subfolder.id,
 																					subfolder.name,
 																					key,
-																					e
+																					e,
 																				)
 																			}
 																			className="text-red-600 cursor-pointer"
 																		>
-																			<Trash2
-																				size={14}
-																				className="mr-2"
-																			/>
+																			<Trash2 size={14} className="mr-2" />
 																			Delete
 																		</DropdownMenuItem>
 																	</DropdownMenuContent>
 																</DropdownMenu>
 															)}
 														</div>
-													</div>
+													</>
 												)}
 											</div>
 										);

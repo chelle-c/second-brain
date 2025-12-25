@@ -1,9 +1,12 @@
-import { sqlStorage } from "./database";
-import { Note, NotesFolders } from "@/types/notes";
-import { Expense } from "@/types/expense";
-import { IncomeEntry, IncomeWeeklyTargets } from "@/types/income";
-import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
+import {
+	DEFAULT_CATEGORY_COLORS,
+	DEFAULT_EXPENSE_CATEGORIES,
+} from "@/lib/expenseHelpers";
+import type { Expense } from "@/types/expense";
+import type { IncomeEntry, IncomeWeeklyTargets } from "@/types/income";
+import type { Note, NotesFolders } from "@/types/notes";
 import { DEFAULT_PAYMENT_METHODS } from "@/types/storage";
+import { sqlStorage } from "./database";
 
 // Generate a simple UUID
 const generateId = (): string => {
@@ -135,15 +138,24 @@ const generateRecurringOccurrences = (
 	parentId: string,
 	baseExpense: Omit<
 		Expense,
-		"id" | "dueDate" | "isPaid" | "paymentDate" | "parentExpenseId" | "initialState"
+		| "id"
+		| "dueDate"
+		| "isPaid"
+		| "paymentDate"
+		| "parentExpenseId"
+		| "initialState"
 	>,
 	dayOfMonth: number,
 	months: number = 12,
-	paidCount: number = 0
+	paidCount: number = 0,
 ): Expense[] => {
 	const now = new Date();
 	return Array.from({ length: months }, (_, i) => i).map((month) => {
-		const dueDate = new Date(now.getFullYear(), now.getMonth() + month, dayOfMonth);
+		const dueDate = new Date(
+			now.getFullYear(),
+			now.getMonth() + month,
+			dayOfMonth,
+		);
 		const isPaid = month < paidCount;
 		return {
 			...baseExpense,
@@ -265,28 +277,40 @@ const createSampleExpenses = (): Expense[] => {
 	};
 
 	// Generate 12 months of occurrences for each recurring expense (with first 1-2 marked as paid)
-	const rentOccurrences = generateRecurringOccurrences(rentId, rentBase, 1, 12, 2);
+	const rentOccurrences = generateRecurringOccurrences(
+		rentId,
+		rentBase,
+		1,
+		12,
+		2,
+	);
 	const electricityOccurrences = generateRecurringOccurrences(
 		electricityId,
 		electricityBase,
 		15,
 		12,
-		1
+		1,
 	);
-	const internetOccurrences = generateRecurringOccurrences(internetId, internetBase, 20, 12, 2);
+	const internetOccurrences = generateRecurringOccurrences(
+		internetId,
+		internetBase,
+		20,
+		12,
+		2,
+	);
 	const phonePlanOccurrences = generateRecurringOccurrences(
 		phonePlanId,
 		phonePlanBase,
 		25,
 		12,
-		1
+		1,
 	);
 	const streamingOccurrences = generateRecurringOccurrences(
 		streamingId,
 		streamingBase,
 		10,
 		12,
-		2
+		2,
 	);
 	const gymOccurrences = generateRecurringOccurrences(gymId, gymBase, 5, 12, 1);
 
@@ -429,7 +453,8 @@ const createSampleIncomeEntries = (): IncomeEntry[] => {
 			const hours = 6 + Math.floor(Math.random() * 4); // 6-9 hours
 			const minutes = Math.floor(Math.random() * 4) * 15; // 0, 15, 30, or 45
 			const hourlyRate = 25 + Math.random() * 10; // $25-35/hour
-			const amount = Math.round((hours + minutes / 60) * hourlyRate * 100) / 100;
+			const amount =
+				Math.round((hours + minutes / 60) * hourlyRate * 100) / 100;
 
 			entries.push({
 				id: generateId(),
@@ -445,7 +470,9 @@ const createSampleIncomeEntries = (): IncomeEntry[] => {
 };
 
 // Sample weekly targets
-const createSampleWeeklyTargets = (): IncomeWeeklyTargets[] => [{ id: generateId(), amount: 800 }];
+const createSampleWeeklyTargets = (): IncomeWeeklyTargets[] => [
+	{ id: generateId(), amount: 800 },
+];
 
 // Main seed function
 export const seedTestDatabase = async (): Promise<void> => {

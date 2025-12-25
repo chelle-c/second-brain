@@ -1,17 +1,17 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { createPortal } from "react-dom";
-import {
-	PluginElementRenderProps,
-	YooptaPlugin,
-	SlateElement,
-	useYooptaEditor,
-	Blocks,
-	generateId,
-} from "@yoopta/editor";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-shell";
-import { Loading } from "@/components/ui/loading";
+import {
+	Blocks,
+	generateId,
+	type PluginElementRenderProps,
+	type SlateElement,
+	useYooptaEditor,
+	YooptaPlugin,
+} from "@yoopta/editor";
 import { Link } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { Loading } from "@/components/ui/loading";
 
 interface LinkMetadata {
 	title?: string | null;
@@ -84,8 +84,11 @@ const UrlInputModal = ({
 		}
 
 		let finalUrl = trimmedUrl;
-		if (!trimmedUrl.startsWith("http://") && !trimmedUrl.startsWith("https://")) {
-			finalUrl = "https://" + trimmedUrl;
+		if (
+			!trimmedUrl.startsWith("http://") &&
+			!trimmedUrl.startsWith("https://")
+		) {
+			finalUrl = `https://${trimmedUrl}`;
 		}
 
 		if (!isValidUrl(finalUrl)) {
@@ -97,8 +100,9 @@ const UrlInputModal = ({
 	};
 
 	return createPortal(
+		// biome-ignore lint/a11y/noStaticElementInteractions: Modal backdrop click-to-close pattern
 		<div
-			className="fixed inset-0 z-[9999] flex items-center justify-center"
+			className="fixed inset-0 z-9999 flex items-center justify-center"
 			onMouseDown={(e) => {
 				e.preventDefault();
 				e.stopPropagation();
@@ -107,10 +111,12 @@ const UrlInputModal = ({
 			onKeyDown={(e) => e.stopPropagation()}
 		>
 			<div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
+			{/* biome-ignore lint/a11y/noStaticElementInteractions: Event propagation boundary */}
 			<div
 				className="relative z-10 w-full max-w-md mx-4"
 				onMouseDown={(e) => e.stopPropagation()}
 				onClick={(e) => e.stopPropagation()}
+				onKeyDown={(e) => e.stopPropagation()}
 			>
 				<div className="border border-border rounded-lg bg-card p-5 shadow-lg">
 					<form onSubmit={handleSubmit} className="space-y-4">
@@ -154,18 +160,25 @@ const UrlInputModal = ({
 							</button>
 						</div>
 						<p className="text-xs text-muted-foreground text-center">
-							Press <kbd className="px-1.5 py-0.5 text-xs bg-muted rounded">Esc</kbd> to cancel
+							Press{" "}
+							<kbd className="px-1.5 py-0.5 text-xs bg-muted rounded">Esc</kbd>{" "}
+							to cancel
 						</p>
 					</form>
 				</div>
 			</div>
 		</div>,
-		document.body
+		document.body,
 	);
 };
 
 // The actual render component for displaying the preview
-const LinkPreviewRender = ({ element, attributes, children, blockId }: PluginElementRenderProps) => {
+const LinkPreviewRender = ({
+	element,
+	attributes,
+	children,
+	blockId,
+}: PluginElementRenderProps) => {
 	const editor = useYooptaEditor();
 	const props = element.props as LinkPreviewProps;
 	const [metadata, setMetadata] = useState<LinkMetadata | null>(null);
@@ -197,7 +210,9 @@ const LinkPreviewRender = ({ element, attributes, children, blockId }: PluginEle
 
 			try {
 				setLoading(true);
-				const data = await invoke<LinkMetadata>("fetch_link_metadata", { url: currentUrl });
+				const data = await invoke<LinkMetadata>("fetch_link_metadata", {
+					url: currentUrl,
+				});
 				if (!cancelled) {
 					setMetadata(data);
 				}
@@ -229,7 +244,7 @@ const LinkPreviewRender = ({ element, attributes, children, blockId }: PluginEle
 				open(currentUrl);
 			}
 		},
-		[currentUrl]
+		[currentUrl],
 	);
 
 	const handleKeyDown = useCallback(
@@ -239,7 +254,7 @@ const LinkPreviewRender = ({ element, attributes, children, blockId }: PluginEle
 				Blocks.deleteBlock(editor, { blockId });
 			}
 		},
-		[editor, blockId]
+		[editor, blockId],
 	);
 
 	const handleUrlSubmit = useCallback(
@@ -263,7 +278,7 @@ const LinkPreviewRender = ({ element, attributes, children, blockId }: PluginEle
 				value: newValue,
 			});
 		},
-		[editor, blockId]
+		[editor, blockId],
 	);
 
 	const handleCancel = useCallback(() => {
@@ -308,7 +323,14 @@ const LinkPreviewRender = ({ element, attributes, children, blockId }: PluginEle
 	}
 
 	return (
-		<div {...attributes} contentEditable={false} tabIndex={0} onKeyDown={handleKeyDown}>
+		<section
+			{...attributes}
+			contentEditable={false}
+			aria-label="Link preview block"
+			// biome-ignore lint/a11y/noNoninteractiveTabindex: Editor block needs focus for keyboard deletion
+			tabIndex={0}
+			onKeyDown={handleKeyDown}
+		>
 			{/* URL displayed above the embed */}
 			<div className="my-2">
 				<a
@@ -370,7 +392,10 @@ const LinkPreviewRender = ({ element, attributes, children, blockId }: PluginEle
 									alt={metadata.title || "Link Preview"}
 									className="w-full h-auto max-h-[200px] object-cover"
 									onError={(e) => {
-										(e.target as HTMLImageElement).parentElement!.style.display = "none";
+										const parent = (e.target as HTMLImageElement).parentElement;
+										if (parent) {
+											parent.style.display = "none";
+										}
 									}}
 								/>
 							</div>
@@ -380,7 +405,7 @@ const LinkPreviewRender = ({ element, attributes, children, blockId }: PluginEle
 			</div>
 			{/* Hidden children to satisfy Slate's requirements */}
 			<span style={{ display: "none" }}>{children}</span>
-		</div>
+		</section>
 	);
 };
 

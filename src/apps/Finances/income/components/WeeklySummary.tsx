@@ -1,30 +1,42 @@
-import React, { useState, useEffect } from "react";
-import { useIncomeStore } from "@/stores/useIncomeStore";
-import { useSettingsStore } from "@/stores/useSettingsStore";
-import { getCurrencySymbol } from "@/lib/currencyUtils";
+import { Check, CheckCircle, Pencil, X } from "lucide-react";
+import type React from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Check, X, Pencil, CheckCircle } from "lucide-react";
+import { getCurrencySymbol } from "@/lib/currencyUtils";
+import { useIncomeStore } from "@/stores/useIncomeStore";
+import { useSettingsStore } from "@/stores/useSettingsStore";
 
 interface WeeklySummaryProps {
 	weeklyTotal: number;
 	selectedWeek: number;
 }
 
-const WeeklySummary: React.FC<WeeklySummaryProps> = ({ weeklyTotal, selectedWeek }) => {
-	const { incomeWeeklyTargets, addIncomeWeeklyTarget, updateIncomeWeeklyTarget } =
-		useIncomeStore();
+const WeeklySummary: React.FC<WeeklySummaryProps> = ({
+	weeklyTotal,
+	selectedWeek,
+}) => {
+	const {
+		incomeWeeklyTargets,
+		addIncomeWeeklyTarget,
+		updateIncomeWeeklyTarget,
+	} = useIncomeStore();
 	const { incomeCurrency, incomeDefaultWeeklyTarget } = useSettingsStore();
 	const currencySymbol = getCurrencySymbol(incomeCurrency);
 
-	const [weeklyTarget, setWeeklyTarget] = useState({ amount: incomeDefaultWeeklyTarget });
+	const [weeklyTarget, setWeeklyTarget] = useState({
+		amount: incomeDefaultWeeklyTarget,
+	});
 	const [editingTarget, setEditingTarget] = useState(false);
-	const [newTargetAmount, setNewTargetAmount] = useState(weeklyTarget.amount.toString());
+	const [newTargetAmount, setNewTargetAmount] = useState(
+		weeklyTarget.amount.toString(),
+	);
 
 	useEffect(() => {
 		const savedTarget =
-			incomeWeeklyTargets?.find((target) => target.id === selectedWeek.toString())?.amount ||
-			incomeDefaultWeeklyTarget;
+			incomeWeeklyTargets?.find(
+				(target) => target.id === selectedWeek.toString(),
+			)?.amount || incomeDefaultWeeklyTarget;
 		setWeeklyTarget({ amount: savedTarget });
 	}, [incomeWeeklyTargets, selectedWeek, incomeDefaultWeeklyTarget]);
 
@@ -37,15 +49,17 @@ const WeeklySummary: React.FC<WeeklySummaryProps> = ({ weeklyTotal, selectedWeek
 	const isTargetReached = weeklyTotal >= weeklyTarget.amount;
 
 	const savedWeeklyTarget =
-		incomeWeeklyTargets?.find((target) => target.id === selectedWeek.toString())?.amount ||
-		incomeDefaultWeeklyTarget;
+		incomeWeeklyTargets?.find((target) => target.id === selectedWeek.toString())
+			?.amount || incomeDefaultWeeklyTarget;
 
 	const handleUpdateTarget = () => {
 		const amount = parseFloat(newTargetAmount);
-		if (!isNaN(amount) && amount > 0) {
+		if (!Number.isNaN(amount) && amount > 0) {
 			setEditingTarget(false);
 			const existingTarget = incomeWeeklyTargets
-				? incomeWeeklyTargets.find((target) => target.id === selectedWeek.toString())
+				? incomeWeeklyTargets.find(
+						(target) => target.id === selectedWeek.toString(),
+					)
 				: undefined;
 			existingTarget === undefined
 				? addIncomeWeeklyTarget(selectedWeek.toString(), amount)
@@ -82,7 +96,8 @@ const WeeklySummary: React.FC<WeeklySummaryProps> = ({ weeklyTotal, selectedWeek
 					{!editingTarget ? (
 						<div className="flex items-center gap-1.5">
 							<span className="text-lg font-bold text-primary">
-								{currencySymbol}{savedWeeklyTarget.toFixed(0)}
+								{currencySymbol}
+								{savedWeeklyTarget.toFixed(0)}
 							</span>
 							<Button
 								variant="ghost"
@@ -96,7 +111,9 @@ const WeeklySummary: React.FC<WeeklySummaryProps> = ({ weeklyTotal, selectedWeek
 					) : (
 						<div className="flex items-center gap-2">
 							<div className="flex items-center">
-								<span className="text-muted-foreground text-sm mr-1">{currencySymbol}</span>
+								<span className="text-muted-foreground text-sm mr-1">
+									{currencySymbol}
+								</span>
 								<Input
 									type="number"
 									step="0.01"
@@ -108,10 +125,18 @@ const WeeklySummary: React.FC<WeeklySummaryProps> = ({ weeklyTotal, selectedWeek
 									autoFocus
 								/>
 							</div>
-							<Button variant="ghost" size="icon-sm" onClick={handleUpdateTarget}>
+							<Button
+								variant="ghost"
+								size="icon-sm"
+								onClick={handleUpdateTarget}
+							>
 								<Check className="w-4 h-4" />
 							</Button>
-							<Button variant="ghost" size="icon-sm" onClick={cancelEditingTarget}>
+							<Button
+								variant="ghost"
+								size="icon-sm"
+								onClick={cancelEditingTarget}
+							>
 								<X className="w-4 h-4" />
 							</Button>
 						</div>
@@ -121,7 +146,10 @@ const WeeklySummary: React.FC<WeeklySummaryProps> = ({ weeklyTotal, selectedWeek
 			<div className="flex-1 flex flex-col justify-center">
 				{/* Progress Bar */}
 				<div className="flex justify-between text-sm font-medium text-muted-foreground mb-1.5">
-					<span>{currencySymbol}{weeklyTotal.toFixed(0)} earned</span>
+					<span>
+						{currencySymbol}
+						{weeklyTotal.toFixed(0)} earned
+					</span>
 					<span>{Math.min(targetProgress, 100).toFixed(0)}%</span>
 				</div>
 				<div className="w-full bg-muted rounded-full h-2.5 overflow-hidden">
@@ -143,7 +171,8 @@ const WeeklySummary: React.FC<WeeklySummaryProps> = ({ weeklyTotal, selectedWeek
 					) : weeklyTotal > 0 ? (
 						<div className="text-center text-xs text-muted-foreground bg-muted rounded-md py-2 px-3">
 							<span className="font-medium text-primary">
-								{currencySymbol}{remainingAmount.toFixed(0)}
+								{currencySymbol}
+								{remainingAmount.toFixed(0)}
 							</span>{" "}
 							remaining
 						</div>

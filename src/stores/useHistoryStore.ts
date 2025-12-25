@@ -1,4 +1,6 @@
 import { create } from "zustand";
+import type { Expense } from "@/types/expense";
+import type { Subfolder } from "@/types/notes";
 
 export type HistoryActionType =
 	// Notes actions
@@ -34,13 +36,15 @@ export interface HistoryAction {
 	timestamp: number;
 	data: {
 		id: string;
-		before?: any;
-		after?: any;
+		// Using unknown for before/after since they can be various entity types
+		// Consumers are responsible for type narrowing based on action type
+		before?: unknown;
+		after?: unknown;
 		parentId?: string;
 		affectedNotes?: { id: string; folder: string }[];
-		affectedSubfolders?: any[];
+		affectedSubfolders?: Subfolder[];
 		// For expenses with recurring occurrences
-		relatedExpenses?: any[];
+		relatedExpenses?: Expense[];
 	};
 }
 

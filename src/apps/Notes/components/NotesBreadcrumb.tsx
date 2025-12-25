@@ -1,6 +1,15 @@
-import { ArrowLeft, ChevronRight, Folder, Inbox, FileText, FilePlus, Undo2, Redo2 } from "lucide-react";
-import { NotesFolder, Subfolder, NotesFolders } from "@/types/notes";
-import { ReactNode } from "react";
+import {
+	ArrowLeft,
+	ChevronRight,
+	FilePlus,
+	FileText,
+	Folder,
+	Inbox,
+	Redo2,
+	Undo2,
+} from "lucide-react";
+import type { ReactNode } from "react";
+import type { NotesFolder, NotesFolders, Subfolder } from "@/types/notes";
 
 interface NotesBreadcrumbProps {
 	activeFolder: NotesFolder | Subfolder | null;
@@ -27,7 +36,8 @@ export function NotesBreadcrumb({
 	onUndo,
 	onRedo,
 }: NotesBreadcrumbProps) {
-	const isSubfolder = activeFolder && "parent" in activeFolder && activeFolder.parent;
+	const isSubfolder =
+		activeFolder && "parent" in activeFolder && activeFolder.parent;
 
 	const getParentFolder = (): NotesFolder | null => {
 		if (!isSubfolder || !activeFolder) return null;
@@ -42,6 +52,7 @@ export function NotesBreadcrumb({
 		<div className="flex items-center justify-between gap-2 px-6 py-3 border-b border-border bg-muted/50">
 			<div className="flex items-center gap-2">
 				<button
+					type="button"
 					onClick={onBack}
 					className="p-1.5 hover:bg-accent rounded-lg transition-colors cursor-pointer"
 					title="Back to notes list"

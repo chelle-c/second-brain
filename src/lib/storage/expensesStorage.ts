@@ -1,7 +1,13 @@
-import { Expense } from "@/types/expense";
-import { AppData } from "@/types/";
-import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
-import { DatabaseContext, DEFAULT_PAYMENT_METHODS } from "../../types/storage";
+import {
+	DEFAULT_CATEGORY_COLORS,
+	DEFAULT_EXPENSE_CATEGORIES,
+} from "@/lib/expenseHelpers";
+import type { AppData } from "@/types/";
+import type { Expense } from "@/types/expense";
+import {
+	type DatabaseContext,
+	DEFAULT_PAYMENT_METHODS,
+} from "../../types/storage";
 import { deepEqual } from "../utils";
 
 export class ExpensesStorage {
@@ -49,7 +55,9 @@ export class ExpensesStorage {
 			overviewMode: expenses.overviewMode,
 			categories: [...expenses.categories].sort(),
 			categoryColors: expenses.categoryColors,
-			paymentMethods: [...(expenses.paymentMethods || DEFAULT_PAYMENT_METHODS)].sort(),
+			paymentMethods: [
+				...(expenses.paymentMethods || DEFAULT_PAYMENT_METHODS),
+			].sort(),
 		};
 	}
 
@@ -66,7 +74,7 @@ export class ExpensesStorage {
 		return this.context.queueOperation(async () => {
 			// First, check what columns exist in the expenses table
 			const tableInfo = await this.context.db.select<Array<{ name: string }>>(
-				"PRAGMA table_info(expenses)"
+				"PRAGMA table_info(expenses)",
 			);
 			const existingColumns = new Set(tableInfo.map((col) => col.name));
 			const hasPaymentMethod = existingColumns.has("paymentMethod");
@@ -79,50 +87,53 @@ export class ExpensesStorage {
 				   updatedAt, parentExpenseId, monthlyOverrides, isModified, initialState 
 				   FROM expenses`;
 
-			const expenses = await this.context.db.select<
-				Array<{
-					id: string;
-					name: string;
-					amount: number;
-					category: string;
-					paymentMethod: string | null;
-					dueDate: string | null;
-					isRecurring: number;
-					recurrence: string | null;
-					isArchived: number;
-					isPaid: number;
-					paymentDate: string | null;
-					type: string;
-					importance: string;
-					createdAt: string;
-					updatedAt: string;
-					parentExpenseId: string | null;
-					monthlyOverrides: string | null;
-					isModified: number | null;
-					initialState: string | null;
-				}>
-			>(selectQuery);
+			const expenses =
+				await this.context.db.select<
+					Array<{
+						id: string;
+						name: string;
+						amount: number;
+						category: string;
+						paymentMethod: string | null;
+						dueDate: string | null;
+						isRecurring: number;
+						recurrence: string | null;
+						isArchived: number;
+						isPaid: number;
+						paymentDate: string | null;
+						type: string;
+						importance: string;
+						createdAt: string;
+						updatedAt: string;
+						parentExpenseId: string | null;
+						monthlyOverrides: string | null;
+						isModified: number | null;
+						initialState: string | null;
+					}>
+				>(selectQuery);
 
-			const selectedMonthResult = await this.context.db.select<Array<{ value: string }>>(
-				"SELECT value FROM settings WHERE key = 'expense_selectedMonth'"
-			);
-			const overviewModeResult = await this.context.db.select<Array<{ value: string }>>(
-				"SELECT value FROM settings WHERE key = 'expense_overviewMode'"
-			);
-			const categoriesResult = await this.context.db.select<Array<{ value: string }>>(
-				"SELECT value FROM settings WHERE key = 'expense_categories'"
-			);
-			const categoryColorsResult = await this.context.db.select<Array<{ value: string }>>(
-				"SELECT value FROM settings WHERE key = 'expense_categoryColors'"
-			);
-			const paymentMethodsResult = await this.context.db.select<Array<{ value: string }>>(
-				"SELECT value FROM settings WHERE key = 'expense_paymentMethods'"
-			);
+			const selectedMonthResult = await this.context.db.select<
+				Array<{ value: string }>
+			>("SELECT value FROM settings WHERE key = 'expense_selectedMonth'");
+			const overviewModeResult = await this.context.db.select<
+				Array<{ value: string }>
+			>("SELECT value FROM settings WHERE key = 'expense_overviewMode'");
+			const categoriesResult = await this.context.db.select<
+				Array<{ value: string }>
+			>("SELECT value FROM settings WHERE key = 'expense_categories'");
+			const categoryColorsResult = await this.context.db.select<
+				Array<{ value: string }>
+			>("SELECT value FROM settings WHERE key = 'expense_categoryColors'");
+			const paymentMethodsResult = await this.context.db.select<
+				Array<{ value: string }>
+			>("SELECT value FROM settings WHERE key = 'expense_paymentMethods'");
 
 			const expensesData = {
 				expenses: expenses.map((row) => {
 					// Parse initialState and ensure paymentMethod exists
-					let initialState = row.initialState ? JSON.parse(row.initialState) : undefined;
+					const initialState = row.initialState
+						? JSON.parse(row.initialState)
+						: undefined;
 					if (initialState && !initialState.paymentMethod) {
 						initialState.paymentMethod = "None";
 					}
@@ -203,12 +214,16 @@ export class ExpensesStorage {
 			const settingsChanged =
 				oldData &&
 				(oldData.overviewMode !== expenses.overviewMode ||
-					oldData.selectedMonth.toISOString() !== expenses.selectedMonth.toISOString() ||
-					!deepEqual([...oldData.categories].sort(), [...expenses.categories].sort()) ||
+					oldData.selectedMonth.toISOString() !==
+						expenses.selectedMonth.toISOString() ||
+					!deepEqual(
+						[...oldData.categories].sort(),
+						[...expenses.categories].sort(),
+					) ||
 					!deepEqual(oldData.categoryColors, expenses.categoryColors) ||
 					!deepEqual(
 						[...(oldData.paymentMethods || [])].sort(),
-						[...(expenses.paymentMethods || [])].sort()
+						[...(expenses.paymentMethods || [])].sort(),
 					));
 
 			// Delete all expenses and reinsert (simpler than tracking updates)
@@ -251,32 +266,34 @@ export class ExpensesStorage {
 						expense.createdAt.toISOString(),
 						expense.updatedAt.toISOString(),
 						expense.parentExpenseId || null,
-						expense.monthlyOverrides ? JSON.stringify(expense.monthlyOverrides) : null,
+						expense.monthlyOverrides
+							? JSON.stringify(expense.monthlyOverrides)
+							: null,
 						expense.isModified ? 1 : 0,
 						initialState ? JSON.stringify(initialState) : null,
-					]
+					],
 				);
 			}
 
 			await this.context.db.execute(
 				`INSERT OR REPLACE INTO settings (key, value) VALUES ('expense_selectedMonth', ?)`,
-				[expenses.selectedMonth.toISOString()]
+				[expenses.selectedMonth.toISOString()],
 			);
 			await this.context.db.execute(
 				`INSERT OR REPLACE INTO settings (key, value) VALUES ('expense_overviewMode', ?)`,
-				[expenses.overviewMode]
+				[expenses.overviewMode],
 			);
 			await this.context.db.execute(
 				`INSERT OR REPLACE INTO settings (key, value) VALUES ('expense_categories', ?)`,
-				[JSON.stringify(expenses.categories)]
+				[JSON.stringify(expenses.categories)],
 			);
 			await this.context.db.execute(
 				`INSERT OR REPLACE INTO settings (key, value) VALUES ('expense_categoryColors', ?)`,
-				[JSON.stringify(expenses.categoryColors)]
+				[JSON.stringify(expenses.categoryColors)],
 			);
 			await this.context.db.execute(
 				`INSERT OR REPLACE INTO settings (key, value) VALUES ('expense_paymentMethods', ?)`,
-				[JSON.stringify(expenses.paymentMethods || DEFAULT_PAYMENT_METHODS)]
+				[JSON.stringify(expenses.paymentMethods || DEFAULT_PAYMENT_METHODS)],
 			);
 
 			this.context.cache.expenses = expenses;

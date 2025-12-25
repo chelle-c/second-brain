@@ -1,20 +1,23 @@
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
-import useAppStore from "./useAppStore";
-import {
-	ThemeMode,
-	ThemePalette,
-	ThemeSettings,
-	DEFAULT_THEME_SETTINGS,
-} from "@/types/theme";
 import { AppToSave } from "@/types";
+import {
+	DEFAULT_THEME_SETTINGS,
+	type ThemeMode,
+	type ThemePalette,
+	type ThemeSettings,
+} from "@/types/theme";
+import useAppStore from "./useAppStore";
 
 interface ThemeStore extends ThemeSettings {
 	// Computed - the actual theme being displayed (resolved from system)
 	resolvedTheme: "light" | "dark";
 
 	// Actions
-	setThemeSettings: (settings: Partial<ThemeSettings>, skipSave?: boolean) => void;
+	setThemeSettings: (
+		settings: Partial<ThemeSettings>,
+		skipSave?: boolean,
+	) => void;
 	setMode: (mode: ThemeMode) => void;
 	setPalette: (palette: ThemePalette) => void;
 	initializeTheme: () => void;
@@ -144,5 +147,5 @@ export const useThemeStore = create<ThemeStore>()(
 				useAppStore.getState().saveToFile(AppToSave.All);
 			}
 		},
-	}))
+	})),
 );

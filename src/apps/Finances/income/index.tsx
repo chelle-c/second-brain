@@ -1,24 +1,31 @@
-import React, { useState, useEffect } from "react";
-import { useIncomeStore } from "@/stores/useIncomeStore";
-import { useHistoryStore } from "@/stores/useHistoryStore";
-import { useSettingsStore } from "@/stores/useSettingsStore";
-import WeekNavigation from "./components/WeekNavigation";
-import IncomeEntriesList from "./components/IncomeEntriesList";
-import WeeklySummary from "./components/WeeklySummary";
-import IncomeChart from "./components/IncomeChart";
-import MonthlyView from "./components/MonthlyView";
-import YearlyView from "./components/YearlyView";
+import { endOfDay, format, isSameDay, parseISO, startOfDay } from "date-fns";
+import { Redo2, Undo2 } from "lucide-react";
+import type React from "react";
+import { useEffect, useState } from "react";
 import { AnimatedToggle } from "@/components/AnimatedToggle";
-import { Undo2, Redo2 } from "lucide-react";
-import type { IncomeWeekSelection, IncomeDayData } from "@/types/income";
 import { years } from "@/lib/dateUtils";
-import { isSameDay, parseISO, startOfDay, endOfDay, format } from "date-fns";
+import { useHistoryStore } from "@/stores/useHistoryStore";
+import { useIncomeStore } from "@/stores/useIncomeStore";
+import { useSettingsStore } from "@/stores/useSettingsStore";
+import type { IncomeDayData, IncomeWeekSelection } from "@/types/income";
+import IncomeChart from "./components/IncomeChart";
+import IncomeEntriesList from "./components/IncomeEntriesList";
+import MonthlyView from "./components/MonthlyView";
+import WeeklySummary from "./components/WeeklySummary";
+import WeekNavigation from "./components/WeekNavigation";
+import YearlyView from "./components/YearlyView";
 
 export const IncomeTracker: React.FC = () => {
 	const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-	const { incomeEntries, incomeViewType, setIncomeViewType, updateIncomeViewType, undo, redo } =
-		useIncomeStore();
+	const {
+		incomeEntries,
+		incomeViewType,
+		setIncomeViewType,
+		updateIncomeViewType,
+		undo,
+		redo,
+	} = useIncomeStore();
 	const { canUndo, canRedo } = useHistoryStore();
 	const { incomeDefaultView, incomeWeekStartDay } = useSettingsStore();
 
@@ -40,7 +47,10 @@ export const IncomeTracker: React.FC = () => {
 			}
 
 			// Ctrl/Cmd + Shift + Z or Ctrl/Cmd + Y to redo
-			if ((modKey && e.shiftKey && e.key === "z") || (modKey && e.key === "y")) {
+			if (
+				(modKey && e.shiftKey && e.key === "z") ||
+				(modKey && e.key === "y")
+			) {
 				if (canRedo) {
 					e.preventDefault();
 					redo();
@@ -67,7 +77,7 @@ export const IncomeTracker: React.FC = () => {
 			year: today.getFullYear(),
 			week: Math.ceil(
 				(today.getTime() - new Date(today.getFullYear(), 0, 1).getTime()) /
-					(7 * 24 * 60 * 60 * 1000)
+					(7 * 24 * 60 * 60 * 1000),
 			),
 			startDate: startOfWeek,
 			endDate: new Date(startOfWeek.getTime() + 6 * 24 * 60 * 60 * 1000),
@@ -82,7 +92,7 @@ export const IncomeTracker: React.FC = () => {
 			year: today.getFullYear(),
 			week: Math.ceil(
 				(today.getTime() - new Date(today.getFullYear(), 0, 1).getTime()) /
-					(7 * 24 * 60 * 60 * 1000)
+					(7 * 24 * 60 * 60 * 1000),
 			),
 			startDate: startOfWeek,
 			endDate: new Date(startOfWeek.getTime() + 6 * 24 * 60 * 60 * 1000),
@@ -101,14 +111,16 @@ export const IncomeTracker: React.FC = () => {
 		const weekStart = selectedWeek.startDate;
 
 		return Array.from({ length: 7 }, (_, index) => {
-			const dayDate = new Date(weekStart.getTime() + index * 24 * 60 * 60 * 1000);
+			const dayDate = new Date(
+				weekStart.getTime() + index * 24 * 60 * 60 * 1000,
+			);
 			const dayName = format(dayDate, "EEEE"); // Get actual day name from date
 			const dayEntries = incomeEntries.filter((entry) =>
-				isSameDay(parseISO(entry.date), dayDate)
+				isSameDay(parseISO(entry.date), dayDate),
 			);
 
 			const latestEntry = dayEntries.sort(
-				(a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+				(a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
 			)[0];
 
 			const totalAmount = latestEntry ? latestEntry.amount : 0;
@@ -136,7 +148,11 @@ export const IncomeTracker: React.FC = () => {
 			label: "Monthly",
 			ariaLabel: "Show monthly summary",
 		},
-		{ value: "yearly" as const, label: "Yearly", ariaLabel: "Show yearly summary" },
+		{
+			value: "yearly" as const,
+			label: "Yearly",
+			ariaLabel: "Show yearly summary",
+		},
 	];
 
 	return (

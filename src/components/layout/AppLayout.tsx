@@ -1,16 +1,25 @@
+import { ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { Outlet } from "react-router";
-import { AppSidebar } from "./AppSidebar";
-import { Button } from "../ui/button";
-import { SidebarProvider, SidebarInset, useSidebar } from "@/components/ui/sidebar";
+import {
+	SidebarInset,
+	SidebarProvider,
+	useSidebar,
+} from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
-import { ChevronRight } from "lucide-react";
+import { Button } from "../ui/button";
+import { AppSidebar } from "./AppSidebar";
 
 type CustomTriggerProps = React.ComponentProps<typeof Button> & {
 	open?: boolean;
 };
 
-const CustomTrigger = ({ className, onClick, open, ...props }: CustomTriggerProps) => {
+const CustomTrigger = ({
+	className,
+	onClick,
+	open,
+	...props
+}: CustomTriggerProps) => {
 	const { toggleSidebar } = useSidebar();
 
 	return (

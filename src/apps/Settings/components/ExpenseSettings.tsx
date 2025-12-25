@@ -1,24 +1,26 @@
-import { useState } from "react";
+import { documentDir } from "@tauri-apps/api/path";
+import { open, save } from "@tauri-apps/plugin-dialog";
 import {
-	DollarSign,
-	Tag,
-	CreditCard,
-	Download,
-	Upload,
-	Loader2,
 	CheckCircle,
+	CreditCard,
+	DollarSign,
+	Download,
+	Loader2,
+	Tag,
+	Upload,
 	XCircle,
 } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
+import { useState } from "react";
+import { CategoryManager } from "@/apps/Finances/expenses/components/CategoryManager";
+import { PaymentMethodManager } from "@/apps/Finances/expenses/components/PaymentMethodManager";
 import { Button } from "@/components/ui/button";
 import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
 import {
 	Dialog,
 	DialogContent,
@@ -27,15 +29,19 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { useSettingsStore } from "@/stores/useSettingsStore";
-import { useExpenseStore } from "@/stores/useExpenseStore";
 import { useBackupStore } from "@/stores/useBackupStore";
-import { CURRENCY_OPTIONS, ExpenseViewType } from "@/types/settings";
-import { CategoryManager } from "@/apps/Finances/expenses/components/CategoryManager";
-import { PaymentMethodManager } from "@/apps/Finances/expenses/components/PaymentMethodManager";
-import { save, open } from "@tauri-apps/plugin-dialog";
-import { documentDir } from "@tauri-apps/api/path";
+import { useExpenseStore } from "@/stores/useExpenseStore";
+import { useSettingsStore } from "@/stores/useSettingsStore";
+import { CURRENCY_OPTIONS, type ExpenseViewType } from "@/types/settings";
 
 const expenseViewOptions: { value: ExpenseViewType; label: string }[] = [
 	{ value: "upcoming", label: "Upcoming Expenses" },
@@ -44,22 +50,31 @@ const expenseViewOptions: { value: ExpenseViewType; label: string }[] = [
 ];
 
 export const ExpenseSettings = () => {
-	const { expenseDefaultView, expenseCurrency, setExpenseDefaultView, setExpenseCurrency } =
-		useSettingsStore();
-	const { categories, categoryColors, paymentMethods, expenses } = useExpenseStore();
-	const { exportExpensesToFile, importExpensesFromFile, isLoading } = useBackupStore();
+	const {
+		expenseDefaultView,
+		expenseCurrency,
+		setExpenseDefaultView,
+		setExpenseCurrency,
+	} = useSettingsStore();
+	const { categories, categoryColors, paymentMethods, expenses } =
+		useExpenseStore();
+	const { exportExpensesToFile, importExpensesFromFile, isLoading } =
+		useBackupStore();
 
 	const [showCategoryManager, setShowCategoryManager] = useState(false);
-	const [showPaymentMethodManager, setShowPaymentMethodManager] = useState(false);
+	const [showPaymentMethodManager, setShowPaymentMethodManager] =
+		useState(false);
 	const [showImportDialog, setShowImportDialog] = useState(false);
 	const [importFilePath, setImportFilePath] = useState<string | null>(null);
 	const [importMode, setImportMode] = useState<"replace" | "merge">("merge");
-	const [exportResult, setExportResult] = useState<{ success: boolean; message: string } | null>(
-		null
-	);
-	const [importResult, setImportResult] = useState<{ success: boolean; message: string } | null>(
-		null
-	);
+	const [exportResult, setExportResult] = useState<{
+		success: boolean;
+		message: string;
+	} | null>(null);
+	const [importResult, setImportResult] = useState<{
+		success: boolean;
+		message: string;
+	} | null>(null);
 
 	const handleExport = async () => {
 		try {
@@ -85,7 +100,10 @@ export const ExpenseSettings = () => {
 						message: `Successfully exported ${expenses.length} expenses`,
 					});
 				} else {
-					setExportResult({ success: false, message: result.error || "Export failed" });
+					setExportResult({
+						success: false,
+						message: result.error || "Export failed",
+					});
 				}
 
 				// Clear result after 5 seconds
@@ -136,7 +154,10 @@ export const ExpenseSettings = () => {
 						: `Imported ${result.importedCount} new expenses, skipped ${result.skippedCount} duplicates`;
 				setImportResult({ success: true, message });
 			} else {
-				setImportResult({ success: false, message: result.error || "Import failed" });
+				setImportResult({
+					success: false,
+					message: result.error || "Import failed",
+				});
 			}
 
 			setTimeout(() => setImportResult(null), 5000);
@@ -289,7 +310,8 @@ export const ExpenseSettings = () => {
 						<div className="space-y-0.5">
 							<Label className="text-base font-medium">Import & Export</Label>
 							<p className="text-sm text-muted-foreground">
-								Export expenses to JSON for backup or import from a previous export
+								Export expenses to JSON for backup or import from a previous
+								export
 							</p>
 						</div>
 
@@ -430,8 +452,8 @@ export const ExpenseSettings = () => {
 
 						{importMode === "replace" && (
 							<div className="p-3 bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded-lg text-sm">
-								⚠️ Warning: This will permanently delete all your current expenses
-								and replace them with the imported data.
+								⚠️ Warning: This will permanently delete all your current
+								expenses and replace them with the imported data.
 							</div>
 						)}
 					</div>

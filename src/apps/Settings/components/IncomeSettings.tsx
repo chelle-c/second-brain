@@ -1,23 +1,23 @@
-import { useState } from "react";
+import { documentDir } from "@tauri-apps/api/path";
+import { open, save } from "@tauri-apps/plugin-dialog";
+import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import {
-	TrendingUp,
-	Download,
-	Upload,
-	Loader2,
 	CheckCircle,
+	Download,
+	Loader2,
+	TrendingUp,
+	Upload,
 	XCircle,
 } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
 import {
 	Dialog,
 	DialogContent,
@@ -26,14 +26,28 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { useSettingsStore } from "@/stores/useSettingsStore";
 import { useIncomeStore } from "@/stores/useIncomeStore";
-import { CURRENCY_OPTIONS, WEEK_DAYS, WeekStartDay } from "@/types/settings";
-import { IncomeViewType, IncomeEntry, IncomeWeeklyTargets } from "@/types/income";
-import { save, open } from "@tauri-apps/plugin-dialog";
-import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
-import { documentDir } from "@tauri-apps/api/path";
+import { useSettingsStore } from "@/stores/useSettingsStore";
+import type {
+	IncomeEntry,
+	IncomeViewType,
+	IncomeWeeklyTargets,
+} from "@/types/income";
+import {
+	CURRENCY_OPTIONS,
+	WEEK_DAYS,
+	type WeekStartDay,
+} from "@/types/settings";
 import { APP_VERSION } from "@/types/storage";
 
 interface IncomeExportData {
@@ -63,19 +77,25 @@ export const IncomeSettings = () => {
 		setIncomeDefaultWeeklyTarget,
 	} = useSettingsStore();
 
-	const { incomeEntries, incomeWeeklyTargets, setIncomeEntries, setIncomeWeeklyTargets } =
-		useIncomeStore();
+	const {
+		incomeEntries,
+		incomeWeeklyTargets,
+		setIncomeEntries,
+		setIncomeWeeklyTargets,
+	} = useIncomeStore();
 
 	const [isLoading, setIsLoading] = useState(false);
 	const [showImportDialog, setShowImportDialog] = useState(false);
 	const [importFilePath, setImportFilePath] = useState<string | null>(null);
 	const [importMode, setImportMode] = useState<"replace" | "merge">("merge");
-	const [exportResult, setExportResult] = useState<{ success: boolean; message: string } | null>(
-		null
-	);
-	const [importResult, setImportResult] = useState<{ success: boolean; message: string } | null>(
-		null
-	);
+	const [exportResult, setExportResult] = useState<{
+		success: boolean;
+		message: string;
+	} | null>(null);
+	const [importResult, setImportResult] = useState<{
+		success: boolean;
+		message: string;
+	} | null>(null);
 
 	const handleExport = async () => {
 		setIsLoading(true);
@@ -114,7 +134,10 @@ export const IncomeSettings = () => {
 			}
 		} catch (error) {
 			console.error("Export error:", error);
-			setExportResult({ success: false, message: "Failed to export income data" });
+			setExportResult({
+				success: false,
+				message: "Failed to export income data",
+			});
 			setTimeout(() => setExportResult(null), 5000);
 		} finally {
 			setIsLoading(false);
@@ -155,7 +178,10 @@ export const IncomeSettings = () => {
 			if (!importData.data || !Array.isArray(importData.data.entries)) {
 				setShowImportDialog(false);
 				setImportFilePath(null);
-				setImportResult({ success: false, message: "Invalid income export file format" });
+				setImportResult({
+					success: false,
+					message: "Invalid income export file format",
+				});
 				setTimeout(() => setImportResult(null), 5000);
 				return;
 			}
@@ -174,12 +200,14 @@ export const IncomeSettings = () => {
 			} else {
 				// Merge mode - add new entries, skip duplicates by ID
 				const existingIds = new Set(incomeEntries.map((e) => e.id));
-				const newEntries = importData.data.entries.filter((e) => !existingIds.has(e.id));
+				const newEntries = importData.data.entries.filter(
+					(e) => !existingIds.has(e.id),
+				);
 
 				// Merge weekly targets
 				const existingTargetIds = new Set(incomeWeeklyTargets.map((t) => t.id));
 				const newTargets = (importData.data.weeklyTargets || []).filter(
-					(t) => !existingTargetIds.has(t.id)
+					(t) => !existingTargetIds.has(t.id),
 				);
 
 				setIncomeEntries([...incomeEntries, ...newEntries]);
@@ -199,7 +227,10 @@ export const IncomeSettings = () => {
 			console.error("Import error:", error);
 			setShowImportDialog(false);
 			setImportFilePath(null);
-			setImportResult({ success: false, message: "Failed to import income data" });
+			setImportResult({
+				success: false,
+				message: "Failed to import income data",
+			});
 			setTimeout(() => setImportResult(null), 5000);
 		} finally {
 			setIsLoading(false);
@@ -226,7 +257,9 @@ export const IncomeSettings = () => {
 						</div>
 						<Select
 							value={incomeDefaultView}
-							onValueChange={(value) => setIncomeDefaultView(value as IncomeViewType)}
+							onValueChange={(value) =>
+								setIncomeDefaultView(value as IncomeViewType)
+							}
 						>
 							<SelectTrigger className="w-[200px]">
 								<SelectValue placeholder="Select view" />
@@ -253,7 +286,7 @@ export const IncomeSettings = () => {
 						<Select
 							value={incomeWeekStartDay.toString()}
 							onValueChange={(value) =>
-								setIncomeWeekStartDay(parseInt(value) as WeekStartDay)
+								setIncomeWeekStartDay(parseInt(value, 10) as WeekStartDay)
 							}
 						>
 							<SelectTrigger className="w-[200px]">
@@ -261,7 +294,10 @@ export const IncomeSettings = () => {
 							</SelectTrigger>
 							<SelectContent>
 								{WEEK_DAYS.map((option) => (
-									<SelectItem key={option.value} value={option.value.toString()}>
+									<SelectItem
+										key={option.value}
+										value={option.value.toString()}
+									>
 										{option.label}
 									</SelectItem>
 								))}
@@ -296,7 +332,9 @@ export const IncomeSettings = () => {
 
 					<div className="flex items-center justify-between">
 						<div className="space-y-0.5">
-							<Label className="text-base font-medium">Default Weekly Target</Label>
+							<Label className="text-base font-medium">
+								Default Weekly Target
+							</Label>
 							<p className="text-sm text-muted-foreground">
 								Default target for weeks that haven't been customized
 							</p>
@@ -308,7 +346,7 @@ export const IncomeSettings = () => {
 							value={incomeDefaultWeeklyTarget}
 							onChange={(e) => {
 								const value = parseFloat(e.target.value);
-								if (!isNaN(value) && value >= 0) {
+								if (!Number.isNaN(value) && value >= 0) {
 									setIncomeDefaultWeeklyTarget(value);
 								}
 							}}
@@ -322,7 +360,8 @@ export const IncomeSettings = () => {
 						<div className="space-y-0.5">
 							<Label className="text-base font-medium">Import & Export</Label>
 							<p className="text-sm text-muted-foreground">
-								Export income data to JSON for backup or import from a previous export
+								Export income data to JSON for backup or import from a previous
+								export
 							</p>
 						</div>
 
@@ -452,8 +491,8 @@ export const IncomeSettings = () => {
 
 						{importMode === "replace" && (
 							<div className="p-3 bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded-lg text-sm">
-								Warning: This will permanently delete all your current income data and
-								replace it with the imported data.
+								Warning: This will permanently delete all your current income
+								data and replace it with the imported data.
 							</div>
 						)}
 					</div>

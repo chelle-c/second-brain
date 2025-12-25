@@ -1,4 +1,21 @@
+import type { Expense, OccurrenceInitialState } from "./expense";
+
 export type DatabaseEnvironment = "production" | "test";
+
+// Serialized expense type for JSON export (dates are ISO strings)
+export interface SerializedExpense
+	extends Omit<
+		Expense,
+		"dueDate" | "paymentDate" | "createdAt" | "updatedAt" | "initialState"
+	> {
+	dueDate: string | null;
+	paymentDate: string | null;
+	createdAt: string;
+	updatedAt: string;
+	initialState?: Omit<OccurrenceInitialState, "dueDate"> & {
+		dueDate: string | null;
+	};
+}
 
 export interface BackupMetadata {
 	id: string;
@@ -57,7 +74,7 @@ export interface ExpenseExportData {
 	version: string;
 	exportedAt: string;
 	data: {
-		expenses: any[];
+		expenses: SerializedExpense[];
 		categories: string[];
 		categoryColors: Record<string, string>;
 		paymentMethods: string[];
@@ -77,6 +94,6 @@ export interface ImportResult {
 export interface MigrationStep {
 	fromVersion: string;
 	toVersion: string;
-	migrate: (data: any) => any;
+	migrate: (data: unknown) => unknown;
 	description: string;
 }

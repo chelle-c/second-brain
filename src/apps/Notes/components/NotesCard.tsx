@@ -1,15 +1,31 @@
-import React, { useState, useMemo } from "react";
+import {
+	Calendar,
+	ChevronRight,
+	Folder,
+	Inbox,
+	Redo2,
+	Search,
+	Undo2,
+} from "lucide-react";
+import React, { useMemo, useState } from "react";
+import { AnimatedToggle } from "@/components/AnimatedToggle";
 import { useNotesStore } from "@/stores/useNotesStore";
+import type {
+	Note,
+	NotesFolder,
+	NotesFolders,
+	Subfolder,
+	Tag,
+} from "@/types/notes";
 import { NotesDropdownMenu } from "./NotesDropdownMenu";
 import { TagFilter } from "./TagFilter";
-import { Note, NotesFolder, NotesFolders, Subfolder, Tag } from "@/types/notes";
-import { Inbox, Calendar, Search, Folder, ChevronRight, Undo2, Redo2 } from "lucide-react";
-import { AnimatedToggle } from "@/components/AnimatedToggle";
 
 interface NotesCardProps {
 	allFolders: NotesFolders;
 	activeFolder: NotesFolder | Subfolder | null;
-	setActiveFolder: React.Dispatch<React.SetStateAction<NotesFolder | Subfolder | null>>;
+	setActiveFolder: React.Dispatch<
+		React.SetStateAction<NotesFolder | Subfolder | null>
+	>;
 	getCurrentFolder: (id: string) => NotesFolder | Subfolder;
 	tags: Record<string, Tag>;
 	activeTags: string[];
@@ -98,10 +114,13 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 			if (!matchesFolder) return false;
 
 			const matchesTags =
-				activeTags.length === 0 || activeTags.some((tag) => note.tags?.includes(tag));
+				activeTags.length === 0 ||
+				activeTags.some((tag) => note.tags?.includes(tag));
 			if (!matchesTags) return false;
 
-			const matchesSearch = note.title.toLowerCase().includes(searchTerm.toLowerCase());
+			const matchesSearch = note.title
+				.toLowerCase()
+				.includes(searchTerm.toLowerCase());
 
 			return matchesSearch;
 		});
@@ -133,15 +152,17 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 	const parentFolderName = getParentFolderName();
 
 	const renderNoteItem = (note: Note) => (
-		<div
+		<article
 			key={note.id}
-			tabIndex={0}
-			className="p-4 bg-card border border-border rounded-lg hover:border-primary/30 hover:shadow-sm transition-all cursor-pointer animate-fadeIn"
-			onClick={() => onSelectNote(note.id)}
-			onKeyDown={(e) => {
-				if (e.key === "Enter") onSelectNote(note.id);
-			}}
+			className="relative p-4 bg-card border border-border rounded-lg hover:border-primary/30 hover:shadow-sm transition-all cursor-pointer animate-fadeIn"
 		>
+			{/* Clickable overlay for the entire card */}
+			<button
+				type="button"
+				onClick={() => onSelectNote(note.id)}
+				className="absolute inset-0 w-full h-full rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+				aria-label={`Open note: ${note.title || "Untitled"}`}
+			/>
 			<div className="flex justify-between items-start gap-4">
 				<div className="flex-1 min-w-0">
 					<h3 className="text-card-foreground mb-2 font-medium truncate">
@@ -174,7 +195,8 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 						</span>
 					</div>
 				</div>
-				<div onClick={(e) => e.stopPropagation()}>
+				{/* Dropdown positioned above the card button with relative z-index */}
+				<div className="relative z-10">
 					<NotesDropdownMenu
 						note={note}
 						allFolders={allFolders}
@@ -183,7 +205,7 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 					/>
 				</div>
 			</div>
-		</div>
+		</article>
 	);
 
 	return (
@@ -242,12 +264,14 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 					)}
 					{React.createElement(
 						activeFolder && activeFolder.name === "Inbox" ? Inbox : Folder,
-						{ size: 24 }
+						{ size: 24 },
 					)}
 					<h1 className="text-2xl font-semibold">
 						{activeFolder && getCurrentFolder(activeFolder.id).name}
 					</h1>
-					<span className="text-sm text-muted-foreground">({filteredNotes.length})</span>
+					<span className="text-sm text-muted-foreground">
+						({filteredNotes.length})
+					</span>
 				</div>
 
 				{/* Subfolders quick access - moved below title */}
@@ -267,7 +291,7 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 										notes.filter(
 											(n) =>
 												n.folder === subfolder.id &&
-												n.archived === (viewMode === "archived")
+												n.archived === (viewMode === "archived"),
 										).length
 									}
 								</span>
@@ -292,7 +316,11 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 				</div>
 
 				{/* Tag filter */}
-				<TagFilter tags={tags} activeTags={activeTags} setActiveTags={setActiveTags} />
+				<TagFilter
+					tags={tags}
+					activeTags={activeTags}
+					setActiveTags={setActiveTags}
+				/>
 			</div>
 
 			{/* Notes list */}
@@ -300,7 +328,8 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 				{filteredNotes.length === 0 ? (
 					<div className="text-center py-12 text-muted-foreground animate-fadeIn">
 						<p className="text-lg mb-2">
-							No {viewMode} notes in {getCurrentFolder(activeFolder?.id || "")?.name}
+							No {viewMode} notes in{" "}
+							{getCurrentFolder(activeFolder?.id || "")?.name}
 						</p>
 						<p className="text-sm">
 							{searchTerm && "Try a different search term"}
@@ -330,7 +359,7 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 						{Object.entries(groupedNotes.grouped).map(
 							([subfolderId, subfolderNotes]) => {
 								const subfolder = currentSubfolders.find(
-									(sf) => sf.id === subfolderId
+									(sf) => sf.id === subfolderId,
 								);
 								if (!subfolder || subfolderNotes.length === 0) return null;
 
@@ -350,7 +379,7 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 										</div>
 									</div>
 								);
-							}
+							},
 						)}
 					</div>
 				) : (

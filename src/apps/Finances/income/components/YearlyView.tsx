@@ -1,13 +1,13 @@
-import React, { useMemo } from "react";
+import { FileText } from "lucide-react";
+import { useMemo } from "react";
+import { BarChart, type BarChartData } from "@/components/charts";
+import { getCurrencySymbol } from "@/lib/currencyUtils";
+import { getYearlyData } from "@/lib/dateUtils";
 import { useIncomeStore } from "@/stores/useIncomeStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
 import { useThemeStore } from "@/stores/useThemeStore";
-import { getYearlyData } from "@/lib/dateUtils";
-import { getCurrencySymbol } from "@/lib/currencyUtils";
-import { FileText } from "lucide-react";
-import { BarChart, type BarChartData } from "@/components/charts";
 
-const YearlyView: React.FC<{}> = () => {
+const YearlyView = () => {
 	const { incomeEntries } = useIncomeStore();
 	const { incomeCurrency } = useSettingsStore();
 	const currencySymbol = getCurrencySymbol(incomeCurrency);
@@ -16,7 +16,9 @@ const YearlyView: React.FC<{}> = () => {
 
 	// Get theme-aware bar color from CSS variable
 	const barColor = useMemo(() => {
-		return getComputedStyle(document.documentElement).getPropertyValue("--primary").trim();
+		return getComputedStyle(document.documentElement)
+			.getPropertyValue("--primary")
+			.trim();
 	}, [resolvedTheme, palette]);
 
 	// Theme-aware colors
@@ -38,9 +40,12 @@ const YearlyView: React.FC<{}> = () => {
 
 	const renderTooltip = (datum: BarChartData) => (
 		<>
-			<div className="font-medium">Year: {datum.year}</div>
-			<div>Amount: {currencySymbol}{datum.value.toFixed(2)}</div>
-			<div>Hours: {datum.hours?.toFixed(1)}h</div>
+			<div className="font-medium">Year: {String(datum.year)}</div>
+			<div>
+				Amount: {currencySymbol}
+				{datum.value.toFixed(2)}
+			</div>
+			<div>Hours: {(datum.hours as number | undefined)?.toFixed(1)}h</div>
 		</>
 	);
 
@@ -114,17 +119,13 @@ const YearlyView: React.FC<{}> = () => {
 													{currencySymbol}
 													{year.amount.toFixed(0)}
 												</div>
-												<div className="text-xs text-primary/80">
-													Earned
-												</div>
+												<div className="text-xs text-primary/80">Earned</div>
 											</div>
 											<div className="bg-emerald-500/10 rounded-md p-2 text-center">
 												<div className="text-sm font-bold text-emerald-500">
 													{year.hours.toFixed(1)}h
 												</div>
-												<div className="text-xs text-emerald-500/80">
-													Hours
-												</div>
+												<div className="text-xs text-emerald-500/80">Hours</div>
 											</div>
 											<div className="bg-purple-500/10 rounded-md p-2 text-center">
 												<div className="text-sm font-bold text-purple-500">
@@ -134,9 +135,7 @@ const YearlyView: React.FC<{}> = () => {
 														: "0"}
 													/h
 												</div>
-												<div className="text-xs text-purple-500/80">
-													Rate
-												</div>
+												<div className="text-xs text-purple-500/80">Rate</div>
 											</div>
 											<div className="bg-amber-500/10 rounded-md p-2 text-center">
 												<div className="text-sm font-bold text-amber-500">
@@ -158,7 +157,9 @@ const YearlyView: React.FC<{}> = () => {
 				<div className="bg-card rounded-xl shadow-lg p-4">
 					<div className="p-8 flex flex-col items-center">
 						<FileText className="w-10 h-10 text-muted-foreground/30 mb-3" />
-						<p className="text-sm text-muted-foreground">No income entries found</p>
+						<p className="text-sm text-muted-foreground">
+							No income entries found
+						</p>
 					</div>
 				</div>
 			)}

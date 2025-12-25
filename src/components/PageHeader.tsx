@@ -7,7 +7,12 @@ interface PageHeaderProps {
 	className?: string;
 }
 
-export function PageHeader({ title, description, children, className }: PageHeaderProps) {
+export function PageHeader({
+	title,
+	description,
+	children,
+	className,
+}: PageHeaderProps) {
 	return (
 		<div className={cn("flex flex-col gap-4 mb-6", className)}>
 			<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

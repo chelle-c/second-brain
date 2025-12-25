@@ -30,7 +30,11 @@ export interface Tag {
 	id: string;
 	name: string;
 	color: string;
-	icon: React.ForwardRefExoticComponent<Omit<any, "ref">>;
+	icon: React.ForwardRefExoticComponent<
+		Omit<React.SVGProps<SVGSVGElement>, "ref"> & {
+			size?: number | string;
+		}
+	>;
 }
 
 export interface Tags {

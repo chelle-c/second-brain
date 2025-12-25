@@ -1,29 +1,36 @@
+import { invoke } from "@tauri-apps/api/core";
 import { appDataDir, documentDir, sep } from "@tauri-apps/api/path";
 import {
+	copyFile,
 	exists,
 	mkdir,
 	readDir,
 	readTextFile,
-	writeTextFile,
 	remove,
-	copyFile,
+	writeTextFile,
 } from "@tauri-apps/plugin-fs";
-import { invoke } from "@tauri-apps/api/core";
 import Database from "@tauri-apps/plugin-sql";
 import {
-	BackupMetadata,
-	BackupSettings,
-	BackupInfo,
-	BackupResult,
-	RestoreResult,
-	DatabaseEnvironment,
+	DEFAULT_CATEGORY_COLORS,
+	DEFAULT_EXPENSE_CATEGORIES,
+} from "@/lib/expenseHelpers";
+import {
+	type BackupInfo,
+	type BackupMetadata,
+	type BackupResult,
+	type BackupSettings,
+	type DatabaseEnvironment,
 	DEFAULT_BACKUP_SETTINGS,
-	MigrationStep,
-	ExpenseExportData,
+	type ExpenseExportData,
+	type MigrationStep,
+	type RestoreResult,
 } from "@/types/backup";
-import { DATA_VERSION, APP_VERSION, DEFAULT_PAYMENT_METHODS } from "@/types/storage";
-import { Expense } from "@/types/expense";
-import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
+import type { Expense } from "@/types/expense";
+import {
+	APP_VERSION,
+	DATA_VERSION,
+	DEFAULT_PAYMENT_METHODS,
+} from "@/types/storage";
 
 const BACKUP_DIR_NAME = "backups";
 const BACKUP_SETTINGS_FILE = "backup-settings.json";
@@ -65,7 +72,7 @@ const MIGRATIONS: MigrationStep[] = [
 							? {
 									...e.initialState,
 									paymentMethod: e.initialState.paymentMethod || "None",
-							  }
+								}
 							: undefined,
 					})),
 				},
@@ -84,7 +91,9 @@ class BackupService {
 		await this.loadSettings();
 
 		const isDev = await this.isDevMode();
-		const expectedEnvironment: DatabaseEnvironment = isDev ? "test" : "production";
+		const expectedEnvironment: DatabaseEnvironment = isDev
+			? "test"
+			: "production";
 		if (this.settings.databaseEnvironment !== expectedEnvironment) {
 			this.settings.databaseEnvironment = expectedEnvironment;
 			await this.saveSettings(this.settings);
@@ -180,7 +189,10 @@ class BackupService {
 			this.autoBackupInterval = null;
 		}
 
-		if (!this.settings.autoBackupEnabled || this.settings.autoBackupIntervalHours <= 0) {
+		if (
+			!this.settings.autoBackupEnabled ||
+			this.settings.autoBackupIntervalHours <= 0
+		) {
 			return;
 		}
 
@@ -196,7 +208,7 @@ class BackupService {
 	private async checkInitialAutoBackup(): Promise<void> {
 		const backups = await this.listBackups();
 		const autoBackups = backups.filter((b) =>
-			b.metadata.description?.startsWith("Auto-backup")
+			b.metadata.description?.startsWith("Auto-backup"),
 		);
 
 		if (autoBackups.length === 0) {
@@ -206,7 +218,8 @@ class BackupService {
 
 		const mostRecent = autoBackups.sort(
 			(a, b) =>
-				new Date(b.metadata.createdAt).getTime() - new Date(a.metadata.createdAt).getTime()
+				new Date(b.metadata.createdAt).getTime() -
+				new Date(a.metadata.createdAt).getTime(),
 		)[0];
 
 		const lastBackupTime = new Date(mostRecent.metadata.createdAt).getTime();
@@ -236,7 +249,7 @@ class BackupService {
 			.sort(
 				(a, b) =>
 					new Date(b.metadata.createdAt).getTime() -
-					new Date(a.metadata.createdAt).getTime()
+					new Date(a.metadata.createdAt).getTime(),
 			);
 
 		const toRemove = autoBackups.slice(this.settings.maxAutoBackups);
@@ -265,9 +278,13 @@ class BackupService {
 		}
 	}
 
-	private generateBackupFilename(timestamp: string, isPreRestore: boolean = false): string {
+	private generateBackupFilename(
+		timestamp: string,
+		isPreRestore: boolean = false,
+	): string {
 		const prefix = isPreRestore ? "pre-restore" : "backup";
-		const envSuffix = this.settings.databaseEnvironment === "test" ? "-test" : "";
+		const envSuffix =
+			this.settings.databaseEnvironment === "test" ? "-test" : "";
 		return `${prefix}${envSuffix}-${timestamp}.db`;
 	}
 
@@ -280,7 +297,7 @@ class BackupService {
 		categoryColors: Record<string, string>,
 		paymentMethods: string[],
 		selectedMonth: Date,
-		overviewMode: string
+		overviewMode: string,
 	): ExpenseExportData {
 		return {
 			version: APP_VERSION,
@@ -297,7 +314,7 @@ class BackupService {
 								amount: e.initialState.amount,
 								dueDate: e.initialState.dueDate?.toISOString() || null,
 								paymentMethod: e.initialState.paymentMethod || "None",
-						  }
+							}
 						: undefined,
 				})),
 				categories,
@@ -314,12 +331,14 @@ class BackupService {
 	 */
 	async exportExpensesToJson(
 		exportData: ExpenseExportData,
-		outputPath: string
+		outputPath: string,
 	): Promise<boolean> {
 		try {
 			const jsonContent = JSON.stringify(exportData, null, 2);
 			await writeTextFile(outputPath, jsonContent);
-			console.log(`Exported ${exportData.data.expenses.length} expenses to ${outputPath}`);
+			console.log(
+				`Exported ${exportData.data.expenses.length} expenses to ${outputPath}`,
+			);
 			return true;
 		} catch (error) {
 			console.error("Failed to export expenses:", error);
@@ -364,11 +383,13 @@ class BackupService {
 								? new Date(e.initialState.dueDate)
 								: null,
 							paymentMethod: e.initialState.paymentMethod || "None",
-					  }
+						}
 					: undefined,
 			}));
 
-			console.log(`Parsed ${data.data.expenses.length} expenses from ${filePath}`);
+			console.log(
+				`Parsed ${data.data.expenses.length} expenses from ${filePath}`,
+			);
 			return { success: true, data };
 		} catch (error) {
 			console.error("Failed to import expenses:", error);
@@ -396,9 +417,11 @@ class BackupService {
 
 			// Check if paymentMethod column exists
 			const tableInfo = await tempDb.select<Array<{ name: string }>>(
-				"PRAGMA table_info(expenses)"
+				"PRAGMA table_info(expenses)",
 			);
-			const hasPaymentMethod = tableInfo.some((col) => col.name === "paymentMethod");
+			const hasPaymentMethod = tableInfo.some(
+				(col) => col.name === "paymentMethod",
+			);
 
 			// Read expenses
 			const selectQuery = hasPaymentMethod
@@ -428,7 +451,9 @@ class BackupService {
 				createdAt: new Date(row.createdAt),
 				updatedAt: new Date(row.updatedAt),
 				parentExpenseId: row.parentExpenseId || undefined,
-				monthlyOverrides: row.monthlyOverrides ? JSON.parse(row.monthlyOverrides) : {},
+				monthlyOverrides: row.monthlyOverrides
+					? JSON.parse(row.monthlyOverrides)
+					: {},
 				isModified: row.isModified === 1,
 				initialState: row.initialState
 					? (() => {
@@ -438,14 +463,14 @@ class BackupService {
 								dueDate: parsed.dueDate ? new Date(parsed.dueDate) : null,
 								paymentMethod: parsed.paymentMethod || "None",
 							};
-					  })()
+						})()
 					: undefined,
 			}));
 
 			// Read settings
-			const settingsResults = await tempDb.select<Array<{ key: string; value: string }>>(
-				"SELECT key, value FROM settings WHERE key LIKE 'expense_%'"
-			);
+			const settingsResults = await tempDb.select<
+				Array<{ key: string; value: string }>
+			>("SELECT key, value FROM settings WHERE key LIKE 'expense_%'");
 
 			const settingsMap: Record<string, any> = {};
 			for (const row of settingsResults) {
@@ -460,9 +485,12 @@ class BackupService {
 
 			return {
 				expenses,
-				categories: settingsMap["expense_categories"] || DEFAULT_EXPENSE_CATEGORIES,
-				categoryColors: settingsMap["expense_categoryColors"] || DEFAULT_CATEGORY_COLORS,
-				paymentMethods: settingsMap["expense_paymentMethods"] || DEFAULT_PAYMENT_METHODS,
+				categories:
+					settingsMap["expense_categories"] || DEFAULT_EXPENSE_CATEGORIES,
+				categoryColors:
+					settingsMap["expense_categoryColors"] || DEFAULT_CATEGORY_COLORS,
+				paymentMethods:
+					settingsMap["expense_paymentMethods"] || DEFAULT_PAYMENT_METHODS,
 				selectedMonth: settingsMap["expense_selectedMonth"]
 					? new Date(settingsMap["expense_selectedMonth"])
 					: new Date(),
@@ -511,7 +539,10 @@ class BackupService {
 
 			// Export expenses to JSON alongside the backup
 			let hasExpenseExport = false;
-			const expenseExportFilename = backupFilename.replace(".db", "-expenses.json");
+			const expenseExportFilename = backupFilename.replace(
+				".db",
+				"-expenses.json",
+			);
 			const expenseExportPath = joinPath(backupPath, expenseExportFilename);
 
 			const expenseData = await this.readExpensesFromDatabase(sourcePath);
@@ -522,10 +553,13 @@ class BackupService {
 					expenseData.categoryColors,
 					expenseData.paymentMethods,
 					expenseData.selectedMonth,
-					expenseData.overviewMode
+					expenseData.overviewMode,
 				);
 
-				hasExpenseExport = await this.exportExpensesToJson(exportData, expenseExportPath);
+				hasExpenseExport = await this.exportExpensesToJson(
+					exportData,
+					expenseExportPath,
+				);
 
 				if (hasExpenseExport) {
 					console.log(`Expense export created: ${expenseExportFilename}`);
@@ -557,7 +591,7 @@ class BackupService {
 			console.log(
 				`Backup created: ${backupFilename}${
 					hasExpenseExport ? " (with expense export)" : ""
-				}`
+				}`,
 			);
 
 			return {
@@ -594,7 +628,7 @@ class BackupService {
 					const metadataPath = joinPath(backupPath, `${entry.name}.meta.json`);
 					const expenseExportPath = joinPath(
 						backupPath,
-						entry.name.replace(".db", "-expenses.json")
+						entry.name.replace(".db", "-expenses.json"),
 					);
 
 					try {
@@ -620,13 +654,17 @@ class BackupService {
 							let environment: DatabaseEnvironment = "production";
 							let createdAt = new Date();
 
-							const prodMatch = entry.name.match(/^backup-(\d{8})-(\d{6})\.db$/);
-							const testMatch = entry.name.match(/^backup-test-(\d{8})-(\d{6})\.db$/);
+							const prodMatch = entry.name.match(
+								/^backup-(\d{8})-(\d{6})\.db$/,
+							);
+							const testMatch = entry.name.match(
+								/^backup-test-(\d{8})-(\d{6})\.db$/,
+							);
 							const oldMatch = entry.name.match(
-								/backup-(prod|production|test)-(\d{8})-(\d{6})\.db/
+								/backup-(prod|production|test)-(\d{8})-(\d{6})\.db/,
 							);
 							const veryOldMatch = entry.name.match(
-								/backup-(production|test)-(.+)\.db/
+								/backup-(production|test)-(.+)\.db/,
 							);
 
 							if (prodMatch) {
@@ -639,7 +677,7 @@ class BackupService {
 									parseInt(dateStr.slice(6, 8)),
 									parseInt(timeStr.slice(0, 2)),
 									parseInt(timeStr.slice(2, 4)),
-									parseInt(timeStr.slice(4, 6))
+									parseInt(timeStr.slice(4, 6)),
 								);
 							} else if (testMatch) {
 								environment = "test";
@@ -651,7 +689,7 @@ class BackupService {
 									parseInt(dateStr.slice(6, 8)),
 									parseInt(timeStr.slice(0, 2)),
 									parseInt(timeStr.slice(2, 4)),
-									parseInt(timeStr.slice(4, 6))
+									parseInt(timeStr.slice(4, 6)),
 								);
 							} else if (oldMatch) {
 								environment = oldMatch[1] === "test" ? "test" : "production";
@@ -663,13 +701,13 @@ class BackupService {
 									parseInt(dateStr.slice(6, 8)),
 									parseInt(timeStr.slice(0, 2)),
 									parseInt(timeStr.slice(2, 4)),
-									parseInt(timeStr.slice(4, 6))
+									parseInt(timeStr.slice(4, 6)),
 								);
 							} else if (veryOldMatch) {
 								environment = veryOldMatch[1] as DatabaseEnvironment;
 								try {
 									createdAt = new Date(
-										veryOldMatch[2].replace(/-/g, ":").replace("T", " ")
+										veryOldMatch[2].replace(/-/g, ":").replace("T", " "),
 									);
 								} catch {
 									// Keep default date
@@ -701,7 +739,7 @@ class BackupService {
 			return backups.sort(
 				(a, b) =>
 					new Date(b.metadata.createdAt).getTime() -
-					new Date(a.metadata.createdAt).getTime()
+					new Date(a.metadata.createdAt).getTime(),
 			);
 		} catch (error) {
 			console.error("Failed to list backups:", error);
@@ -716,7 +754,7 @@ class BackupService {
 			const metadataPath = joinPath(backupPath, `${filename}.meta.json`);
 			const expenseExportPath = joinPath(
 				backupPath,
-				filename.replace(".db", "-expenses.json")
+				filename.replace(".db", "-expenses.json"),
 			);
 
 			await remove(filePath);
@@ -738,12 +776,13 @@ class BackupService {
 
 	validateRestoreEnvironment(
 		backupEnvironment: DatabaseEnvironment,
-		targetEnvironment: DatabaseEnvironment
+		targetEnvironment: DatabaseEnvironment,
 	): { allowed: boolean; reason?: string } {
 		if (backupEnvironment === "test" && targetEnvironment === "production") {
 			return {
 				allowed: false,
-				reason: "Cannot restore test environment backup to production database. This is a safety measure to prevent test data from overwriting production data.",
+				reason:
+					"Cannot restore test environment backup to production database. This is a safety measure to prevent test data from overwriting production data.",
 			};
 		}
 		return { allowed: true };
@@ -754,7 +793,7 @@ class BackupService {
 		options?: {
 			targetEnvironment?: DatabaseEnvironment;
 			skipEnvironmentCheck?: boolean;
-		}
+		},
 	): Promise<RestoreResult> {
 		try {
 			const appData = await this.getAppDataPath();
@@ -786,7 +825,9 @@ class BackupService {
 					}
 				}
 			} catch {
-				console.warn("Could not read backup metadata, assuming production environment");
+				console.warn(
+					"Could not read backup metadata, assuming production environment",
+				);
 			}
 
 			const targetEnvironment =
@@ -795,7 +836,7 @@ class BackupService {
 			if (!options?.skipEnvironmentCheck) {
 				const validation = this.validateRestoreEnvironment(
 					backupEnvironment,
-					targetEnvironment
+					targetEnvironment,
 				);
 				if (!validation.allowed) {
 					return {
@@ -828,7 +869,10 @@ class BackupService {
 				const timestamp = formatDateForFilename(new Date());
 				const savedEnv = this.settings.databaseEnvironment;
 				this.settings.databaseEnvironment = targetEnvironment;
-				const preRestoreBackupName = this.generateBackupFilename(timestamp, true);
+				const preRestoreBackupName = this.generateBackupFilename(
+					timestamp,
+					true,
+				);
 				this.settings.databaseEnvironment = savedEnv;
 
 				const preRestoreBackupPath = joinPath(backupPath, preRestoreBackupName);
@@ -845,7 +889,7 @@ class BackupService {
 					};
 					await writeTextFile(
 						joinPath(backupPath, `${preRestoreBackupName}.meta.json`),
-						JSON.stringify(preRestoreMetadata, null, 2)
+						JSON.stringify(preRestoreMetadata, null, 2),
 					);
 
 					console.log(`Created pre-restore backup: ${preRestoreBackupName}`);
@@ -854,7 +898,10 @@ class BackupService {
 				}
 			}
 
-			const targetPath = joinPath(appData, this.getDatabaseFileName(targetEnvironment));
+			const targetPath = joinPath(
+				appData,
+				this.getDatabaseFileName(targetEnvironment),
+			);
 
 			if (currentDbExists) {
 				try {
@@ -876,7 +923,7 @@ class BackupService {
 			await copyFile(backupFilePath, targetPath);
 
 			console.log(
-				`Restored backup ${filename} (${backupEnvironment}) to ${targetEnvironment} environment`
+				`Restored backup ${filename} (${backupEnvironment}) to ${targetEnvironment} environment`,
 			);
 
 			return {
@@ -895,7 +942,10 @@ class BackupService {
 
 	async getExpenseExportPath(backupFilename: string): Promise<string | null> {
 		const backupPath = await this.getBackupPath();
-		const exportPath = joinPath(backupPath, backupFilename.replace(".db", "-expenses.json"));
+		const exportPath = joinPath(
+			backupPath,
+			backupFilename.replace(".db", "-expenses.json"),
+		);
 
 		if (await exists(exportPath)) {
 			return exportPath;
@@ -912,7 +962,9 @@ class BackupService {
 
 		let currentVersion = fromVersion;
 		while (currentVersion !== toVersion) {
-			const nextMigration = MIGRATIONS.find((m) => m.fromVersion === currentVersion);
+			const nextMigration = MIGRATIONS.find(
+				(m) => m.fromVersion === currentVersion,
+			);
 			if (!nextMigration) {
 				return this.compareVersions(fromVersion, toVersion) <= 0;
 			}
@@ -939,7 +991,9 @@ class BackupService {
 		let currentVersion = fromVersion;
 
 		while (currentVersion !== toVersion) {
-			const nextMigration = MIGRATIONS.find((m) => m.fromVersion === currentVersion);
+			const nextMigration = MIGRATIONS.find(
+				(m) => m.fromVersion === currentVersion,
+			);
 			if (!nextMigration) {
 				break;
 			}

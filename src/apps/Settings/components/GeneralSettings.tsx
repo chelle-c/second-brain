@@ -1,17 +1,29 @@
-import { Settings as SettingsIcon, Save, FolderOpen, RotateCcw } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import {
+	FolderOpen,
+	RotateCcw,
+	Save,
+	Settings as SettingsIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { sqlStorage } from "@/lib/storage";
 import useAppStore from "@/stores/useAppStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
-import { sqlStorage } from "@/lib/storage";
 import { AppToSave } from "@/types";
 
 export const GeneralSettings = () => {
 	const { lastSaved, saveToFile } = useAppStore();
-	const { autoSaveEnabled, setAutoSaveEnabled, resetToDefaults } = useSettingsStore();
+	const { autoSaveEnabled, setAutoSaveEnabled, resetToDefaults } =
+		useSettingsStore();
 
 	const handleOpenDataFolder = async () => {
 		try {
@@ -28,9 +40,7 @@ export const GeneralSettings = () => {
 					<SettingsIcon className="w-5 h-5" />
 					General
 				</CardTitle>
-				<CardDescription>
-					App-wide settings and data management
-				</CardDescription>
+				<CardDescription>App-wide settings and data management</CardDescription>
 			</CardHeader>
 			<CardContent className="space-y-6">
 				<div className="flex items-center justify-between">
@@ -98,11 +108,7 @@ export const GeneralSettings = () => {
 							Restore all settings to their default values
 						</p>
 					</div>
-					<Button
-						onClick={resetToDefaults}
-						variant="outline"
-						className="gap-2"
-					>
+					<Button onClick={resetToDefaults} variant="outline" className="gap-2">
 						<RotateCcw className="w-4 h-4" />
 						Reset
 					</Button>

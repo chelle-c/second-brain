@@ -1,9 +1,15 @@
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
-import useAppStore from "./useAppStore";
-import { useHistoryStore, HistoryAction } from "./useHistoryStore";
-import { Note, NotesFolder, NotesFolders, Subfolder, Tag } from "@/types/notes";
 import { AppToSave } from "@/types";
+import type {
+	Note,
+	NotesFolder,
+	NotesFolders,
+	Subfolder,
+	Tag,
+} from "@/types/notes";
+import useAppStore from "./useAppStore";
+import { type HistoryAction, useHistoryStore } from "./useHistoryStore";
 
 interface NotesStore {
 	// State
@@ -19,8 +25,14 @@ interface NotesStore {
 	setTags: (tags: Record<string, Tag>) => void;
 
 	// Notes
-	addNote: (note: Omit<Note, "id" | "createdAt" | "updatedAt" | "archived">) => string;
-	updateNote: (id: string, updates: Partial<Note>, recordHistory?: boolean) => void;
+	addNote: (
+		note: Omit<Note, "id" | "createdAt" | "updatedAt" | "archived">,
+	) => string;
+	updateNote: (
+		id: string,
+		updates: Partial<Note>,
+		recordHistory?: boolean,
+	) => void;
 	deleteNote: (id: string) => void;
 	archiveNote: (id: string) => void;
 	unarchiveNote: (id: string) => void;
@@ -90,7 +102,9 @@ export const useNotesStore = create<NotesStore>()(
 
 			set((state) => ({
 				notes: state.notes.map((note) =>
-					note.id === id ? { ...note, ...updates, updatedAt: new Date() } : note
+					note.id === id
+						? { ...note, ...updates, updatedAt: new Date() }
+						: note,
 				),
 			}));
 
@@ -141,7 +155,9 @@ export const useNotesStore = create<NotesStore>()(
 
 			set((state) => ({
 				notes: state.notes.map((note) =>
-					note.id === id ? { ...note, archived: true, updatedAt: new Date() } : note
+					note.id === id
+						? { ...note, archived: true, updatedAt: new Date() }
+						: note,
 				),
 			}));
 
@@ -162,7 +178,9 @@ export const useNotesStore = create<NotesStore>()(
 
 			set((state) => ({
 				notes: state.notes.map((note) =>
-					note.id === id ? { ...note, archived: false, updatedAt: new Date() } : note
+					note.id === id
+						? { ...note, archived: false, updatedAt: new Date() }
+						: note,
 				),
 			}));
 
@@ -190,15 +208,19 @@ export const useNotesStore = create<NotesStore>()(
 								...note,
 								folder: newFolder,
 								updatedAt: new Date(),
-						  }
-						: note
+							}
+						: note,
 				),
 			}));
 
 			if (oldNote) {
 				useHistoryStore.getState().pushAction({
 					type: "MOVE_NOTE",
-					data: { before: oldNote, after: { ...oldNote, folder: newFolder }, id },
+					data: {
+						before: oldNote,
+						after: { ...oldNote, folder: newFolder },
+						id,
+					},
 				});
 			}
 
@@ -266,28 +288,28 @@ export const useNotesStore = create<NotesStore>()(
 
 			// Capture affected notes before deletion (notes that will be moved to inbox)
 			const affectedNotes = get().notes.filter(
-				(note) => note.folder === id || childIds.includes(note.folder)
+				(note) => note.folder === id || childIds.includes(note.folder),
 			);
 
 			// Capture affected subfolders before deletion
 			const affectedSubfolders = get().subfolders.filter(
-				(sf) => sf.parent === id || sf.id === id
+				(sf) => sf.parent === id || sf.id === id,
 			);
 
 			set((state) => {
 				const updatedNotes = state.notes.map((note) =>
 					note.folder === id || childIds.includes(note.folder)
 						? { ...note, folder: "inbox" }
-						: note
+						: note,
 				);
 
 				const updatedSubfolders = state.subfolders.filter(
-					(sf) => sf.parent !== id && sf.id !== id
+					(sf) => sf.parent !== id && sf.id !== id,
 				);
 
 				return {
 					notesFolders: Object.fromEntries(
-						Object.entries(state.notesFolders).filter(([key]) => key !== id)
+						Object.entries(state.notesFolders).filter(([key]) => key !== id),
 					),
 					notes: updatedNotes,
 					subfolders: updatedSubfolders,
@@ -300,7 +322,10 @@ export const useNotesStore = create<NotesStore>()(
 					data: {
 						before: deletedFolder,
 						id,
-						affectedNotes: affectedNotes.map((n) => ({ id: n.id, folder: n.folder })),
+						affectedNotes: affectedNotes.map((n) => ({
+							id: n.id,
+							folder: n.folder,
+						})),
 						affectedSubfolders,
 					},
 				});
@@ -329,7 +354,9 @@ export const useNotesStore = create<NotesStore>()(
 
 		addSubFolder: (subfolder) => {
 			set((state) => {
-				const newFolders: NotesFolders = JSON.parse(JSON.stringify(state.notesFolders));
+				const newFolders: NotesFolders = JSON.parse(
+					JSON.stringify(state.notesFolders),
+				);
 				const parentFolder = newFolders[subfolder.parent];
 
 				if (parentFolder) {
@@ -356,7 +383,11 @@ export const useNotesStore = create<NotesStore>()(
 
 			useHistoryStore.getState().pushAction({
 				type: "CREATE_SUBFOLDER",
-				data: { after: subfolder, id: subfolder.id, parentId: subfolder.parent },
+				data: {
+					after: subfolder,
+					id: subfolder.id,
+					parentId: subfolder.parent,
+				},
 			});
 
 			if (useAppStore.getState().autoSaveEnabled) {
@@ -368,7 +399,9 @@ export const useNotesStore = create<NotesStore>()(
 			const oldSubfolder = get().subfolders.find((sf) => sf.id === id);
 
 			set((state) => {
-				const newFolders: NotesFolders = JSON.parse(JSON.stringify(state.notesFolders));
+				const newFolders: NotesFolders = JSON.parse(
+					JSON.stringify(state.notesFolders),
+				);
 
 				const folderEntries = Object.entries(newFolders);
 				for (const [, folder] of folderEntries) {
@@ -383,7 +416,7 @@ export const useNotesStore = create<NotesStore>()(
 				}
 
 				const newSubfolders = state.subfolders.map((subfolder) =>
-					subfolder.id === id ? { ...subfolder, ...updates } : subfolder
+					subfolder.id === id ? { ...subfolder, ...updates } : subfolder,
 				);
 
 				return {
@@ -418,19 +451,23 @@ export const useNotesStore = create<NotesStore>()(
 				: [];
 
 			set((state) => {
-				const newFolders: NotesFolders = JSON.parse(JSON.stringify(state.notesFolders));
+				const newFolders: NotesFolders = JSON.parse(
+					JSON.stringify(state.notesFolders),
+				);
 
 				const folderEntries = Object.entries(newFolders);
 				for (const [, folder] of folderEntries) {
 					if (folder.children) {
-						folder.children = folder.children.filter((child) => child.id !== id);
+						folder.children = folder.children.filter(
+							(child) => child.id !== id,
+						);
 					}
 				}
 
 				const newNotes = state.notes.map((note) =>
 					subfolder && note.folder === subfolder.id
 						? { ...note, folder: subfolder.parent || "inbox" }
-						: note
+						: note,
 				);
 
 				const newSubfolders = state.subfolders.filter((sf) => sf.id !== id);
@@ -449,7 +486,10 @@ export const useNotesStore = create<NotesStore>()(
 						before: subfolder,
 						id,
 						parentId: subfolder.parent,
-						affectedNotes: affectedNotes.map((n) => ({ id: n.id, folder: n.folder })),
+						affectedNotes: affectedNotes.map((n) => ({
+							id: n.id,
+							folder: n.folder,
+						})),
 					},
 				});
 			}
@@ -461,7 +501,9 @@ export const useNotesStore = create<NotesStore>()(
 
 		restoreSubfolder: (subfolder, parentId) => {
 			set((state) => {
-				const newFolders: NotesFolders = JSON.parse(JSON.stringify(state.notesFolders));
+				const newFolders: NotesFolders = JSON.parse(
+					JSON.stringify(state.notesFolders),
+				);
 				const parentFolder = newFolders[parentId];
 
 				if (parentFolder) {
@@ -523,7 +565,9 @@ export const useNotesStore = create<NotesStore>()(
 
 		deleteTag: (id) => {
 			set((state) => ({
-				tags: Object.fromEntries(Object.entries(state.tags).filter(([key]) => key !== id)),
+				tags: Object.fromEntries(
+					Object.entries(state.tags).filter(([key]) => key !== id),
+				),
 				notes: state.notes.map((note) => ({
 					...note,
 					tags: note.tags?.filter((tagId) => tagId !== id) || [],
@@ -552,16 +596,22 @@ export const useNotesStore = create<NotesStore>()(
 
 				case "UPDATE_NOTE":
 					// Undo update = restore old values
-					set((state) => ({
-						notes: state.notes.map((n) => (n.id === data.id ? data.before : n)),
-					}));
+					if (data.before) {
+						const beforeNote = data.before as Note;
+						set((state) => ({
+							notes: state.notes.map((n) =>
+								n.id === data.id ? beforeNote : n,
+							),
+						}));
+					}
 					break;
 
 				case "DELETE_NOTE":
 					// Undo delete = restore
 					if (data.before) {
+						const beforeNote = data.before as Note;
 						set((state) => ({
-							notes: [...state.notes, data.before],
+							notes: [...state.notes, beforeNote],
 						}));
 					}
 					break;
@@ -571,8 +621,11 @@ export const useNotesStore = create<NotesStore>()(
 				case "MOVE_NOTE":
 					// Restore previous state
 					if (data.before) {
+						const beforeNote = data.before as Note;
 						set((state) => ({
-							notes: state.notes.map((n) => (n.id === data.id ? data.before : n)),
+							notes: state.notes.map((n) =>
+								n.id === data.id ? beforeNote : n,
+							),
 						}));
 					}
 					break;
@@ -581,7 +634,9 @@ export const useNotesStore = create<NotesStore>()(
 					// Undo create = delete
 					set((state) => ({
 						notesFolders: Object.fromEntries(
-							Object.entries(state.notesFolders).filter(([key]) => key !== data.id)
+							Object.entries(state.notesFolders).filter(
+								([key]) => key !== data.id,
+							),
 						),
 					}));
 					break;
@@ -589,10 +644,11 @@ export const useNotesStore = create<NotesStore>()(
 				case "UPDATE_FOLDER":
 					// Undo update = restore old values
 					if (data.before) {
+						const beforeFolder = data.before as NotesFolder;
 						set((state) => ({
 							notesFolders: {
 								...state.notesFolders,
-								[data.id]: data.before,
+								[data.id]: beforeFolder,
 							},
 						}));
 					}
@@ -601,18 +657,19 @@ export const useNotesStore = create<NotesStore>()(
 				case "DELETE_FOLDER":
 					// Undo delete = restore folder and move notes back to original folders
 					if (data.before) {
+						const beforeFolder = data.before as NotesFolder;
 						set((state) => {
 							// Restore the folder
 							const newFolders = {
 								...state.notesFolders,
-								[data.id]: data.before,
+								[data.id]: beforeFolder,
 							};
 
 							// Restore notes to their original folders
 							let updatedNotes = state.notes;
 							if (data.affectedNotes && Array.isArray(data.affectedNotes)) {
 								const affectedNotesMap = new Map<string, string>(
-									data.affectedNotes.map((n) => [n.id, n.folder])
+									data.affectedNotes.map((n) => [n.id, n.folder]),
 								);
 								updatedNotes = state.notes.map((note) => {
 									const originalFolder = affectedNotesMap.get(note.id);
@@ -625,8 +682,14 @@ export const useNotesStore = create<NotesStore>()(
 
 							// Restore subfolders
 							let updatedSubfolders = state.subfolders;
-							if (data.affectedSubfolders && Array.isArray(data.affectedSubfolders)) {
-								updatedSubfolders = [...state.subfolders, ...data.affectedSubfolders];
+							if (
+								data.affectedSubfolders &&
+								Array.isArray(data.affectedSubfolders)
+							) {
+								updatedSubfolders = [
+									...state.subfolders,
+									...data.affectedSubfolders,
+								];
 							}
 
 							return {
@@ -642,13 +705,13 @@ export const useNotesStore = create<NotesStore>()(
 					// Undo create = remove from parent
 					set((state) => {
 						const newFolders: NotesFolders = JSON.parse(
-							JSON.stringify(state.notesFolders)
+							JSON.stringify(state.notesFolders),
 						);
 						if (data.parentId) {
 							const parentFolder = newFolders[data.parentId];
 							if (parentFolder?.children) {
 								parentFolder.children = parentFolder.children.filter(
-									(c) => c.id !== data.id
+									(c) => c.id !== data.id,
 								);
 							}
 						}
@@ -662,22 +725,23 @@ export const useNotesStore = create<NotesStore>()(
 				case "UPDATE_SUBFOLDER":
 					// Undo update = restore old values
 					if (data.before) {
+						const beforeSubfolder = data.before as Subfolder;
 						set((state) => {
 							const newFolders: NotesFolders = JSON.parse(
-								JSON.stringify(state.notesFolders)
+								JSON.stringify(state.notesFolders),
 							);
 							const folderEntries = Object.entries(newFolders);
 							for (const [, folder] of folderEntries) {
 								if (folder.children) {
 									folder.children = folder.children.map((c) =>
-										c.id === data.id ? { ...c, name: data.before.name } : c
+										c.id === data.id ? { ...c, name: beforeSubfolder.name } : c,
 									);
 								}
 							}
 							return {
 								notesFolders: newFolders,
 								subfolders: state.subfolders.map((sf) =>
-									sf.id === data.id ? data.before : sf
+									sf.id === data.id ? beforeSubfolder : sf,
 								),
 							};
 						});
@@ -687,9 +751,10 @@ export const useNotesStore = create<NotesStore>()(
 				case "DELETE_SUBFOLDER":
 					// Undo delete = restore subfolder and move notes back to original folder
 					if (data.before && data.parentId) {
+						const beforeSubfolder = data.before as Subfolder;
 						set((state) => {
 							const newFolders: NotesFolders = JSON.parse(
-								JSON.stringify(state.notesFolders)
+								JSON.stringify(state.notesFolders),
 							);
 							if (data.parentId) {
 								const parentFolder = newFolders[data.parentId];
@@ -697,8 +762,8 @@ export const useNotesStore = create<NotesStore>()(
 									parentFolder.children = [];
 								}
 								parentFolder.children.push({
-									id: data.before.id,
-									name: data.before.name,
+									id: beforeSubfolder.id,
+									name: beforeSubfolder.name,
 									parent: data.parentId,
 									children: [],
 								});
@@ -708,7 +773,7 @@ export const useNotesStore = create<NotesStore>()(
 							let updatedNotes = state.notes;
 							if (data.affectedNotes && Array.isArray(data.affectedNotes)) {
 								const affectedNotesMap = new Map<string, string>(
-									data.affectedNotes.map((n) => [n.id, n.folder])
+									data.affectedNotes.map((n) => [n.id, n.folder]),
 								);
 								updatedNotes = state.notes.map((note) => {
 									const originalFolder = affectedNotesMap.get(note.id);
@@ -721,7 +786,7 @@ export const useNotesStore = create<NotesStore>()(
 
 							return {
 								notesFolders: newFolders,
-								subfolders: [...state.subfolders, data.before],
+								subfolders: [...state.subfolders, beforeSubfolder],
 								notes: updatedNotes,
 							};
 						});
@@ -744,8 +809,9 @@ export const useNotesStore = create<NotesStore>()(
 				case "CREATE_NOTE":
 					// Redo create = add
 					if (data.after) {
+						const afterNote = data.after as Note;
 						set((state) => ({
-							notes: [...state.notes, data.after],
+							notes: [...state.notes, afterNote],
 						}));
 					}
 					break;
@@ -753,8 +819,9 @@ export const useNotesStore = create<NotesStore>()(
 				case "UPDATE_NOTE":
 					// Redo update = apply new values
 					if (data.after) {
+						const afterNote = data.after as Note;
 						set((state) => ({
-							notes: state.notes.map((n) => (n.id === data.id ? data.after : n)),
+							notes: state.notes.map((n) => (n.id === data.id ? afterNote : n)),
 						}));
 					}
 					break;
@@ -770,7 +837,7 @@ export const useNotesStore = create<NotesStore>()(
 					// Redo archive
 					set((state) => ({
 						notes: state.notes.map((n) =>
-							n.id === data.id ? { ...n, archived: true } : n
+							n.id === data.id ? { ...n, archived: true } : n,
 						),
 					}));
 					break;
@@ -779,7 +846,7 @@ export const useNotesStore = create<NotesStore>()(
 					// Redo unarchive
 					set((state) => ({
 						notes: state.notes.map((n) =>
-							n.id === data.id ? { ...n, archived: false } : n
+							n.id === data.id ? { ...n, archived: false } : n,
 						),
 					}));
 					break;
@@ -787,8 +854,9 @@ export const useNotesStore = create<NotesStore>()(
 				case "MOVE_NOTE":
 					// Redo move
 					if (data.after) {
+						const afterNote = data.after as Note;
 						set((state) => ({
-							notes: state.notes.map((n) => (n.id === data.id ? data.after : n)),
+							notes: state.notes.map((n) => (n.id === data.id ? afterNote : n)),
 						}));
 					}
 					break;
@@ -796,10 +864,11 @@ export const useNotesStore = create<NotesStore>()(
 				case "CREATE_FOLDER":
 					// Redo create
 					if (data.after) {
+						const afterFolder = data.after as NotesFolder;
 						set((state) => ({
 							notesFolders: {
 								...state.notesFolders,
-								[data.id]: data.after,
+								[data.id]: afterFolder,
 							},
 						}));
 					}
@@ -808,10 +877,11 @@ export const useNotesStore = create<NotesStore>()(
 				case "UPDATE_FOLDER":
 					// Redo update
 					if (data.after) {
+						const afterFolder = data.after as NotesFolder;
 						set((state) => ({
 							notesFolders: {
 								...state.notesFolders,
-								[data.id]: data.after,
+								[data.id]: afterFolder,
 							},
 						}));
 					}
@@ -824,7 +894,7 @@ export const useNotesStore = create<NotesStore>()(
 						let updatedNotes = state.notes;
 						if (data.affectedNotes && Array.isArray(data.affectedNotes)) {
 							const affectedIds = new Set(
-								data.affectedNotes.map((n: { id: string }) => n.id)
+								data.affectedNotes.map((n: { id: string }) => n.id),
 							);
 							updatedNotes = state.notes.map((note) => {
 								if (affectedIds.has(note.id)) {
@@ -836,18 +906,23 @@ export const useNotesStore = create<NotesStore>()(
 
 						// Remove subfolders
 						let updatedSubfolders = state.subfolders;
-						if (data.affectedSubfolders && Array.isArray(data.affectedSubfolders)) {
+						if (
+							data.affectedSubfolders &&
+							Array.isArray(data.affectedSubfolders)
+						) {
 							const affectedSubIds = new Set(
-								data.affectedSubfolders.map((sf: { id: string }) => sf.id)
+								data.affectedSubfolders.map((sf: { id: string }) => sf.id),
 							);
 							updatedSubfolders = state.subfolders.filter(
-								(sf) => !affectedSubIds.has(sf.id)
+								(sf) => !affectedSubIds.has(sf.id),
 							);
 						}
 
 						return {
 							notesFolders: Object.fromEntries(
-								Object.entries(state.notesFolders).filter(([key]) => key !== data.id)
+								Object.entries(state.notesFolders).filter(
+									([key]) => key !== data.id,
+								),
 							),
 							notes: updatedNotes,
 							subfolders: updatedSubfolders,
@@ -858,9 +933,10 @@ export const useNotesStore = create<NotesStore>()(
 				case "CREATE_SUBFOLDER":
 					// Redo create
 					if (data.after && data.parentId) {
+						const afterSubfolder = data.after as Subfolder;
 						set((state) => {
 							const newFolders: NotesFolders = JSON.parse(
-								JSON.stringify(state.notesFolders)
+								JSON.stringify(state.notesFolders),
 							);
 							if (data.parentId) {
 								const parentFolder = newFolders[data.parentId];
@@ -868,15 +944,15 @@ export const useNotesStore = create<NotesStore>()(
 									parentFolder.children = [];
 								}
 								parentFolder.children.push({
-									id: data.after.id,
-									name: data.after.name,
+									id: afterSubfolder.id,
+									name: afterSubfolder.name,
 									parent: data.parentId,
 									children: [],
 								});
 							}
 							return {
 								notesFolders: newFolders,
-								subfolders: [...state.subfolders, data.after],
+								subfolders: [...state.subfolders, afterSubfolder],
 							};
 						});
 					}
@@ -885,22 +961,23 @@ export const useNotesStore = create<NotesStore>()(
 				case "UPDATE_SUBFOLDER":
 					// Redo update
 					if (data.after) {
+						const afterSubfolder = data.after as Subfolder;
 						set((state) => {
 							const newFolders: NotesFolders = JSON.parse(
-								JSON.stringify(state.notesFolders)
+								JSON.stringify(state.notesFolders),
 							);
 							const folderEntries = Object.entries(newFolders);
 							for (const [, folder] of folderEntries) {
 								if (folder.children) {
 									folder.children = folder.children.map((c) =>
-										c.id === data.id ? { ...c, name: data.after.name } : c
+										c.id === data.id ? { ...c, name: afterSubfolder.name } : c,
 									);
 								}
 							}
 							return {
 								notesFolders: newFolders,
 								subfolders: state.subfolders.map((sf) =>
-									sf.id === data.id ? data.after : sf
+									sf.id === data.id ? afterSubfolder : sf,
 								),
 							};
 						});
@@ -911,12 +988,14 @@ export const useNotesStore = create<NotesStore>()(
 					// Redo delete = remove subfolder and move notes to parent
 					set((state) => {
 						const newFolders: NotesFolders = JSON.parse(
-							JSON.stringify(state.notesFolders)
+							JSON.stringify(state.notesFolders),
 						);
 						const folderEntries = Object.entries(newFolders);
 						for (const [, folder] of folderEntries) {
 							if (folder.children) {
-								folder.children = folder.children.filter((c) => c.id !== data.id);
+								folder.children = folder.children.filter(
+									(c) => c.id !== data.id,
+								);
 							}
 						}
 
@@ -924,7 +1003,7 @@ export const useNotesStore = create<NotesStore>()(
 						let updatedNotes = state.notes;
 						if (data.affectedNotes && Array.isArray(data.affectedNotes)) {
 							const affectedIds = new Set(
-								data.affectedNotes.map((n: { id: string }) => n.id)
+								data.affectedNotes.map((n: { id: string }) => n.id),
 							);
 							updatedNotes = state.notes.map((note) => {
 								if (affectedIds.has(note.id)) {
@@ -947,5 +1026,5 @@ export const useNotesStore = create<NotesStore>()(
 				useAppStore.getState().saveToFile(AppToSave.NotesApp);
 			}
 		},
-	}))
+	})),
 );

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface ToggleOption<T extends string> {
 	value: T;
@@ -71,6 +71,7 @@ export function AnimatedToggle<T extends string>({
 			{/* Buttons */}
 			{options.map((option, index) => (
 				<button
+					type="button"
 					key={option.value}
 					ref={(el) => {
 						buttonsRef.current[index] = el;

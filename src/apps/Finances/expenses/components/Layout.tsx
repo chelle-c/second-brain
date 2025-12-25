@@ -1,5 +1,5 @@
+import { Redo2, Undo2 } from "lucide-react";
 import { AnimatedToggle } from "@/components/AnimatedToggle";
-import { Undo2, Redo2 } from "lucide-react";
 
 interface LayoutProps {
 	children: React.ReactNode;

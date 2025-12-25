@@ -1,28 +1,32 @@
+import {
+	Brain,
+	ChevronRight,
+	DollarSign,
+	Network,
+	Settings,
+	StickyNote,
+	TrendingUp,
+} from "lucide-react";
 import { NavLink } from "react-router";
-import useAppStore from "@/stores/useAppStore";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+	Collapsible,
+	CollapsibleContent,
+	CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
 	Sidebar,
 	SidebarContent,
+	SidebarFooter,
 	SidebarGroup,
 	SidebarGroupContent,
+	SidebarHeader,
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
-	SidebarFooter,
-	SidebarHeader,
 	SidebarMenuSub,
 	SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
-import {
-	StickyNote,
-	DollarSign,
-	TrendingUp,
-	Network,
-	Settings,
-	ChevronRight,
-	Brain,
-} from "lucide-react";
+import useAppStore from "@/stores/useAppStore";
 
 export function AppSidebar() {
 	const { lastSaved } = useAppStore();
@@ -90,7 +94,10 @@ export function AppSidebar() {
 											<CollapsibleTrigger asChild>
 												<SidebarMenuButton className="group/btn cursor-pointer h-10 px-3 hover:bg-sidebar-accent rounded-lg transition-colors">
 													<div className="w-full flex items-center gap-3">
-														<item.icon size={18} className="text-sidebar-foreground/70 group-hover/btn:text-sidebar-accent-foreground transition-colors" />
+														<item.icon
+															size={18}
+															className="text-sidebar-foreground/70 group-hover/btn:text-sidebar-accent-foreground transition-colors"
+														/>
 														<span className="flex-1 text-sm font-medium group-hover/btn:text-sidebar-accent-foreground transition-colors">
 															{item.title}
 														</span>
@@ -105,10 +112,7 @@ export function AppSidebar() {
 												<SidebarMenuSub className="mt-1 ml-4 pl-3 border-l-2 border-sidebar-border">
 													{item.subItems.map((subItem) => (
 														<SidebarMenuSubItem key={subItem.title}>
-															<NavLink
-																to={`/${subItem.url}`}
-																className="block"
-															>
+															<NavLink to={`/${subItem.url}`} className="block">
 																{({ isActive }) => (
 																	<SidebarMenuButton
 																		className={`group/btn cursor-pointer h-9 px-3 rounded-lg transition-colors ${
@@ -125,11 +129,13 @@ export function AppSidebar() {
 																					: "text-sidebar-foreground/70 group-hover/btn:text-sidebar-accent-foreground"
 																			}`}
 																		/>
-																		<span className={`text-sm font-medium transition-colors ${
-																			isActive
-																				? "text-sidebar-accent-foreground"
-																				: "group-hover/btn:text-sidebar-accent-foreground"
-																		}`}>
+																		<span
+																			className={`text-sm font-medium transition-colors ${
+																				isActive
+																					? "text-sidebar-accent-foreground"
+																					: "group-hover/btn:text-sidebar-accent-foreground"
+																			}`}
+																		>
 																			{subItem.title}
 																		</span>
 																	</SidebarMenuButton>
@@ -143,10 +149,7 @@ export function AppSidebar() {
 									</Collapsible>
 								) : (
 									<SidebarMenuItem key={item.title}>
-										<NavLink
-											to={`/${item.url}`}
-											className="block"
-										>
+										<NavLink to={`/${item.url}`} className="block">
 											{({ isActive }) => (
 												<SidebarMenuButton
 													className={`group/btn cursor-pointer h-10 px-3 rounded-lg transition-colors ${
@@ -163,16 +166,20 @@ export function AppSidebar() {
 																: "text-sidebar-foreground/70 group-hover/btn:text-sidebar-accent-foreground"
 														}`}
 													/>
-													<span className={`text-sm font-medium transition-colors ${
-														isActive
-															? "text-sidebar-accent-foreground"
-															: "group-hover/btn:text-sidebar-accent-foreground"
-													}`}>{item.title}</span>
+													<span
+														className={`text-sm font-medium transition-colors ${
+															isActive
+																? "text-sidebar-accent-foreground"
+																: "group-hover/btn:text-sidebar-accent-foreground"
+														}`}
+													>
+														{item.title}
+													</span>
 												</SidebarMenuButton>
 											)}
 										</NavLink>
 									</SidebarMenuItem>
-								)
+								),
 							)}
 						</SidebarMenu>
 					</SidebarGroupContent>

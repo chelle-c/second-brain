@@ -1,10 +1,10 @@
-import { useEffect, useMemo } from "react";
-import { DeleteModal } from "./DeleteModal";
-import { useExpenseStore } from "@/stores/useExpenseStore";
-import { ExpenseTable } from "./ExpenseTable";
 import { isSameMonth } from "date-fns";
-import { DollarSign, Calendar, Clock } from "lucide-react";
+import { Calendar, Clock, DollarSign } from "lucide-react";
+import { useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
+import { useExpenseStore } from "@/stores/useExpenseStore";
+import { ConfirmationModal } from "@/components/ConfirmationModal";
+import { ExpenseTable } from "./ExpenseTable";
 
 export const ExpenseList: React.FC = () => {
 	const {
@@ -38,18 +38,21 @@ export const ExpenseList: React.FC = () => {
 				case "remaining":
 					// Show unpaid expenses (both Need and Want types)
 					return (
-						!expense.isPaid && isSameMonth(expense.dueDate || new Date(), selectedMonth)
+						!expense.isPaid &&
+						isSameMonth(expense.dueDate || new Date(), selectedMonth)
 					);
 				case "required":
 					// Show only "Need" type expenses (paid or unpaid)
-					return expense.type === "need" && isSameMonth(expense.dueDate || new Date(), selectedMonth);
-				case "all":
+					return (
+						expense.type === "need" &&
+						isSameMonth(expense.dueDate || new Date(), selectedMonth)
+					);
 				default:
 					// Show all expenses
 					return true;
 			}
 		});
-	}, [monthlyExpenses, overviewMode]);
+	}, [monthlyExpenses, overviewMode, selectedMonth]);
 
 	// Calculate the visible count (respecting showPaid toggle for display purposes)
 	const visibleCount = useMemo(() => {
@@ -87,7 +90,9 @@ export const ExpenseList: React.FC = () => {
 			case "remaining":
 				return " (Remaining Unpaid)";
 			case "required":
-				return showPaidExpenses ? " (Required - All)" : " (Required - Unpaid Only)";
+				return showPaidExpenses
+					? " (Required - All)"
+					: " (Required - Unpaid Only)";
 			case "all":
 				return showPaidExpenses ? "" : " (Unpaid Only)";
 			default:
@@ -101,23 +106,27 @@ export const ExpenseList: React.FC = () => {
 				<h3 className="text-xl font-bold text-foreground mb-4">
 					Monthly Expenses{getFilterLabel()}
 				</h3>
-				{(overviewMode !== "all" || !showPaidExpenses) && monthlyExpenses.length > 0 && (
-					<p className="text-sm text-muted-foreground mb-4">
-						Showing 0 of {monthlyExpenses.length} expenses
-					</p>
-				)}
+				{(overviewMode !== "all" || !showPaidExpenses) &&
+					monthlyExpenses.length > 0 && (
+						<p className="text-sm text-muted-foreground mb-4">
+							Showing 0 of {monthlyExpenses.length} expenses
+						</p>
+					)}
 				<div className="text-center py-12">
-					<DollarSign className="mx-auto text-muted-foreground/30 mb-4" size={48} />
+					<DollarSign
+						className="mx-auto text-muted-foreground/30 mb-4"
+						size={48}
+					/>
 					<p className="text-muted-foreground">
 						{overviewMode === "remaining"
 							? "All expenses are paid!"
 							: overviewMode === "required"
-							? showPaidExpenses
-								? "No required expenses for this month."
-								: "All required expenses are paid!"
-							: showPaidExpenses
-							? "No expenses for this month."
-							: "All expenses are paid!"}
+								? showPaidExpenses
+									? "No required expenses for this month."
+									: "All required expenses are paid!"
+								: showPaidExpenses
+									? "No expenses for this month."
+									: "All expenses are paid!"}
 					</p>
 					{overviewMode === "all" && showPaidExpenses && (
 						<p className="text-muted-foreground/70 text-sm mt-2">
@@ -145,9 +154,13 @@ export const ExpenseList: React.FC = () => {
 					/>
 				)}
 
-				<DeleteModal
+				<ConfirmationModal
 					isOpen={deleteModal.isOpen}
-					expenseName={deleteModal.name}
+					title="Confirm Deletion"
+					message={`Are you sure you want to delete "${deleteModal.name}"? This action cannot be undone.`}
+					confirmLabel="Delete"
+					cancelLabel="Cancel"
+					variant="danger"
 					onConfirm={handleDeleteConfirm}
 					onCancel={handleDeleteCancel}
 				/>
@@ -172,8 +185,14 @@ export const ExpenseList: React.FC = () => {
 					<Button
 						variant="secondary"
 						size="sm"
-						onClick={() => setShowMonthlyRelativeDates(!showMonthlyRelativeDates)}
-						title={showMonthlyRelativeDates ? "Show actual dates" : "Show relative dates"}
+						onClick={() =>
+							setShowMonthlyRelativeDates(!showMonthlyRelativeDates)
+						}
+						title={
+							showMonthlyRelativeDates
+								? "Show actual dates"
+								: "Show relative dates"
+						}
 					>
 						{showMonthlyRelativeDates ? (
 							<>
@@ -204,9 +223,13 @@ export const ExpenseList: React.FC = () => {
 				showRelativeDates={showMonthlyRelativeDates}
 			/>
 
-			<DeleteModal
+			<ConfirmationModal
 				isOpen={deleteModal.isOpen}
-				expenseName={deleteModal.name}
+				title="Confirm Deletion"
+				message={`Are you sure you want to delete "${deleteModal.name}"? This action cannot be undone.`}
+				confirmLabel="Delete"
+				cancelLabel="Cancel"
+				variant="danger"
 				onConfirm={handleDeleteConfirm}
 				onCancel={handleDeleteCancel}
 			/>

@@ -1,19 +1,19 @@
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
-import useAppStore from "./useAppStore";
-import { useHistoryStore, HistoryAction } from "./useHistoryStore";
-import {
-	IncomeEntry,
-	IncomeWeeklyTargets,
-	IncomeDayData,
-	IncomeParsedEntry,
-	IncomeWeekSelection,
-	IncomeWeekInfo,
-	IncomeMonthlyData,
-	IncomeYearlyData,
-	IncomeViewType,
-} from "@/types/income";
 import { AppToSave } from "@/types";
+import type {
+	IncomeDayData,
+	IncomeEntry,
+	IncomeMonthlyData,
+	IncomeParsedEntry,
+	IncomeViewType,
+	IncomeWeekInfo,
+	IncomeWeeklyTargets,
+	IncomeWeekSelection,
+	IncomeYearlyData,
+} from "@/types/income";
+import useAppStore from "./useAppStore";
+import { type HistoryAction, useHistoryStore } from "./useHistoryStore";
 
 interface IncomeStore {
 	//State
@@ -64,9 +64,12 @@ export const useIncomeStore = create<IncomeStore>()(
 		incomeViewType: "monthly",
 
 		// Set state
-		setIncomeEntries: (entries: IncomeEntry[]) => set({ incomeEntries: entries }),
-		setIncomeWeeklyTargets: (targets: IncomeWeeklyTargets[]) => set({ incomeWeeklyTargets: targets }),
-		setIncomeViewType: (viewType: IncomeViewType) => set({ incomeViewType: viewType }),
+		setIncomeEntries: (entries: IncomeEntry[]) =>
+			set({ incomeEntries: entries }),
+		setIncomeWeeklyTargets: (targets: IncomeWeeklyTargets[]) =>
+			set({ incomeWeeklyTargets: targets }),
+		setIncomeViewType: (viewType: IncomeViewType) =>
+			set({ incomeViewType: viewType }),
 
 		// Income actions
 		addIncomeEntry: (paymentData) => {
@@ -74,7 +77,9 @@ export const useIncomeStore = create<IncomeStore>()(
 				...paymentData,
 			};
 
-			const existingEntry = get().incomeEntries.find((p) => p.date === entry.date);
+			const existingEntry = get().incomeEntries.find(
+				(p) => p.date === entry.date,
+			);
 			if (existingEntry) {
 				// Store before state for history (this is an update to existing entry)
 				const beforeEntry = { ...existingEntry };
@@ -82,7 +87,7 @@ export const useIncomeStore = create<IncomeStore>()(
 				set((state) => ({
 					...state,
 					incomeEntries: state.incomeEntries.map((payment) =>
-						payment.date === entry.date ? { ...payment, ...entry } : payment
+						payment.date === entry.date ? { ...payment, ...entry } : payment,
 					),
 				}));
 
@@ -110,13 +115,15 @@ export const useIncomeStore = create<IncomeStore>()(
 		},
 
 		updateIncomeEntry: (updates) => {
-			const existingEntry = get().incomeEntries.find((p) => p.date === updates.date);
+			const existingEntry = get().incomeEntries.find(
+				(p) => p.date === updates.date,
+			);
 			const beforeEntry = existingEntry ? { ...existingEntry } : null;
 
 			set((state) => ({
 				...state,
 				incomeEntries: state.incomeEntries.map((payment) =>
-					payment.date === updates.date ? { ...payment, ...updates } : payment
+					payment.date === updates.date ? { ...payment, ...updates } : payment,
 				),
 			}));
 
@@ -138,7 +145,9 @@ export const useIncomeStore = create<IncomeStore>()(
 
 			set((state) => ({
 				...state,
-				incomeEntries: state.incomeEntries.filter((payment) => payment.id !== id),
+				incomeEntries: state.incomeEntries.filter(
+					(payment) => payment.id !== id,
+				),
 			}));
 
 			// Record history
@@ -184,12 +193,14 @@ export const useIncomeStore = create<IncomeStore>()(
 		},
 
 		updateIncomeWeeklyTarget: (updates) => {
-			const existingTarget = get().incomeWeeklyTargets.find((t) => t.id === updates.id);
+			const existingTarget = get().incomeWeeklyTargets.find(
+				(t) => t.id === updates.id,
+			);
 			const beforeTarget = existingTarget ? { ...existingTarget } : null;
 
 			set((state) => ({
 				incomeWeeklyTargets: state.incomeWeeklyTargets.map((target) =>
-					target.id === updates.id ? { ...target, ...updates } : target
+					target.id === updates.id ? { ...target, ...updates } : target,
 				),
 			}));
 
@@ -210,7 +221,9 @@ export const useIncomeStore = create<IncomeStore>()(
 			const deletedTarget = get().incomeWeeklyTargets.find((t) => t.id === id);
 
 			set((state) => ({
-				incomeWeeklyTargets: state.incomeWeeklyTargets.filter((target) => target.id !== id),
+				incomeWeeklyTargets: state.incomeWeeklyTargets.filter(
+					(target) => target.id !== id,
+				),
 			}));
 
 			// Record history
@@ -254,9 +267,10 @@ export const useIncomeStore = create<IncomeStore>()(
 				case "UPDATE_INCOME_ENTRY":
 					// Undo update = restore previous state
 					if (data.before) {
+						const beforeEntry = data.before as IncomeEntry;
 						set((state) => ({
 							incomeEntries: state.incomeEntries.map((e) =>
-								e.id === data.id ? data.before : e
+								e.id === data.id ? beforeEntry : e,
 							),
 						}));
 					}
@@ -265,8 +279,9 @@ export const useIncomeStore = create<IncomeStore>()(
 				case "DELETE_INCOME_ENTRY":
 					// Undo delete = restore
 					if (data.before) {
+						const beforeEntry = data.before as IncomeEntry;
 						set((state) => ({
-							incomeEntries: [...state.incomeEntries, data.before],
+							incomeEntries: [...state.incomeEntries, beforeEntry],
 						}));
 					}
 					break;
@@ -274,16 +289,19 @@ export const useIncomeStore = create<IncomeStore>()(
 				case "CREATE_WEEKLY_TARGET":
 					// Undo create = delete
 					set((state) => ({
-						incomeWeeklyTargets: state.incomeWeeklyTargets.filter((t) => t.id !== data.id),
+						incomeWeeklyTargets: state.incomeWeeklyTargets.filter(
+							(t) => t.id !== data.id,
+						),
 					}));
 					break;
 
 				case "UPDATE_WEEKLY_TARGET":
 					// Undo update = restore previous state
 					if (data.before) {
+						const beforeTarget = data.before as IncomeWeeklyTargets;
 						set((state) => ({
 							incomeWeeklyTargets: state.incomeWeeklyTargets.map((t) =>
-								t.id === data.id ? data.before : t
+								t.id === data.id ? beforeTarget : t,
 							),
 						}));
 					}
@@ -292,8 +310,9 @@ export const useIncomeStore = create<IncomeStore>()(
 				case "DELETE_WEEKLY_TARGET":
 					// Undo delete = restore
 					if (data.before) {
+						const beforeTarget = data.before as IncomeWeeklyTargets;
 						set((state) => ({
-							incomeWeeklyTargets: [...state.incomeWeeklyTargets, data.before],
+							incomeWeeklyTargets: [...state.incomeWeeklyTargets, beforeTarget],
 						}));
 					}
 					break;
@@ -314,8 +333,9 @@ export const useIncomeStore = create<IncomeStore>()(
 				case "CREATE_INCOME_ENTRY":
 					// Redo create = add back
 					if (data.after) {
+						const afterEntry = data.after as IncomeEntry;
 						set((state) => ({
-							incomeEntries: [...state.incomeEntries, data.after],
+							incomeEntries: [...state.incomeEntries, afterEntry],
 						}));
 					}
 					break;
@@ -323,9 +343,10 @@ export const useIncomeStore = create<IncomeStore>()(
 				case "UPDATE_INCOME_ENTRY":
 					// Redo update = apply new state
 					if (data.after) {
+						const afterEntry = data.after as IncomeEntry;
 						set((state) => ({
 							incomeEntries: state.incomeEntries.map((e) =>
-								e.id === data.id ? data.after : e
+								e.id === data.id ? afterEntry : e,
 							),
 						}));
 					}
@@ -341,8 +362,9 @@ export const useIncomeStore = create<IncomeStore>()(
 				case "CREATE_WEEKLY_TARGET":
 					// Redo create = add back
 					if (data.after) {
+						const afterTarget = data.after as IncomeWeeklyTargets;
 						set((state) => ({
-							incomeWeeklyTargets: [...state.incomeWeeklyTargets, data.after],
+							incomeWeeklyTargets: [...state.incomeWeeklyTargets, afterTarget],
 						}));
 					}
 					break;
@@ -350,9 +372,10 @@ export const useIncomeStore = create<IncomeStore>()(
 				case "UPDATE_WEEKLY_TARGET":
 					// Redo update = apply new state
 					if (data.after) {
+						const afterTarget = data.after as IncomeWeeklyTargets;
 						set((state) => ({
 							incomeWeeklyTargets: state.incomeWeeklyTargets.map((t) =>
-								t.id === data.id ? data.after : t
+								t.id === data.id ? afterTarget : t,
 							),
 						}));
 					}
@@ -361,7 +384,9 @@ export const useIncomeStore = create<IncomeStore>()(
 				case "DELETE_WEEKLY_TARGET":
 					// Redo delete = remove
 					set((state) => ({
-						incomeWeeklyTargets: state.incomeWeeklyTargets.filter((t) => t.id !== data.id),
+						incomeWeeklyTargets: state.incomeWeeklyTargets.filter(
+							(t) => t.id !== data.id,
+						),
 					}));
 					break;
 			}
@@ -370,5 +395,5 @@ export const useIncomeStore = create<IncomeStore>()(
 				useAppStore.getState().saveToFile(AppToSave.Income);
 			}
 		},
-	}))
+	})),
 );

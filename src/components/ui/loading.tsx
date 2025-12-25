@@ -1,5 +1,5 @@
-import { Spinner } from "./spinner";
 import { cn } from "@/lib/utils";
+import { Spinner } from "./spinner";
 
 interface LoadingProps {
 	className?: string;
@@ -14,9 +14,19 @@ const sizeClasses = {
 	lg: "size-8",
 };
 
-function Loading({ className, size = "md", text, fullScreen = false }: LoadingProps) {
+function Loading({
+	className,
+	size = "md",
+	text,
+	fullScreen = false,
+}: LoadingProps) {
 	const content = (
-		<div className={cn("flex flex-col items-center justify-center gap-3", className)}>
+		<div
+			className={cn(
+				"flex flex-col items-center justify-center gap-3",
+				className,
+			)}
+		>
 			<Spinner className={cn(sizeClasses[size], "text-primary")} />
 			{text && <span className="text-sm text-muted-foreground">{text}</span>}
 		</div>

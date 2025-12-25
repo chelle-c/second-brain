@@ -1,8 +1,8 @@
-import { useState, useEffect, Fragment } from "react";
 import { Group } from "@visx/group";
-import { Pie } from "@visx/shape";
-import { scaleOrdinal } from "@visx/scale";
 import { ParentSize } from "@visx/responsive";
+import { scaleOrdinal } from "@visx/scale";
+import { Pie } from "@visx/shape";
+import { Fragment, useEffect, useState } from "react";
 
 export interface PieChartData {
 	name: string;
@@ -46,7 +46,7 @@ const PieChartInner = ({
 			const elapsed = currentTime - startTime;
 			const progress = Math.min(elapsed / duration, 1);
 			// Ease-out cubic for smooth deceleration
-			const eased = 1 - Math.pow(1 - progress, 3);
+			const eased = 1 - (1 - progress) ** 3;
 			setAnimationProgress(eased);
 
 			if (progress < 1) {
@@ -74,7 +74,8 @@ const PieChartInner = ({
 
 	return (
 		<div style={{ position: "relative", width, height }}>
-			<svg width={width} height={height}>
+			<svg width={width} height={height} aria-label="Pie chart">
+				<title>Pie chart</title>
 				<Group
 					top={centerY}
 					left={centerX}
@@ -91,9 +92,11 @@ const PieChartInner = ({
 					>
 						{(pie) => (
 							<>
-								{pie.arcs.map((arc, i) => (
-									<Fragment key={`arc-${i}`}>
+								{pie.arcs.map((arc) => (
+									<Fragment key={`arc-${arc.data.name}`}>
+										{/* biome-ignore lint/a11y/noStaticElementInteractions: SVG path needs mouse events for tooltip */}
 										<path
+											aria-label={`${arc.data.name}: ${arc.data.value}`}
 											d={pie.path(arc) || ""}
 											fill={colorScale(arc.data.name)}
 											opacity={opacity}
@@ -119,7 +122,7 @@ const PieChartInner = ({
 								))}
 								{/* Draw divider lines from center to edge at each arc boundary */}
 								{data.length > 1 &&
-									pie.arcs.map((arc, i) => {
+									pie.arcs.map((arc) => {
 										const outerRadius = radius * 0.8;
 										// Line from center to outer edge at start angle
 										const x =
@@ -128,7 +131,7 @@ const PieChartInner = ({
 											Math.sin(arc.startAngle - Math.PI / 2) * outerRadius;
 										return (
 											<line
-												key={`divider-${i}`}
+												key={`divider-${arc.data.name}`}
 												x1={0}
 												y1={0}
 												x2={x}

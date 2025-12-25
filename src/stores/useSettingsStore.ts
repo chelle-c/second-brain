@@ -1,14 +1,14 @@
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
-import useAppStore from "./useAppStore";
-import {
-	AppSettings,
-	DEFAULT_SETTINGS,
-	ExpenseViewType,
-	WeekStartDay,
-} from "@/types/settings";
-import { IncomeViewType } from "@/types/income";
 import { AppToSave } from "@/types";
+import type { IncomeViewType } from "@/types/income";
+import {
+	type AppSettings,
+	DEFAULT_SETTINGS,
+	type ExpenseViewType,
+	type WeekStartDay,
+} from "@/types/settings";
+import useAppStore from "./useAppStore";
 
 interface SettingsStore extends AppSettings {
 	// Actions
@@ -126,5 +126,5 @@ export const useSettingsStore = create<SettingsStore>()(
 				useAppStore.getState().saveToFile(AppToSave.All);
 			}
 		},
-	}))
+	})),
 );

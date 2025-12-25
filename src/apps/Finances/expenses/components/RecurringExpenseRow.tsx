@@ -1,23 +1,26 @@
-import { useState } from "react";
 import {
-	ChevronDown,
-	ChevronRight,
-	Edit2,
-	Trash2,
 	Archive,
 	ArchiveRestore,
-	RefreshCw,
 	Check,
 	CheckCircle,
-	RotateCcw,
+	ChevronDown,
+	ChevronRight,
 	Copy,
+	Edit2,
+	RefreshCw,
+	RotateCcw,
+	Trash2,
 } from "lucide-react";
+import { useState } from "react";
 import { formatCurrency, formatDate } from "@/lib/dateUtils";
-import { DEFAULT_CATEGORY_COLORS, getCategoryDisplayColor } from "@/lib/expenseHelpers";
-import { Expense, ImportanceLevel } from "@/types/expense";
+import {
+	DEFAULT_CATEGORY_COLORS,
+	getCategoryDisplayColor,
+} from "@/lib/expenseHelpers";
 import { useExpenseStore } from "@/stores/useExpenseStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
 import { useThemeStore } from "@/stores/useThemeStore";
+import type { Expense, ImportanceLevel } from "@/types/expense";
 
 interface RecurringExpenseRowProps {
 	parentExpense: Expense;
@@ -78,7 +81,8 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 	showPaid = true,
 }) => {
 	const [isExpanded, setIsExpanded] = useState(false);
-	const { toggleExpensePaid, resetOccurrence, setEditingExpense } = useExpenseStore();
+	const { toggleExpensePaid, resetOccurrence, setEditingExpense } =
+		useExpenseStore();
 	const { expenseCurrency } = useSettingsStore();
 	const { resolvedTheme } = useThemeStore();
 	const isDarkMode = resolvedTheme === "dark";
@@ -107,6 +111,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 				<td className="py-3 px-2">
 					<div className="flex items-center gap-1">
 						<button
+							type="button"
 							onClick={(e) => {
 								e.stopPropagation();
 								toggleExpensePaid(parentExpense.id);
@@ -116,11 +121,13 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 									paidCount === totalCount && paidCount > 0
 										? "text-green-500 bg-green-500/10 hover:bg-green-500/20"
 										: paidCount > 0
-										? "text-yellow-500 bg-yellow-500/10 hover:bg-yellow-500/20"
-										: "text-muted-foreground bg-muted hover:bg-accent"
+											? "text-yellow-500 bg-yellow-500/10 hover:bg-yellow-500/20"
+											: "text-muted-foreground bg-muted hover:bg-accent"
 								}`}
 							title={
-								paidCount === totalCount ? "Mark all as unpaid" : "Mark all as paid"
+								paidCount === totalCount
+									? "Mark all as unpaid"
+									: "Mark all as paid"
 							}
 						>
 							{paidCount === totalCount && paidCount > 0 ? (
@@ -132,6 +139,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 							)}
 						</button>
 						<button
+							type="button"
 							onClick={(e) => {
 								e.stopPropagation();
 								setIsExpanded(!isExpanded);
@@ -139,13 +147,25 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 							className="p-1 hover:bg-accent rounded transition-all duration-200 text-muted-foreground hover:text-foreground"
 							title={isExpanded ? "Collapse" : "Expand"}
 						>
-							{isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+							{isExpanded ? (
+								<ChevronDown size={16} />
+							) : (
+								<ChevronRight size={16} />
+							)}
 						</button>
 					</div>
 				</td>
 
 				{/* Column 2: Name */}
-				<td className="py-3 px-3" onClick={() => setIsExpanded(!isExpanded)}>
+				<td
+					className="py-3 px-3"
+					onClick={() => setIsExpanded(!isExpanded)}
+					onKeyDown={(event) => {
+						if (event.key === "Enter" || event.key === " ") {
+							setIsExpanded(!isExpanded);
+						}
+					}}
+				>
 					<div className="flex items-center gap-2">
 						<span className="font-medium text-foreground text-sm">
 							{parentExpense.name}
@@ -215,8 +235,8 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 						{sortedOccurrences.length > 0 && sortedOccurrences[0].dueDate
 							? formatDate(sortedOccurrences[0].dueDate)
 							: parentExpense.dueDate
-							? formatDate(parentExpense.dueDate)
-							: "No date"}
+								? formatDate(parentExpense.dueDate)
+								: "No date"}
 					</div>
 					<div className="text-xs text-muted-foreground">first occurrence</div>
 				</td>
@@ -230,6 +250,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 				<td className="py-3 px-3">
 					<div className="flex items-center justify-center gap-1">
 						<button
+							type="button"
 							onClick={(e) => {
 								e.stopPropagation();
 								setEditingExpense(parentExpense);
@@ -242,6 +263,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 						</button>
 						{onDuplicate && (
 							<button
+								type="button"
 								onClick={(e) => {
 									e.stopPropagation();
 									onDuplicate(parentExpense.id);
@@ -255,6 +277,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 						)}
 						{parentExpense.isArchived ? (
 							<button
+								type="button"
 								onClick={(e) => {
 									e.stopPropagation();
 									onUnarchive(parentExpense.id);
@@ -267,6 +290,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 							</button>
 						) : (
 							<button
+								type="button"
 								onClick={(e) => {
 									e.stopPropagation();
 									onArchive(parentExpense.id);
@@ -279,6 +303,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 							</button>
 						)}
 						<button
+							type="button"
 							onClick={(e) => {
 								e.stopPropagation();
 								onDelete(parentExpense.id, parentExpense.name);
@@ -307,6 +332,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 						{/* Column 1: Paid checkbox */}
 						<td className="py-2 px-2">
 							<button
+								type="button"
 								onClick={() => toggleExpensePaid(occurrence.id)}
 								className={`p-1.5 rounded-lg transition-all duration-200 hover:scale-110 ml-6
 								${
@@ -385,8 +411,8 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 									occurrence.isPaid
 										? "line-through text-muted-foreground opacity-60"
 										: occurrence.amount !== parentExpense.amount
-										? "text-orange-500"
-										: "text-primary"
+											? "text-orange-500"
+											: "text-primary"
 								}`}
 							>
 								{formatCurrency(occurrence.amount, expenseCurrency)}
@@ -396,7 +422,9 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 						{/* Column 8: Due Date */}
 						<td className="py-2 px-3">
 							<span className="text-sm text-muted-foreground">
-								{occurrence.dueDate ? formatDate(occurrence.dueDate) : "No date"}
+								{occurrence.dueDate
+									? formatDate(occurrence.dueDate)
+									: "No date"}
 							</span>
 						</td>
 
@@ -407,7 +435,9 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 									{formatDate(occurrence.paymentDate)}
 								</span>
 							) : (
-								<span className="text-xs text-muted-foreground/70">Not paid</span>
+								<span className="text-xs text-muted-foreground/70">
+									Not paid
+								</span>
 							)}
 						</td>
 
@@ -415,6 +445,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 						<td className="py-2 px-3">
 							<div className="flex items-center justify-center gap-1">
 								<button
+									type="button"
 									onClick={() => onEditOccurrence(occurrence)}
 									className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10
 										rounded-lg transition-all duration-200 hover:scale-110"
@@ -424,6 +455,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 								</button>
 								{onDuplicate && (
 									<button
+										type="button"
 										onClick={() => onDuplicate(occurrence.id)}
 										className="p-1.5 text-muted-foreground hover:text-purple-500 hover:bg-purple-500/10
 											rounded-lg transition-all duration-200 hover:scale-110"
@@ -434,6 +466,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 								)}
 								{occurrence.isModified && (
 									<button
+										type="button"
 										onClick={(e) => {
 											e.stopPropagation();
 											resetOccurrence(occurrence.id);

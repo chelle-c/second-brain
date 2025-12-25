@@ -1,13 +1,13 @@
-import { useEffect, useRef } from "react";
 import { AlertTriangle, Info } from "lucide-react";
+import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
 	DialogContent,
-	DialogHeader,
-	DialogTitle,
 	DialogDescription,
 	DialogFooter,
+	DialogHeader,
+	DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
@@ -76,11 +76,7 @@ export function ConfirmationModal({
 				</DialogHeader>
 
 				<DialogFooter className="mt-4">
-					<Button
-						ref={cancelButtonRef}
-						variant="outline"
-						onClick={onCancel}
-					>
+					<Button ref={cancelButtonRef} variant="outline" onClick={onCancel}>
 						{cancelLabel}
 					</Button>
 					<Button

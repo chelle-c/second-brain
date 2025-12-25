@@ -1,12 +1,12 @@
-import { MonthNavigation } from "./MonthNavigation";
-import { useExpenseStore } from "@/stores/useExpenseStore";
-import { useSettingsStore } from "@/stores/useSettingsStore";
-import { formatCurrency } from "@/lib/dateUtils";
-import { getCurrencySymbol } from "@/lib/currencyUtils";
-import { DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
 import { TrendingUp } from "lucide-react";
 import { AnimatedToggle } from "@/components/AnimatedToggle";
 import { PieChart, type PieChartData } from "@/components/charts";
+import { getCurrencySymbol } from "@/lib/currencyUtils";
+import { formatCurrency } from "@/lib/dateUtils";
+import { DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
+import { useExpenseStore } from "@/stores/useExpenseStore";
+import { useSettingsStore } from "@/stores/useSettingsStore";
+import { MonthNavigation } from "./MonthNavigation";
 
 export const ExpenseOverview: React.FC = () => {
 	const {
@@ -26,14 +26,20 @@ export const ExpenseOverview: React.FC = () => {
 	const categoryTotals = getTotalByCategoryFiltered(
 		selectedMonth,
 		overviewMode,
-		showPaidExpenses
+		showPaidExpenses,
 	);
-	const monthlyTotal = getMonthlyTotalFiltered(selectedMonth, overviewMode, showPaidExpenses);
+	const monthlyTotal = getMonthlyTotalFiltered(
+		selectedMonth,
+		overviewMode,
+		showPaidExpenses,
+	);
 
-	const data: PieChartData[] = Object.entries(categoryTotals).map(([category, amount]) => ({
-		name: category,
-		value: amount,
-	}));
+	const data: PieChartData[] = Object.entries(categoryTotals).map(
+		([category, amount]) => ({
+			name: category,
+			value: amount,
+		}),
+	);
 
 	const placeholderData: PieChartData[] = [
 		{ name: "Housing", value: 1200 },
@@ -124,9 +130,14 @@ export const ExpenseOverview: React.FC = () => {
 									"All Unpaid Expenses"}
 							</p>
 							<div className="flex items-center justify-center gap-2">
-								<span className="text-primary text-2xl font-bold">{currencySymbol}</span>
+								<span className="text-primary text-2xl font-bold">
+									{currencySymbol}
+								</span>
 								<p className="text-2xl sm:text-4xl font-bold text-primary">
-									{formatCurrency(monthlyTotal, expenseCurrency).replace(/^[^0-9]+/, "")}
+									{formatCurrency(monthlyTotal, expenseCurrency).replace(
+										/^[^0-9]+/,
+										"",
+									)}
 								</p>
 							</div>
 						</div>
@@ -135,7 +146,9 @@ export const ExpenseOverview: React.FC = () => {
 					{/* Category breakdown stats */}
 					{data.length > 0 && (
 						<div className="bg-muted rounded-lg p-4">
-							<p className="text-xs font-bold text-foreground mb-2">Top Categories:</p>
+							<p className="text-xs font-bold text-foreground mb-2">
+								Top Categories:
+							</p>
 							{data
 								.sort((a, b) => b.value - a.value)
 								.slice(0, 3)
@@ -164,7 +177,9 @@ export const ExpenseOverview: React.FC = () => {
 						</p>
 					)}
 
-					<div className={`flex flex-col space-y-4 ${isPlaceholder ? "opacity-60" : ""}`}>
+					<div
+						className={`flex flex-col space-y-4 ${isPlaceholder ? "opacity-60" : ""}`}
+					>
 						<div className="h-48 sm:h-64">
 							<PieChart
 								data={chartData}
@@ -176,9 +191,9 @@ export const ExpenseOverview: React.FC = () => {
 
 						{/* Custom Legend */}
 						<div className="flex gap-x-4 gap-y-2 justify-center flex-wrap">
-							{chartData.map((entry, index) => (
+							{chartData.map((entry) => (
 								<div
-									key={`legend-${index}`}
+									key={`legend-${entry.name}`}
 									className="flex items-center gap-2 min-w-0"
 								>
 									<span

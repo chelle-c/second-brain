@@ -52,7 +52,9 @@
 	--theme-sidebar-primary: oklch(0.205 0 0);
 	--theme-sidebar-primary-fg: oklch(0.985 0 0);
 	--theme-sidebar-accent: oklch(0.473 0.137 46.201); /* amber-800 */
-	--theme-sidebar-accent-fg: oklch(0.98 0.025 95.617); /* near white with amber tint */
+	--theme-sidebar-accent-fg: oklch(
+		0.98 0.025 95.617
+	); /* near white with amber tint */
 	--theme-sidebar-border: oklch(0.473 0.137 46.201); /* amber-800 */
 	--theme-sidebar-ring: oklch(0.769 0.188 70.08); /* amber-500 */
 }

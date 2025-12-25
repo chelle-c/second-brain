@@ -1,16 +1,23 @@
+import {
+	addDays,
+	addMonths,
+	addWeeks,
+	addYears,
+	isWithinInterval,
+	startOfDay,
+} from "date-fns";
+import { Calendar, Clock, TrendingUp } from "lucide-react";
 import { useMemo } from "react";
-import { DeleteModal } from "./DeleteModal";
+import { AnimatedToggle } from "@/components/AnimatedToggle";
+import { PieChart, type PieChartData } from "@/components/charts";
+import { Button } from "@/components/ui/button";
+import { getCurrencySymbol } from "@/lib/currencyUtils";
+import { formatCurrency } from "@/lib/dateUtils";
+import { DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
 import { useExpenseStore } from "@/stores/useExpenseStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
+import { ConfirmationModal } from "@/components/ConfirmationModal";
 import { ExpenseTable } from "./ExpenseTable";
-import { formatCurrency } from "@/lib/dateUtils";
-import { getCurrencySymbol } from "@/lib/currencyUtils";
-import { DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
-import { TrendingUp, Calendar, Clock } from "lucide-react";
-import { addDays, addWeeks, addMonths, addYears, isWithinInterval, startOfDay } from "date-fns";
-import { AnimatedToggle } from "@/components/AnimatedToggle";
-import { Button } from "@/components/ui/button";
-import { PieChart, type PieChartData } from "@/components/charts";
 
 export const UpcomingExpenses = () => {
 	const {
@@ -71,7 +78,8 @@ export const UpcomingExpenses = () => {
 		const totals: Record<string, number> = {};
 		upcomingExpenses.forEach((expense) => {
 			if (!expense.isPaid) {
-				totals[expense.category] = (totals[expense.category] || 0) + expense.amount;
+				totals[expense.category] =
+					(totals[expense.category] || 0) + expense.amount;
 			}
 		});
 		return totals;
@@ -79,13 +87,15 @@ export const UpcomingExpenses = () => {
 
 	const total = useMemo(
 		() => Object.values(categoryTotals).reduce((sum, val) => sum + val, 0),
-		[categoryTotals]
+		[categoryTotals],
 	);
 
-	const chartData: PieChartData[] = Object.entries(categoryTotals).map(([category, amount]) => ({
-		name: category,
-		value: amount,
-	}));
+	const chartData: PieChartData[] = Object.entries(categoryTotals).map(
+		([category, amount]) => ({
+			name: category,
+			value: amount,
+		}),
+	);
 
 	const placeholderData: PieChartData[] = [
 		{ name: "Housing", value: 1200 },
@@ -98,10 +108,26 @@ export const UpcomingExpenses = () => {
 	const allColors = { ...DEFAULT_CATEGORY_COLORS, ...categoryColors };
 
 	const timeUnitOptions = [
-		{ value: "days" as const, label: "Days", ariaLabel: "Show expenses due in days" },
-		{ value: "weeks" as const, label: "Weeks", ariaLabel: "Show expenses due in weeks" },
-		{ value: "months" as const, label: "Months", ariaLabel: "Show expenses due in months" },
-		{ value: "years" as const, label: "Years", ariaLabel: "Show expenses due in years" },
+		{
+			value: "days" as const,
+			label: "Days",
+			ariaLabel: "Show expenses due in days",
+		},
+		{
+			value: "weeks" as const,
+			label: "Weeks",
+			ariaLabel: "Show expenses due in weeks",
+		},
+		{
+			value: "months" as const,
+			label: "Months",
+			ariaLabel: "Show expenses due in months",
+		},
+		{
+			value: "years" as const,
+			label: "Years",
+			ariaLabel: "Show expenses due in years",
+		},
 	];
 
 	const renderTooltip = (datum: PieChartData, tooltipTotal: number) => (
@@ -134,7 +160,9 @@ export const UpcomingExpenses = () => {
 
 	const getTimeRangeText = () => {
 		const unitText =
-			upcomingTimeAmount === 1 ? upcomingTimeUnit.slice(0, -1) : upcomingTimeUnit;
+			upcomingTimeAmount === 1
+				? upcomingTimeUnit.slice(0, -1)
+				: upcomingTimeUnit;
 		return `${upcomingTimeAmount} ${unitText}`;
 	};
 
@@ -151,7 +179,10 @@ export const UpcomingExpenses = () => {
 
 						{/* Time Range Selector */}
 						<div className="bg-muted rounded-lg p-4 w-full sm:w-auto">
-							<label className="block text-sm font-medium text-foreground mb-3">
+							<label
+								htmlFor="time-amount"
+								className="block text-sm font-medium text-foreground mb-3"
+							>
 								Show expenses due within:
 							</label>
 							<div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
@@ -167,7 +198,7 @@ export const UpcomingExpenses = () => {
 										max="999"
 										value={upcomingTimeAmount}
 										onChange={(e) => {
-											const val = parseInt(e.target.value);
+											const val = parseInt(e.target.value, 10);
 											if (val > 0 && val <= 999) {
 												setUpcomingTimeAmount(val);
 											}
@@ -181,7 +212,9 @@ export const UpcomingExpenses = () => {
 								<AnimatedToggle
 									options={timeUnitOptions}
 									value={upcomingTimeUnit}
-									onChange={(value) => setUpcomingTimeUnit(value as typeof upcomingTimeUnit)}
+									onChange={(value) =>
+										setUpcomingTimeUnit(value as typeof upcomingTimeUnit)
+									}
 								/>
 							</div>
 						</div>
@@ -196,11 +229,18 @@ export const UpcomingExpenses = () => {
 							{/* Total Display */}
 							<div className="bg-linear-to-br from-secondary to-accent rounded-lg p-6 flex-1 flex flex-col justify-center">
 								<div className="text-center">
-									<p className="text-sm text-muted-foreground mb-2">Total Unpaid</p>
+									<p className="text-sm text-muted-foreground mb-2">
+										Total Unpaid
+									</p>
 									<div className="flex items-center justify-center gap-2">
-										<span className="text-primary text-2xl font-bold">{currencySymbol}</span>
+										<span className="text-primary text-2xl font-bold">
+											{currencySymbol}
+										</span>
 										<p className="text-2xl sm:text-4xl font-bold text-primary">
-											{formatCurrency(total, expenseCurrency).replace(/^[^0-9]+/, "")}
+											{formatCurrency(total, expenseCurrency).replace(
+												/^[^0-9]+/,
+												"",
+											)}
 										</p>
 									</div>
 									<p className="text-xs text-muted-foreground mt-2">
@@ -224,7 +264,9 @@ export const UpcomingExpenses = () => {
 												key={category.name}
 												className="flex items-center justify-between text-xs mb-1"
 											>
-												<span className="text-muted-foreground">{category.name}</span>
+												<span className="text-muted-foreground">
+													{category.name}
+												</span>
 												<span className="font-medium text-foreground">
 													{((category.value / total) * 100).toFixed(0)}%
 												</span>
@@ -258,9 +300,9 @@ export const UpcomingExpenses = () => {
 
 								{/* Custom Legend */}
 								<div className="flex gap-x-6 gap-y-2 justify-center mt-4 flex-wrap">
-									{displayData.map((entry, index) => (
+									{displayData.map((entry) => (
 										<div
-											key={`legend-${index}`}
+											key={`legend-${entry.name}`}
 											className="flex items-center gap-2"
 										>
 											<span
@@ -303,8 +345,14 @@ export const UpcomingExpenses = () => {
 							<Button
 								variant="secondary"
 								size="sm"
-								onClick={() => setShowUpcomingRelativeDates(!showUpcomingRelativeDates)}
-								title={showUpcomingRelativeDates ? "Show actual dates" : "Show relative dates"}
+								onClick={() =>
+									setShowUpcomingRelativeDates(!showUpcomingRelativeDates)
+								}
+								title={
+									showUpcomingRelativeDates
+										? "Show actual dates"
+										: "Show relative dates"
+								}
 							>
 								{showUpcomingRelativeDates ? (
 									<>
@@ -336,9 +384,13 @@ export const UpcomingExpenses = () => {
 				</div>
 			</div>
 
-			<DeleteModal
+			<ConfirmationModal
 				isOpen={deleteModal.isOpen}
-				expenseName={deleteModal.name}
+				title="Confirm Deletion"
+				message={`Are you sure you want to delete "${deleteModal.name}"? This action cannot be undone.`}
+				confirmLabel="Delete"
+				cancelLabel="Cancel"
+				variant="danger"
 				onConfirm={handleDeleteConfirm}
 				onCancel={handleDeleteCancel}
 			/>

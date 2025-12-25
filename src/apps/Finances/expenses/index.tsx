@@ -1,17 +1,19 @@
-import { useState, useEffect } from "react";
-import { Layout } from "./components/Layout";
-import { ExpenseOverview } from "./components/ExpenseOverview";
-import { ExpenseForm } from "./components/ExpenseForm";
-import { ExpenseList } from "./components/ExpenseList";
-import { AllExpenses } from "./components/AllExpenses";
-import { UpcomingExpenses } from "./components/UpcomingExpenses";
+import { useEffect, useState } from "react";
 import { useExpenseStore } from "@/stores/useExpenseStore";
 import { useHistoryStore } from "@/stores/useHistoryStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
+import { AllExpenses } from "./components/AllExpenses";
+import { ExpenseForm } from "./components/ExpenseForm";
+import { ExpenseList } from "./components/ExpenseList";
+import { ExpenseOverview } from "./components/ExpenseOverview";
+import { Layout } from "./components/Layout";
+import { UpcomingExpenses } from "./components/UpcomingExpenses";
 
 export const ExpensesTracker = () => {
 	const { expenseDefaultView } = useSettingsStore();
-	const [currentView, setCurrentView] = useState<"monthly" | "all" | "upcoming">(expenseDefaultView);
+	const [currentView, setCurrentView] = useState<
+		"monthly" | "all" | "upcoming"
+	>(expenseDefaultView);
 
 	const { editingExpense, setEditingExpense, undo, redo } = useExpenseStore();
 	const { canUndo, canRedo } = useHistoryStore();
@@ -33,7 +35,10 @@ export const ExpensesTracker = () => {
 			}
 
 			// Ctrl/Cmd + Shift + Z or Ctrl/Cmd + Y to redo
-			if ((modKey && e.shiftKey && e.key === "z") || (modKey && e.key === "y")) {
+			if (
+				(modKey && e.shiftKey && e.key === "z") ||
+				(modKey && e.key === "y")
+			) {
 				if (canRedo) {
 					e.preventDefault();
 					redo();

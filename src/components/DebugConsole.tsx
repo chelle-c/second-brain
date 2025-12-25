@@ -1,6 +1,7 @@
 // src/components/DebugConsole.tsx
-import { useState, useEffect, useRef } from "react";
-import { ChevronUp, ChevronDown, Trash2 } from "lucide-react";
+
+import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 interface LogEntry {
 	id: string; // Changed to string for unique IDs
@@ -22,7 +23,7 @@ export function DebugConsole() {
 		const originalWarn = console.warn;
 		const originalInfo = console.info;
 
-		const addLog = (type: LogEntry["type"], args: any[]) => {
+		const addLog = (type: LogEntry["type"], args: unknown[]) => {
 			// Prevent infinite loop
 			if (isAddingLog.current) return;
 
@@ -110,29 +111,42 @@ export function DebugConsole() {
 	return (
 		<div className="fixed bottom-0 right-0 w-96 bg-white border-l border-t shadow-lg z-50">
 			{/* Header */}
-			<div
-				className="flex justify-between items-center p-2 bg-gray-800 text-white cursor-pointer select-none"
-				onClick={() => setIsOpen(!isOpen)}
-			>
-				<span className="text-sm font-semibold">Debug Console ({logs.length})</span>
+			<div className="flex justify-between items-center p-2 bg-gray-800 text-white">
+				<button
+					type="button"
+					onClick={() => setIsOpen(!isOpen)}
+					className="flex-1 text-left text-sm font-semibold cursor-pointer select-none"
+					aria-expanded={isOpen}
+					aria-controls="debug-console-content"
+				>
+					Debug Console ({logs.length})
+				</button>
 				<div className="flex items-center gap-2">
 					<button
-						onClick={(e) => {
-							e.stopPropagation();
-							clearLogs();
-						}}
+						type="button"
+						onClick={clearLogs}
 						className="p-1 hover:bg-gray-700 rounded"
 						title="Clear logs"
 					>
 						<Trash2 size={16} />
 					</button>
-					{isOpen ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+					<button
+						type="button"
+						onClick={() => setIsOpen(!isOpen)}
+						className="p-1 hover:bg-gray-700 rounded"
+						aria-label={isOpen ? "Collapse console" : "Expand console"}
+					>
+						{isOpen ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+					</button>
 				</div>
 			</div>
 
 			{/* Console Content */}
 			{isOpen && (
-				<div className="h-64 overflow-y-auto bg-gray-50 font-mono text-xs">
+				<div
+					id="debug-console-content"
+					className="h-64 overflow-y-auto bg-gray-50 font-mono text-xs"
+				>
 					{logs.length === 0 ? (
 						<div className="p-2 text-gray-500">No logs yet...</div>
 					) : (
@@ -141,7 +155,7 @@ export function DebugConsole() {
 								<div
 									key={log.id}
 									className={`p-2 border-b border-gray-200 ${getLogColor(
-										log.type
+										log.type,
 									)} wrap-break-word`}
 								>
 									<div className="flex gap-2">

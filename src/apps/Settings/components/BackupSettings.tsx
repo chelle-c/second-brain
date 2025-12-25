@@ -1,39 +1,18 @@
-import { useState } from "react";
 import {
-	Database,
-	HardDrive,
-	FolderOpen,
-	Download,
-	Upload,
-	Trash2,
-	Clock,
-	RefreshCw,
 	AlertTriangle,
 	CheckCircle2,
+	Clock,
+	Database,
+	Download,
 	FlaskConical,
+	FolderOpen,
+	HardDrive,
+	RefreshCw,
+	Trash2,
+	Upload,
 	Wand2,
 } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+import { useState } from "react";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -44,11 +23,38 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useBackupStore } from "@/stores/useBackupStore";
-import { BackupInfo } from "@/types/backup";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { seedTestDatabase } from "@/lib/storage";
 import useAppStore from "@/stores/useAppStore";
+import { useBackupStore } from "@/stores/useBackupStore";
+import type { BackupInfo } from "@/types/backup";
 
 const AUTO_BACKUP_INTERVALS = [
 	{ value: "0", label: "Disabled" },
@@ -94,7 +100,9 @@ export const BackupSettings = () => {
 	const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 	const [selectedBackup, setSelectedBackup] = useState<BackupInfo | null>(null);
-	const [customPathInput, setCustomPathInput] = useState(settings.customBackupPath || "");
+	const [customPathInput, setCustomPathInput] = useState(
+		settings.customBackupPath || "",
+	);
 	const [backupDescription, setBackupDescription] = useState("");
 	const [showCreateBackup, setShowCreateBackup] = useState(false);
 	const [showSeedConfirm, setShowSeedConfirm] = useState(false);
@@ -183,14 +191,18 @@ export const BackupSettings = () => {
 					<CardContent className="space-y-6">
 						<div className="flex items-center justify-between">
 							<div className="space-y-0.5">
-								<Label className="text-base font-medium">Current Environment</Label>
+								<Label className="text-base font-medium">
+									Current Environment
+								</Label>
 								<p className="text-sm text-muted-foreground">
 									Using test database (development mode)
 								</p>
 							</div>
 							<div className="flex items-center gap-2 px-4 py-2 rounded-md bg-muted">
 								<FlaskConical className="w-4 h-4" />
-								<span className="font-medium capitalize">{currentEnvironment}</span>
+								<span className="font-medium capitalize">
+									{currentEnvironment}
+								</span>
 							</div>
 						</div>
 
@@ -263,7 +275,8 @@ export const BackupSettings = () => {
 						<div className="space-y-0.5">
 							<Label className="text-base font-medium">Manage Backups</Label>
 							<p className="text-sm text-muted-foreground">
-								{backups.length} backup{backups.length !== 1 ? "s" : ""} available
+								{backups.length} backup{backups.length !== 1 ? "s" : ""}{" "}
+								available
 							</p>
 						</div>
 						<Button
@@ -302,7 +315,9 @@ export const BackupSettings = () => {
 						<>
 							<div className="flex items-center justify-between">
 								<div className="space-y-0.5">
-									<Label className="text-base font-medium">Backup Interval</Label>
+									<Label className="text-base font-medium">
+										Backup Interval
+									</Label>
 									<p className="text-sm text-muted-foreground">
 										How often to create automatic backups
 									</p>
@@ -310,7 +325,7 @@ export const BackupSettings = () => {
 								<Select
 									value={settings.autoBackupIntervalHours.toString()}
 									onValueChange={(value) =>
-										setAutoBackupInterval(parseInt(value))
+										setAutoBackupInterval(parseInt(value, 10))
 									}
 								>
 									<SelectTrigger className="w-[200px]">
@@ -331,7 +346,9 @@ export const BackupSettings = () => {
 
 							<div className="flex items-center justify-between">
 								<div className="space-y-0.5">
-									<Label className="text-base font-medium">Maximum Backups</Label>
+									<Label className="text-base font-medium">
+										Maximum Backups
+									</Label>
 									<p className="text-sm text-muted-foreground">
 										Older auto-backups will be removed
 									</p>
@@ -435,17 +452,25 @@ export const BackupSettings = () => {
 						<FolderOpen className="w-5 h-5" />
 						Backup Location
 					</CardTitle>
-					<CardDescription>Choose where to store your backup files</CardDescription>
+					<CardDescription>
+						Choose where to store your backup files
+					</CardDescription>
 				</CardHeader>
 				<CardContent className="space-y-6">
 					<div className="flex items-center justify-between">
 						<div className="space-y-0.5">
-							<Label className="text-base font-medium">Open Backup Folder</Label>
+							<Label className="text-base font-medium">
+								Open Backup Folder
+							</Label>
 							<p className="text-sm text-muted-foreground">
 								View your backup files in the file explorer
 							</p>
 						</div>
-						<Button onClick={openBackupFolder} variant="outline" className="gap-2">
+						<Button
+							onClick={openBackupFolder}
+							variant="outline"
+							className="gap-2"
+						>
 							<FolderOpen className="w-4 h-4" />
 							Open Folder
 						</Button>
@@ -455,9 +480,12 @@ export const BackupSettings = () => {
 
 					<div className="space-y-4">
 						<div className="space-y-0.5">
-							<Label className="text-base font-medium">Custom Backup Path</Label>
+							<Label className="text-base font-medium">
+								Custom Backup Path
+							</Label>
 							<p className="text-sm text-muted-foreground">
-								Set a custom location for storing backups (e.g., Documents folder)
+								Set a custom location for storing backups (e.g., Documents
+								folder)
 							</p>
 						</div>
 
@@ -485,7 +513,11 @@ export const BackupSettings = () => {
 							>
 								Use Documents Folder
 							</Button>
-							<Button onClick={handleUseDefaultLocation} variant="ghost" size="sm">
+							<Button
+								onClick={handleUseDefaultLocation}
+								variant="ghost"
+								size="sm"
+							>
 								Use Default Location
 							</Button>
 						</div>
@@ -520,7 +552,10 @@ export const BackupSettings = () => {
 						/>
 					</div>
 					<DialogFooter>
-						<Button variant="outline" onClick={() => setShowCreateBackup(false)}>
+						<Button
+							variant="outline"
+							onClick={() => setShowCreateBackup(false)}
+						>
 							Cancel
 						</Button>
 						<Button onClick={handleCreateBackup} disabled={isLoading}>
@@ -535,7 +570,9 @@ export const BackupSettings = () => {
 				<DialogContent className="max-w-2xl">
 					<DialogHeader>
 						<DialogTitle>Manage Backups</DialogTitle>
-						<DialogDescription>View, restore, or delete your backups</DialogDescription>
+						<DialogDescription>
+							View, restore, or delete your backups
+						</DialogDescription>
 					</DialogHeader>
 					<ScrollArea className="max-h-[400px]">
 						{backups.length === 0 ? (
@@ -557,8 +594,7 @@ export const BackupSettings = () => {
 												{currentEnvironment === "test" && (
 													<span
 														className={`text-xs px-2 py-0.5 rounded ${
-															backup.metadata.environment ===
-															"production"
+															backup.metadata.environment === "production"
 																? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
 																: "bg-amber-500/10 text-amber-600 dark:text-amber-400"
 														}`}
@@ -571,9 +607,7 @@ export const BackupSettings = () => {
 												{formatDate(backup.metadata.createdAt)} • v
 												{backup.metadata.version}
 												{backup.metadata.fileSize &&
-													` • ${formatFileSize(
-														backup.metadata.fileSize
-													)}`}
+													` • ${formatFileSize(backup.metadata.fileSize)}`}
 											</div>
 										</div>
 										<div className="flex gap-2">
@@ -613,23 +647,30 @@ export const BackupSettings = () => {
 			</Dialog>
 
 			{/* Restore Confirmation */}
-			<AlertDialog open={showRestoreConfirm} onOpenChange={setShowRestoreConfirm}>
+			<AlertDialog
+				open={showRestoreConfirm}
+				onOpenChange={setShowRestoreConfirm}
+			>
 				<AlertDialogContent>
 					<AlertDialogHeader>
 						<AlertDialogTitle>Restore from Backup</AlertDialogTitle>
 						<AlertDialogDescription>
-							This will replace your current data with the data from this backup. A
-							backup of your current data will be created first.
-							{selectedBackup && selectedBackup.metadata.version !== "unknown" && (
-								<span className="block mt-2">
-									Backup version: {selectedBackup.metadata.version}
-								</span>
-							)}
+							This will replace your current data with the data from this
+							backup. A backup of your current data will be created first.
+							{selectedBackup &&
+								selectedBackup.metadata.version !== "unknown" && (
+									<span className="block mt-2">
+										Backup version: {selectedBackup.metadata.version}
+									</span>
+								)}
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
 						<AlertDialogCancel>Cancel</AlertDialogCancel>
-						<AlertDialogAction onClick={handleRestoreBackup} disabled={isLoading}>
+						<AlertDialogAction
+							onClick={handleRestoreBackup}
+							disabled={isLoading}
+						>
 							{isLoading ? "Restoring..." : "Restore"}
 						</AlertDialogAction>
 					</AlertDialogFooter>
@@ -665,8 +706,8 @@ export const BackupSettings = () => {
 						<AlertDialogTitle>Seed Test Database</AlertDialogTitle>
 						<AlertDialogDescription asChild>
 							<div>
-								This will clear all existing data in the test database and replace
-								it with sample data including:
+								This will clear all existing data in the test database and
+								replace it with sample data including:
 								<ul className="list-disc list-inside mt-2 space-y-1">
 									<li>7 sample notes across different folders</li>
 									<li>10 sample expenses (recurring and one-time)</li>
@@ -680,7 +721,10 @@ export const BackupSettings = () => {
 					</AlertDialogHeader>
 					<AlertDialogFooter>
 						<AlertDialogCancel disabled={seedingData}>Cancel</AlertDialogCancel>
-						<AlertDialogAction onClick={handleSeedTestData} disabled={seedingData}>
+						<AlertDialogAction
+							onClick={handleSeedTestData}
+							disabled={seedingData}
+						>
 							{seedingData ? "Seeding..." : "Seed Data"}
 						</AlertDialogAction>
 					</AlertDialogFooter>

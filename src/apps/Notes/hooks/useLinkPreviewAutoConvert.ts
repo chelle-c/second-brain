@@ -1,5 +1,10 @@
-import { useEffect, useCallback, useRef } from "react";
-import { YooEditor, YooptaContentValue, generateId, Blocks } from "@yoopta/editor";
+import {
+	Blocks,
+	generateId,
+	type YooEditor,
+	type YooptaContentValue,
+} from "@yoopta/editor";
+import { useCallback, useEffect, useRef } from "react";
 import { isValidUrl } from "../components/LinkPreview";
 
 // Helper to check if a block contains only a URL
@@ -62,7 +67,9 @@ export const useLinkPreviewAutoConvert = (editor: YooEditor) => {
 
 			// Get the newly inserted block
 			const blocks = editor.children;
-			const newBlock = Object.values(blocks).find((b) => b.meta.order === order);
+			const newBlock = Object.values(blocks).find(
+				(b) => b.meta.order === order,
+			);
 
 			if (newBlock) {
 				// Update the block with the URL
@@ -80,7 +87,7 @@ export const useLinkPreviewAutoConvert = (editor: YooEditor) => {
 				});
 			}
 		},
-		[editor]
+		[editor],
 	);
 
 	useEffect(() => {

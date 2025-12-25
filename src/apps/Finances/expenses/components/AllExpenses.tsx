@@ -1,9 +1,9 @@
-import { useState, useMemo } from "react";
-import { useExpenseStore } from "@/stores/useExpenseStore";
-import { DeleteModal } from "./DeleteModal";
-import { ExpenseTable } from "./ExpenseTable";
-import { AnimatedToggle } from "@/components/AnimatedToggle";
 import { DollarSign } from "lucide-react";
+import { useMemo, useState } from "react";
+import { AnimatedToggle } from "@/components/AnimatedToggle";
+import { useExpenseStore } from "@/stores/useExpenseStore";
+import { ConfirmationModal } from "@/components/ConfirmationModal";
+import { ExpenseTable } from "./ExpenseTable";
 
 export const AllExpenses: React.FC = () => {
 	const {
@@ -18,7 +18,11 @@ export const AllExpenses: React.FC = () => {
 
 	const [showArchived, setShowArchived] = useState(false);
 	const [selectedYear, setSelectedYear] = useState<number | "all">("all");
-	const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string; name: string }>({
+	const [deleteModal, setDeleteModal] = useState<{
+		isOpen: boolean;
+		id: string;
+		name: string;
+	}>({
 		isOpen: false,
 		id: "",
 		name: "",
@@ -30,7 +34,7 @@ export const AllExpenses: React.FC = () => {
 
 		// Filter by archived status
 		filtered = filtered.filter((expense) =>
-			showArchived ? expense.isArchived : !expense.isArchived
+			showArchived ? expense.isArchived : !expense.isArchived,
 		);
 
 		// Filter by year
@@ -98,9 +102,14 @@ export const AllExpenses: React.FC = () => {
 	if (totalExpenseCount === 0) {
 		return (
 			<div className="bg-card rounded-xl shadow-lg p-4 sm:p-6 animate-slideUp">
-				<h3 className="text-lg sm:text-xl font-bold text-card-foreground mb-4">All Expenses</h3>
+				<h3 className="text-lg sm:text-xl font-bold text-card-foreground mb-4">
+					All Expenses
+				</h3>
 				<div className="text-center py-12">
-					<DollarSign className="mx-auto text-muted-foreground/30 mb-4" size={48} />
+					<DollarSign
+						className="mx-auto text-muted-foreground/30 mb-4"
+						size={48}
+					/>
 					<p className="text-muted-foreground">No expenses found.</p>
 					<p className="text-muted-foreground/70 text-sm mt-2">
 						Click the + button to add your first expense.
@@ -115,7 +124,9 @@ export const AllExpenses: React.FC = () => {
 			<div className="bg-card rounded-xl shadow-lg p-4 sm:p-6 animate-slideUp">
 				<div className="pb-4">
 					<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-						<h3 className="text-lg sm:text-xl font-bold text-card-foreground">All Expenses</h3>
+						<h3 className="text-lg sm:text-xl font-bold text-card-foreground">
+							All Expenses
+						</h3>
 
 						{/* Archive Toggle */}
 						<AnimatedToggle
@@ -132,10 +143,10 @@ export const AllExpenses: React.FC = () => {
 							{showArchived
 								? `No archived expenses found${
 										selectedYear !== "all" ? ` for ${selectedYear}` : ""
-								  }.`
+									}.`
 								: `No active expenses found${
 										selectedYear !== "all" ? ` for ${selectedYear}` : ""
-								  }.`}
+									}.`}
 						</div>
 					) : (
 						<ExpenseTable
@@ -158,9 +169,13 @@ export const AllExpenses: React.FC = () => {
 				</div>
 			</div>
 
-			<DeleteModal
+			<ConfirmationModal
 				isOpen={deleteModal.isOpen}
-				expenseName={deleteModal.name}
+				title="Confirm Deletion"
+				message={`Are you sure you want to delete "${deleteModal.name}"? This action cannot be undone.`}
+				confirmLabel="Delete"
+				cancelLabel="Cancel"
+				variant="danger"
 				onConfirm={handleDeleteConfirm}
 				onCancel={handleDeleteCancel}
 			/>

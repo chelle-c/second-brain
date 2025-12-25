@@ -1,18 +1,19 @@
-import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
-	format,
-	startOfMonth,
-	endOfMonth,
-	eachDayOfInterval,
-	startOfWeek,
-	endOfWeek,
-	isSameWeek,
 	addMonths,
-	subMonths,
-	getWeek,
 	addWeeks,
+	eachDayOfInterval,
+	endOfMonth,
+	endOfWeek,
+	format,
+	getWeek,
+	isSameWeek,
+	startOfMonth,
+	startOfWeek,
+	subMonths,
 	subWeeks,
 } from "date-fns";
+import type React from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSettingsStore } from "@/stores/useSettingsStore";
 import type { WeekStartDay } from "@/types/settings";
 import { WEEK_DAYS } from "@/types/settings";
@@ -23,17 +24,21 @@ interface WeekPickerProps {
 	onClose: () => void;
 }
 
-export const WeekPicker: React.FC<WeekPickerProps> = ({ selectedDate, onWeekSelect, onClose }) => {
+export const WeekPicker: React.FC<WeekPickerProps> = ({
+	selectedDate,
+	onWeekSelect,
+	onClose,
+}) => {
 	const { incomeWeekStartDay } = useSettingsStore();
 	const weekStartsOn = incomeWeekStartDay as WeekStartDay;
 
 	const [currentMonth, setCurrentMonth] = useState(selectedDate);
 	const [hoveredWeek, setHoveredWeek] = useState<Date | null>(null);
 	const [focusedWeek, setFocusedWeek] = useState<Date>(
-		startOfWeek(selectedDate, { weekStartsOn })
+		startOfWeek(selectedDate, { weekStartsOn }),
 	);
 	const containerRef = useRef<HTMLDivElement>(null);
-	const weekRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+	const weekRefs = useRef<Map<string, HTMLTableRowElement>>(new Map());
 
 	const monthStart = startOfMonth(currentMonth);
 	const monthEnd = endOfMonth(currentMonth);
@@ -47,7 +52,8 @@ export const WeekPicker: React.FC<WeekPickerProps> = ({ selectedDate, onWeekSele
 		weeks.push(days.slice(i, i + 7));
 	}
 
-	const getWeekKey = (date: Date) => format(startOfWeek(date, { weekStartsOn }), "yyyy-MM-dd");
+	const getWeekKey = (date: Date) =>
+		format(startOfWeek(date, { weekStartsOn }), "yyyy-MM-dd");
 
 	const handleWeekClick = (weekStart: Date) => {
 		onWeekSelect(weekStart);
@@ -82,7 +88,7 @@ export const WeekPicker: React.FC<WeekPickerProps> = ({ selectedDate, onWeekSele
 	const handleKeyDown = useCallback(
 		(e: React.KeyboardEvent) => {
 			switch (e.key) {
-				case "ArrowUp":
+				case "ArrowUp": {
 					e.preventDefault();
 					const prevWeek = subWeeks(focusedWeek, 1);
 					setFocusedWeek(prevWeek);
@@ -91,7 +97,8 @@ export const WeekPicker: React.FC<WeekPickerProps> = ({ selectedDate, onWeekSele
 						setCurrentMonth(subMonths(currentMonth, 1));
 					}
 					break;
-				case "ArrowDown":
+				}
+				case "ArrowDown": {
 					e.preventDefault();
 					const nextWeek = addWeeks(focusedWeek, 1);
 					setFocusedWeek(nextWeek);
@@ -100,14 +107,27 @@ export const WeekPicker: React.FC<WeekPickerProps> = ({ selectedDate, onWeekSele
 						setCurrentMonth(addMonths(currentMonth, 1));
 					}
 					break;
-				case "ArrowLeft":
+				}
+				case "ArrowLeft": {
 					e.preventDefault();
-					setCurrentMonth(subMonths(currentMonth, 1));
+					const prevMonth = subMonths(currentMonth, 1);
+					setCurrentMonth(prevMonth);
+					// Update focused week to first week of the new month view
+					const newMonthStart = startOfMonth(prevMonth);
+					const newCalendarStart = startOfWeek(newMonthStart, { weekStartsOn });
+					setFocusedWeek(newCalendarStart);
 					break;
-				case "ArrowRight":
+				}
+				case "ArrowRight": {
 					e.preventDefault();
-					setCurrentMonth(addMonths(currentMonth, 1));
+					const nextMonth = addMonths(currentMonth, 1);
+					setCurrentMonth(nextMonth);
+					// Update focused week to first week of the new month view
+					const newMonthStart = startOfMonth(nextMonth);
+					const newCalendarStart = startOfWeek(newMonthStart, { weekStartsOn });
+					setFocusedWeek(newCalendarStart);
 					break;
+				}
 				case "Enter":
 				case " ":
 					e.preventDefault();
@@ -129,17 +149,20 @@ export const WeekPicker: React.FC<WeekPickerProps> = ({ selectedDate, onWeekSele
 					break;
 			}
 		},
-		[focusedWeek, currentMonth, calendarStart, calendarEnd, weeks, onClose]
+		[focusedWeek, currentMonth, calendarStart, calendarEnd, weeks, onClose],
 	);
 
-	const setWeekRef = useCallback((weekStart: Date, element: HTMLDivElement | null) => {
-		const key = getWeekKey(weekStart);
-		if (element) {
-			weekRefs.current.set(key, element);
-		} else {
-			weekRefs.current.delete(key);
-		}
-	}, []);
+	const setWeekRef = useCallback(
+		(weekStart: Date, element: HTMLTableRowElement | null) => {
+			const key = getWeekKey(weekStart);
+			if (element) {
+				weekRefs.current.set(key, element);
+			} else {
+				weekRefs.current.delete(key);
+			}
+		},
+		[],
+	);
 
 	return (
 		<div
@@ -158,7 +181,13 @@ export const WeekPicker: React.FC<WeekPickerProps> = ({ selectedDate, onWeekSele
 					aria-label="Previous month"
 					type="button"
 				>
-					<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<svg
+						className="w-4 h-4"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+					>
+						<title>Previous</title>
 						<path
 							strokeLinecap="round"
 							strokeLinejoin="round"
@@ -176,7 +205,13 @@ export const WeekPicker: React.FC<WeekPickerProps> = ({ selectedDate, onWeekSele
 					aria-label="Next month"
 					type="button"
 				>
-					<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<svg
+						className="w-4 h-4"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+					>
+						<title>Next</title>
 						<path
 							strokeLinecap="round"
 							strokeLinejoin="round"
@@ -187,76 +222,86 @@ export const WeekPicker: React.FC<WeekPickerProps> = ({ selectedDate, onWeekSele
 				</button>
 			</div>
 
-			{/* Weekday Headers */}
-			<div className="grid grid-cols-7 gap-1 mb-2" role="row">
-				{Array.from({ length: 7 }, (_, i) => {
-					const dayIndex = (incomeWeekStartDay + i) % 7;
-					const dayName = WEEK_DAYS[dayIndex].label.substring(0, 3);
-					return (
-						<div
-							key={dayIndex}
-							className="text-center text-xs font-medium text-muted-foreground py-1"
-							role="columnheader"
-						>
-							{dayName}
-						</div>
-					);
-				})}
-			</div>
+			{/* Calendar Table */}
+			<table
+				className="w-full border-collapse"
+				aria-label="Week selection calendar"
+			>
+				<thead>
+					<tr>
+						{Array.from({ length: 7 }, (_, i) => {
+							const dayIndex = (incomeWeekStartDay + i) % 7;
+							const dayName = WEEK_DAYS[dayIndex].label.substring(0, 3);
+							return (
+								<th
+									key={dayIndex}
+									scope="col"
+									className="text-center text-xs font-medium text-muted-foreground py-1"
+								>
+									{dayName}
+								</th>
+							);
+						})}
+					</tr>
+				</thead>
+				<tbody className="space-y-1">
+					{weeks.map((week) => {
+						const weekStart = week[0];
+						const weekNumber = getWeek(weekStart, { weekStartsOn });
+						const isSelected = isWeekSelected(weekStart);
+						const isHovered = isWeekHovered(weekStart);
+						const isFocused = isWeekFocused(weekStart);
+						const isCurrent = isCurrentWeek(weekStart);
 
-			{/* Calendar Grid */}
-			<div className="space-y-1" role="grid" aria-label="Week selection calendar">
-				{weeks.map((week, weekIndex) => {
-					const weekStart = week[0];
-					const weekNumber = getWeek(weekStart, { weekStartsOn });
-					const isSelected = isWeekSelected(weekStart);
-					const isHovered = isWeekHovered(weekStart);
-					const isFocused = isWeekFocused(weekStart);
-					const isCurrent = isCurrentWeek(weekStart);
-
-					return (
-						<div
-							key={weekIndex}
-							ref={(el) => setWeekRef(weekStart, el)}
-							className={`grid grid-cols-7 gap-1 rounded-md transition-colors cursor-pointer outline-none ${
-								isSelected
-									? "bg-primary/20 ring-1 ring-primary"
-									: isFocused
-									? "bg-primary/10 ring-2 ring-primary/70"
-									: isHovered
-									? "bg-accent"
-									: ""
-							}`}
-							onClick={() => handleWeekClick(weekStart)}
-							onMouseEnter={() => setHoveredWeek(weekStart)}
-							onMouseLeave={() => setHoveredWeek(null)}
-							onFocus={() => setFocusedWeek(weekStart)}
-							tabIndex={isFocused ? 0 : -1}
-							role="row"
-							aria-selected={isSelected}
-							aria-label={`Week ${weekNumber}: ${format(
-								weekStart,
-								"MMM d"
-							)} - ${format(week[6], "MMM d, yyyy")}`}
-						>
-							{week.map((day, dayIndex) => {
-								const isInMonth = day.getMonth() === currentMonth.getMonth();
-								return (
-									<div
-										key={dayIndex}
-										className={`text-center text-xs py-2 ${
-											isInMonth ? "text-foreground" : "text-muted-foreground/50"
-										} ${isCurrent && isInMonth ? "font-bold" : ""}`}
-										role="gridcell"
-									>
-										{format(day, "d")}
-									</div>
-								);
-							})}
-						</div>
-					);
-				})}
-			</div>
+						return (
+							<tr
+								key={format(weekStart, "yyyy-MM-dd")}
+								ref={(el) => setWeekRef(weekStart, el)}
+								className={`rounded-md transition-colors cursor-pointer outline-none ${
+									isSelected
+										? "bg-primary/20 ring-1 ring-primary"
+										: isFocused
+											? "bg-primary/10 ring-2 ring-primary/70"
+											: isHovered
+												? "bg-accent"
+												: ""
+								}`}
+								onClick={() => handleWeekClick(weekStart)}
+								onMouseEnter={() => setHoveredWeek(weekStart)}
+								onMouseLeave={() => setHoveredWeek(null)}
+								onFocus={() => setFocusedWeek(weekStart)}
+								onKeyDown={(e) => {
+									if (e.key === "Enter") {
+										handleWeekClick(weekStart);
+									}
+								}}
+								tabIndex={isFocused ? 0 : -1}
+								aria-selected={isSelected}
+								aria-label={`Week ${weekNumber}: ${format(
+									weekStart,
+									"MMM d",
+								)} - ${format(week[6], "MMM d, yyyy")}`}
+							>
+								{week.map((day) => {
+									const isInMonth = day.getMonth() === currentMonth.getMonth();
+									return (
+										<td
+											key={day.getDate()}
+											className={`text-center text-xs py-2 ${
+												isInMonth
+													? "text-foreground"
+													: "text-muted-foreground/50"
+											} ${isCurrent && isInMonth ? "font-bold" : ""}`}
+										>
+											{format(day, "d")}
+										</td>
+									);
+								})}
+							</tr>
+						);
+					})}
+				</tbody>
+			</table>
 
 			{/* Instructions */}
 			<div className="mt-3 pt-3 border-t border-border text-xs text-muted-foreground">

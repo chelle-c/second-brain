@@ -1,15 +1,23 @@
-import Database from "@tauri-apps/plugin-sql";
-import { appDataDir, sep } from "@tauri-apps/api/path";
 import { invoke } from "@tauri-apps/api/core";
-import { AppData, AppMetadata, AppToSave } from "@/types/";
-import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
-import { DatabaseContext, StorageCache, DATA_VERSION, DEFAULT_PAYMENT_METHODS } from "../../types/storage";
-import { NotesStorage } from "./notesStorage";
+import { appDataDir, sep } from "@tauri-apps/api/path";
+import Database from "@tauri-apps/plugin-sql";
+import {
+	DEFAULT_CATEGORY_COLORS,
+	DEFAULT_EXPENSE_CATEGORIES,
+} from "@/lib/expenseHelpers";
+import { type AppData, type AppMetadata, AppToSave } from "@/types";
+import type { DatabaseEnvironment } from "@/types/backup";
+import { type AppSettings, DEFAULT_SETTINGS } from "@/types/settings";
+import {
+	DATA_VERSION,
+	type DatabaseContext,
+	DEFAULT_PAYMENT_METHODS,
+	type StorageCache,
+} from "@/types/storage";
+import { DEFAULT_THEME_SETTINGS, type ThemeSettings } from "@/types/theme";
 import { ExpensesStorage } from "./expensesStorage";
 import { IncomeStorage } from "./incomeStorage";
-import { AppSettings, DEFAULT_SETTINGS } from "@/types/settings";
-import { ThemeSettings, DEFAULT_THEME_SETTINGS } from "@/types/theme";
-import { DatabaseEnvironment } from "@/types/backup";
+import { NotesStorage } from "./notesStorage";
 
 const DB_NAME_PRODUCTION = "appdata.db";
 const DB_NAME_TEST = "appdata-test.db";
@@ -40,7 +48,9 @@ class SqlStorage {
 	private incomeStorage!: IncomeStorage;
 
 	private getDatabaseFileName(): string {
-		return this.currentEnvironment === "production" ? DB_NAME_PRODUCTION : DB_NAME_TEST;
+		return this.currentEnvironment === "production"
+			? DB_NAME_PRODUCTION
+			: DB_NAME_TEST;
 	}
 
 	getCurrentEnvironment(): DatabaseEnvironment {
@@ -54,7 +64,9 @@ class SqlStorage {
 		return this.appDataPath;
 	}
 
-	private queueOperation = async <T>(operation: () => Promise<T>): Promise<T> => {
+	private queueOperation = async <T>(
+		operation: () => Promise<T>,
+	): Promise<T> => {
 		const result = this.operationQueue.then(operation).catch((error) => {
 			console.error("Database operation failed:", error);
 			throw error;
@@ -122,7 +134,7 @@ class SqlStorage {
 
 			this.initialized = true;
 			console.log(
-				`Database initialized (${this.currentEnvironment} environment, file: ${dbFileName}, version: ${DATA_VERSION})`
+				`Database initialized (${this.currentEnvironment} environment, file: ${dbFileName}, version: ${DATA_VERSION})`,
 			);
 		} catch (error) {
 			console.error("Failed to initialize database:", error);
@@ -231,7 +243,7 @@ class SqlStorage {
 
 		try {
 			const versionResult = await this.db.select<Array<{ version: string }>>(
-				"SELECT version FROM metadata WHERE id = 1"
+				"SELECT version FROM metadata WHERE id = 1",
 			);
 			if (versionResult.length > 0 && versionResult[0].version) {
 				currentVersion = versionResult[0].version;
@@ -241,7 +253,7 @@ class SqlStorage {
 		}
 
 		console.log(
-			`Database migration check: current version ${currentVersion}, target version ${DATA_VERSION}`
+			`Database migration check: current version ${currentVersion}, target version ${DATA_VERSION}`,
 		);
 
 		// Always check and add missing columns regardless of version
@@ -253,7 +265,7 @@ class SqlStorage {
 			try {
 				await this.db.execute(
 					`INSERT OR REPLACE INTO metadata (id, lastSaved, version) VALUES (1, ?, ?)`,
-					[new Date().toISOString(), DATA_VERSION]
+					[new Date().toISOString(), DATA_VERSION],
 				);
 				console.log(`Updated database version to ${DATA_VERSION}`);
 			} catch (error) {
@@ -267,17 +279,21 @@ class SqlStorage {
 
 		try {
 			// Get current columns in expenses table
-			const tableInfo = await this.db.select<Array<{ name: string; type: string }>>(
-				"PRAGMA table_info(expenses)"
-			);
+			const tableInfo = await this.db.select<
+				Array<{ name: string; type: string }>
+			>("PRAGMA table_info(expenses)");
 
 			const existingColumns = new Set(tableInfo.map((col) => col.name));
-			console.log(`Expenses table columns: ${Array.from(existingColumns).join(", ")}`);
+			console.log(
+				`Expenses table columns: ${Array.from(existingColumns).join(", ")}`,
+			);
 
 			// Define columns that should exist with their defaults
-			const requiredColumns: Array<{ name: string; type: string; defaultValue: string }> = [
-				{ name: "paymentMethod", type: "TEXT", defaultValue: "'None'" },
-			];
+			const requiredColumns: Array<{
+				name: string;
+				type: string;
+				defaultValue: string;
+			}> = [{ name: "paymentMethod", type: "TEXT", defaultValue: "'None'" }];
 
 			// Add any missing columns
 			for (const column of requiredColumns) {
@@ -285,7 +301,7 @@ class SqlStorage {
 					console.log(`Adding missing column: ${column.name}`);
 					try {
 						await this.db.execute(
-							`ALTER TABLE expenses ADD COLUMN ${column.name} ${column.type} DEFAULT ${column.defaultValue}`
+							`ALTER TABLE expenses ADD COLUMN ${column.name} ${column.type} DEFAULT ${column.defaultValue}`,
 						);
 						console.log(`Successfully added column: ${column.name}`);
 					} catch (alterError) {
@@ -296,14 +312,14 @@ class SqlStorage {
 			}
 
 			// Ensure payment methods setting exists
-			const paymentMethodsResult = await this.db.select<Array<{ value: string }>>(
-				"SELECT value FROM settings WHERE key = 'expense_paymentMethods'"
-			);
+			const paymentMethodsResult = await this.db.select<
+				Array<{ value: string }>
+			>("SELECT value FROM settings WHERE key = 'expense_paymentMethods'");
 
 			if (paymentMethodsResult.length === 0) {
 				await this.db.execute(
 					`INSERT OR REPLACE INTO settings (key, value) VALUES ('expense_paymentMethods', ?)`,
-					[JSON.stringify(DEFAULT_PAYMENT_METHODS)]
+					[JSON.stringify(DEFAULT_PAYMENT_METHODS)],
 				);
 				console.log("Added default payment methods setting");
 			}
@@ -319,7 +335,7 @@ class SqlStorage {
 		try {
 			// Verify expenses table has all required columns
 			const tableInfo = await this.db.select<Array<{ name: string }>>(
-				"PRAGMA table_info(expenses)"
+				"PRAGMA table_info(expenses)",
 			);
 
 			const columns = new Set(tableInfo.map((col) => col.name));
@@ -350,8 +366,8 @@ class SqlStorage {
 			if (missingColumns.length > 0) {
 				throw new Error(
 					`Schema verification failed. Missing columns in expenses table: ${missingColumns.join(
-						", "
-					)}`
+						", ",
+					)}`,
 				);
 			}
 
@@ -420,9 +436,9 @@ class SqlStorage {
 		if (!this.initialized) await this.initialize();
 
 		return this.queueOperation(async () => {
-			const results = await this.db!.select<Array<{ key: string; value: string }>>(
-				"SELECT key, value FROM settings"
-			);
+			const results = await this.db!.select<
+				Array<{ key: string; value: string }>
+			>("SELECT key, value FROM settings");
 
 			if (results.length === 0) {
 				return DEFAULT_SETTINGS;
@@ -449,7 +465,7 @@ class SqlStorage {
 			for (const [key, value] of Object.entries(settings)) {
 				await this.db!.execute(
 					`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`,
-					[key, JSON.stringify(value)]
+					[key, JSON.stringify(value)],
 				);
 			}
 			this.cache.settings = settings;
@@ -466,9 +482,9 @@ class SqlStorage {
 		if (!this.initialized) await this.initialize();
 
 		return this.queueOperation(async () => {
-			const results = await this.db!.select<Array<{ key: string; value: string }>>(
-				"SELECT key, value FROM settings WHERE key LIKE 'theme_%'"
-			);
+			const results = await this.db!.select<
+				Array<{ key: string; value: string }>
+			>("SELECT key, value FROM settings WHERE key LIKE 'theme_%'");
 
 			if (results.length === 0) {
 				return DEFAULT_THEME_SETTINGS;
@@ -495,7 +511,7 @@ class SqlStorage {
 			for (const [key, value] of Object.entries(theme)) {
 				await this.db!.execute(
 					`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`,
-					[`theme_${key}`, JSON.stringify(value)]
+					[`theme_${key}`, JSON.stringify(value)],
 				);
 			}
 		});
@@ -510,9 +526,9 @@ class SqlStorage {
 		if (!this.initialized) await this.initialize();
 
 		return this.queueOperation(async () => {
-			const results = await this.db!.select<Array<{ lastSaved: string; version: string }>>(
-				"SELECT * FROM metadata WHERE id = 1"
-			);
+			const results = await this.db!.select<
+				Array<{ lastSaved: string; version: string }>
+			>("SELECT * FROM metadata WHERE id = 1");
 
 			if (results.length === 0) {
 				const defaultMetadata: AppMetadata = {
@@ -521,7 +537,7 @@ class SqlStorage {
 				};
 				await this.db!.execute(
 					`INSERT OR REPLACE INTO metadata (id, lastSaved, version) VALUES (1, ?, ?)`,
-					[defaultMetadata.lastSaved.toISOString(), defaultMetadata.version]
+					[defaultMetadata.lastSaved.toISOString(), defaultMetadata.version],
 				);
 				return defaultMetadata;
 			}
@@ -539,7 +555,7 @@ class SqlStorage {
 		return this.queueOperation(async () => {
 			await this.db!.execute(
 				`INSERT OR REPLACE INTO metadata (id, lastSaved, version) VALUES (1, ?, ?)`,
-				[metadata.lastSaved.toISOString(), metadata.version]
+				[metadata.lastSaved.toISOString(), metadata.version],
 			);
 		});
 	}
@@ -558,7 +574,8 @@ class SqlStorage {
 			const settings = await this.loadSettings();
 			const theme = await this.loadTheme();
 
-			const subfolders = this.notesStorage.extractSubfoldersFromHierarchy(folders);
+			const subfolders =
+				this.notesStorage.extractSubfoldersFromHierarchy(folders);
 
 			return {
 				notes,
@@ -611,7 +628,9 @@ class SqlStorage {
 
 			if (appToSave === AppToSave.NotesApp) {
 				const notesChanged = this.notesStorage.hasNotesChanged(data.notes);
-				const foldersChanged = this.notesStorage.hasFoldersChanged(data.notesFolders);
+				const foldersChanged = this.notesStorage.hasFoldersChanged(
+					data.notesFolders,
+				);
 				const tagsChanged = this.notesStorage.hasTagsChanged(data.tags || {});
 
 				if (notesChanged || foldersChanged || tagsChanged) {
@@ -632,9 +651,13 @@ class SqlStorage {
 				}
 			} else if (appToSave === AppToSave.All) {
 				const notesChanged = this.notesStorage.hasNotesChanged(data.notes);
-				const foldersChanged = this.notesStorage.hasFoldersChanged(data.notesFolders);
+				const foldersChanged = this.notesStorage.hasFoldersChanged(
+					data.notesFolders,
+				);
 				const tagsChanged = this.notesStorage.hasTagsChanged(data.tags || {});
-				const expensesChanged = this.expensesStorage.hasExpensesChanged(data.expenses);
+				const expensesChanged = this.expensesStorage.hasExpensesChanged(
+					data.expenses,
+				);
 				const incomeChanged = this.incomeStorage.hasIncomeChanged(data.income);
 				const settingsChanged = this.hasSettingsChanged(data.settings);
 				const themeChanged = this.hasThemeChanged(data.theme);
@@ -735,7 +758,7 @@ class SqlStorage {
 	// Switch between production and test environments
 	async switchEnvironment(environment: DatabaseEnvironment): Promise<void> {
 		console.log(
-			`Switching database environment from ${this.currentEnvironment} to: ${environment}`
+			`Switching database environment from ${this.currentEnvironment} to: ${environment}`,
 		);
 
 		// Always close and reinitialize when switching

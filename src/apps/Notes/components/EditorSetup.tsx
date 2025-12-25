@@ -1,28 +1,36 @@
-import { useMemo, useRef, useState } from "react";
 import { useNotesStore } from "@/stores/useNotesStore";
-import { Note } from "@/types/notes";
-
-import YooptaEditor, { createYooptaEditor } from "@yoopta/editor";
-import Paragraph from "@yoopta/paragraph";
-import Blockquote from "@yoopta/blockquote";
-import Embed from "@yoopta/embed";
-import Image from "@yoopta/image";
-import Link, { LinkElementProps } from "@yoopta/link";
-import Callout from "@yoopta/callout";
-import Video from "@yoopta/video";
-import File from "@yoopta/file";
-import Accordion from "@yoopta/accordion";
-import { NumberedList, BulletedList, TodoList } from "@yoopta/lists";
-import { Bold, Italic, CodeMark, Underline, Strike, Highlight } from "@yoopta/marks";
-import { HeadingOne, HeadingThree, HeadingTwo } from "@yoopta/headings";
-import Code from "@yoopta/code";
-import Table from "@yoopta/table";
-import Divider from "@yoopta/divider";
-import ActionMenuList, { DefaultActionMenuRender } from "@yoopta/action-menu-list";
-import Toolbar, { DefaultToolbarRender } from "@yoopta/toolbar";
-import LinkTool, { DefaultLinkToolRender } from "@yoopta/link-tool";
-import LinkPreviewPlugin from "./LinkPreview";
+import type { Note } from "@/types/notes";
 import { useLinkPreviewAutoConvert } from "../hooks/useLinkPreviewAutoConvert";
+import LinkPreviewPlugin from "./LinkPreview";
+import Accordion from "@yoopta/accordion";
+import ActionMenuList, {
+	DefaultActionMenuRender,
+} from "@yoopta/action-menu-list";
+import Blockquote from "@yoopta/blockquote";
+import Callout from "@yoopta/callout";
+import Code from "@yoopta/code";
+import Divider, { type DividerElementProps } from "@yoopta/divider";
+import YooptaEditor, { createYooptaEditor } from "@yoopta/editor";
+import Embed from "@yoopta/embed";
+import File from "@yoopta/file";
+import { HeadingOne, HeadingThree, HeadingTwo } from "@yoopta/headings";
+import Image from "@yoopta/image";
+import Link, { type LinkElementProps } from "@yoopta/link";
+import LinkTool, { DefaultLinkToolRender } from "@yoopta/link-tool";
+import { BulletedList, NumberedList, TodoList } from "@yoopta/lists";
+import {
+	Bold,
+	CodeMark,
+	Highlight,
+	Italic,
+	Strike,
+	Underline,
+} from "@yoopta/marks";
+import Paragraph from "@yoopta/paragraph";
+import Table from "@yoopta/table";
+import Toolbar, { DefaultToolbarRender } from "@yoopta/toolbar";
+import Video from "@yoopta/video";
+import { useMemo, useRef, useState } from "react";
 
 const fileToBase64 = (file: File): Promise<string> => {
 	return new Promise((resolve, reject) => {
@@ -34,7 +42,9 @@ const fileToBase64 = (file: File): Promise<string> => {
 };
 
 // Helper function to get image dimensions
-const getImageDimensions = (file: File): Promise<{ width: number; height: number }> => {
+const getImageDimensions = (
+	file: File,
+): Promise<{ width: number; height: number }> => {
 	return new Promise((resolve, reject) => {
 		const img = document.createElement("img");
 		const url = URL.createObjectURL(file);
@@ -54,7 +64,9 @@ const getImageDimensions = (file: File): Promise<{ width: number; height: number
 };
 
 // Helper function to get video dimensions
-const getVideoDimensions = (file: File): Promise<{ width: number; height: number }> => {
+const getVideoDimensions = (
+	file: File,
+): Promise<{ width: number; height: number }> => {
 	return new Promise((resolve, reject) => {
 		const video = document.createElement("video");
 		const url = URL.createObjectURL(file);
@@ -75,10 +87,11 @@ const getVideoDimensions = (file: File): Promise<{ width: number; height: number
 
 const plugins = [
 	Paragraph,
+	// biome-ignore lint/suspicious/noExplicitAny: Table plugin types are incompatible with Yoopta's type system
 	Table as any,
 	Divider.extend({
 		elementProps: {
-			divider: (props: any) => ({
+			divider: (props: DividerElementProps) => ({
 				...props,
 				color: "#007aff",
 			}),
@@ -205,7 +218,7 @@ export const EditorSetup = ({ note }: EditorSetupProps) => {
 	// Enable automatic URL to LinkPreview conversion
 	useLinkPreviewAutoConvert(editor);
 
-	const onChange = async (value: any) => {
+	const onChange = async (value: Record<string, unknown>) => {
 		setValue(value);
 
 		const content = JSON.stringify(value);

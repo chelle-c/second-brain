@@ -1,18 +1,21 @@
+import { format, isSameDay, parseISO } from "date-fns";
+import { FileText, Pencil, Plus, Trash2 } from "lucide-react";
 import React, { useState } from "react";
-import ManualEntryForm from "./ManualEntryForm";
-import PasteEntryForm from "./PasteEntryForm";
-import { getAvailableDates } from "@/lib/dateUtils";
-import { parsePasteText } from "@/lib/dateUtils";
+import { Modal } from "@/components/Modal";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { getCurrencySymbol } from "@/lib/currencyUtils";
+import { getAvailableDates, parsePasteText } from "@/lib/dateUtils";
 import { useIncomeStore } from "@/stores/useIncomeStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
-import { getCurrencySymbol } from "@/lib/currencyUtils";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Modal } from "@/components/Modal";
-import { format, parseISO, isSameDay } from "date-fns";
-import { Plus, Pencil, Trash2, FileText } from "lucide-react";
-import type { IncomeEntry, IncomeWeekSelection } from "@/types/income";
+import type {
+	IncomeEntry,
+	IncomeWeekSelection,
+	IncomeParsedEntry,
+} from "@/types/income";
+import ManualEntryForm from "./ManualEntryForm";
+import PasteEntryForm from "./PasteEntryForm";
 
 interface IncomeEntriesListProps {
 	selectedWeek: IncomeWeekSelection;
@@ -58,13 +61,17 @@ const EditModal: React.FC<{
 		>
 			<div className="space-y-4">
 				<div>
-					<Label className="text-sm text-muted-foreground mb-1">Amount ({currencySymbol})</Label>
+					<Label className="text-sm text-muted-foreground mb-1">
+						Amount ({currencySymbol})
+					</Label>
 					<Input
 						type="number"
 						step="0.01"
 						min="0"
 						value={editForm.amount || ""}
-						onChange={(e) => handleChange("amount", parseFloat(e.target.value) || 0)}
+						onChange={(e) =>
+							handleChange("amount", parseFloat(e.target.value) || 0)
+						}
 						className="bg-background h-10"
 						placeholder="0.00"
 					/>
@@ -78,27 +85,36 @@ const EditModal: React.FC<{
 							min="0"
 							max="24"
 							value={editForm.hours || ""}
-							onChange={(e) => handleChange("hours", parseFloat(e.target.value) || 0)}
+							onChange={(e) =>
+								handleChange("hours", parseFloat(e.target.value) || 0)
+							}
 							className="bg-background h-10"
 							placeholder="0"
 						/>
 					</div>
 					<div>
-						<Label className="text-sm text-muted-foreground mb-1">Minutes</Label>
+						<Label className="text-sm text-muted-foreground mb-1">
+							Minutes
+						</Label>
 						<Input
 							type="number"
 							step="1"
 							min="0"
 							max="59"
 							value={editForm.minutes || ""}
-							onChange={(e) => handleChange("minutes", parseInt(e.target.value) || 0)}
+							onChange={(e) =>
+								handleChange("minutes", parseInt(e.target.value, 10) || 0)
+							}
 							className="bg-background h-10"
 							placeholder="0"
 						/>
 					</div>
 				</div>
 				<div className="flex gap-2 pt-2">
-					<Button onClick={handleSave} className="flex-1 bg-primary hover:bg-primary/80">
+					<Button
+						onClick={handleSave}
+						className="flex-1 bg-primary hover:bg-primary/80"
+					>
 						Save Changes
 					</Button>
 					<Button variant="secondary" onClick={onClose}>
@@ -124,14 +140,18 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 		minutes: 0,
 	});
 	const [pasteText, setPasteText] = useState("");
-	const [parsedEntries, setParsedEntries] = useState<any[]>([]);
+	const [parsedEntries, setParsedEntries] = useState<IncomeParsedEntry[]>([]);
 	const [parseError, setParseError] = useState("");
 	const [showAddModal, setShowAddModal] = useState(false);
 	const [entryMethod, setEntryMethod] = useState<"manual" | "paste">("paste");
 	const [editingEntry, setEditingEntry] = useState<IncomeEntry | null>(null);
 
-	const { incomeEntries, addIncomeEntry, updateIncomeEntry, deleteIncomeEntry } =
-		useIncomeStore();
+	const {
+		incomeEntries,
+		addIncomeEntry,
+		updateIncomeEntry,
+		deleteIncomeEntry,
+	} = useIncomeStore();
 
 	const availableDates = getAvailableDates(selectedWeek.startDate);
 
@@ -139,8 +159,9 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 		return (
 			incomeEntries
 				.filter((e) => isSameDay(parseISO(e.date), parseISO(entry.date)))
-				.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]?.id ===
-			entry.id
+				.sort(
+					(a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+				)[0]?.id === entry.id
 		);
 	};
 
@@ -168,7 +189,9 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 			minutes: parsed.minutes,
 		}));
 
-		newEntries.forEach((entry) => addIncomeEntry(entry));
+		newEntries.forEach((entry) => {
+			addIncomeEntry(entry);
+		});
 		setShowAddModal(false);
 		onResetForm();
 	};
@@ -180,8 +203,12 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 		if (text.trim()) {
 			try {
 				const parsed = parsePasteText(text, selectedWeek.year);
-				setParsedEntries(parsed);
-			} catch (error) {
+				const parsedEntriesWithIds = parsed.map((entry) => ({
+					...entry,
+					id: Date.now().toString() + Math.random(),
+				}));
+				setParsedEntries(parsedEntriesWithIds);
+			} catch (_error) {
 				setParseError("Error parsing text. Please check the format.");
 			}
 		} else {
@@ -201,7 +228,10 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 		setParseError("");
 	};
 
-	const onNewEntryChange = (field: keyof IncomeEntry, value: string | number) => {
+	const onNewEntryChange = (
+		field: keyof IncomeEntry,
+		value: string | number,
+	) => {
 		setNewEntry((prev) => ({ ...prev, [field]: value }));
 	};
 
@@ -217,7 +247,7 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 	};
 
 	const sortedEntries = [...currentWeekEntries].sort(
-		(a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+		(a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
 	);
 
 	return (
@@ -225,7 +255,9 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 			<div className="pb-3">
 				<div className="flex items-center justify-between">
 					<div>
-						<h3 className="text-sm font-semibold text-card-foreground">Income Entries</h3>
+						<h3 className="text-sm font-semibold text-card-foreground">
+							Income Entries
+						</h3>
 						<span className="text-xs text-muted-foreground mt-0.5 block">
 							{currentWeekEntries.length}{" "}
 							{currentWeekEntries.length === 1 ? "entry" : "entries"}
@@ -246,7 +278,9 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 				{currentWeekEntries.length === 0 ? (
 					<div className="text-center py-8">
 						<FileText className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
-						<p className="text-sm text-muted-foreground">No entries this week</p>
+						<p className="text-sm text-muted-foreground">
+							No entries this week
+						</p>
 					</div>
 				) : (
 					<div className="overflow-x-auto">
@@ -293,7 +327,8 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 											</td>
 											<td className="py-2 px-2 text-right">
 												<span className="text-xs font-semibold text-primary">
-													{currencySymbol}{entry.amount.toFixed(2)}
+													{currencySymbol}
+													{entry.amount.toFixed(2)}
 												</span>
 											</td>
 											<td className="py-2 px-2 text-right">
@@ -345,6 +380,7 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 				<div className="space-y-4">
 					<div className="flex gap-2">
 						<button
+							type="button"
 							onClick={() => setEntryMethod("manual")}
 							className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
 								entryMethod === "manual"
@@ -355,6 +391,7 @@ const IncomeEntriesList: React.FC<IncomeEntriesListProps> = ({
 							Manual Entry
 						</button>
 						<button
+							type="button"
 							onClick={() => setEntryMethod("paste")}
 							className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
 								entryMethod === "paste"

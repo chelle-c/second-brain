@@ -1,14 +1,14 @@
-import { useMemo, useState, useEffect } from "react";
-import { Group } from "@visx/group";
-import { scaleBand, scaleLinear } from "@visx/scale";
 import { GridRows } from "@visx/grid";
+import { Group } from "@visx/group";
 import { ParentSize } from "@visx/responsive";
+import { scaleBand, scaleLinear } from "@visx/scale";
 import { Text } from "@visx/text";
+import { useEffect, useMemo, useState } from "react";
 
 export interface BarChartData {
 	label: string;
 	value: number;
-	[key: string]: any;
+	[key: string]: string | number | boolean | Date | undefined;
 }
 
 interface BarChartProps {
@@ -61,7 +61,7 @@ const BarChartInner = ({
 			const elapsed = currentTime - startTime;
 			const progress = Math.min(elapsed / duration, 1);
 			// Ease-out cubic for smooth deceleration
-			const eased = 1 - Math.pow(1 - progress, 3);
+			const eased = 1 - (1 - progress) ** 3;
 			setAnimationProgress(eased);
 
 			if (progress < 1) {
@@ -82,7 +82,7 @@ const BarChartInner = ({
 				range: [0, innerWidth],
 				padding: 0.3,
 			}),
-		[data, innerWidth]
+		[data, innerWidth],
 	);
 
 	const yScale = useMemo(() => {
@@ -95,11 +95,15 @@ const BarChartInner = ({
 	}, [data, innerHeight]);
 
 	const yTicks = yScale.ticks(5);
-	const calculatedBarWidth = Math.min(barSize || xScale.bandwidth(), xScale.bandwidth());
+	const calculatedBarWidth = Math.min(
+		barSize || xScale.bandwidth(),
+		xScale.bandwidth(),
+	);
 
 	return (
 		<div style={{ position: "relative", width, height }}>
-			<svg width={width} height={height}>
+			<svg width={width} height={height} aria-label="Bar chart">
+				<title>Bar chart</title>
 				<Group left={margin.left} top={margin.top}>
 					<GridRows
 						scale={yScale}
@@ -109,9 +113,9 @@ const BarChartInner = ({
 					/>
 
 					{/* Y-axis labels */}
-					{yTicks.map((tick, i) => (
+					{yTicks.map((tick) => (
 						<Text
-							key={`y-tick-${i}`}
+							key={`y-tick-${tick}`}
 							x={-8}
 							y={yScale(tick)}
 							textAnchor="end"
@@ -124,16 +128,20 @@ const BarChartInner = ({
 					))}
 
 					{/* Bars */}
-					{data.map((d, i) => {
+					{data.map((d) => {
 						const fullBarHeight = Math.max(0, innerHeight - yScale(d.value));
 						const animatedBarHeight = fullBarHeight * animationProgress;
-						const barX = (xScale(d.label) || 0) + (xScale.bandwidth() - calculatedBarWidth) / 2;
+						const barX =
+							(xScale(d.label) || 0) +
+							(xScale.bandwidth() - calculatedBarWidth) / 2;
 						// Bar rises from bottom, so y starts at innerHeight and moves up
 						const barY = innerHeight - animatedBarHeight;
 
 						return (
-							<Group key={`bar-${i}`}>
+							<Group key={`bar-${d.label}`}>
+								{/* biome-ignore lint/a11y/noStaticElementInteractions: SVG rect needs mouse events for tooltip */}
 								<rect
+									aria-label={`${d.label}: ${d.value}`}
 									x={barX}
 									y={barY}
 									width={calculatedBarWidth}
@@ -168,10 +176,10 @@ const BarChartInner = ({
 					})}
 
 					{/* X-axis labels */}
-					{data.map((d, i) => {
+					{data.map((d) => {
 						const x = (xScale(d.label) || 0) + xScale.bandwidth() / 2;
 						return (
-							<Group key={`x-label-${i}`}>
+							<Group key={`x-label-${d.label}`}>
 								<Text
 									x={x}
 									y={innerHeight + 16}
@@ -190,7 +198,7 @@ const BarChartInner = ({
 										fill={theme.mutedTextColor}
 										fontSize={11}
 									>
-										{d.secondaryLabel}
+										{String(d.secondaryLabel)}
 									</Text>
 								)}
 							</Group>

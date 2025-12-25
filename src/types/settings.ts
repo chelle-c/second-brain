@@ -1,4 +1,4 @@
-import { IncomeViewType } from "./income";
+import type { IncomeViewType } from "./income";
 
 export type ExpenseViewType = "upcoming" | "monthly" | "all";
 export type WeekStartDay = 0 | 1 | 2 | 3 | 4 | 5 | 6; // 0 = Sunday, 1 = Monday, etc.
