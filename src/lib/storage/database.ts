@@ -7,6 +7,7 @@ import {
 } from "@/lib/expenseHelpers";
 import { type AppData, type AppMetadata, AppToSave } from "@/types";
 import type { DatabaseEnvironment } from "@/types/backup";
+import type { Note, NotesFolders, Tag } from "@/types/notes";
 import { type AppSettings, DEFAULT_SETTINGS } from "@/types/settings";
 import {
 	DATA_VERSION,
@@ -39,13 +40,20 @@ class SqlStorage {
 	private initializing = false;
 	private db: Database | null = null;
 	private appDataPath: string | null = null;
-	private operationQueue: Promise<any> = Promise.resolve();
+	private operationQueue: Promise<void> = Promise.resolve();
 	private cache: StorageCache = {};
 	private currentEnvironment: DatabaseEnvironment = "production";
 
 	private notesStorage!: NotesStorage;
 	private expensesStorage!: ExpensesStorage;
 	private incomeStorage!: IncomeStorage;
+
+	private assertDb(): Database {
+		if (!this.db) {
+			throw new Error("Database not initialized");
+		}
+		return this.db;
+	}
 
 	private getDatabaseFileName(): string {
 		return this.currentEnvironment === "production"
@@ -248,7 +256,7 @@ class SqlStorage {
 			if (versionResult.length > 0 && versionResult[0].version) {
 				currentVersion = versionResult[0].version;
 			}
-		} catch (error) {
+		} catch (_) {
 			console.log("No metadata found, assuming version 0.0.0");
 		}
 
@@ -384,7 +392,7 @@ class SqlStorage {
 		return this.notesStorage.loadNotes();
 	}
 
-	async saveNotes(notes: any[]) {
+	async saveNotes(notes: Note[]) {
 		if (!this.initialized) await this.initialize();
 		return this.notesStorage.saveNotes(notes);
 	}
@@ -394,7 +402,7 @@ class SqlStorage {
 		return this.notesStorage.loadFolders();
 	}
 
-	async saveFolders(folders: any) {
+	async saveFolders(folders: NotesFolders) {
 		if (!this.initialized) await this.initialize();
 		return this.notesStorage.saveFolders(folders);
 	}
@@ -404,7 +412,7 @@ class SqlStorage {
 		return this.notesStorage.loadTags();
 	}
 
-	async saveTags(tags: any) {
+	async saveTags(tags: Record<string, Tag>) {
 		if (!this.initialized) await this.initialize();
 		return this.notesStorage.saveTags(tags);
 	}
@@ -436,7 +444,7 @@ class SqlStorage {
 		if (!this.initialized) await this.initialize();
 
 		return this.queueOperation(async () => {
-			const results = await this.db!.select<
+			const results = await this.assertDb().select<
 				Array<{ key: string; value: string }>
 			>("SELECT key, value FROM settings");
 
@@ -444,16 +452,19 @@ class SqlStorage {
 				return DEFAULT_SETTINGS;
 			}
 
-			const settings: Partial<AppSettings> = {};
+			const settings: Record<string, unknown> = {};
 			for (const row of results) {
 				try {
-					(settings as any)[row.key] = JSON.parse(row.value);
+					settings[row.key] = JSON.parse(row.value);
 				} catch {
-					(settings as any)[row.key] = row.value;
+					settings[row.key] = row.value;
 				}
 			}
 
-			this.cache.settings = { ...DEFAULT_SETTINGS, ...settings };
+			this.cache.settings = {
+				...DEFAULT_SETTINGS,
+				...(settings as Partial<AppSettings>),
+			};
 			return this.cache.settings;
 		});
 	}
@@ -463,7 +474,7 @@ class SqlStorage {
 
 		return this.queueOperation(async () => {
 			for (const [key, value] of Object.entries(settings)) {
-				await this.db!.execute(
+				await this.assertDb().execute(
 					`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`,
 					[key, JSON.stringify(value)],
 				);
@@ -482,25 +493,31 @@ class SqlStorage {
 		if (!this.initialized) await this.initialize();
 
 		return this.queueOperation(async () => {
-			const results = await this.db!.select<
+			const results = await this.assertDb().select<
 				Array<{ key: string; value: string }>
 			>("SELECT key, value FROM settings WHERE key LIKE 'theme_%'");
 
 			if (results.length === 0) {
+				this.cache.theme = DEFAULT_THEME_SETTINGS;
 				return DEFAULT_THEME_SETTINGS;
 			}
 
-			const theme: Partial<ThemeSettings> = {};
+			const theme: Record<string, unknown> = {};
 			for (const row of results) {
-				const key = row.key.replace("theme_", "") as keyof ThemeSettings;
+				const key = row.key.replace("theme_", "");
 				try {
-					(theme as any)[key] = JSON.parse(row.value);
+					theme[key] = JSON.parse(row.value);
 				} catch {
-					(theme as any)[key] = row.value;
+					theme[key] = row.value;
 				}
 			}
 
-			return { ...DEFAULT_THEME_SETTINGS, ...theme };
+			const fullTheme = {
+				...DEFAULT_THEME_SETTINGS,
+				...(theme as Partial<ThemeSettings>),
+			};
+			this.cache.theme = fullTheme;
+			return fullTheme;
 		});
 	}
 
@@ -509,16 +526,18 @@ class SqlStorage {
 
 		return this.queueOperation(async () => {
 			for (const [key, value] of Object.entries(theme)) {
-				await this.db!.execute(
+				await this.assertDb().execute(
 					`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`,
 					[`theme_${key}`, JSON.stringify(value)],
 				);
 			}
+			this.cache.theme = theme;
 		});
 	}
 
-	hasThemeChanged(_theme: ThemeSettings): boolean {
-		return true;
+	hasThemeChanged(theme: ThemeSettings): boolean {
+		if (!this.cache.theme) return true;
+		return JSON.stringify(this.cache.theme) !== JSON.stringify(theme);
 	}
 
 	// Metadata
@@ -526,7 +545,7 @@ class SqlStorage {
 		if (!this.initialized) await this.initialize();
 
 		return this.queueOperation(async () => {
-			const results = await this.db!.select<
+			const results = await this.assertDb().select<
 				Array<{ lastSaved: string; version: string }>
 			>("SELECT * FROM metadata WHERE id = 1");
 
@@ -535,7 +554,7 @@ class SqlStorage {
 					lastSaved: new Date(),
 					version: DATA_VERSION,
 				};
-				await this.db!.execute(
+				await this.assertDb().execute(
 					`INSERT OR REPLACE INTO metadata (id, lastSaved, version) VALUES (1, ?, ?)`,
 					[defaultMetadata.lastSaved.toISOString(), defaultMetadata.version],
 				);
@@ -553,7 +572,7 @@ class SqlStorage {
 		if (!this.initialized) await this.initialize();
 
 		return this.queueOperation(async () => {
-			await this.db!.execute(
+			await this.assertDb().execute(
 				`INSERT OR REPLACE INTO metadata (id, lastSaved, version) VALUES (1, ?, ?)`,
 				[metadata.lastSaved.toISOString(), metadata.version],
 			);
@@ -710,14 +729,14 @@ class SqlStorage {
 		if (!this.initialized) await this.initialize();
 
 		await this.queueOperation(async () => {
-			await this.db!.execute("DELETE FROM notes");
-			await this.db!.execute("DELETE FROM folders");
-			await this.db!.execute("DELETE FROM tags");
-			await this.db!.execute("DELETE FROM expenses");
-			await this.db!.execute("DELETE FROM income_entries");
-			await this.db!.execute("DELETE FROM income_weekly_targets");
-			await this.db!.execute("DELETE FROM settings");
-			await this.db!.execute("DELETE FROM metadata");
+			await this.assertDb().execute("DELETE FROM notes");
+			await this.assertDb().execute("DELETE FROM folders");
+			await this.assertDb().execute("DELETE FROM tags");
+			await this.assertDb().execute("DELETE FROM expenses");
+			await this.assertDb().execute("DELETE FROM income_entries");
+			await this.assertDb().execute("DELETE FROM income_weekly_targets");
+			await this.assertDb().execute("DELETE FROM settings");
+			await this.assertDb().execute("DELETE FROM metadata");
 		});
 
 		this.cache = {};

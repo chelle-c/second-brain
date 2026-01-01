@@ -1,4 +1,5 @@
 import type { AppData } from "@/types/";
+import type { IncomeViewType } from "@/types/income";
 import type { DatabaseContext } from "../../types/storage";
 import { deepEqual } from "../utils";
 
@@ -9,7 +10,7 @@ export class IncomeStorage {
 		this.context = context;
 	}
 
-	private normalizeIncome(income: AppData["income"]): any {
+	private normalizeIncome(income: AppData["income"]): AppData["income"] {
 		return {
 			entries: [...income.entries].sort((a, b) => a.id.localeCompare(b.id)),
 			weeklyTargets: [...income.weeklyTargets].sort((a, b) =>
@@ -59,7 +60,7 @@ export class IncomeStorage {
 				weeklyTargets: targets,
 				viewType:
 					viewTypeResult.length > 0
-						? (viewTypeResult[0].value as any)
+						? (viewTypeResult[0].value as IncomeViewType)
 						: "weekly",
 			};
 

@@ -53,6 +53,17 @@ const applyPalette = (palette: ThemePalette) => {
 	}
 };
 
+// Cache theme to localStorage for early application on next startup
+const cacheThemeToLocalStorage = (mode: ThemeMode, palette: ThemePalette) => {
+	if (typeof localStorage !== "undefined") {
+		try {
+			localStorage.setItem("theme-cache", JSON.stringify({ mode, palette }));
+		} catch {
+			// Ignore localStorage errors
+		}
+	}
+};
+
 // Resolve the actual theme from mode
 const resolveTheme = (mode: ThemeMode): "light" | "dark" => {
 	if (mode === "system") {
@@ -82,17 +93,24 @@ export const useThemeStore = create<ThemeStore>()(
 			applyTheme(newResolvedTheme);
 			applyPalette(newPalette);
 
+			// Cache for early application on next startup
+			cacheThemeToLocalStorage(newMode, newPalette);
+
 			if (!skipSave && useAppStore.getState().autoSaveEnabled) {
 				useAppStore.getState().saveToFile(AppToSave.All);
 			}
 		},
 
 		setMode: (mode) => {
+			const palette = get().palette;
 			const resolvedTheme = resolveTheme(mode);
 			set({ mode, resolvedTheme });
 
 			// Apply the theme to DOM
 			applyTheme(resolvedTheme);
+
+			// Cache for early application on next startup
+			cacheThemeToLocalStorage(mode, palette);
 
 			if (useAppStore.getState().autoSaveEnabled) {
 				useAppStore.getState().saveToFile(AppToSave.All);
@@ -100,10 +118,14 @@ export const useThemeStore = create<ThemeStore>()(
 		},
 
 		setPalette: (palette) => {
+			const mode = get().mode;
 			set({ palette });
 
 			// Apply the palette to DOM
 			applyPalette(palette);
+
+			// Cache for early application on next startup
+			cacheThemeToLocalStorage(mode, palette);
 
 			if (useAppStore.getState().autoSaveEnabled) {
 				useAppStore.getState().saveToFile(AppToSave.All);
@@ -116,6 +138,9 @@ export const useThemeStore = create<ThemeStore>()(
 			set({ resolvedTheme });
 			applyTheme(resolvedTheme);
 			applyPalette(palette);
+
+			// Cache for early application on next startup
+			cacheThemeToLocalStorage(mode, palette);
 
 			// Listen for system theme changes
 			if (typeof window !== "undefined" && window.matchMedia) {
@@ -142,6 +167,12 @@ export const useThemeStore = create<ThemeStore>()(
 			});
 			applyTheme(resolvedTheme);
 			applyPalette(DEFAULT_THEME_SETTINGS.palette);
+
+			// Cache for early application on next startup
+			cacheThemeToLocalStorage(
+				DEFAULT_THEME_SETTINGS.mode,
+				DEFAULT_THEME_SETTINGS.palette,
+			);
 
 			if (useAppStore.getState().autoSaveEnabled) {
 				useAppStore.getState().saveToFile(AppToSave.All);

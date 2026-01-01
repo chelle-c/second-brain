@@ -2,6 +2,7 @@ import type Database from "@tauri-apps/plugin-sql";
 import type { AppData } from "@/types/";
 import type { Note, NotesFolders, Tag } from "@/types/notes";
 import type { AppSettings } from "@/types/settings";
+import type { ThemeSettings } from "@/types/theme";
 
 export interface StorageCache {
 	notes?: Note[];
@@ -10,6 +11,7 @@ export interface StorageCache {
 	expenses?: AppData["expenses"];
 	income?: AppData["income"];
 	settings?: AppSettings;
+	theme?: ThemeSettings;
 }
 
 export interface DatabaseContext {

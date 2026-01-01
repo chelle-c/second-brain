@@ -182,12 +182,12 @@ export function validateAndConvertNotes(
 		const createdAt = new Date(noteData.createdAt);
 		const updatedAt = new Date(noteData.updatedAt);
 
-		if (isNaN(createdAt.getTime())) {
+		if (Number.isNaN(createdAt.getTime())) {
 			errors.push(`Note "${noteData.title}": Invalid createdAt date.`);
 			continue;
 		}
 
-		if (isNaN(updatedAt.getTime())) {
+		if (Number.isNaN(updatedAt.getTime())) {
 			errors.push(`Note "${noteData.title}": Invalid updatedAt date.`);
 			continue;
 		}

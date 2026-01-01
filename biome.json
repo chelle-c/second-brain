@@ -6,7 +6,13 @@
 		"useIgnoreFile": true
 	},
 	"files": {
-		"includes": ["**", "!!**/dist"]
+		"includes": [
+			"**",
+			"!**/tests",
+			"!**/src/components/ui",
+			"!!**/dist",
+			"!!**/node_modules"
+		]
 	},
 	"formatter": {
 		"enabled": true,

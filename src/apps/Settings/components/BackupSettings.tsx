@@ -355,7 +355,9 @@ export const BackupSettings = () => {
 								</div>
 								<Select
 									value={settings.maxAutoBackups.toString()}
-									onValueChange={(value) => setMaxAutoBackups(parseInt(value))}
+									onValueChange={(value) =>
+										setMaxAutoBackups(parseInt(value, 10))
+									}
 								>
 									<SelectTrigger className="w-[200px]">
 										<SelectValue />

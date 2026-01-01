@@ -1,11 +1,14 @@
 import { invoke } from "@tauri-apps/api/core";
-import { lazy, Suspense, useEffect, useState } from "react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import { DebugConsole } from "@/components/DebugConsole";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Loading, PageLoading } from "@/components/ui/loading";
+import { sqlStorage } from "@/lib/storage";
 import useAppStore from "@/stores/useAppStore";
 import { useBackupStore } from "@/stores/useBackupStore";
+import { AppToSave } from "@/types";
 
 // Lazy load route modules for code splitting
 const NotesApp = lazy(() =>
@@ -31,6 +34,7 @@ function App() {
 	const loadFromFile = useAppStore((state) => state.loadFromFile);
 	const isLoading = useAppStore((state) => state.isLoading);
 	const initializeBackup = useBackupStore((state) => state.initialize);
+	const isSavingRef = useRef(false);
 
 	const initializeApp = async () => {
 		try {
@@ -45,6 +49,42 @@ function App() {
 	useEffect(() => {
 		initializeApp();
 	}, [loadFromFile]);
+
+	// Handle window close - save all data before closing
+	useEffect(() => {
+		const appWindow = getCurrentWindow();
+
+		const unlistenPromise = appWindow.onCloseRequested(async (event) => {
+			// Prevent multiple simultaneous save attempts
+			if (isSavingRef.current) {
+				event.preventDefault();
+				return;
+			}
+
+			// Prevent default close - we'll close manually after saving
+			event.preventDefault();
+			isSavingRef.current = true;
+			console.log("Window close requested - saving data...");
+
+			try {
+				// Force save all data before closing
+				await useAppStore.getState().saveToFile(AppToSave.All);
+				// Ensure database is properly closed
+				await sqlStorage.close();
+				console.log("Data saved successfully before close");
+			} catch (error) {
+				console.error("Error saving data on close:", error);
+			} finally {
+				isSavingRef.current = false;
+				// Now close the window
+				await appWindow.destroy();
+			}
+		});
+
+		return () => {
+			unlistenPromise.then((unlisten) => unlisten());
+		};
+	}, []);
 
 	return (
 		<>

@@ -5,7 +5,7 @@ export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
 }
 
-export function deepEqual(obj1: any, obj2: any): boolean {
+export function deepEqual(obj1: unknown, obj2: unknown): boolean {
 	if (obj1 === obj2) return true;
 
 	if (obj1 == null || obj2 == null) return false;
@@ -24,12 +24,17 @@ export function deepEqual(obj1: any, obj2: any): boolean {
 
 	// Handle Objects
 	if (typeof obj1 === "object" && typeof obj2 === "object") {
-		const keys1 = Object.keys(obj1);
-		const keys2 = Object.keys(obj2);
+		const keys1 = Object.keys(obj1 as object);
+		const keys2 = Object.keys(obj2 as object);
 
 		if (keys1.length !== keys2.length) return false;
 
-		return keys1.every((key) => deepEqual(obj1[key], obj2[key]));
+		return keys1.every((key) =>
+			deepEqual(
+				(obj1 as Record<string, unknown>)[key],
+				(obj2 as Record<string, unknown>)[key],
+			),
+		);
 	}
 
 	return false;

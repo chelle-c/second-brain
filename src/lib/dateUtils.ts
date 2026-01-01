@@ -19,7 +19,7 @@ import {
 	startOfWeek,
 	startOfYear,
 } from "date-fns";
-import type { IncomeParsedEntry } from "@/types/income";
+import type { IncomeEntry, IncomeParsedEntry } from "@/types/income";
 
 // ============================================
 // Constants
@@ -256,12 +256,12 @@ export const parsePasteText = (text: string, selectedYear: number) => {
 		} else if (line.includes("h") || line.includes("min")) {
 			const timeMatch = line.match(/(\d+)h\s*(\d+)min/);
 			if (timeMatch) {
-				currentEntry.hours = parseInt(timeMatch[1]);
-				currentEntry.minutes = parseInt(timeMatch[2]);
+				currentEntry.hours = parseInt(timeMatch[1], 10);
+				currentEntry.minutes = parseInt(timeMatch[2], 10);
 			} else {
 				const hoursMatch = line.match(/(\d+)h/);
 				if (hoursMatch) {
-					currentEntry.hours = parseInt(hoursMatch[1]);
+					currentEntry.hours = parseInt(hoursMatch[1], 10);
 				}
 			}
 		}
@@ -280,7 +280,7 @@ export const parsePasteText = (text: string, selectedYear: number) => {
 	return entries;
 };
 
-export const getMonthlyData = (incomeEntries: any[], year: number) => {
+export const getMonthlyData = (incomeEntries: IncomeEntry[], year: number) => {
 	const monthlyData = [];
 
 	for (let month = 0; month < 12; month++) {
@@ -293,11 +293,10 @@ export const getMonthlyData = (incomeEntries: any[], year: number) => {
 		});
 
 		// Get the latest entry for each day to avoid duplicates
-		const uniqueEntries = monthEntries.reduce((acc, entry) => {
+		const uniqueEntries = monthEntries.reduce((acc: IncomeEntry[], entry) => {
 			const entryDate = format(parseISO(entry.date), "yyyy-MM-dd");
 			const existingEntry = acc.find(
-				(e: { date: string }) =>
-					format(parseISO(e.date), "yyyy-MM-dd") === entryDate,
+				(e) => format(parseISO(e.date), "yyyy-MM-dd") === entryDate,
 			);
 
 			if (
@@ -305,8 +304,7 @@ export const getMonthlyData = (incomeEntries: any[], year: number) => {
 				new Date(entry.date) > new Date(existingEntry.date)
 			) {
 				acc = acc.filter(
-					(e: { date: string }) =>
-						format(parseISO(e.date), "yyyy-MM-dd") !== entryDate,
+					(e) => format(parseISO(e.date), "yyyy-MM-dd") !== entryDate,
 				);
 				acc.push(entry);
 			}
@@ -315,11 +313,11 @@ export const getMonthlyData = (incomeEntries: any[], year: number) => {
 		}, []);
 
 		const totalAmount = uniqueEntries.reduce(
-			(sum: any, entry: { amount: any }) => sum + entry.amount,
+			(sum: number, entry: IncomeEntry) => sum + entry.amount,
 			0,
 		);
 		const totalHours = uniqueEntries.reduce(
-			(sum: any, entry: { hours: number; minutes: number }) => {
+			(sum: number, entry: IncomeEntry) => {
 				const hours = entry.hours || 0;
 				const minutes = entry.minutes || 0;
 				return sum + hours + minutes / 60;
@@ -339,7 +337,7 @@ export const getMonthlyData = (incomeEntries: any[], year: number) => {
 	return monthlyData;
 };
 
-export const getYearlyData = (incomeEntries: any[]) => {
+export const getYearlyData = (incomeEntries: IncomeEntry[]) => {
 	const yearlyData = [];
 	const uniqueYears = [
 		...new Set(incomeEntries.map((entry) => getYear(parseISO(entry.date)))),
@@ -351,11 +349,10 @@ export const getYearlyData = (incomeEntries: any[]) => {
 		);
 
 		// Get the latest entry for each day to avoid duplicates
-		const uniqueEntries = yearEntries.reduce((acc, entry) => {
+		const uniqueEntries = yearEntries.reduce((acc: IncomeEntry[], entry) => {
 			const entryDate = format(parseISO(entry.date), "yyyy-MM-dd");
 			const existingEntry = acc.find(
-				(e: { date: string }) =>
-					format(parseISO(e.date), "yyyy-MM-dd") === entryDate,
+				(e) => format(parseISO(e.date), "yyyy-MM-dd") === entryDate,
 			);
 
 			if (
@@ -363,8 +360,7 @@ export const getYearlyData = (incomeEntries: any[]) => {
 				new Date(entry.date) > new Date(existingEntry.date)
 			) {
 				acc = acc.filter(
-					(e: { date: string }) =>
-						format(parseISO(e.date), "yyyy-MM-dd") !== entryDate,
+					(e) => format(parseISO(e.date), "yyyy-MM-dd") !== entryDate,
 				);
 				acc.push(entry);
 			}
@@ -373,11 +369,11 @@ export const getYearlyData = (incomeEntries: any[]) => {
 		}, []);
 
 		const totalAmount = uniqueEntries.reduce(
-			(sum: any, entry: { amount: any }) => sum + entry.amount,
+			(sum: number, entry: IncomeEntry) => sum + entry.amount,
 			0,
 		);
 		const totalHours = uniqueEntries.reduce(
-			(sum: any, entry: { hours: number; minutes: number }) => {
+			(sum: number, entry: IncomeEntry) => {
 				const hours = entry.hours || 0;
 				const minutes = entry.minutes || 0;
 				return sum + hours + minutes / 60;
@@ -395,18 +391,16 @@ export const getYearlyData = (incomeEntries: any[]) => {
 	return yearlyData.sort((a, b) => b.year - a.year);
 };
 
-export const getTotalHoursWorked = (incomeEntries: any[]) => {
-	const uniqueEntries = incomeEntries.reduce((acc, entry) => {
+export const getTotalHoursWorked = (incomeEntries: IncomeEntry[]) => {
+	const uniqueEntries = incomeEntries.reduce((acc: IncomeEntry[], entry) => {
 		const entryDate = format(parseISO(entry.date), "yyyy-MM-dd");
 		const existingEntry = acc.find(
-			(e: { date: string }) =>
-				format(parseISO(e.date), "yyyy-MM-dd") === entryDate,
+			(e) => format(parseISO(e.date), "yyyy-MM-dd") === entryDate,
 		);
 
 		if (!existingEntry || new Date(entry.date) > new Date(existingEntry.date)) {
 			acc = acc.filter(
-				(e: { date: string }) =>
-					format(parseISO(e.date), "yyyy-MM-dd") !== entryDate,
+				(e) => format(parseISO(e.date), "yyyy-MM-dd") !== entryDate,
 			);
 			acc.push(entry);
 		}
@@ -414,28 +408,23 @@ export const getTotalHoursWorked = (incomeEntries: any[]) => {
 		return acc;
 	}, []);
 
-	return uniqueEntries.reduce(
-		(sum: any, entry: { hours: number; minutes: number }) => {
-			const hours = entry.hours || 0;
-			const minutes = entry.minutes || 0;
-			return sum + hours + minutes / 60;
-		},
-		0,
-	);
+	return uniqueEntries.reduce((sum: number, entry: IncomeEntry) => {
+		const hours = entry.hours || 0;
+		const minutes = entry.minutes || 0;
+		return sum + hours + minutes / 60;
+	}, 0);
 };
 
-export const getTotalAmount = (incomeEntries: any[]) => {
-	const uniqueEntries = incomeEntries.reduce((acc, entry) => {
+export const getTotalAmount = (incomeEntries: IncomeEntry[]) => {
+	const uniqueEntries = incomeEntries.reduce((acc: IncomeEntry[], entry) => {
 		const entryDate = format(parseISO(entry.date), "yyyy-MM-dd");
 		const existingEntry = acc.find(
-			(e: { date: string }) =>
-				format(parseISO(e.date), "yyyy-MM-dd") === entryDate,
+			(e) => format(parseISO(e.date), "yyyy-MM-dd") === entryDate,
 		);
 
 		if (!existingEntry || new Date(entry.date) > new Date(existingEntry.date)) {
 			acc = acc.filter(
-				(e: { date: string }) =>
-					format(parseISO(e.date), "yyyy-MM-dd") !== entryDate,
+				(e) => format(parseISO(e.date), "yyyy-MM-dd") !== entryDate,
 			);
 			acc.push(entry);
 		}
@@ -444,7 +433,7 @@ export const getTotalAmount = (incomeEntries: any[]) => {
 	}, []);
 
 	return uniqueEntries.reduce(
-		(sum: any, entry: { amount: any }) => sum + entry.amount,
+		(sum: number, entry: IncomeEntry) => sum + entry.amount,
 		0,
 	);
 };

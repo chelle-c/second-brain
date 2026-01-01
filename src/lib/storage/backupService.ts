@@ -25,7 +25,12 @@ import {
 	type MigrationStep,
 	type RestoreResult,
 } from "@/types/backup";
-import type { Expense } from "@/types/expense";
+import type {
+	Expense,
+	ExpenseType,
+	ImportanceLevel,
+	RecurrenceSettings,
+} from "@/types/expense";
 import {
 	APP_VERSION,
 	DATA_VERSION,
@@ -53,19 +58,56 @@ const formatDateForFilename = (date: Date): string => {
 	return `${year}${month}${day}-${hours}${minutes}${seconds}`;
 };
 
+// Migration data shape for type safety
+interface MigrationData {
+	expenses?: {
+		paymentMethods?: string[];
+		expenses?: Array<{
+			paymentMethod?: string;
+			initialState?: {
+				paymentMethod?: string;
+			};
+		}>;
+	};
+}
+
+// Raw expense data from database or import (with string dates)
+interface RawExpenseData {
+	id: string;
+	name: string;
+	amount: number;
+	category: string;
+	dueDate?: string | null;
+	paymentDate?: string | null;
+	createdAt: string;
+	updatedAt: string;
+	isRecurring: number | boolean;
+	recurrence?: string | null;
+	isArchived: number | boolean;
+	isPaid: number | boolean;
+	type: string;
+	importance: string;
+	parentExpenseId?: string | null;
+	monthlyOverrides?: string | null;
+	isModified?: number | boolean | null;
+	initialState?: string | null;
+	paymentMethod?: string | null;
+}
+
 // Migration steps
 const MIGRATIONS: MigrationStep[] = [
 	{
 		fromVersion: "0.0.4",
 		toVersion: "0.0.5",
 		description: "Added paymentMethod to expenses",
-		migrate: (data: any) => {
+		migrate: (data: unknown) => {
+			const typedData = data as MigrationData;
 			return {
-				...data,
+				...typedData,
 				expenses: {
-					...data.expenses,
-					paymentMethods: data.expenses?.paymentMethods || ["Default"],
-					expenses: (data.expenses?.expenses || []).map((e: any) => ({
+					...typedData.expenses,
+					paymentMethods: typedData.expenses?.paymentMethods || ["Default"],
+					expenses: (typedData.expenses?.expenses || []).map((e) => ({
 						...e,
 						paymentMethod: e.paymentMethod || "None",
 						initialState: e.initialState
@@ -369,7 +411,7 @@ class BackupService {
 			}
 
 			// Convert date strings back to Date objects
-			data.data.expenses = data.data.expenses.map((e: any) => ({
+			const convertedExpenses = data.data.expenses.map((e) => ({
 				...e,
 				dueDate: e.dueDate ? new Date(e.dueDate) : null,
 				paymentDate: e.paymentDate ? new Date(e.paymentDate) : null,
@@ -386,6 +428,9 @@ class BackupService {
 						}
 					: undefined,
 			}));
+			// Type assertion needed because we're converting string dates to Date objects
+			data.data.expenses =
+				convertedExpenses as unknown as typeof data.data.expenses;
 
 			console.log(
 				`Parsed ${data.data.expenses.length} expenses from ${filePath}`,
@@ -431,10 +476,10 @@ class BackupService {
 				   updatedAt, parentExpenseId, monthlyOverrides, isModified, initialState 
 				   FROM expenses`;
 
-			const rawExpenses = await tempDb.select<any[]>(selectQuery);
+			const rawExpenses = await tempDb.select<RawExpenseData[]>(selectQuery);
 
 			// Convert raw rows to Expense objects
-			const expenses: Expense[] = rawExpenses.map((row: any) => ({
+			const expenses: Expense[] = rawExpenses.map((row) => ({
 				id: row.id,
 				name: row.name,
 				amount: row.amount,
@@ -442,22 +487,31 @@ class BackupService {
 				paymentMethod: row.paymentMethod || "None",
 				dueDate: row.dueDate ? new Date(row.dueDate) : null,
 				isRecurring: row.isRecurring === 1,
-				recurrence: row.recurrence ? JSON.parse(row.recurrence) : undefined,
+				recurrence: row.recurrence
+					? (JSON.parse(row.recurrence) as RecurrenceSettings)
+					: undefined,
 				isArchived: row.isArchived === 1,
 				isPaid: row.isPaid === 1,
 				paymentDate: row.paymentDate ? new Date(row.paymentDate) : null,
-				type: row.type || "need",
-				importance: row.importance || "none",
+				type: (row.type || "need") as ExpenseType,
+				importance: (row.importance || "none") as ImportanceLevel,
 				createdAt: new Date(row.createdAt),
 				updatedAt: new Date(row.updatedAt),
 				parentExpenseId: row.parentExpenseId || undefined,
 				monthlyOverrides: row.monthlyOverrides
-					? JSON.parse(row.monthlyOverrides)
+					? (JSON.parse(row.monthlyOverrides) as Record<
+							string,
+							Partial<Expense>
+						>)
 					: {},
 				isModified: row.isModified === 1,
 				initialState: row.initialState
 					? (() => {
-							const parsed = JSON.parse(row.initialState);
+							const parsed = JSON.parse(row.initialState) as {
+								amount: number;
+								dueDate?: string | null;
+								paymentMethod?: string;
+							};
 							return {
 								amount: parsed.amount,
 								dueDate: parsed.dueDate ? new Date(parsed.dueDate) : null,
@@ -472,7 +526,7 @@ class BackupService {
 				Array<{ key: string; value: string }>
 			>("SELECT key, value FROM settings WHERE key LIKE 'expense_%'");
 
-			const settingsMap: Record<string, any> = {};
+			const settingsMap: Record<string, unknown> = {};
 			for (const row of settingsResults) {
 				try {
 					settingsMap[row.key] = JSON.parse(row.value);
@@ -486,15 +540,21 @@ class BackupService {
 			return {
 				expenses,
 				categories:
-					settingsMap["expense_categories"] || DEFAULT_EXPENSE_CATEGORIES,
+					(settingsMap.expense_categories as string[] | undefined) ||
+					DEFAULT_EXPENSE_CATEGORIES,
 				categoryColors:
-					settingsMap["expense_categoryColors"] || DEFAULT_CATEGORY_COLORS,
+					(settingsMap.expense_categoryColors as
+						| Record<string, string>
+						| undefined) || DEFAULT_CATEGORY_COLORS,
 				paymentMethods:
-					settingsMap["expense_paymentMethods"] || DEFAULT_PAYMENT_METHODS,
-				selectedMonth: settingsMap["expense_selectedMonth"]
-					? new Date(settingsMap["expense_selectedMonth"])
+					(settingsMap.expense_paymentMethods as string[] | undefined) ||
+					DEFAULT_PAYMENT_METHODS,
+				selectedMonth: settingsMap.expense_selectedMonth
+					? new Date(settingsMap.expense_selectedMonth as string)
 					: new Date(),
-				overviewMode: settingsMap["expense_overviewMode"] || "remaining",
+				overviewMode:
+					(settingsMap.expense_overviewMode as string | undefined) ||
+					"remaining",
 			};
 		} catch (error) {
 			console.error("Failed to read expenses from database:", error);
@@ -620,11 +680,7 @@ class BackupService {
 			const backups: BackupInfo[] = [];
 
 			for (const entry of entries) {
-				if (
-					entry.name &&
-					entry.name.endsWith(".db") &&
-					!entry.name.endsWith(".meta.json")
-				) {
+				if (entry.name?.endsWith(".db") && !entry.name.endsWith(".meta.json")) {
 					const metadataPath = joinPath(backupPath, `${entry.name}.meta.json`);
 					const expenseExportPath = joinPath(
 						backupPath,
@@ -672,36 +728,36 @@ class BackupService {
 								const dateStr = prodMatch[1];
 								const timeStr = prodMatch[2];
 								createdAt = new Date(
-									parseInt(dateStr.slice(0, 4)),
-									parseInt(dateStr.slice(4, 6)) - 1,
-									parseInt(dateStr.slice(6, 8)),
-									parseInt(timeStr.slice(0, 2)),
-									parseInt(timeStr.slice(2, 4)),
-									parseInt(timeStr.slice(4, 6)),
+									parseInt(dateStr.slice(0, 4), 10),
+									parseInt(dateStr.slice(4, 6), 10) - 1,
+									parseInt(dateStr.slice(6, 8), 10),
+									parseInt(timeStr.slice(0, 2), 10),
+									parseInt(timeStr.slice(2, 4), 10),
+									parseInt(timeStr.slice(4, 6), 10),
 								);
 							} else if (testMatch) {
 								environment = "test";
 								const dateStr = testMatch[1];
 								const timeStr = testMatch[2];
 								createdAt = new Date(
-									parseInt(dateStr.slice(0, 4)),
-									parseInt(dateStr.slice(4, 6)) - 1,
-									parseInt(dateStr.slice(6, 8)),
-									parseInt(timeStr.slice(0, 2)),
-									parseInt(timeStr.slice(2, 4)),
-									parseInt(timeStr.slice(4, 6)),
+									parseInt(dateStr.slice(0, 4), 10),
+									parseInt(dateStr.slice(4, 6), 10) - 1,
+									parseInt(dateStr.slice(6, 8), 10),
+									parseInt(timeStr.slice(0, 2), 10),
+									parseInt(timeStr.slice(2, 4), 10),
+									parseInt(timeStr.slice(4, 6), 10),
 								);
 							} else if (oldMatch) {
 								environment = oldMatch[1] === "test" ? "test" : "production";
 								const dateStr = oldMatch[2];
 								const timeStr = oldMatch[3];
 								createdAt = new Date(
-									parseInt(dateStr.slice(0, 4)),
-									parseInt(dateStr.slice(4, 6)) - 1,
-									parseInt(dateStr.slice(6, 8)),
-									parseInt(timeStr.slice(0, 2)),
-									parseInt(timeStr.slice(2, 4)),
-									parseInt(timeStr.slice(4, 6)),
+									parseInt(dateStr.slice(0, 4), 10),
+									parseInt(dateStr.slice(4, 6), 10) - 1,
+									parseInt(dateStr.slice(6, 8), 10),
+									parseInt(timeStr.slice(0, 2), 10),
+									parseInt(timeStr.slice(2, 4), 10),
+									parseInt(timeStr.slice(4, 6), 10),
 								);
 							} else if (veryOldMatch) {
 								environment = veryOldMatch[1] as DatabaseEnvironment;
@@ -911,8 +967,8 @@ class BackupService {
 				}
 
 				try {
-					const walPath = targetPath + "-wal";
-					const shmPath = targetPath + "-shm";
+					const walPath = `${targetPath}-wal`;
+					const shmPath = `${targetPath}-shm`;
 					if (await exists(walPath)) await remove(walPath);
 					if (await exists(shmPath)) await remove(shmPath);
 				} catch {

@@ -22,6 +22,13 @@ pub fn run() {
             }
             Ok(())
         })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { .. } = event {
+                // Log shutdown - the frontend handles saving via onCloseRequested
+                // This provides a fallback log in case frontend handler fails
+                log::info!("Window close requested for: {}", window.label());
+            }
+        })
         .invoke_handler(tauri::generate_handler![commands::is_dev, commands::fetch_link_metadata])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

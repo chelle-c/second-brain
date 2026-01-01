@@ -8,11 +8,14 @@ import { useCallback, useEffect, useRef } from "react";
 import { isValidUrl } from "../components/LinkPreview";
 
 // Helper to check if a block contains only a URL
-const isUrlOnlyBlock = (block: any): string | null => {
-	if (!block?.value?.[0]?.children) return null;
+const isUrlOnlyBlock = (block: unknown): string | null => {
+	const typedBlock = block as {
+		value?: Array<{ children?: Array<{ text?: string }> }>;
+	};
+	if (!typedBlock?.value?.[0]?.children) return null;
 
-	const children = block.value[0].children;
-	if (children.length !== 1) return null;
+	const children = typedBlock.value[0].children;
+	if (!children || children.length !== 1) return null;
 
 	const textNode = children[0];
 	if (typeof textNode.text !== "string") return null;
@@ -26,10 +29,16 @@ const isUrlOnlyBlock = (block: any): string | null => {
 };
 
 // Helper to check if a block contains a link element (from toolbar)
-const getLinkFromBlock = (block: any): string | null => {
-	if (!block?.value?.[0]?.children) return null;
+const getLinkFromBlock = (block: unknown): string | null => {
+	const typedBlock = block as {
+		value?: Array<{
+			children?: Array<{ type?: string; props?: { url?: string } }>;
+		}>;
+	};
+	if (!typedBlock?.value?.[0]?.children) return null;
 
-	const children = block.value[0].children;
+	const children = typedBlock.value[0].children;
+	if (!children) return null;
 
 	// Check if there's a single link element that spans the entire content
 	for (const child of children) {

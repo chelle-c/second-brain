@@ -1,6 +1,18 @@
-import type { Note, NotesFolders, Tag } from "@/types/notes";
+import type { Note, NotesFolders, Subfolder, Tag } from "@/types/notes";
 import type { DatabaseContext } from "../../types/storage";
 import { deepEqual } from "../utils";
+
+// Normalized note type for comparison (dates as strings)
+interface NormalizedNote {
+	id: string;
+	title: string;
+	content: string;
+	tags: string[];
+	folder: string;
+	createdAt: string;
+	updatedAt: string;
+	archived: boolean;
+}
 
 export class NotesStorage {
 	private context: DatabaseContext;
@@ -9,18 +21,21 @@ export class NotesStorage {
 		this.context = context;
 	}
 
-	private normalizeNotes(notes: Note[]): any[] {
+	private normalizeNotes(notes: Note[]): NormalizedNote[] {
 		return notes
 			.map((note) => ({
-				...note,
+				id: note.id,
+				title: note.title,
+				content: note.content,
+				folder: note.folder,
 				createdAt:
 					note.createdAt instanceof Date
 						? note.createdAt.toISOString()
-						: note.createdAt,
+						: String(note.createdAt),
 				updatedAt:
 					note.updatedAt instanceof Date
 						? note.updatedAt.toISOString()
-						: note.updatedAt,
+						: String(note.updatedAt),
 				tags: note.tags || [],
 				archived: note.archived || false,
 			}))
@@ -46,8 +61,8 @@ export class NotesStorage {
 		return !deepEqual(this.context.cache.tags, newTags);
 	}
 
-	extractSubfoldersFromHierarchy(folders: NotesFolders): any[] {
-		const subfolders: any[] = [];
+	extractSubfoldersFromHierarchy(folders: NotesFolders): Subfolder[] {
+		const subfolders: Subfolder[] = [];
 
 		Object.values(folders).forEach((folder) => {
 			if (folder.children && folder.children.length > 0) {
@@ -344,7 +359,8 @@ export class NotesStorage {
 					id: row.id,
 					name: row.name,
 					color: row.color,
-					icon: row.icon as any, // Icon will be resolved by the component
+					// Icon is stored as string name, component resolves it later
+					icon: row.icon as unknown as Tag["icon"],
 				};
 			});
 
@@ -361,12 +377,18 @@ export class NotesStorage {
 		return this.context.queueOperation(async () => {
 			await this.context.db.execute("DELETE FROM tags");
 
-			for (const [_, tag] of Object.entries(tags)) {
+			for (const [, tag] of Object.entries(tags)) {
 				// Store the icon name as a string if it's a component, otherwise store as-is
-				const iconName =
-					typeof tag.icon === "function"
-						? (tag.icon as any).displayName || (tag.icon as any).name || "Hash"
-						: String(tag.icon);
+				let iconName = "Hash";
+				if (typeof tag.icon === "function") {
+					const iconComponent = tag.icon as unknown as {
+						displayName?: string;
+						name?: string;
+					};
+					iconName = iconComponent.displayName || iconComponent.name || "Hash";
+				} else if (typeof tag.icon === "string") {
+					iconName = tag.icon;
+				}
 
 				await this.context.db.execute(
 					`INSERT INTO tags (id, name, color, icon)

@@ -5,6 +5,33 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tauri + React + Typescript</title>
+    <script>
+      // Apply theme immediately to prevent flash of unstyled content
+      (() => {
+        let mode = 'system';
+        let palette = 'default';
+        try {
+          const cachedTheme = localStorage.getItem('theme-cache');
+          if (cachedTheme) {
+            const parsed = JSON.parse(cachedTheme);
+            mode = parsed.mode || 'system';
+            palette = parsed.palette || 'default';
+          }
+        } catch {
+          // Ignore cache read errors
+        }
+
+        let resolvedTheme = mode;
+        if (mode === 'system') {
+          resolvedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+
+        if (resolvedTheme === 'dark') {
+          document.documentElement.classList.add('dark');
+        }
+        document.documentElement.setAttribute('data-palette', palette);
+      })();
+    </script>
   </head>
 
   <body>

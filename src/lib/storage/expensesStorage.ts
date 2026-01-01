@@ -3,12 +3,50 @@ import {
 	DEFAULT_EXPENSE_CATEGORIES,
 } from "@/lib/expenseHelpers";
 import type { AppData } from "@/types/";
-import type { Expense } from "@/types/expense";
+import type {
+	Expense,
+	OccurrenceInitialState,
+	OverviewMode,
+	RecurrenceSettings,
+} from "@/types/expense";
 import {
 	type DatabaseContext,
 	DEFAULT_PAYMENT_METHODS,
 } from "../../types/storage";
 import { deepEqual } from "../utils";
+
+// Normalized expense type for comparison (dates as strings)
+interface NormalizedExpense {
+	id: string;
+	name: string;
+	amount: number;
+	category: string;
+	paymentMethod: string;
+	dueDate: string | null;
+	isRecurring: boolean;
+	recurrence: RecurrenceSettings | null;
+	isArchived: boolean;
+	isPaid: boolean;
+	paymentDate: string | null;
+	type: string;
+	importance: string;
+	createdAt: string;
+	updatedAt: string;
+	parentExpenseId?: string;
+	monthlyOverrides: Record<string, Partial<Expense>>;
+	isModified?: boolean;
+	initialState: OccurrenceInitialState | null;
+}
+
+// Normalized expenses data structure for comparison
+interface NormalizedExpensesData {
+	expenses: NormalizedExpense[];
+	selectedMonth: string;
+	overviewMode: OverviewMode;
+	categories: string[];
+	categoryColors: Record<string, string>;
+	paymentMethods: string[];
+}
 
 export class ExpensesStorage {
 	private context: DatabaseContext;
@@ -17,35 +55,47 @@ export class ExpensesStorage {
 		this.context = context;
 	}
 
-	private normalizeExpenses(expenses: Expense[]): any[] {
+	private normalizeExpenses(expenses: Expense[]): NormalizedExpense[] {
 		return expenses
 			.map((expense) => ({
-				...expense,
+				id: expense.id,
+				name: expense.name,
+				amount: expense.amount,
+				category: expense.category,
 				paymentMethod: expense.paymentMethod || "None",
 				dueDate:
 					expense.dueDate instanceof Date
 						? expense.dueDate.toISOString()
 						: expense.dueDate,
+				isRecurring: expense.isRecurring,
+				recurrence: expense.recurrence || null,
+				isArchived: expense.isArchived,
+				isPaid: expense.isPaid,
 				paymentDate:
 					expense.paymentDate instanceof Date
 						? expense.paymentDate.toISOString()
-						: expense.paymentDate,
+						: (expense.paymentDate ?? null),
+				type: expense.type,
+				importance: expense.importance,
 				createdAt:
 					expense.createdAt instanceof Date
 						? expense.createdAt.toISOString()
-						: expense.createdAt,
+						: String(expense.createdAt),
 				updatedAt:
 					expense.updatedAt instanceof Date
 						? expense.updatedAt.toISOString()
-						: expense.updatedAt,
-				recurrence: expense.recurrence || null,
+						: String(expense.updatedAt),
+				parentExpenseId: expense.parentExpenseId,
 				monthlyOverrides: expense.monthlyOverrides || {},
+				isModified: expense.isModified,
 				initialState: expense.initialState || null,
 			}))
 			.sort((a, b) => a.id.localeCompare(b.id));
 	}
 
-	private normalizeExpensesData(expenses: AppData["expenses"]): any {
+	private normalizeExpensesData(
+		expenses: AppData["expenses"],
+	): NormalizedExpensesData {
 		return {
 			expenses: this.normalizeExpenses(expenses.expenses),
 			selectedMonth:
