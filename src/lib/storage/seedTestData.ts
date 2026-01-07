@@ -1,10 +1,7 @@
-import {
-	DEFAULT_CATEGORY_COLORS,
-	DEFAULT_EXPENSE_CATEGORIES,
-} from "@/lib/expenseHelpers";
+import { DEFAULT_CATEGORY_COLORS, DEFAULT_EXPENSE_CATEGORIES } from "@/lib/expenseHelpers";
 import type { Expense } from "@/types/expense";
 import type { IncomeEntry, IncomeWeeklyTargets } from "@/types/income";
-import type { Note, NotesFolders } from "@/types/notes";
+import type { Folder, Note } from "@/types/notes";
 import { DEFAULT_PAYMENT_METHODS } from "@/types/storage";
 import { sqlStorage } from "./database";
 
@@ -26,33 +23,125 @@ const daysFromNow = (days: number): Date => {
 	return date;
 };
 
-// Sample folders structure
-const createSampleFolders = (): NotesFolders => ({
-	inbox: {
-		id: "inbox",
-		name: "Inbox",
-	},
-	work: {
-		id: "work",
-		name: "Work",
-	},
-	personal: {
-		id: "personal",
-		name: "Personal",
-	},
-	ideas: {
-		id: "ideas",
-		name: "Ideas",
-	},
-	archive: {
-		id: "archive",
-		name: "Archive",
-	},
-});
+// Sample folders structure with new flat format
+const createSampleFolders = (): Folder[] => {
+	const now = new Date();
+	return [
+		{
+			id: "inbox",
+			name: "Inbox",
+			parentId: null,
+			archived: false,
+			order: 0,
+			createdAt: now,
+			updatedAt: now,
+		},
+		{
+			id: "work",
+			name: "Work",
+			parentId: null,
+			archived: false,
+			order: 1,
+			createdAt: now,
+			updatedAt: now,
+		},
+		{
+			id: "work_meetings",
+			name: "Meetings",
+			parentId: "work",
+			archived: false,
+			order: 2,
+			createdAt: now,
+			updatedAt: now,
+		},
+		{
+			id: "work_projects",
+			name: "Projects",
+			parentId: "work",
+			archived: false,
+			order: 3,
+			createdAt: now,
+			updatedAt: now,
+		},
+		{
+			id: "work_tasks",
+			name: "Tasks",
+			parentId: "work",
+			archived: false,
+			order: 4,
+			createdAt: now,
+			updatedAt: now,
+		},
+		{
+			id: "personal",
+			name: "Personal",
+			parentId: null,
+			archived: false,
+			order: 5,
+			createdAt: now,
+			updatedAt: now,
+		},
+		{
+			id: "personal_health",
+			name: "Health",
+			parentId: "personal",
+			archived: false,
+			order: 6,
+			createdAt: now,
+			updatedAt: now,
+		},
+		{
+			id: "personal_finance",
+			name: "Finance",
+			parentId: "personal",
+			archived: false,
+			order: 7,
+			createdAt: now,
+			updatedAt: now,
+		},
+		{
+			id: "personal_home",
+			name: "Home",
+			parentId: "personal",
+			archived: false,
+			order: 8,
+			createdAt: now,
+			updatedAt: now,
+		},
+		{
+			id: "ideas",
+			name: "Ideas",
+			parentId: null,
+			archived: false,
+			order: 9,
+			createdAt: now,
+			updatedAt: now,
+		},
+		{
+			id: "ideas_app",
+			name: "App Features",
+			parentId: "ideas",
+			archived: false,
+			order: 10,
+			createdAt: now,
+			updatedAt: now,
+		},
+		{
+			id: "ideas_business",
+			name: "Business",
+			parentId: "ideas",
+			archived: false,
+			order: 11,
+			createdAt: now,
+			updatedAt: now,
+		},
+	];
+};
 
-// Sample notes with Yoopta editor content structure
+// Sample notes with folders and subfolders - using `folder` instead of `folderId`
 const createSampleNotes = (): Note[] => {
 	return [
+		// Inbox notes
 		{
 			id: generateId(),
 			title: "Welcome to Second Brain",
@@ -64,33 +153,61 @@ const createSampleNotes = (): Note[] => {
 			updatedAt: daysAgo(7),
 			archived: false,
 		},
+
+		// Work folder notes
 		{
 			id: generateId(),
-			title: "Project Planning",
+			title: "Q1 Planning Overview",
 			content:
-				'{"a7cf988f-4be4-443d-91cd-2ed6c45c0bc2":{"id":"a7cf988f-4be4-443d-91cd-2ed6c45c0bc2","type":"NumberedList","meta":{"order":1,"depth":0},"value":[{"id":"1527bed0-3417-4938-8e9d-86681d0a8f58","type":"numbered-list","props":{"nodeType":"block"},"children":[{"text":"Complete feature design"}]}]},"ba2db766-89f5-4ed3-9807-c80b909443dc":{"id":"ba2db766-89f5-4ed3-9807-c80b909443dc","type":"NumberedList","meta":{"order":2,"depth":0},"value":[{"id":"6ace2626-17c8-4370-8b4b-5ea48a616c81","type":"numbered-list","props":{"nodeType":"block"},"children":[{"text":"Implement core functionality"}]}]},"6f218292-efc8-480c-b6a9-1613fbd36c91":{"id":"6f218292-efc8-480c-b6a9-1613fbd36c91","type":"NumberedList","meta":{"order":3,"depth":0},"value":[{"id":"2f008e6e-22f7-40b5-9945-826c92620a86","type":"numbered-list","props":{"nodeType":"block"},"children":[{"text":"User testing phase"}]}]},"b03656b3-53b1-4206-ad71-aaa1f0ebb7cf":{"id":"b03656b3-53b1-4206-ad71-aaa1f0ebb7cf","type":"NumberedList","meta":{"order":4,"depth":0},"value":[{"id":"7582f6bf-626f-430a-b3a4-68e162ccc7ff","type":"numbered-list","props":{"nodeType":"block"},"children":[{"text":"Launch preparation"}]}]},"2f6a7c52-135e-43af-a061-b5da96d91fd4":{"id":"2f6a7c52-135e-43af-a061-b5da96d91fd4","type":"HeadingTwo","meta":{"order":0,"depth":0},"value":[{"id":"eb800f95-317f-4e11-9db6-b00d5a3bfb1b","type":"heading-two","props":{"nodeType":"block"},"children":[{"text":"Key milestones for Q1"}]}]}}',
+				'{"2f6a7c52-135e-43af-a061-b5da96d91fd4":{"id":"2f6a7c52-135e-43af-a061-b5da96d91fd4","type":"HeadingTwo","meta":{"order":0,"depth":0},"value":[{"id":"eb800f95-317f-4e11-9db6-b00d5a3bfb1b","type":"heading-two","props":{"nodeType":"block"},"children":[{"text":"Key milestones for Q1"}]}]}}',
 			tags: [],
 			folder: "work",
 			createdAt: daysAgo(5),
 			updatedAt: daysAgo(2),
 			archived: false,
 		},
+
+		// Work subfolder notes
 		{
 			id: generateId(),
-			title: "Meeting Notes - Team Sync",
+			title: "Team Sync - Weekly Standup",
 			content:
 				'{"910a0709-5f63-46f8-af94-36b4cd3c0610":{"id":"910a0709-5f63-46f8-af94-36b4cd3c0610","type":"Paragraph","value":[{"id":"3ca41907-de40-47e4-9ee1-d54aa9fc4241","type":"paragraph","children":[{"text":"Discussed roadmap priorities. Action items: Review competitor analysis, prepare demo for stakeholders, schedule follow-up meeting."}]}],"meta":{"order":0,"depth":0}}}',
 			tags: [],
-			folder: "work",
+			folder: "work_meetings",
 			createdAt: daysAgo(3),
 			updatedAt: daysAgo(3),
 			archived: false,
 		},
 		{
 			id: generateId(),
+			title: "Project Alpha - Requirements",
+			content:
+				'{"a7cf988f-4be4-443d-91cd-2ed6c45c0bc2":{"id":"a7cf988f-4be4-443d-91cd-2ed6c45c0bc2","type":"NumberedList","meta":{"order":1,"depth":0},"value":[{"id":"1527bed0-3417-4938-8e9d-86681d0a8f58","type":"numbered-list","props":{"nodeType":"block"},"children":[{"text":"Complete feature design"}]}]}}',
+			tags: [],
+			folder: "work_projects",
+			createdAt: daysAgo(10),
+			updatedAt: daysAgo(1),
+			archived: false,
+		},
+		{
+			id: generateId(),
+			title: "Weekly Tasks",
+			content:
+				'{"78b886e6-4cab-4799-a774-38a6fd152f74":{"id":"78b886e6-4cab-4799-a774-38a6fd152f74","type":"TodoList","meta":{"order":4,"depth":0},"value":[{"id":"f4dd7e72-7af7-4617-83cb-e84199447d7b","type":"todo-list","props":{"checked":false},"children":[{"text":"Code review"}]}]}}',
+			tags: [],
+			folder: "work_tasks",
+			createdAt: daysAgo(2),
+			updatedAt: daysAgo(1),
+			archived: false,
+		},
+
+		// Personal folder and subfolder notes
+		{
+			id: generateId(),
 			title: "Book Recommendations",
 			content:
-				'{"7a2d54b2-8dd6-4953-a1a3-e47c6a610114":{"id":"7a2d54b2-8dd6-4953-a1a3-e47c6a610114","type":"Paragraph","value":[{"id":"db4f4d3d-446b-4290-83e5-1cf5557569d7","type":"paragraph","children":[{"text":"Books to read","underline":true}]}],"meta":{"order":0,"depth":0}},"ccad4c65-4642-4f5d-9244-9d48faddd1ae":{"id":"ccad4c65-4642-4f5d-9244-9d48faddd1ae","type":"BulletedList","meta":{"order":1,"depth":0},"value":[{"id":"2cd598bf-0c1f-40a4-a82e-ef2ccecd33c2","type":"bulleted-list","children":[{"text":"Atomic Habits","italic":true},{"text":" by James Clear"}]}]},"e76d495c-1492-4e5f-b803-69644e2a1739":{"id":"e76d495c-1492-4e5f-b803-69644e2a1739","type":"BulletedList","meta":{"order":2,"depth":0},"value":[{"id":"6a422bac-1aa0-4d34-b8cd-dede36eed8a9","type":"bulleted-list","children":[{"text":"Deep Work","italic":true},{"text":" by Cal Newport"}]}]},"f7bae096-88fd-4de5-b574-7849c5136263":{"id":"f7bae096-88fd-4de5-b574-7849c5136263","type":"BulletedList","meta":{"order":3,"depth":0},"value":[{"id":"20d55f8e-d6fc-4787-bbe8-1f84d2db7f14","type":"bulleted-list","children":[{"text":"The Psychology of Money","italic":true},{"text":" by Morgan Housel"}]}]},"963289c6-835e-41ed-ae14-e99368bb7ca4":{"id":"963289c6-835e-41ed-ae14-e99368bb7ca4","type":"Paragraph","value":[{"id":"2cf668b5-6a76-42ed-8719-1bfab6e2b708","type":"paragraph","children":[{"text":""}]}],"meta":{"align":"left","depth":0,"order":4}}}',
+				'{"7a2d54b2-8dd6-4953-a1a3-e47c6a610114":{"id":"7a2d54b2-8dd6-4953-a1a3-e47c6a610114","type":"Paragraph","value":[{"id":"db4f4d3d-446b-4290-83e5-1cf5557569d7","type":"paragraph","children":[{"text":"Books to read","underline":true}]}],"meta":{"order":0,"depth":0}}}',
 			tags: [],
 			folder: "personal",
 			createdAt: daysAgo(10),
@@ -99,9 +216,44 @@ const createSampleNotes = (): Note[] => {
 		},
 		{
 			id: generateId(),
-			title: "App Feature Ideas",
+			title: "Workout Plan",
 			content:
-				'{"99a9b1be-21a0-431b-934e-267dadb7de18":{"id":"99a9b1be-21a0-431b-934e-267dadb7de18","type":"NumberedList","meta":{"order":1,"depth":0},"value":[{"id":"9d07b27b-ed06-442c-b078-1b7f77f6a48f","type":"numbered-list","props":{"nodeType":"block"},"children":[{"text":"Additional themes"}]}]},"c5ac2094-93fa-46a1-b1ba-6887c0cb0117":{"id":"c5ac2094-93fa-46a1-b1ba-6887c0cb0117","type":"NumberedList","meta":{"order":2,"depth":0},"value":[{"id":"9e274bfc-8966-4c21-a537-fe5aca5adad5","type":"numbered-list","props":{"nodeType":"block"},"children":[{"text":"Export to PDF"}]}]},"5ce91dd9-bd85-4481-9d31-27e50633fa37":{"id":"5ce91dd9-bd85-4481-9d31-27e50633fa37","type":"NumberedList","meta":{"order":3,"depth":0},"value":[{"id":"86e7e3a8-16a9-4bfc-a916-bbacbfb5f89d","type":"numbered-list","props":{"nodeType":"block"},"children":[{"text":"Cloud sync"}]}]},"e1a53903-2fa1-4cfb-b7f0-4586df055130":{"id":"e1a53903-2fa1-4cfb-b7f0-4586df055130","type":"NumberedList","meta":{"order":4,"depth":0},"value":[{"id":"10a44e9c-de34-419c-90b8-c34117272b18","type":"numbered-list","props":{"nodeType":"block"},"children":[{"text":"Mobile companion app"}]}]},"b75fc683-8fb6-4ef1-a90e-79ece7c4ae12":{"id":"b75fc683-8fb6-4ef1-a90e-79ece7c4ae12","type":"NumberedList","meta":{"order":5,"depth":0},"value":[{"id":"dfb5b244-96c6-4990-a0a7-ed5e835c4299","type":"numbered-list","props":{"nodeType":"block"},"children":[{"text":"AI-powered suggestions"}]}]},"80f82c3d-ceaa-4c7e-b35a-1a64d4deebe2":{"id":"80f82c3d-ceaa-4c7e-b35a-1a64d4deebe2","type":"HeadingThree","meta":{"order":0,"depth":0},"value":[{"id":"b96729c1-d792-48a6-b040-a159785f276f","type":"heading-three","props":{"nodeType":"block"},"children":[{"text":"Potential features to explore"}]}]}}',
+				'{"ccad4c65-4642-4f5d-9244-9d48faddd1ae":{"id":"ccad4c65-4642-4f5d-9244-9d48faddd1ae","type":"BulletedList","meta":{"order":1,"depth":0},"value":[{"id":"2cd598bf-0c1f-40a4-a82e-ef2ccecd33c2","type":"bulleted-list","children":[{"text":"Monday: Cardio"}]}]}}',
+			tags: [],
+			folder: "personal_health",
+			createdAt: daysAgo(15),
+			updatedAt: daysAgo(3),
+			archived: false,
+		},
+		{
+			id: generateId(),
+			title: "Budget Tracker",
+			content:
+				'{"e76d495c-1492-4e5f-b803-69644e2a1739":{"id":"e76d495c-1492-4e5f-b803-69644e2a1739","type":"BulletedList","meta":{"order":2,"depth":0},"value":[{"id":"6a422bac-1aa0-4d34-b8cd-dede36eed8a9","type":"bulleted-list","children":[{"text":"Monthly expenses review"}]}]}}',
+			tags: [],
+			folder: "personal_finance",
+			createdAt: daysAgo(8),
+			updatedAt: daysAgo(2),
+			archived: false,
+		},
+		{
+			id: generateId(),
+			title: "Home Improvement Ideas",
+			content:
+				'{"31ef8ec7-25cf-449d-bb0c-430d30116a20":{"id":"31ef8ec7-25cf-449d-bb0c-430d30116a20","type":"HeadingThree","meta":{"order":0,"depth":0},"value":[{"id":"69e0feca-e45c-4c3f-88c0-bb3329c8a709","type":"heading-three","props":{"nodeType":"block"},"children":[{"text":"Kitchen renovation plans"}]}]}}',
+			tags: [],
+			folder: "personal_home",
+			createdAt: daysAgo(20),
+			updatedAt: daysAgo(6),
+			archived: false,
+		},
+
+		// Ideas folder and subfolder notes
+		{
+			id: generateId(),
+			title: "Brainstorming Session",
+			content:
+				'{"99a9b1be-21a0-431b-934e-267dadb7de18":{"id":"99a9b1be-21a0-431b-934e-267dadb7de18","type":"NumberedList","meta":{"order":1,"depth":0},"value":[{"id":"9d07b27b-ed06-442c-b078-1b7f77f6a48f","type":"numbered-list","props":{"nodeType":"block"},"children":[{"text":"Mind mapping features"}]}]}}',
 			tags: [],
 			folder: "ideas",
 			createdAt: daysAgo(14),
@@ -110,24 +262,48 @@ const createSampleNotes = (): Note[] => {
 		},
 		{
 			id: generateId(),
-			title: "Grocery List Template",
+			title: "Feature Wishlist",
 			content:
-				'{"a69cf80f-930f-447f-b0c6-6f756855ecfc":{"id":"a69cf80f-930f-447f-b0c6-6f756855ecfc","type":"TodoList","meta":{"depth":0,"order":1},"value":[{"id":"f4dd7e72-7af7-4617-83cb-e84199447d7b","type":"todo-list","props":{"checked":false},"children":[{"text":"Fruits and vegetables"}]}]},"0b888d81-d386-48be-8f1d-5844320dbdac":{"id":"0b888d81-d386-48be-8f1d-5844320dbdac","type":"TodoList","meta":{"order":2,"depth":0},"value":[{"id":"f4dd7e72-7af7-4617-83cb-e84199447d7b","type":"todo-list","props":{"checked":false},"children":[{"text":"Dairy products"}]}]},"c5ca5045-a71c-4501-a634-152d32c2f949":{"id":"c5ca5045-a71c-4501-a634-152d32c2f949","type":"TodoList","meta":{"order":3,"depth":0},"value":[{"id":"f4dd7e72-7af7-4617-83cb-e84199447d7b","type":"todo-list","props":{"checked":false},"children":[{"text":"Bread"}]}]},"78b886e6-4cab-4799-a774-38a6fd152f74":{"id":"78b886e6-4cab-4799-a774-38a6fd152f74","type":"TodoList","meta":{"order":4,"depth":0},"value":[{"id":"f4dd7e72-7af7-4617-83cb-e84199447d7b","type":"todo-list","props":{"checked":false},"children":[{"text":"Proteins"}]}]},"b841a065-8590-45a2-997f-3da1076aca5d":{"id":"b841a065-8590-45a2-997f-3da1076aca5d","type":"TodoList","meta":{"order":5,"depth":0},"value":[{"id":"f4dd7e72-7af7-4617-83cb-e84199447d7b","type":"todo-list","props":{"checked":false},"children":[{"text":"Snacks"}]}]},"31ef8ec7-25cf-449d-bb0c-430d30116a20":{"id":"31ef8ec7-25cf-449d-bb0c-430d30116a20","type":"HeadingThree","meta":{"order":0,"depth":0},"value":[{"id":"69e0feca-e45c-4c3f-88c0-bb3329c8a709","type":"heading-three","props":{"nodeType":"block"},"children":[{"text":"Weekly essentials:"}]}]}}',
+				'{"c5ac2094-93fa-46a1-b1ba-6887c0cb0117":{"id":"c5ac2094-93fa-46a1-b1ba-6887c0cb0117","type":"NumberedList","meta":{"order":2,"depth":0},"value":[{"id":"9e274bfc-8966-4c21-a537-fe5aca5adad5","type":"numbered-list","props":{"nodeType":"block"},"children":[{"text":"Export to PDF"}]}]}}',
 			tags: [],
-			folder: "personal",
-			createdAt: daysAgo(20),
-			updatedAt: daysAgo(6),
+			folder: "ideas_app",
+			createdAt: daysAgo(12),
+			updatedAt: daysAgo(3),
 			archived: false,
 		},
+		{
+			id: generateId(),
+			title: "Startup Ideas",
+			content:
+				'{"5ce91dd9-bd85-4481-9d31-27e50633fa37":{"id":"5ce91dd9-bd85-4481-9d31-27e50633fa37","type":"NumberedList","meta":{"order":3,"depth":0},"value":[{"id":"86e7e3a8-16a9-4bfc-a916-bbacbfb5f89d","type":"numbered-list","props":{"nodeType":"block"},"children":[{"text":"SaaS products"}]}]}}',
+			tags: [],
+			folder: "ideas_business",
+			createdAt: daysAgo(18),
+			updatedAt: daysAgo(5),
+			archived: false,
+		},
+
+		// Archived notes
 		{
 			id: generateId(),
 			title: "Old Project Notes",
 			content:
 				'{"8561d8f6-9c01-4129-9927-36875a3c9a7a":{"id":"8561d8f6-9c01-4129-9927-36875a3c9a7a","type":"Paragraph","value":[{"id":"a188cf5a-d7f9-4bd9-93de-521b6cf3b5ab","type":"paragraph","children":[{"text":"These are archived notes from a completed project. Kept for reference."}]}],"meta":{"order":0,"depth":0}}}',
 			tags: [],
-			folder: "archive",
+			folder: "inbox",
 			createdAt: daysAgo(60),
 			updatedAt: daysAgo(30),
+			archived: true,
+		},
+		{
+			id: generateId(),
+			title: "Completed Tasks - Q4 2023",
+			content:
+				'{"e1a53903-2fa1-4cfb-b7f0-4586df055130":{"id":"e1a53903-2fa1-4cfb-b7f0-4586df055130","type":"NumberedList","meta":{"order":4,"depth":0},"value":[{"id":"10a44e9c-de34-419c-90b8-c34117272b18","type":"numbered-list","props":{"nodeType":"block"},"children":[{"text":"Archived completed tasks"}]}]}}',
+			tags: [],
+			folder: "work_tasks",
+			createdAt: daysAgo(90),
+			updatedAt: daysAgo(90),
 			archived: true,
 		},
 	];
@@ -138,24 +314,15 @@ const generateRecurringOccurrences = (
 	parentId: string,
 	baseExpense: Omit<
 		Expense,
-		| "id"
-		| "dueDate"
-		| "isPaid"
-		| "paymentDate"
-		| "parentExpenseId"
-		| "initialState"
+		"id" | "dueDate" | "isPaid" | "paymentDate" | "parentExpenseId" | "initialState"
 	>,
 	dayOfMonth: number,
 	months: number = 12,
-	paidCount: number = 0,
+	paidCount: number = 0
 ): Expense[] => {
 	const now = new Date();
 	return Array.from({ length: months }, (_, i) => i).map((month) => {
-		const dueDate = new Date(
-			now.getFullYear(),
-			now.getMonth() + month,
-			dayOfMonth,
-		);
+		const dueDate = new Date(now.getFullYear(), now.getMonth() + month, dayOfMonth);
 		const isPaid = month < paidCount;
 		return {
 			...baseExpense,
@@ -277,40 +444,28 @@ const createSampleExpenses = (): Expense[] => {
 	};
 
 	// Generate 12 months of occurrences for each recurring expense (with first 1-2 marked as paid)
-	const rentOccurrences = generateRecurringOccurrences(
-		rentId,
-		rentBase,
-		1,
-		12,
-		2,
-	);
+	const rentOccurrences = generateRecurringOccurrences(rentId, rentBase, 1, 12, 2);
 	const electricityOccurrences = generateRecurringOccurrences(
 		electricityId,
 		electricityBase,
 		15,
 		12,
-		1,
+		1
 	);
-	const internetOccurrences = generateRecurringOccurrences(
-		internetId,
-		internetBase,
-		20,
-		12,
-		2,
-	);
+	const internetOccurrences = generateRecurringOccurrences(internetId, internetBase, 20, 12, 2);
 	const phonePlanOccurrences = generateRecurringOccurrences(
 		phonePlanId,
 		phonePlanBase,
 		25,
 		12,
-		1,
+		1
 	);
 	const streamingOccurrences = generateRecurringOccurrences(
 		streamingId,
 		streamingBase,
 		10,
 		12,
-		2,
+		2
 	);
 	const gymOccurrences = generateRecurringOccurrences(gymId, gymBase, 5, 12, 1);
 
@@ -453,8 +608,7 @@ const createSampleIncomeEntries = (): IncomeEntry[] => {
 			const hours = 6 + Math.floor(Math.random() * 4); // 6-9 hours
 			const minutes = Math.floor(Math.random() * 4) * 15; // 0, 15, 30, or 45
 			const hourlyRate = 25 + Math.random() * 10; // $25-35/hour
-			const amount =
-				Math.round((hours + minutes / 60) * hourlyRate * 100) / 100;
+			const amount = Math.round((hours + minutes / 60) * hourlyRate * 100) / 100;
 
 			entries.push({
 				id: generateId(),
@@ -470,9 +624,7 @@ const createSampleIncomeEntries = (): IncomeEntry[] => {
 };
 
 // Sample weekly targets
-const createSampleWeeklyTargets = (): IncomeWeeklyTargets[] => [
-	{ id: generateId(), amount: 800 },
-];
+const createSampleWeeklyTargets = (): IncomeWeeklyTargets[] => [{ id: generateId(), amount: 800 }];
 
 // Main seed function
 export const seedTestDatabase = async (): Promise<void> => {
@@ -485,7 +637,7 @@ export const seedTestDatabase = async (): Promise<void> => {
 		// Save folders
 		const folders = createSampleFolders();
 		await sqlStorage.saveFolders(folders);
-		console.log("✓ Folders created");
+		console.log(`✓ ${folders.length} folders created`);
 
 		// Save notes
 		const notes = createSampleNotes();

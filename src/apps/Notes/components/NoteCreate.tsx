@@ -14,33 +14,24 @@ import Image from "@yoopta/image";
 import Link, { type LinkElementProps } from "@yoopta/link";
 import LinkTool, { DefaultLinkToolRender } from "@yoopta/link-tool";
 import { BulletedList, NumberedList, TodoList } from "@yoopta/lists";
-import {
-	Bold,
-	CodeMark,
-	Highlight,
-	Italic,
-	Strike,
-	Underline,
-} from "@yoopta/marks";
+import { Bold, CodeMark, Highlight, Italic, Strike, Underline } from "@yoopta/marks";
 import Paragraph from "@yoopta/paragraph";
 import Table from "@yoopta/table";
 import Toolbar, { DefaultToolbarRender } from "@yoopta/toolbar";
 import Video from "@yoopta/video";
 import { Hash } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ConfirmationModal } from "@/components/ConfirmationModal";
 import { useNotesStore } from "@/stores/useNotesStore";
-import type { NotesFolder, Subfolder, Tag } from "@/types/notes";
+import type { Folder, Tag } from "@/types/notes";
 import { useLinkPreviewAutoConvert } from "../hooks/useLinkPreviewAutoConvert";
 import LinkPreviewPlugin from "./LinkPreview";
 
 interface NoteCreateProps {
 	tags: Record<string, Tag>;
-	activeFolder: NotesFolder | Subfolder | null;
+	activeFolder: Folder | null;
 	onBack: () => void;
 	onNoteCreated: (noteId: string) => void;
-	registerBackHandler?: (handler: () => void) => void;
-	registerSaveHandler?: (handler: () => void) => void;
+	registerBackHandler: (handler: () => void) => void;
 }
 
 const MARKS = [Bold, Italic, CodeMark, Underline, Strike, Highlight];
@@ -54,9 +45,7 @@ const fileToBase64 = (file: File): Promise<string> => {
 	});
 };
 
-const getImageDimensions = (
-	file: File,
-): Promise<{ width: number; height: number }> => {
+const getImageDimensions = (file: File): Promise<{ width: number; height: number }> => {
 	return new Promise((resolve, reject) => {
 		const img = document.createElement("img");
 		const url = URL.createObjectURL(file);
@@ -72,9 +61,7 @@ const getImageDimensions = (
 	});
 };
 
-const getVideoDimensions = (
-	file: File,
-): Promise<{ width: number; height: number }> => {
+const getVideoDimensions = (file: File): Promise<{ width: number; height: number }> => {
 	return new Promise((resolve, reject) => {
 		const video = document.createElement("video");
 		const url = URL.createObjectURL(file);
@@ -93,23 +80,38 @@ const getVideoDimensions = (
 export const NoteCreate = ({
 	tags,
 	activeFolder,
-	onBack,
 	onNoteCreated,
 	registerBackHandler,
-	registerSaveHandler,
 }: NoteCreateProps) => {
 	const { addNote } = useNotesStore();
 	const editor = useMemo(() => createYooptaEditor(), []);
 	const selectionRef = useRef<HTMLDivElement>(null);
 	const titleRef = useRef<HTMLInputElement>(null);
 
+	// Use refs to track current values for the save function
+	const titleValueRef = useRef("");
+	const selectedTagsRef = useRef<string[]>([]);
+	const editorValueRef = useRef<Record<string, unknown>>({});
+	const hasContentRef = useRef(false);
+	const hasSavedRef = useRef(false);
+
 	const [title, setTitle] = useState("");
 	const [selectedTags, setSelectedTags] = useState<string[]>([]);
-	const [editorValue, setEditorValue] = useState({});
-	const [showDiscardModal, setShowDiscardModal] = useState(false);
-	const [pendingBack, setPendingBack] = useState(false);
+	const [editorValue, setEditorValue] = useState<Record<string, unknown>>({});
 
-	// Enable automatic URL to LinkPreview conversion
+	// Sync refs with state
+	useEffect(() => {
+		titleValueRef.current = title;
+	}, [title]);
+
+	useEffect(() => {
+		selectedTagsRef.current = selectedTags;
+	}, [selectedTags]);
+
+	useEffect(() => {
+		editorValueRef.current = editorValue;
+	}, [editorValue]);
+
 	useLinkPreviewAutoConvert(editor);
 
 	useEffect(() => {
@@ -128,10 +130,7 @@ export const NoteCreate = ({
 			BulletedList,
 			TodoList,
 			Code,
-			Table as unknown as YooptaPlugin<
-				Record<string, SlateElement>,
-				Record<string, unknown>
-			>,
+			Table as unknown as YooptaPlugin<Record<string, SlateElement>, Record<string, unknown>>,
 			Link.extend({
 				elementProps: {
 					link: (props: LinkElementProps) => ({
@@ -182,7 +181,7 @@ export const NoteCreate = ({
 			}),
 			LinkPreviewPlugin,
 		],
-		[],
+		[]
 	);
 
 	const TOOLS = useMemo(
@@ -191,160 +190,159 @@ export const NoteCreate = ({
 			Toolbar: { render: DefaultToolbarRender, tool: Toolbar },
 			LinkTool: { render: DefaultLinkToolRender, tool: LinkTool },
 		}),
-		[],
+		[]
 	);
 
-	const hasContent = useCallback(() => {
-		if (title.trim()) return true;
-		const content = JSON.stringify(editorValue);
-		// Check if editor has meaningful content
-		return (
-			content !== "{}" &&
-			content !== '{"":{"id":"","value":[],"type":"Paragraph"}}'
-		);
-	}, [title, editorValue]);
+	const checkHasContent = useCallback(() => {
+		const currentTitle = titleValueRef.current;
+		const currentEditorValue = editorValueRef.current;
+
+		if (currentTitle.trim()) return true;
+
+		const content = JSON.stringify(currentEditorValue);
+		if (content === "{}" || content === "{}") return false;
+
+		// Check if there's any actual text in the editor
+		try {
+			const parsed = currentEditorValue as Record<
+				string,
+				{ value?: Array<{ children?: Array<{ text?: string }> }> }
+			>;
+			for (const block of Object.values(parsed)) {
+				if (block.value) {
+					for (const node of block.value) {
+						if (node.children) {
+							for (const child of node.children) {
+								if (child.text?.trim()) {
+									return true;
+								}
+							}
+						}
+					}
+				}
+			}
+		} catch {
+			return false;
+		}
+
+		return false;
+	}, []);
+
+	const saveNote = useCallback(() => {
+		if (hasSavedRef.current) return null;
+
+		const currentTitle = titleValueRef.current;
+		const currentTags = selectedTagsRef.current;
+		const currentEditorValue = editorValueRef.current;
+
+		const content = JSON.stringify(currentEditorValue);
+
+		try {
+			hasSavedRef.current = true;
+			const noteId = addNote({
+				title: currentTitle.trim() || "Untitled",
+				content,
+				tags: currentTags,
+				folder: activeFolder?.id || "inbox",
+			});
+
+			return noteId;
+		} catch (error) {
+			console.error("Failed to create note:", error);
+			hasSavedRef.current = false;
+			return null;
+		}
+	}, [addNote, activeFolder]);
 
 	const handleBack = useCallback(() => {
-		if (hasContent()) {
-			setPendingBack(true);
-			setShowDiscardModal(true);
-		} else {
-			onBack();
+		// Auto-save if there's content and haven't saved yet
+		if (!hasSavedRef.current && checkHasContent()) {
+			const noteId = saveNote();
+			if (noteId) {
+				onNoteCreated(noteId);
+			}
 		}
-	}, [hasContent, onBack]);
+		// Parent component will handle navigation
+	}, [checkHasContent, saveNote, onNoteCreated]);
 
-	// Register handlers for external use (e.g., breadcrumb buttons)
 	useEffect(() => {
 		if (registerBackHandler) {
 			registerBackHandler(handleBack);
 		}
 	}, [registerBackHandler, handleBack]);
 
-	const handleSave = useCallback(() => {
-		const content = JSON.stringify(editor.getEditorValue());
-		const folderId = activeFolder?.id || "inbox";
-
-		const noteId = addNote({
-			title: title.trim() || "Untitled",
-			content,
-			tags: selectedTags,
-			folder: folderId,
-		});
-
-		onNoteCreated(noteId);
-	}, [editor, activeFolder, title, selectedTags, addNote, onNoteCreated]);
-
-	useEffect(() => {
-		if (registerSaveHandler) {
-			registerSaveHandler(handleSave);
-		}
-	}, [registerSaveHandler, handleSave]);
-
-	const handleDiscard = () => {
-		setShowDiscardModal(false);
-		if (pendingBack) {
-			onBack();
-		}
-	};
-
 	const handleTagToggle = (tagId: string) => {
 		setSelectedTags((prev) =>
-			prev.includes(tagId) ? prev.filter((t) => t !== tagId) : [...prev, tagId],
+			prev.includes(tagId) ? prev.filter((t) => t !== tagId) : [...prev, tagId]
 		);
 	};
 
 	const handleEditorChange = (value: Record<string, unknown>) => {
 		setEditorValue(value);
+		hasContentRef.current = true;
 	};
 
-	// Handle Escape key
-	useEffect(() => {
-		const handleKeyDown = (e: KeyboardEvent) => {
-			if (e.key === "Escape") {
-				handleBack();
-			}
-		};
-
-		document.addEventListener("keydown", handleKeyDown);
-		return () => document.removeEventListener("keydown", handleKeyDown);
-	}, [title, editorValue]);
+	const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		setTitle(e.target.value);
+	};
 
 	return (
-		<>
-			<ConfirmationModal
-				isOpen={showDiscardModal}
-				title="Discard Note?"
-				message="You have unsaved changes. Are you sure you want to discard this note?"
-				confirmLabel="Discard"
-				cancelLabel="Keep Editing"
-				variant="warning"
-				onConfirm={handleDiscard}
-				onCancel={() => {
-					setShowDiscardModal(false);
-					setPendingBack(false);
-				}}
-			/>
+		<div className="h-full overflow-y-auto">
+			<div className="max-w-4xl mx-auto px-8 py-6">
+				{/* Title */}
+				<input
+					ref={titleRef}
+					type="text"
+					value={title}
+					onChange={handleTitleChange}
+					placeholder="Untitled"
+					className="w-full text-4xl font-bold text-card-foreground outline-none mb-4 placeholder:text-muted-foreground bg-transparent"
+				/>
 
-			<div className="h-full flex flex-col bg-card border border-border animate-slideIn">
-				{/* Content */}
-				<div className="flex-1 overflow-y-auto">
-					<div className="max-w-4xl mx-auto px-8 py-6">
-						{/* Title */}
-						<input
-							ref={titleRef}
-							type="text"
-							value={title}
-							onChange={(e) => setTitle(e.target.value)}
-							placeholder="Untitled"
-							className="w-full text-4xl font-bold text-card-foreground outline-none mb-4 placeholder:text-muted-foreground bg-transparent"
+				{/* Tags selector */}
+				<div className="flex items-center gap-2 mb-6">
+					<Hash size={16} className="text-muted-foreground" />
+					<div className="flex flex-wrap gap-2">
+						{Object.entries(tags).map(([tagId, tag]) => {
+							const isSelected = selectedTags.includes(tagId);
+							const Icon = tag.icon;
+							return (
+								<button
+									key={tagId}
+									type="button"
+									onClick={() => handleTagToggle(tagId)}
+									className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer ${
+										isSelected
+											? `bg-primary/10 text-primary border border-primary/30`
+											: `bg-muted text-muted-foreground hover:bg-accent border border-border`
+									}`}
+								>
+									{typeof Icon === "function" && <Icon size={12} />}
+									{tag.name}
+								</button>
+							);
+						})}
+					</div>
+				</div>
+
+				<div className="border-t pt-6">
+					{/* Yoopta Editor */}
+					<div ref={selectionRef} className="w-full min-h-[300px]">
+						<YooptaEditor
+							editor={editor}
+							plugins={plugins}
+							tools={TOOLS}
+							marks={MARKS}
+							selectionBoxRoot={selectionRef}
+							value={editorValue}
+							onChange={handleEditorChange}
+							placeholder="Start writing..."
+							autoFocus={false}
+							width="100%"
 						/>
-
-						{/* Tags selector */}
-						<div className="flex items-center gap-2 mb-6">
-							<Hash size={16} className="text-muted-foreground" />
-							<div className="flex flex-wrap gap-2">
-								{Object.entries(tags).map(([tagId, tag]) => {
-									const isSelected = selectedTags.includes(tagId);
-									const Icon = tag.icon;
-									return (
-										<button
-											key={tagId}
-											type="button"
-											onClick={() => handleTagToggle(tagId)}
-											className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-												isSelected
-													? `bg-primary/10 text-primary border border-primary/30`
-													: `bg-muted text-muted-foreground hover:bg-accent border border-border`
-											}`}
-										>
-											{typeof Icon === "function" && <Icon size={12} />}
-											{tag.name}
-										</button>
-									);
-								})}
-							</div>
-						</div>
-
-						<div className="border-t pt-6">
-							{/* Yoopta Editor */}
-							<div ref={selectionRef} className="w-full min-h-[300px]">
-								<YooptaEditor
-									editor={editor}
-									plugins={plugins}
-									tools={TOOLS}
-									marks={MARKS}
-									selectionBoxRoot={selectionRef}
-									value={editorValue}
-									onChange={handleEditorChange}
-									placeholder="Start writing..."
-									autoFocus={false}
-									width="100%"
-								/>
-							</div>
-						</div>
 					</div>
 				</div>
 			</div>
-		</>
+		</div>
 	);
 };

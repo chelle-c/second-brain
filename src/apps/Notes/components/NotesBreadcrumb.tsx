@@ -1,124 +1,80 @@
-import {
-	ArrowLeft,
-	ChevronRight,
-	FilePlus,
-	FileText,
-	Folder,
-	Inbox,
-	Redo2,
-	Undo2,
-} from "lucide-react";
-import type { ReactNode } from "react";
-import type { NotesFolder, NotesFolders, Subfolder } from "@/types/notes";
+import React, { type ReactNode } from "react";
+import type { Folder as FolderType } from "@/types/notes";
+import { ChevronLeft, Folder, Inbox, Redo2, Undo2 } from "lucide-react";
 
 interface NotesBreadcrumbProps {
-	activeFolder: NotesFolder | Subfolder | null;
-	allFolders: NotesFolders;
+	activeFolder: FolderType | null;
+	folders: FolderType[];
 	noteTitle?: string;
 	isCreating?: boolean;
 	onBack: () => void;
+	canUndo: boolean;
+	canRedo: boolean;
+	onUndo: () => void;
+	onRedo: () => void;
 	actions?: ReactNode;
-	canUndo?: boolean;
-	canRedo?: boolean;
-	onUndo?: () => void;
-	onRedo?: () => void;
 }
 
 export function NotesBreadcrumb({
 	activeFolder,
-	allFolders,
 	noteTitle,
 	isCreating,
 	onBack,
-	actions,
 	canUndo,
 	canRedo,
 	onUndo,
 	onRedo,
+	actions,
 }: NotesBreadcrumbProps) {
-	const isSubfolder =
-		activeFolder && "parent" in activeFolder && activeFolder.parent;
-
-	const getParentFolder = (): NotesFolder | null => {
-		if (!isSubfolder || !activeFolder) return null;
-		const parentId = (activeFolder as Subfolder).parent;
-		return allFolders[parentId] || null;
-	};
-
-	const parentFolder = getParentFolder();
-	const FolderIcon = activeFolder?.name === "Inbox" ? Inbox : Folder;
-
 	return (
-		<div className="flex items-center justify-between gap-2 px-6 py-3 border-b border-border bg-muted/50">
-			<div className="flex items-center gap-2">
+		<div className="flex items-center justify-between gap-4 p-4 border-b border-border bg-background">
+			<div className="flex items-center gap-2 min-w-0 flex-1">
 				<button
 					type="button"
 					onClick={onBack}
-					className="p-1.5 hover:bg-accent rounded-lg transition-colors cursor-pointer"
+					className="p-1.5 hover:bg-accent rounded-lg transition-colors shrink-0"
 					title="Back to notes list"
 				>
-					<ArrowLeft size={20} />
+					<ChevronLeft size={20} />
 				</button>
 
-				<div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-					{/* Parent folder (if subfolder) */}
-					{parentFolder && (
-						<>
-							<Folder size={14} className="text-muted-foreground" />
-							<span>{parentFolder.name}</span>
-							<ChevronRight size={14} />
-						</>
-					)}
-
-					{/* Current folder */}
-					{activeFolder && (
-						<>
-							<FolderIcon size={14} className="text-muted-foreground" />
-							<span>{activeFolder.name}</span>
-							<ChevronRight size={14} />
-						</>
-					)}
-
-					{/* Note indicator */}
-					{isCreating ? (
-						<span className="flex items-center gap-1.5 text-foreground font-medium">
-							<FilePlus size={14} className="text-sky-500" />
-							New Note
-						</span>
-					) : noteTitle ? (
-						<span className="flex items-center gap-1.5 text-foreground font-medium truncate max-w-[300px]">
-							<FileText size={14} className="text-primary shrink-0" />
-							<span className="truncate">{noteTitle || "Untitled"}</span>
-						</span>
-					) : null}
+				<div className="flex items-center gap-2 min-w-0">
+					{React.createElement(activeFolder?.id === "inbox" ? Inbox : Folder, {
+						size: 18,
+						className: "text-muted-foreground shrink-0",
+					})}
+					<span className="text-sm text-muted-foreground truncate">
+						{activeFolder?.name || "Notes"}
+					</span>
+					<span className="text-sm text-muted-foreground">/</span>
+					<span className="text-sm font-medium truncate">
+						{isCreating ? "New Note" : noteTitle || "Untitled"}
+					</span>
 				</div>
 			</div>
 
-			{/* Right side: Undo/Redo and action buttons */}
-			<div className="flex items-center gap-2">
-				{/* Undo/Redo buttons */}
-				{onUndo && onRedo && (
-					<div className="flex items-center gap-1 mr-2">
-						<button
-							type="button"
-							onClick={onUndo}
-							disabled={!canUndo}
-							className="p-1.5 hover:bg-accent rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-							title="Undo (Ctrl+Z)"
-						>
-							<Undo2 size={18} />
-						</button>
-						<button
-							type="button"
-							onClick={onRedo}
-							disabled={!canRedo}
-							className="p-1.5 hover:bg-accent rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-							title="Redo (Ctrl+Y)"
-						>
-							<Redo2 size={18} />
-						</button>
-					</div>
-				)}
+			<div className="flex items-center gap-2 shrink-0">
+				<div className="flex items-center gap-1 mr-2">
+					<button
+						type="button"
+						onClick={onUndo}
+						disabled={!canUndo}
+						className="p-1.5 hover:bg-accent rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+						title="Undo (Ctrl+Z)"
+					>
+						<Undo2 size={18} />
+					</button>
+					<button
+						type="button"
+						onClick={onRedo}
+						disabled={!canRedo}
+						className="p-1.5 hover:bg-accent rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+						title="Redo (Ctrl+Y)"
+					>
+						<Redo2 size={18} />
+					</button>
+				</div>
+
 				{actions}
 			</div>
 		</div>

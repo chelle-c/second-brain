@@ -1,3 +1,16 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ConfirmationModal } from "@/components/ConfirmationModal";
+import { Button } from "@/components/ui/button";
+import { useHistoryStore } from "@/stores/useHistoryStore";
+import { useNotesStore } from "@/stores/useNotesStore";
+import { useSettingsStore } from "@/stores/useSettingsStore";
+import type { Folder, Tag } from "@/types/notes";
+import { FolderNav } from "./components/FolderNav";
+import { NoteCreate } from "./components/NoteCreate";
+import { NotesBreadcrumb } from "./components/NotesBreadcrumb";
+import { NotesCard } from "./components/NotesCard";
+import { NotesLayout } from "./components/NotesLayout";
+import { NoteView } from "./components/NoteView";
 import {
 	Archive,
 	ArchiveRestore,
@@ -5,48 +18,28 @@ import {
 	CheckCircle,
 	FileWarning,
 	Lightbulb,
-	Plus,
-	Save,
 	Trash2,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { ConfirmationModal } from "@/components/ConfirmationModal";
-import { Button } from "@/components/ui/button";
-import { useHistoryStore } from "@/stores/useHistoryStore";
-import { useNotesStore } from "@/stores/useNotesStore";
-import { useSettingsStore } from "@/stores/useSettingsStore";
-import type { NotesFolder, NotesFolders, Subfolder, Tag } from "@/types/notes";
-import { FolderNav } from "./components/FolderNav";
-import { NoteCreate } from "./components/NoteCreate";
-import { NotesBreadcrumb } from "./components/NotesBreadcrumb";
-import { NotesCard } from "./components/NotesCard";
-import { NotesLayout } from "./components/NotesLayout";
-import { NoteView } from "./components/NoteView";
 
 type ViewState = "list" | "view" | "create";
 
 export function NotesApp() {
-	const {
-		notes,
-		notesFolders,
-		tags,
-		undo,
-		redo,
-		archiveNote,
-		unarchiveNote,
-		deleteNote,
-	} = useNotesStore();
+	const { notes, folders, tags, undo, redo, archiveNote, unarchiveNote, deleteNote } =
+		useNotesStore();
 	const { canUndo, canRedo } = useHistoryStore();
 	const { notesDefaultFolder } = useSettingsStore();
 
-	const [activeFolder, setActiveFolder] = useState<
-		NotesFolder | Subfolder | null
-	>(null);
+	const [activeFolder, setActiveFolder] = useState<Folder | null>(null);
 	const [activeTags, setActiveTags] = useState<string[]>([]);
 	const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
 	const [viewMode, setViewMode] = useState<"active" | "archived">("active");
 	const [viewState, setViewState] = useState<ViewState>("list");
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+	const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+	// Track if folder was changed while viewing/creating a note
+	const lastActiveFolderRef = useRef<Folder | null>(null);
 
 	const defaultTags: Record<string, Tag> = {
 		actions: {
@@ -71,21 +64,33 @@ export function NotesApp() {
 	};
 
 	const allTags = { ...defaultTags, ...tags };
-	const allFolders: NotesFolders = { ...notesFolders };
 
 	// Set initial folder from settings
 	useEffect(() => {
-		if (!activeFolder) {
-			// Try to use the default folder from settings
-			const defaultFolder = allFolders[notesDefaultFolder];
+		if (!activeFolder && folders.length > 0) {
+			const defaultFolder = folders.find((f) => f.id === notesDefaultFolder);
 			if (defaultFolder) {
 				setActiveFolder(defaultFolder);
-			} else if (allFolders.inbox) {
-				// Fall back to inbox if default folder doesn't exist
-				setActiveFolder(allFolders.inbox);
+			} else {
+				const inbox = folders.find((f) => f.id === "inbox");
+				if (inbox) {
+					setActiveFolder(inbox);
+				}
 			}
 		}
-	}, [notesFolders, notesDefaultFolder]);
+	}, [folders, notesDefaultFolder, activeFolder]);
+
+	// When folder changes while viewing/creating a note, close the note
+	useEffect(() => {
+		if (viewState !== "list" && activeFolder && lastActiveFolderRef.current) {
+			if (activeFolder.id !== lastActiveFolderRef.current.id) {
+				// Folder changed while viewing a note - close the note
+				setSelectedNoteId(null);
+				setViewState("list");
+			}
+		}
+		lastActiveFolderRef.current = activeFolder;
+	}, [activeFolder, viewState]);
 
 	// Keyboard shortcuts
 	useEffect(() => {
@@ -93,30 +98,23 @@ export function NotesApp() {
 			const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
 			const modKey = isMac ? e.metaKey : e.ctrlKey;
 
-			// Ctrl/Cmd + = to create new note
 			if (modKey && (e.key === "=" || e.key === "+")) {
 				e.preventDefault();
 				setViewState("create");
 			}
 
-			// Ctrl/Cmd + Z to undo
 			if (modKey && e.key === "z" && !e.shiftKey && canUndo) {
 				e.preventDefault();
 				undo();
 			}
 
-			// Ctrl/Cmd + Shift + Z or Ctrl/Cmd + Y to redo
-			if (
-				(modKey && e.shiftKey && e.key === "z") ||
-				(modKey && e.key === "y")
-			) {
+			if ((modKey && e.shiftKey && e.key === "z") || (modKey && e.key === "y")) {
 				if (canRedo) {
 					e.preventDefault();
 					redo();
 				}
 			}
 
-			// Escape to go back to list when viewing a note
 			if (e.key === "Escape" && viewState === "view") {
 				e.preventDefault();
 				handleBackToList();
@@ -127,47 +125,26 @@ export function NotesApp() {
 		return () => document.removeEventListener("keydown", handleKeyDown);
 	}, [canUndo, canRedo, undo, redo, viewState]);
 
-	const getSubfolderIds = (folderId: string): string[] => {
-		const folder = allFolders[folderId];
-		if (folder?.children && folder.children.length > 0) {
-			return folder.children.map((child) => child.id);
-		}
-		return [];
-	};
-
-	const isSubfolder = (folderId: string): boolean => {
-		return Object.values(allFolders).some((folder) =>
-			folder.children?.some((child) => child.id === folderId),
-		);
-	};
-
 	const getNoteCount = (
 		folderId: string,
 		archived: boolean = false,
+		includeDescendants: boolean = true
 	): number => {
-		if (isSubfolder(folderId)) {
-			return notes.filter(
-				(n) => n.folder === folderId && n.archived === archived,
-			).length;
-		} else {
-			const subfolderIds = getSubfolderIds(folderId);
-			return notes.filter(
-				(n) =>
-					(n.folder === folderId || subfolderIds.includes(n.folder)) &&
-					n.archived === archived,
-			).length;
+		if (!includeDescendants) {
+			return notes.filter((n) => n.folder === folderId && n.archived === archived).length;
 		}
+
+		const getDescendantIds = (id: string): string[] => {
+			const children = folders.filter((f) => f.parentId === id);
+			return [id, ...children.flatMap((child) => getDescendantIds(child.id))];
+		};
+
+		const folderIds = getDescendantIds(folderId);
+		return notes.filter((n) => folderIds.includes(n.folder) && n.archived === archived).length;
 	};
 
-	const getCurrentFolder = (id: string): NotesFolder | Subfolder => {
-		const currentFolder = Object.values(allFolders).find((f) => f.id === id);
-		if (currentFolder === undefined) {
-			const currentSubfolder = Object.values(allFolders).find((f) =>
-				f.children?.find((c) => c.id === id),
-			);
-			return currentSubfolder?.children?.find((c) => c.id === id) as Subfolder;
-		}
-		return currentFolder ? currentFolder : { id: "inbox", name: "Inbox" };
+	const getFolderById = (id: string): Folder | undefined => {
+		return folders.find((f) => f.id === id);
 	};
 
 	const handleSelectNote = (noteId: string) => {
@@ -175,23 +152,35 @@ export function NotesApp() {
 		setViewState("view");
 	};
 
-	const handleBackToList = () => {
+	const handleBackToList = useCallback(() => {
 		setSelectedNoteId(null);
 		setViewState("list");
-	};
+	}, []);
 
-	const handleNoteCreated = (noteId: string) => {
+	const handleNoteCreated = useCallback((noteId: string) => {
 		setSelectedNoteId(noteId);
 		setViewState("view");
-	};
+	}, []);
 
 	const handleCreateNote = () => {
 		setViewState("create");
 	};
 
+	// Handler for folder selection from sidebar
+	const handleFolderSelect = useCallback(
+		(folder: Folder | null) => {
+			setActiveFolder(folder);
+			// If we're viewing or creating a note, go back to list
+			if (viewState !== "list") {
+				setSelectedNoteId(null);
+				setViewState("list");
+			}
+		},
+		[viewState]
+	);
+
 	const selectedNote = notes.find((n) => n.id === selectedNoteId);
 
-	// Note action handlers for breadcrumb
 	const handleArchiveToggle = useCallback(() => {
 		if (!selectedNote) return;
 		if (selectedNote.archived) {
@@ -200,7 +189,7 @@ export function NotesApp() {
 			archiveNote(selectedNote.id);
 		}
 		handleBackToList();
-	}, [selectedNote, archiveNote, unarchiveNote]);
+	}, [selectedNote, archiveNote, unarchiveNote, handleBackToList]);
 
 	const handleDeleteNote = useCallback(() => {
 		setShowDeleteConfirm(true);
@@ -212,35 +201,21 @@ export function NotesApp() {
 			setShowDeleteConfirm(false);
 			handleBackToList();
 		}
-	}, [selectedNote, deleteNote]);
+	}, [selectedNote, deleteNote, handleBackToList]);
 
-	// Store handlers from NoteCreate for use by breadcrumb
 	const createBackHandlerRef = useRef<(() => void) | null>(null);
-	const createSaveHandlerRef = useRef<(() => void) | null>(null);
 
 	const registerCreateBackHandler = useCallback((handler: () => void) => {
 		createBackHandlerRef.current = handler;
 	}, []);
 
-	const registerCreateSaveHandler = useCallback((handler: () => void) => {
-		createSaveHandlerRef.current = handler;
-	}, []);
-
 	const handleCreateBack = useCallback(() => {
 		if (createBackHandlerRef.current) {
 			createBackHandlerRef.current();
-		} else {
-			handleBackToList();
 		}
-	}, []);
-
-	const handleCreateSave = useCallback(() => {
-		if (createSaveHandlerRef.current) {
-			createSaveHandlerRef.current();
-		}
-	}, []);
-
-	const showSidebar = viewState === "list";
+		// Always go back to list after the handler runs
+		handleBackToList();
+	}, [handleBackToList]);
 
 	const renderContent = () => {
 		switch (viewState) {
@@ -249,22 +224,13 @@ export function NotesApp() {
 					<div className="h-full flex flex-col">
 						<NotesBreadcrumb
 							activeFolder={activeFolder}
-							allFolders={allFolders}
+							folders={folders}
 							isCreating
 							onBack={handleCreateBack}
 							canUndo={canUndo}
 							canRedo={canRedo}
 							onUndo={undo}
 							onRedo={redo}
-							actions={
-								<Button
-									onClick={handleCreateSave}
-									className="bg-primary/80 text-base"
-								>
-									<Save size={20} />
-									Save Note
-								</Button>
-							}
 						/>
 						<div className="flex-1 overflow-hidden">
 							<NoteCreate
@@ -273,7 +239,6 @@ export function NotesApp() {
 								onBack={handleBackToList}
 								onNoteCreated={handleNoteCreated}
 								registerBackHandler={registerCreateBackHandler}
-								registerSaveHandler={registerCreateSaveHandler}
 							/>
 						</div>
 					</div>
@@ -283,8 +248,8 @@ export function NotesApp() {
 					return (
 						<div className="h-full flex flex-col">
 							<NotesBreadcrumb
-								activeFolder={activeFolder}
-								allFolders={allFolders}
+								activeFolder={getFolderById(selectedNote.folder) || activeFolder}
+								folders={folders}
 								noteTitle={selectedNote.title}
 								onBack={handleBackToList}
 								canUndo={canUndo}
@@ -294,6 +259,7 @@ export function NotesApp() {
 								actions={
 									<div className="flex items-center gap-2">
 										<Button
+											type="button"
 											onClick={handleArchiveToggle}
 											variant="ghost"
 											size="sm"
@@ -312,6 +278,7 @@ export function NotesApp() {
 											)}
 										</Button>
 										<Button
+											type="button"
 											onClick={handleDeleteNote}
 											variant="ghost"
 											size="sm"
@@ -337,17 +304,16 @@ export function NotesApp() {
 			default:
 				return (
 					<NotesCard
-						allFolders={allFolders}
+						folders={folders}
 						activeFolder={activeFolder}
 						setActiveFolder={setActiveFolder}
-						getCurrentFolder={getCurrentFolder}
+						getFolderById={getFolderById}
 						tags={allTags}
 						activeTags={activeTags}
 						getNoteCount={getNoteCount}
 						setActiveTags={setActiveTags}
 						onSelectNote={handleSelectNote}
 						viewMode={viewMode}
-						setViewMode={setViewMode}
 						canUndo={canUndo}
 						canRedo={canRedo}
 						onUndo={undo}
@@ -374,41 +340,26 @@ export function NotesApp() {
 
 			<div className="w-full h-full animate-fadeIn relative">
 				<NotesLayout
-					showSidebar={showSidebar}
+					isCollapsed={isSidebarCollapsed}
+					onToggleCollapse={setIsSidebarCollapsed}
 					sidebar={
 						<FolderNav
-							allFolders={allFolders}
+							folders={folders}
 							activeFolder={activeFolder}
-							setActiveFolder={setActiveFolder}
-							getCurrentFolder={getCurrentFolder}
+							setActiveFolder={handleFolderSelect}
+							getFolderById={getFolderById}
 							setActiveTags={setActiveTags}
 							getNoteCount={getNoteCount}
+							onCreateNote={handleCreateNote}
+							viewMode={viewMode}
+							setViewMode={setViewMode}
+							onSelectNote={handleSelectNote}
+							isCollapsed={isSidebarCollapsed}
+							onToggleCollapse={setIsSidebarCollapsed}
 						/>
 					}
 					content={<div className="h-full">{renderContent()}</div>}
 				/>
-
-				{/* Floating New Note Button */}
-				{viewState === "list" && (
-					<button
-						type="button"
-						onClick={handleCreateNote}
-						className="fixed bottom-8 right-12 bg-primary text-primary-foreground p-4 rounded-full
-							shadow-xl hover:bg-primary/90 hover:scale-110 transition-all duration-200
-							active:scale-95 z-40 group"
-						title="New Note (Ctrl/Cmd + =)"
-					>
-						<Plus size={24} />
-						<span
-							className="absolute right-full mr-3 top-1/2 -translate-y-1/2
-							bg-gray-800 text-white px-3 py-1 rounded-lg text-sm
-							opacity-0 group-hover:opacity-100 transition-opacity duration-200
-							whitespace-nowrap"
-						>
-							New Note
-						</span>
-					</button>
-				)}
 			</div>
 		</>
 	);

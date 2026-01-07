@@ -190,10 +190,6 @@ export const useBackupStore = create<BackupStore>()(
 					}
 				}
 
-				console.log(
-					`Starting restore of ${filename} to ${actualTarget} environment...`,
-				);
-
 				await sqlStorage.close();
 
 				const result = await backupService.restoreFromBackup(filename, {
@@ -204,7 +200,6 @@ export const useBackupStore = create<BackupStore>()(
 					await sqlStorage.initialize(actualTarget);
 					await useAppStore.getState().loadFromFile();
 					await get().loadBackups();
-					console.log("Restore completed successfully");
 				} else {
 					console.error("Restore failed:", result.error);
 					try {

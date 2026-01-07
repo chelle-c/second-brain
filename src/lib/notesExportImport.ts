@@ -1,12 +1,18 @@
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
-import type { Note } from "@/types/notes";
+import {
+	folderIdSegmentToDisplayName,
+	getParentIdFromFolderId,
+	parseFolderIdPath,
+} from "@/lib/folderHelpers";
+import type { Folder, Note } from "@/types/notes";
 import { APP_VERSION } from "@/types/storage";
 
 export interface NotesExport {
 	version: string;
 	exportedAt: string;
 	notes: ExportedNote[];
+	folders?: ExportedFolder[]; // Optional for backwards compatibility
 }
 
 export interface ExportedNote {
@@ -14,10 +20,22 @@ export interface ExportedNote {
 	title: string;
 	content: string;
 	tags: string[];
-	folder: string;
+	folder?: string;
+	folderId?: string; // Legacy support
 	createdAt: string;
 	updatedAt: string;
 	archived: boolean;
+}
+
+export interface ExportedFolder {
+	id: string;
+	name: string;
+	parentId: string | null;
+	icon?: string;
+	archived: boolean;
+	order: number;
+	createdAt: string;
+	updatedAt: string;
 }
 
 export interface ImportResult {
@@ -32,7 +50,6 @@ const NOTE_REQUIRED_KEYS: (keyof ExportedNote)[] = [
 	"title",
 	"content",
 	"tags",
-	"folder",
 	"createdAt",
 	"updatedAt",
 	"archived",
@@ -60,15 +77,16 @@ function isValidNote(note: unknown): note is ExportedNote {
 	if (typeof noteObj.content !== "string") {
 		return false;
 	}
-	if (
-		!Array.isArray(noteObj.tags) ||
-		!noteObj.tags.every((t) => typeof t === "string")
-	) {
+	if (!Array.isArray(noteObj.tags) || !noteObj.tags.every((t) => typeof t === "string")) {
 		return false;
 	}
-	if (typeof noteObj.folder !== "string") {
-		return false;
-	}
+
+	// Accept either folder or folderId, or default to inbox if missing
+	const hasFolder = "folder" in noteObj && typeof noteObj.folder === "string";
+	const hasFolderId = "folderId" in noteObj && typeof noteObj.folderId === "string";
+
+	// Don't require folder/folderId - we'll default to inbox if missing
+
 	if (typeof noteObj.createdAt !== "string") {
 		return false;
 	}
@@ -102,33 +120,55 @@ function isValidExportFormat(data: unknown): data is NotesExport {
 	return true;
 }
 
-export function exportNotes(notes: Note[]): NotesExport {
+/**
+ * Get icon name from icon component for export
+ */
+function getIconNameForExport(icon: unknown): string | undefined {
+	if (!icon) return undefined;
+
+	if (typeof icon === "function") {
+		const iconComponent = icon as { displayName?: string; name?: string };
+		return iconComponent.displayName || iconComponent.name || undefined;
+	}
+
+	return undefined;
+}
+
+export function exportNotes(notes: Note[], folders?: Folder[]): NotesExport {
 	const exportedNotes: ExportedNote[] = notes.map((note) => ({
 		id: note.id,
 		title: note.title,
 		content: note.content,
 		tags: note.tags || [],
 		folder: note.folder,
-		createdAt:
-			note.createdAt instanceof Date
-				? note.createdAt.toISOString()
-				: note.createdAt,
-		updatedAt:
-			note.updatedAt instanceof Date
-				? note.updatedAt.toISOString()
-				: note.updatedAt,
+		createdAt: note.createdAt instanceof Date ? note.createdAt.toISOString() : note.createdAt,
+		updatedAt: note.updatedAt instanceof Date ? note.updatedAt.toISOString() : note.updatedAt,
 		archived: note.archived,
+	}));
+
+	const exportedFolders: ExportedFolder[] | undefined = folders?.map((folder) => ({
+		id: folder.id,
+		name: folder.name,
+		parentId: folder.parentId,
+		icon: getIconNameForExport(folder.icon),
+		archived: folder.archived || false,
+		order: folder.order || 0,
+		createdAt:
+			folder.createdAt instanceof Date ? folder.createdAt.toISOString() : folder.createdAt || new Date().toISOString(),
+		updatedAt:
+			folder.updatedAt instanceof Date ? folder.updatedAt.toISOString() : folder.updatedAt || new Date().toISOString(),
 	}));
 
 	return {
 		version: APP_VERSION,
 		exportedAt: new Date().toISOString(),
 		notes: exportedNotes,
+		folders: exportedFolders,
 	};
 }
 
-export function exportNotesToJson(notes: Note[]): string {
-	const exportData = exportNotes(notes);
+export function exportNotesToJson(notes: Note[], folders?: Folder[]): string {
+	const exportData = exportNotes(notes, folders);
 	return JSON.stringify(exportData, null, 2);
 }
 
@@ -140,25 +180,31 @@ export function parseImportedNotes(jsonString: string): {
 		const parsed = JSON.parse(jsonString);
 
 		if (!isValidExportFormat(parsed)) {
+			// Provide more specific error messages
+			const exportObj = parsed as Record<string, unknown>;
+			const missing: string[] = [];
+			if (typeof exportObj.version !== "string") missing.push("version");
+			if (typeof exportObj.exportedAt !== "string") missing.push("exportedAt");
+			if (!Array.isArray(exportObj.notes)) missing.push("notes array");
+
 			return {
 				data: null,
-				error:
-					"Invalid export format. Missing required fields (version, exportedAt, notes).",
+				error: `Invalid notes export format. Missing: ${missing.join(", ")}. This may be an expenses export file.`,
 			};
 		}
 
 		return { data: parsed, error: null };
-	} catch {
+	} catch (e) {
 		return {
 			data: null,
-			error: "Invalid JSON format. Please check the file contents.",
+			error: `Invalid JSON format: ${e instanceof Error ? e.message : "unknown error"}`,
 		};
 	}
 }
 
 export function validateAndConvertNotes(
 	exportData: NotesExport,
-	existingNoteIds: Set<string>,
+	existingNoteIds: Set<string>
 ): { validNotes: Note[]; errors: string[]; skipped: number } {
 	const validNotes: Note[] = [];
 	const errors: string[] = [];
@@ -168,9 +214,7 @@ export function validateAndConvertNotes(
 		const noteData = exportData.notes[i];
 
 		if (!isValidNote(noteData)) {
-			errors.push(
-				`Note at index ${i}: Invalid structure or missing required fields.`,
-			);
+			errors.push(`Note at index ${i}: Invalid structure or missing required fields.`);
 			continue;
 		}
 
@@ -192,12 +236,15 @@ export function validateAndConvertNotes(
 			continue;
 		}
 
+		// Use folder if present, otherwise use folderId (legacy), otherwise default to inbox
+		const folder = noteData.folder || noteData.folderId || "inbox";
+
 		const note: Note = {
 			id: noteData.id,
 			title: noteData.title,
 			content: noteData.content,
 			tags: noteData.tags,
-			folder: noteData.folder,
+			folder,
 			createdAt,
 			updatedAt,
 			archived: noteData.archived,
@@ -211,9 +258,10 @@ export function validateAndConvertNotes(
 
 export async function downloadNotesAsJson(
 	notes: Note[],
-	filename?: string,
+	folders?: Folder[],
+	filename?: string
 ): Promise<boolean> {
-	const jsonContent = exportNotesToJson(notes);
+	const jsonContent = exportNotesToJson(notes, folders);
 	const defaultFilename =
 		filename || `notes-export-${new Date().toISOString().split("T")[0]}.json`;
 
@@ -232,11 +280,120 @@ export async function downloadNotesAsJson(
 			await writeTextFile(filePath, jsonContent);
 			return true;
 		}
-		return false; // User cancelled
+		return false;
 	} catch (error) {
 		console.error("Failed to save file:", error);
 		throw error;
 	}
+}
+
+/**
+ * Validate and convert folders from exported data
+ */
+export function validateAndConvertFolders(
+	exportData: NotesExport,
+	existingFolderIds: Set<string>
+): { validFolders: Folder[]; errors: string[]; skipped: number } {
+	const validFolders: Folder[] = [];
+	const errors: string[] = [];
+	let skipped = 0;
+
+	if (!exportData.folders || !Array.isArray(exportData.folders)) {
+		return { validFolders, errors, skipped };
+	}
+
+	for (let i = 0; i < exportData.folders.length; i++) {
+		const folderData = exportData.folders[i];
+
+		// Skip inbox - it's always present
+		if (folderData.id === "inbox") {
+			skipped++;
+			continue;
+		}
+
+		// Skip if already exists
+		if (existingFolderIds.has(folderData.id)) {
+			skipped++;
+			continue;
+		}
+
+		// Validate required fields
+		if (!folderData.id || typeof folderData.id !== "string") {
+			errors.push(`Folder at index ${i}: Missing or invalid id.`);
+			continue;
+		}
+
+		if (!folderData.name || typeof folderData.name !== "string") {
+			errors.push(`Folder at index ${i}: Missing or invalid name.`);
+			continue;
+		}
+
+		const createdAt = folderData.createdAt ? new Date(folderData.createdAt) : new Date();
+		const updatedAt = folderData.updatedAt ? new Date(folderData.updatedAt) : new Date();
+
+		const folder: Folder = {
+			id: folderData.id,
+			name: folderData.name,
+			parentId: folderData.parentId || null,
+			archived: folderData.archived || false,
+			order: folderData.order || 0,
+			createdAt,
+			updatedAt,
+		};
+
+		validFolders.push(folder);
+	}
+
+	return { validFolders, errors, skipped };
+}
+
+/**
+ * Reconstruct folders from note folder references
+ * This is used when importing data that doesn't have explicit folder definitions
+ * but has notes with folder IDs in the format "parent_child_grandchild"
+ */
+export function reconstructFoldersFromNotes(
+	notes: Note[],
+	existingFolders: Folder[]
+): Folder[] {
+	const existingFolderIds = new Set(existingFolders.map((f) => f.id));
+	const newFolders: Map<string, Folder> = new Map();
+	const now = new Date();
+
+	for (const note of notes) {
+		const folderId = note.folder;
+		if (!folderId || folderId === "inbox" || existingFolderIds.has(folderId)) {
+			continue;
+		}
+
+		// Parse the folder ID to get all ancestor paths
+		const pathIds = parseFolderIdPath(folderId);
+
+		for (const pathId of pathIds) {
+			if (existingFolderIds.has(pathId) || newFolders.has(pathId)) {
+				continue;
+			}
+
+			const parentId = getParentIdFromFolderId(pathId);
+			const nameSegment = pathId.includes("_")
+				? pathId.substring(pathId.lastIndexOf("_") + 1)
+				: pathId;
+
+			const folder: Folder = {
+				id: pathId,
+				name: folderIdSegmentToDisplayName(nameSegment),
+				parentId: parentId,
+				archived: false,
+				order: newFolders.size,
+				createdAt: now,
+				updatedAt: now,
+			};
+
+			newFolders.set(pathId, folder);
+		}
+	}
+
+	return Array.from(newFolders.values());
 }
 
 export function readFileAsText(file: File): Promise<string> {

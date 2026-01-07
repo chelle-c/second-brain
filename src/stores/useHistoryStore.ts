@@ -1,6 +1,4 @@
 import { create } from "zustand";
-import type { Expense } from "@/types/expense";
-import type { Subfolder } from "@/types/notes";
 
 export type HistoryActionType =
 	// Notes actions
@@ -10,12 +8,13 @@ export type HistoryActionType =
 	| "ARCHIVE_NOTE"
 	| "UNARCHIVE_NOTE"
 	| "MOVE_NOTE"
+	// Folder actions (unified)
 	| "CREATE_FOLDER"
 	| "UPDATE_FOLDER"
 	| "DELETE_FOLDER"
-	| "CREATE_SUBFOLDER"
-	| "UPDATE_SUBFOLDER"
-	| "DELETE_SUBFOLDER"
+	| "ARCHIVE_FOLDER"
+	| "UNARCHIVE_FOLDER"
+	| "MOVE_FOLDER"
 	// Expense actions
 	| "CREATE_EXPENSE"
 	| "UPDATE_EXPENSE"
@@ -36,15 +35,13 @@ export interface HistoryAction {
 	timestamp: number;
 	data: {
 		id: string;
-		// Using unknown for before/after since they can be various entity types
-		// Consumers are responsible for type narrowing based on action type
 		before?: unknown;
 		after?: unknown;
 		parentId?: string;
 		affectedNotes?: { id: string; folder: string }[];
-		affectedSubfolders?: Subfolder[];
-		// For expenses with recurring occurrences
-		relatedExpenses?: Expense[];
+		affectedSubfolders?: unknown[];
+		relatedExpenses?: unknown[];
+		idMapping?: Record<string, string>; // For folder move/rename operations
 	};
 }
 
@@ -80,7 +77,7 @@ export const useHistoryStore = create<HistoryStore>((set, get) => ({
 			const newPast = [...state.past, newAction].slice(-MAX_HISTORY_SIZE);
 			return {
 				past: newPast,
-				future: [], // Clear future on new action
+				future: [],
 				canUndo: newPast.length > 0,
 				canRedo: false,
 			};

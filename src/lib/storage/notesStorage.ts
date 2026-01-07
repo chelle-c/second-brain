@@ -1,8 +1,21 @@
-import type { Note, NotesFolders, Subfolder, Tag } from "@/types/notes";
+import type { Folder, Note, NotesFolders, Tag } from "@/types/notes";
 import type { DatabaseContext } from "../../types/storage";
 import { deepEqual } from "../utils";
+import {
+	Circle,
+	Club,
+	Diamond,
+	Folder as FolderIcon,
+	Heart,
+	Spade,
+	Sparkles,
+	Square,
+	Star,
+	Triangle,
+	X,
+	type LucideIcon,
+} from "lucide-react";
 
-// Normalized note type for comparison (dates as strings)
 interface NormalizedNote {
 	id: string;
 	title: string;
@@ -13,6 +26,32 @@ interface NormalizedNote {
 	updatedAt: string;
 	archived: boolean;
 }
+
+const ICON_MAP: Record<string, LucideIcon> = {
+	Folder: FolderIcon,
+	Star: Star,
+	Heart: Heart,
+	Square: Square,
+	Triangle: Triangle,
+	Circle: Circle,
+	X: X,
+	Club: Club,
+	Spade: Spade,
+	Diamond: Diamond,
+	Sparkles: Sparkles,
+};
+
+const getIconName = (icon: LucideIcon | undefined): string | null => {
+	if (!icon) return null;
+
+	for (const [name, component] of Object.entries(ICON_MAP)) {
+		if (component === icon) {
+			return name;
+		}
+	}
+
+	return null;
+};
 
 export class NotesStorage {
 	private context: DatabaseContext;
@@ -51,7 +90,7 @@ export class NotesStorage {
 		return !deepEqual(normalized1, normalized2);
 	}
 
-	hasFoldersChanged(newFolders: NotesFolders): boolean {
+	hasFoldersChanged(newFolders: Folder[]): boolean {
 		if (!this.context.cache.folders) return true;
 		return !deepEqual(this.context.cache.folders, newFolders);
 	}
@@ -61,155 +100,160 @@ export class NotesStorage {
 		return !deepEqual(this.context.cache.tags, newTags);
 	}
 
-	extractSubfoldersFromHierarchy(folders: NotesFolders): Subfolder[] {
-		const subfolders: Subfolder[] = [];
+	// Convert old folder structure to new flat structure
+	private convertLegacyFolders(oldFolders: NotesFolders): Folder[] {
+		const folders: Folder[] = [];
+		let order = 0;
 
-		Object.values(folders).forEach((folder) => {
-			if (folder.children && folder.children.length > 0) {
-				folder.children.forEach((child) => {
-					subfolders.push({
+		for (const [id, oldFolder] of Object.entries(oldFolders)) {
+			folders.push({
+				id,
+				name: oldFolder.name,
+				parentId: oldFolder.parent || null,
+				icon: oldFolder.icon,
+				archived: false,
+				order: order++,
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			if (oldFolder.children && oldFolder.children.length > 0) {
+				for (const child of oldFolder.children) {
+					folders.push({
 						id: child.id,
 						name: child.name,
-						parent: folder.id,
+						parentId: id,
+						icon: child.icon,
+						archived: false,
+						order: order++,
+						createdAt: new Date(),
+						updatedAt: new Date(),
 					});
-				});
+				}
 			}
-		});
+		}
 
-		return subfolders;
+		return folders;
 	}
 
-	createInitialFolders(): NotesFolders {
-		return {
-			inbox: {
+	createInitialFolders(): Folder[] {
+		const now = new Date();
+		return [
+			{
 				id: "inbox",
 				name: "Inbox",
-				children: [],
+				parentId: null,
+				archived: false,
+				order: 0,
+				createdAt: now,
+				updatedAt: now,
 			},
-			personal: {
+			{
 				id: "personal",
 				name: "Personal",
-				children: [
-					{
-						id: "personal_health",
-						name: "Health",
-						parent: "personal",
-						children: [],
-					},
-					{
-						id: "personal_finance",
-						name: "Finance",
-						parent: "personal",
-						children: [],
-					},
-					{
-						id: "personal_home",
-						name: "Home",
-						parent: "personal",
-						children: [],
-					},
-				],
+				parentId: null,
+				archived: false,
+				order: 1,
+				createdAt: now,
+				updatedAt: now,
 			},
-			work: {
+			{
+				id: "personal_health",
+				name: "Health",
+				parentId: "personal",
+				archived: false,
+				order: 2,
+				createdAt: now,
+				updatedAt: now,
+			},
+			{
+				id: "personal_finance",
+				name: "Finance",
+				parentId: "personal",
+				archived: false,
+				order: 3,
+				createdAt: now,
+				updatedAt: now,
+			},
+			{
 				id: "work",
 				name: "Work",
-				children: [
-					{
-						id: "work_meetings",
-						name: "Meetings",
-						parent: "work",
-						children: [],
-					},
-					{ id: "work_tasks", name: "Tasks", parent: "work", children: [] },
-					{
-						id: "work_learning",
-						name: "Learning",
-						parent: "work",
-						children: [],
-					},
-				],
+				parentId: null,
+				archived: false,
+				order: 4,
+				createdAt: now,
+				updatedAt: now,
 			},
-			projects: {
-				id: "projects",
+			{
+				id: "work_projects",
 				name: "Projects",
-				children: [
-					{
-						id: "projects_active",
-						name: "Active",
-						parent: "projects",
-						children: [],
-					},
-					{
-						id: "projects_planning",
-						name: "Planning",
-						parent: "projects",
-						children: [],
-					},
-					{
-						id: "projects_someday",
-						name: "Someday",
-						parent: "projects",
-						children: [],
-					},
-				],
+				parentId: "work",
+				archived: false,
+				order: 5,
+				createdAt: now,
+				updatedAt: now,
 			},
-			resources: {
-				id: "resources",
-				name: "Resources",
-				children: [
-					{
-						id: "resources_articles",
-						name: "Articles",
-						parent: "resources",
-						children: [],
-					},
-					{
-						id: "resources_books",
-						name: "Books",
-						parent: "resources",
-						children: [],
-					},
-					{
-						id: "resources_tools",
-						name: "Tools",
-						parent: "resources",
-						children: [],
-					},
-				],
-			},
-		};
+		];
 	}
 
 	async loadNotes(): Promise<Note[]> {
 		return this.context.queueOperation(async () => {
-			const results = await this.context.db.select<
-				Array<{
-					id: string;
-					title: string;
-					content: string;
-					tags: string;
-					folder: string;
-					createdAt: string;
-					updatedAt: string;
-					archived: number;
-				}>
-			>(
-				"SELECT id, title, content, tags, folder, createdAt, updatedAt, archived FROM notes",
-			);
+			try {
+				const tableInfo = await this.context.db.select<Array<{ name: string }>>(
+					"PRAGMA table_info(notes)"
+				);
 
-			const notes = results.map((row) => ({
-				id: row.id,
-				title: row.title,
-				content: row.content,
-				tags: row.tags ? JSON.parse(row.tags) : [],
-				folder: row.folder,
-				createdAt: new Date(row.createdAt),
-				updatedAt: new Date(row.updatedAt),
-				archived: Boolean(row.archived),
-			}));
+				const columnNames = tableInfo.map((col) => col.name);
+				const hasFolder = columnNames.includes("folder");
+				const hasFolderId = columnNames.includes("folderId");
 
-			this.context.cache.notes = notes;
-			return notes;
+				let query = "SELECT id, title, content, tags, createdAt, updatedAt, archived";
+
+				if (hasFolder) {
+					query += ", folder";
+				}
+				if (hasFolderId && !hasFolder) {
+					query += ", folderId";
+				}
+
+				query += " FROM notes";
+
+				const results = await this.context.db.select<
+					Array<{
+						id: string;
+						title: string;
+						content: string;
+						tags: string;
+						folder?: string;
+						folderId?: string;
+						createdAt: string;
+						updatedAt: string;
+						archived: number;
+					}>
+				>(query);
+
+				const notes = results.map((row) => {
+					// Prefer folder, fallback to folderId, then to inbox
+					const folder = row.folder || row.folderId || "inbox";
+
+					return {
+						id: row.id,
+						title: row.title,
+						content: row.content,
+						tags: row.tags ? JSON.parse(row.tags) : [],
+						folder,
+						createdAt: new Date(row.createdAt),
+						updatedAt: new Date(row.updatedAt),
+						archived: Boolean(row.archived),
+					};
+				});
+
+				this.context.cache.notes = notes;
+				return notes;
+			} catch (error) {
+				console.error("Error loading notes:", error);
+				return [];
+			}
 		});
 	}
 
@@ -223,7 +267,6 @@ export class NotesStorage {
 			const oldIds = new Set(oldNotes.map((n) => n.id));
 			const newIds = new Set(notes.map((n) => n.id));
 
-			// Determine what changed
 			const added = notes.filter((n) => !oldIds.has(n.id));
 			const deleted = oldNotes.filter((n) => !newIds.has(n.id));
 			const modified = notes.filter((n) => {
@@ -253,7 +296,7 @@ export class NotesStorage {
 								n.updatedAt instanceof Date
 									? n.updatedAt.toISOString()
 									: n.updatedAt,
-						},
+						}
 					)
 				);
 			});
@@ -261,15 +304,17 @@ export class NotesStorage {
 			await this.context.db.execute("DELETE FROM notes");
 
 			for (const note of notes) {
+				const folder = note.folder || "inbox";
+
 				await this.context.db.execute(
 					`INSERT INTO notes (id, title, content, tags, folder, createdAt, updatedAt, archived)
-					VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 					[
 						note.id,
 						note.title,
 						note.content,
 						JSON.stringify(note.tags || []),
-						note.folder,
+						folder,
 						note.createdAt instanceof Date
 							? note.createdAt.toISOString()
 							: note.createdAt,
@@ -277,13 +322,12 @@ export class NotesStorage {
 							? note.updatedAt.toISOString()
 							: note.updatedAt,
 						note.archived ? 1 : 0,
-					],
+					]
 				);
 			}
 
 			this.context.cache.notes = notes;
 
-			// Log specific changes
 			if (added.length === 1) {
 				console.log(`Note created: "${added[0].title}"`);
 			} else if (added.length > 1) {
@@ -302,56 +346,170 @@ export class NotesStorage {
 		});
 	}
 
-	async loadFolders(): Promise<NotesFolders> {
+	async loadFolders(): Promise<Folder[]> {
 		return this.context.queueOperation(async () => {
-			const results = await this.context.db.select<Array<{ data: string }>>(
-				"SELECT data FROM folders WHERE id = 1",
-			);
-
-			let folders: NotesFolders;
-
-			if (results.length === 0) {
-				folders = this.createInitialFolders();
-				await this.context.db.execute(
-					`INSERT OR REPLACE INTO folders (id, data) VALUES (1, ?)`,
-					[JSON.stringify(folders)],
+			try {
+				const tables = await this.context.db.select<Array<{ name: string }>>(
+					"SELECT name FROM sqlite_master WHERE type='table' AND name='folders_new'"
 				);
-			} else {
-				folders = JSON.parse(results[0].data);
-			}
 
-			this.context.cache.folders = folders;
-			return folders;
+				if (tables.length === 0) {
+					const initialFolders = this.createInitialFolders();
+					this.context.cache.folders = initialFolders;
+					return initialFolders;
+				}
+
+				const results = await this.context.db.select<
+					Array<{
+						id: string;
+						name: string;
+						parentId: string | null;
+						icon: string | null;
+						archived: number;
+						order: number;
+						createdAt: string;
+						updatedAt: string;
+					}>
+				>("SELECT * FROM folders_new ORDER BY `order`");
+
+				if (results.length === 0) {
+					const initialFolders = this.createInitialFolders();
+					this.context.cache.folders = initialFolders;
+					return initialFolders;
+				}
+
+				const folders = results.map((row) => {
+					const icon = row.icon && ICON_MAP[row.icon] ? ICON_MAP[row.icon] : undefined;
+
+					return {
+						id: row.id,
+						name: row.name,
+						parentId: row.parentId,
+						icon,
+						archived: Boolean(row.archived),
+						order: row.order,
+						createdAt: new Date(row.createdAt),
+						updatedAt: new Date(row.updatedAt),
+					};
+				});
+
+				this.context.cache.folders = folders;
+				return folders;
+			} catch (error) {
+				console.error("Error loading folders:", error);
+
+				try {
+					const results = await this.context.db.select<Array<{ data: string }>>(
+						"SELECT data FROM folders WHERE id = 1"
+					);
+
+					if (results.length > 0) {
+						const oldFolders: NotesFolders = JSON.parse(results[0].data);
+						const newFolders = this.convertLegacyFolders(oldFolders);
+						this.context.cache.folders = newFolders;
+						return newFolders;
+					}
+				} catch (legacyError) {
+					console.error("Error loading legacy folders:", legacyError);
+				}
+
+				const initialFolders = this.createInitialFolders();
+				this.context.cache.folders = initialFolders;
+				return initialFolders;
+			}
 		});
 	}
 
-	async saveFolders(folders: NotesFolders): Promise<void> {
+	// Sort folders so parents are inserted before children (topological sort)
+	private sortFoldersForInsert(folders: Folder[]): Folder[] {
+		const sorted: Folder[] = [];
+		const inserted = new Set<string>();
+		const remaining = [...folders];
+
+		// Keep iterating until all folders are sorted
+		while (remaining.length > 0) {
+			const beforeLength = remaining.length;
+
+			for (let i = remaining.length - 1; i >= 0; i--) {
+				const folder = remaining[i];
+				// Insert if no parent or parent already inserted
+				if (!folder.parentId || inserted.has(folder.parentId)) {
+					sorted.push(folder);
+					inserted.add(folder.id);
+					remaining.splice(i, 1);
+				}
+			}
+
+			// If no progress was made, there's a circular reference or missing parent
+			// Insert remaining folders anyway (with null parentId to avoid FK error)
+			if (remaining.length === beforeLength) {
+				for (const folder of remaining) {
+					sorted.push({ ...folder, parentId: null });
+				}
+				break;
+			}
+		}
+
+		return sorted;
+	}
+
+	async saveFolders(folders: Folder[]): Promise<void> {
+		if (!Array.isArray(folders)) {
+			console.error("saveFolders called with non-array:", folders);
+			return;
+		}
+
 		if (!this.hasFoldersChanged(folders)) {
 			return;
 		}
 
 		return this.context.queueOperation(async () => {
-			await this.context.db.execute(
-				`INSERT OR REPLACE INTO folders (id, data) VALUES (1, ?)`,
-				[JSON.stringify(folders)],
-			);
+			await this.context.db.execute("DELETE FROM folders_new");
+
+			// Sort folders so parents are inserted before children
+			const sortedFolders = this.sortFoldersForInsert(folders);
+
+			for (const folder of sortedFolders) {
+				const iconName = getIconName(folder.icon);
+
+				await this.context.db.execute(
+					`INSERT INTO folders_new (id, name, parentId, icon, archived, \`order\`, createdAt, updatedAt)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+					[
+						folder.id,
+						folder.name,
+						folder.parentId,
+						iconName,
+						folder.archived ? 1 : 0,
+						folder.order || 0,
+						folder.createdAt
+							? folder.createdAt instanceof Date
+								? folder.createdAt.toISOString()
+								: folder.createdAt
+							: new Date().toISOString(),
+						folder.updatedAt
+							? folder.updatedAt instanceof Date
+								? folder.updatedAt.toISOString()
+								: folder.updatedAt
+							: new Date().toISOString(),
+					]
+				);
+			}
 
 			this.context.cache.folders = folders;
-			console.log("Folders updated");
 		});
 	}
 
 	async loadTags(): Promise<Record<string, Tag>> {
 		return this.context.queueOperation(async () => {
-			const results =
-				await this.context.db.select<
-					Array<{
-						id: string;
-						name: string;
-						color: string;
-						icon: string;
-					}>
-				>("SELECT * FROM tags");
+			const results = await this.context.db.select<
+				Array<{
+					id: string;
+					name: string;
+					color: string;
+					icon: string;
+				}>
+			>("SELECT * FROM tags");
 
 			const tags: Record<string, Tag> = {};
 			results.forEach((row) => {
@@ -359,7 +517,6 @@ export class NotesStorage {
 					id: row.id,
 					name: row.name,
 					color: row.color,
-					// Icon is stored as string name, component resolves it later
 					icon: row.icon as unknown as Tag["icon"],
 				};
 			});
@@ -378,7 +535,6 @@ export class NotesStorage {
 			await this.context.db.execute("DELETE FROM tags");
 
 			for (const [, tag] of Object.entries(tags)) {
-				// Store the icon name as a string if it's a component, otherwise store as-is
 				let iconName = "Hash";
 				if (typeof tag.icon === "function") {
 					const iconComponent = tag.icon as unknown as {
@@ -393,12 +549,11 @@ export class NotesStorage {
 				await this.context.db.execute(
 					`INSERT INTO tags (id, name, color, icon)
 					VALUES (?, ?, ?, ?)`,
-					[tag.id, tag.name, tag.color, iconName],
+					[tag.id, tag.name, tag.color, iconName]
 				);
 			}
 
 			this.context.cache.tags = tags;
-			console.log("Tags updated");
 		});
 	}
 }

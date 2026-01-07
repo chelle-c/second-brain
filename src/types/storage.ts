@@ -1,12 +1,12 @@
 import type Database from "@tauri-apps/plugin-sql";
 import type { AppData } from "@/types/";
-import type { Note, NotesFolders, Tag } from "@/types/notes";
+import type { Folder, Note, Tag } from "@/types/notes";
 import type { AppSettings } from "@/types/settings";
 import type { ThemeSettings } from "@/types/theme";
 
 export interface StorageCache {
 	notes?: Note[];
-	folders?: NotesFolders;
+	folders?: Folder[];
 	tags?: Record<string, Tag>;
 	expenses?: AppData["expenses"];
 	income?: AppData["income"];
@@ -20,9 +20,8 @@ export interface DatabaseContext {
 	cache: StorageCache;
 }
 
-export const DATA_VERSION = "0.0.5";
+export const DATA_VERSION = "0.0.6"; // Increment for migration
 
-// App version for exports - should match tauri.conf.json version
 export const APP_VERSION = "0.0.1";
 
 export const DEFAULT_PAYMENT_METHODS = ["Default"];

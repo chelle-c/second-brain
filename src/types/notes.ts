@@ -1,29 +1,25 @@
+import type { LucideIcon } from "lucide-react";
+
 export interface Note {
 	id: string;
 	title: string;
 	content: string;
-	tags: string[]; // Changed from category to tags array
-	folder: string;
+	tags: string[];
+	folder: string; // Changed from folderId to folder
 	createdAt: Date;
 	updatedAt: Date;
-	archived: boolean; // Added archived flag
+	archived: boolean;
 }
 
-export interface NotesFolder {
+export interface Folder {
 	id: string;
 	name: string;
-	parent?: string;
-	children?: NotesFolder[];
-}
-
-export interface NotesFolders {
-	[folderId: string]: NotesFolder;
-}
-
-export interface Subfolder {
-	id: string;
-	name: string;
-	parent: string;
+	parentId: string | null; // null for root folders, string for subfolders
+	icon?: LucideIcon;
+	archived?: boolean;
+	order?: number; // For custom ordering
+	createdAt?: Date;
+	updatedAt?: Date;
 }
 
 export interface Tag {
@@ -41,12 +37,21 @@ export interface Tags {
 	[key: string]: Tag;
 }
 
-export interface FoldersData {
-	folders: NotesFolders;
-	version: string;
+// Legacy types for migration
+export interface NotesFolder {
+	id: string;
+	name: string;
+	parent?: string;
+	children?: NotesFolder[];
+	icon?: LucideIcon;
 }
 
-export interface NotesData {
-	notes: Note[];
-	version: string;
+export interface NotesFolders {
+	[folderId: string]: NotesFolder;
+}
+
+export interface Subfolder {
+	id: string;
+	name: string;
+	parent: string;
 }

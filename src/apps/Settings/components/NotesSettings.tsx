@@ -1,23 +1,10 @@
 import { documentDir } from "@tauri-apps/api/path";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
-import {
-	CheckCircle,
-	Download,
-	Loader2,
-	StickyNote,
-	Upload,
-	XCircle,
-} from "lucide-react";
+import { CheckCircle, Download, Loader2, StickyNote, Upload, XCircle } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	Dialog,
 	DialogContent,
@@ -38,6 +25,8 @@ import { Separator } from "@/components/ui/separator";
 import {
 	exportNotesToJson,
 	parseImportedNotes,
+	reconstructFoldersFromNotes,
+	validateAndConvertFolders,
 	validateAndConvertNotes,
 } from "@/lib/notesExportImport";
 import { useNotesStore } from "@/stores/useNotesStore";
@@ -45,7 +34,7 @@ import { useSettingsStore } from "@/stores/useSettingsStore";
 
 export const NotesSettings = () => {
 	const { notesDefaultFolder, setNotesDefaultFolder } = useSettingsStore();
-	const { notesFolders, notes, restoreNote } = useNotesStore();
+	const { folders, notes, setNotes, setFolders } = useNotesStore();
 
 	const [isLoading, setIsLoading] = useState(false);
 	const [showImportDialog, setShowImportDialog] = useState(false);
@@ -60,10 +49,12 @@ export const NotesSettings = () => {
 		message: string;
 	} | null>(null);
 
-	const folderOptions = Object.values(notesFolders).map((folder) => ({
-		value: folder.id,
-		label: folder.name,
-	}));
+	const folderOptions = folders
+		.filter((f) => !f.archived)
+		.map((folder) => ({
+			value: folder.id,
+			label: folder.name,
+		}));
 
 	const handleExport = async () => {
 		setIsLoading(true);
@@ -83,11 +74,11 @@ export const NotesSettings = () => {
 			});
 
 			if (filePath) {
-				const jsonContent = exportNotesToJson(notes);
+				const jsonContent = exportNotesToJson(notes, folders);
 				await writeTextFile(filePath, jsonContent);
 				setExportResult({
 					success: true,
-					message: `Successfully exported ${notes.length} notes`,
+					message: `Successfully exported ${notes.length} notes and ${folders.length} folders`,
 				});
 
 				setTimeout(() => setExportResult(null), 5000);
@@ -142,17 +133,12 @@ export const NotesSettings = () => {
 				return;
 			}
 
-			// For replace mode, we would need to clear existing notes first
-			// For now, merge mode skips duplicates, replace mode uses empty set
+			// For replace mode, use empty set to import all
+			// For merge mode, skip existing IDs
 			const existingIds =
-				importMode === "replace"
-					? new Set<string>()
-					: new Set(notes.map((n) => n.id));
+				importMode === "replace" ? new Set<string>() : new Set(notes.map((n) => n.id));
 
-			const { validNotes, errors, skipped } = validateAndConvertNotes(
-				data,
-				existingIds,
-			);
+			const { validNotes, errors, skipped } = validateAndConvertNotes(data, existingIds);
 
 			if (validNotes.length === 0 && errors.length > 0) {
 				setShowImportDialog(false);
@@ -165,9 +151,42 @@ export const NotesSettings = () => {
 				return;
 			}
 
-			// Import valid notes
-			for (const note of validNotes) {
-				restoreNote(note);
+			// Handle folder import
+			const existingFolderIds = new Set(folders.map((f) => f.id));
+			let newFolders: typeof folders = [];
+
+			// First, try to import folders from the export data
+			if (data.folders && data.folders.length > 0) {
+				const { validFolders } = validateAndConvertFolders(
+					data,
+					importMode === "replace" ? new Set<string>() : existingFolderIds
+				);
+				newFolders = validFolders;
+			}
+
+			// If no explicit folders or some notes reference missing folders,
+			// reconstruct them from note folder IDs
+			const reconstructedFolders = reconstructFoldersFromNotes(
+				validNotes,
+				importMode === "replace" ? newFolders : [...folders, ...newFolders]
+			);
+			newFolders = [...newFolders, ...reconstructedFolders];
+
+			if (importMode === "replace") {
+				// Replace all notes and folders with imported data
+				// Keep inbox folder if it exists
+				const inbox = folders.find((f) => f.id === "inbox");
+				const foldersToSet = inbox
+					? [inbox, ...newFolders.filter((f) => f.id !== "inbox")]
+					: newFolders;
+				setFolders(foldersToSet);
+				setNotes(validNotes);
+			} else {
+				// Merge: add new folders and notes to existing
+				if (newFolders.length > 0) {
+					setFolders([...folders, ...newFolders]);
+				}
+				setNotes([...notes, ...validNotes]);
 			}
 
 			setShowImportDialog(false);
@@ -175,8 +194,18 @@ export const NotesSettings = () => {
 
 			const message =
 				importMode === "replace"
-					? `Successfully imported ${validNotes.length} notes`
-					: `Imported ${validNotes.length} new notes${skipped > 0 ? `, skipped ${skipped} duplicates` : ""}`;
+					? `Successfully imported ${validNotes.length} notes${
+							newFolders.length > 0
+								? ` and ${newFolders.length} folders`
+								: ""
+					  }`
+					: `Imported ${validNotes.length} new notes${
+							skipped > 0 ? `, skipped ${skipped} duplicates` : ""
+					  }${
+							newFolders.length > 0
+								? ` (+ ${newFolders.length} folders)`
+								: ""
+					  }`;
 			setImportResult({ success: true, message });
 
 			if (errors.length > 0) {
@@ -213,10 +242,7 @@ export const NotesSettings = () => {
 								Folder shown when opening the Notes app
 							</p>
 						</div>
-						<Select
-							value={notesDefaultFolder}
-							onValueChange={setNotesDefaultFolder}
-						>
+						<Select value={notesDefaultFolder} onValueChange={setNotesDefaultFolder}>
 							<SelectTrigger className="w-[200px]">
 								<SelectValue placeholder="Select folder" />
 							</SelectTrigger>
@@ -242,6 +268,7 @@ export const NotesSettings = () => {
 
 						<div className="flex flex-wrap gap-3">
 							<Button
+								type="button"
 								onClick={handleExport}
 								variant="outline"
 								className="gap-2"
@@ -259,6 +286,7 @@ export const NotesSettings = () => {
 							</Button>
 
 							<Button
+								type="button"
 								onClick={handleImportSelect}
 								variant="outline"
 								className="gap-2"
@@ -356,7 +384,7 @@ export const NotesSettings = () => {
 									<div>
 										<div className="font-medium">Replace</div>
 										<div className="text-sm text-muted-foreground">
-											Import all notes from the file, including duplicates.
+											Replace all existing notes with imported notes.
 										</div>
 									</div>
 								</label>
@@ -365,14 +393,15 @@ export const NotesSettings = () => {
 
 						{importMode === "replace" && (
 							<div className="p-3 bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded-lg text-sm">
-								Note: This will import all notes from the file, potentially
-								creating duplicates if notes with the same ID already exist.
+								Warning: This will delete all your existing notes and replace them
+								with the imported notes. This action cannot be undone.
 							</div>
 						)}
 					</div>
 
 					<DialogFooter>
 						<Button
+							type="button"
 							variant="outline"
 							onClick={() => {
 								setShowImportDialog(false);
@@ -381,7 +410,7 @@ export const NotesSettings = () => {
 						>
 							Cancel
 						</Button>
-						<Button onClick={handleImportConfirm} disabled={isLoading}>
+						<Button type="button" onClick={handleImportConfirm} disabled={isLoading}>
 							{isLoading ? (
 								<>
 									<Loader2 className="w-4 h-4 mr-2 animate-spin" />

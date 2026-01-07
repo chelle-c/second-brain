@@ -1,17 +1,12 @@
-import type {
-	IncomeEntry,
-	IncomeViewType,
-	IncomeWeeklyTargets,
-} from "@/types/income";
+import type { IncomeEntry, IncomeViewType, IncomeWeeklyTargets } from "@/types/income";
 import type { Expense, OverviewMode } from "./expense";
-import type { Note, NotesFolders, Subfolder, Tag } from "./notes";
+import type { Folder, Note, Tag } from "./notes";
 import type { AppSettings } from "./settings";
 import type { ThemeSettings } from "./theme";
 
 export interface AppData {
 	notes: Note[];
-	notesFolders: NotesFolders;
-	subfolders: Subfolder[];
+	folders: Folder[];
 	tags: Record<string, Tag>;
 
 	expenses: {

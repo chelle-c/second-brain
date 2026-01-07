@@ -1,39 +1,22 @@
-import {
-	Calendar,
-	ChevronRight,
-	Folder,
-	Inbox,
-	Redo2,
-	Search,
-	Undo2,
-} from "lucide-react";
-import React, { useMemo, useState } from "react";
-import { AnimatedToggle } from "@/components/AnimatedToggle";
+import { Calendar, ChevronRight, Folder as FolderIcon, Inbox, Redo2, Undo2 } from "lucide-react";
+import React, { useMemo } from "react";
+import { getFolderBreadcrumb } from "@/lib/folderHelpers";
 import { useNotesStore } from "@/stores/useNotesStore";
-import type {
-	Note,
-	NotesFolder,
-	NotesFolders,
-	Subfolder,
-	Tag,
-} from "@/types/notes";
+import type { Folder, Note, Tag } from "@/types/notes";
 import { NotesDropdownMenu } from "./NotesDropdownMenu";
 import { TagFilter } from "./TagFilter";
 
 interface NotesCardProps {
-	allFolders: NotesFolders;
-	activeFolder: NotesFolder | Subfolder | null;
-	setActiveFolder: React.Dispatch<
-		React.SetStateAction<NotesFolder | Subfolder | null>
-	>;
-	getCurrentFolder: (id: string) => NotesFolder | Subfolder;
+	folders: Folder[];
+	activeFolder: Folder | null;
+	setActiveFolder: React.Dispatch<React.SetStateAction<Folder | null>>;
+	getFolderById: (id: string) => Folder | undefined;
 	tags: Record<string, Tag>;
 	activeTags: string[];
-	getNoteCount: (folderId: string, archived?: boolean) => number;
+	getNoteCount: (folderId: string, archived?: boolean, includeDescendants?: boolean) => number;
 	setActiveTags: React.Dispatch<React.SetStateAction<string[]>>;
 	onSelectNote: (noteId: string) => void;
 	viewMode: "active" | "archived";
-	setViewMode: (mode: "active" | "archived") => void;
 	canUndo: boolean;
 	canRedo: boolean;
 	onUndo: () => void;
@@ -41,23 +24,20 @@ interface NotesCardProps {
 }
 
 export const NotesCard: React.FC<NotesCardProps> = ({
-	allFolders,
+	folders,
 	activeFolder,
 	setActiveFolder,
-	getCurrentFolder,
 	tags,
 	activeTags,
 	setActiveTags,
 	onSelectNote,
 	viewMode,
-	setViewMode,
 	canUndo,
 	canRedo,
 	onUndo,
 	onRedo,
 }) => {
 	const { notes } = useNotesStore();
-	const [searchTerm, setSearchTerm] = useState("");
 
 	const formatDate = (date: Date) => {
 		const now = new Date();
@@ -70,64 +50,49 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 		return noteDate.toLocaleDateString();
 	};
 
-	const getSubfolderIds = (folderId: string): string[] => {
-		const folder = allFolders[folderId];
-		if (folder?.children && folder.children.length > 0) {
-			return folder.children.map((child) => child.id);
-		}
-		return [];
-	};
+	// Get direct children of active folder
+	const childFolders = useMemo(() => {
+		if (!activeFolder) return [];
+		return folders
+			.filter((f) => f.parentId === activeFolder.id && !f.archived)
+			.sort((a, b) => (a.order || 0) - (b.order || 0));
+	}, [activeFolder, folders]);
 
-	const isSubfolder = useMemo(() => {
-		if (!activeFolder) return false;
-		return "parent" in activeFolder && activeFolder.parent !== undefined;
-	}, [activeFolder]);
+	// Get breadcrumb path
+	const breadcrumb = useMemo(() => {
+		if (!activeFolder) return [];
+		return getFolderBreadcrumb(folders, activeFolder.id);
+	}, [activeFolder, folders]);
 
-	const getParentFolderName = (): string | null => {
-		if (!activeFolder || !isSubfolder) return null;
-		const subfolder = activeFolder as Subfolder;
-		const parent = allFolders[subfolder.parent];
-		return parent?.name || null;
-	};
-
-	const currentSubfolders = useMemo(() => {
-		if (!activeFolder || isSubfolder) return [];
-		const folder = allFolders[activeFolder.id];
-		return folder?.children || [];
-	}, [activeFolder, allFolders, isSubfolder]);
-
+	// Filter notes
 	const filteredNotes = useMemo(() => {
 		if (!activeFolder) return [];
+
+		// Get all folder IDs in subtree
+		const getSubtreeIds = (folderId: string): string[] => {
+			const children = folders.filter((f) => f.parentId === folderId);
+			return [folderId, ...children.flatMap((child) => getSubtreeIds(child.id))];
+		};
+
+		const folderIds = getSubtreeIds(activeFolder.id);
 
 		return notes.filter((note) => {
 			const matchesArchived = note.archived === (viewMode === "archived");
 			if (!matchesArchived) return false;
 
-			let matchesFolder = false;
-			if (isSubfolder) {
-				matchesFolder = note.folder === activeFolder.id;
-			} else {
-				const subfolderIds = getSubfolderIds(activeFolder.id);
-				matchesFolder =
-					note.folder === activeFolder.id || subfolderIds.includes(note.folder);
-			}
+			const matchesFolder = folderIds.includes(note.folder);
 			if (!matchesFolder) return false;
 
 			const matchesTags =
-				activeTags.length === 0 ||
-				activeTags.some((tag) => note.tags?.includes(tag));
-			if (!matchesTags) return false;
+				activeTags.length === 0 || activeTags.some((tag) => note.tags?.includes(tag));
 
-			const matchesSearch = note.title
-				.toLowerCase()
-				.includes(searchTerm.toLowerCase());
-
-			return matchesSearch;
+			return matchesTags;
 		});
-	}, [notes, activeFolder, viewMode, activeTags, searchTerm, isSubfolder]);
+	}, [notes, activeFolder, viewMode, activeTags, folders]);
 
+	// Group notes by direct children
 	const groupedNotes = useMemo(() => {
-		if (isSubfolder || currentSubfolders.length === 0) {
+		if (childFolders.length === 0) {
 			return { ungrouped: filteredNotes, grouped: {} };
 		}
 
@@ -135,28 +100,25 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 		const ungrouped: Note[] = [];
 
 		filteredNotes.forEach((note) => {
-			const subfolder = currentSubfolders.find((sf) => sf.id === note.folder);
-			if (subfolder) {
-				if (!grouped[subfolder.id]) {
-					grouped[subfolder.id] = [];
+			const childFolder = childFolders.find((f) => f.id === note.folder);
+			if (childFolder) {
+				if (!grouped[childFolder.id]) {
+					grouped[childFolder.id] = [];
 				}
-				grouped[subfolder.id].push(note);
-			} else {
+				grouped[childFolder.id].push(note);
+			} else if (note.folder === activeFolder?.id) {
 				ungrouped.push(note);
 			}
 		});
 
 		return { ungrouped, grouped };
-	}, [filteredNotes, currentSubfolders, isSubfolder]);
-
-	const parentFolderName = getParentFolderName();
+	}, [filteredNotes, childFolders, activeFolder]);
 
 	const renderNoteItem = (note: Note) => (
 		<article
 			key={note.id}
 			className="relative p-4 bg-card border border-border rounded-lg hover:border-primary/30 hover:shadow-sm transition-all cursor-pointer animate-fadeIn"
 		>
-			{/* Clickable overlay for the entire card */}
 			<button
 				type="button"
 				onClick={() => onSelectNote(note.id)}
@@ -195,11 +157,10 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 						</span>
 					</div>
 				</div>
-				{/* Dropdown positioned above the card button with relative z-index */}
 				<div className="relative z-10">
 					<NotesDropdownMenu
 						note={note}
-						allFolders={allFolders}
+						folders={folders}
 						activeFolder={activeFolder}
 						tags={tags}
 					/>
@@ -210,18 +171,37 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 
 	return (
 		<div className="h-full flex flex-col p-6 animate-fadeIn">
-			{/* Header */}
 			<div className="space-y-4 mb-6">
-				{/* Top bar with toggle and undo/redo */}
+				{/* Folder title with inline undo/redo */}
 				<div className="flex items-center justify-between">
-					<AnimatedToggle
-						options={[
-							{ value: "active", label: "Active" },
-							{ value: "archived", label: "Archived" },
-						]}
-						value={viewMode}
-						onChange={(value) => setViewMode(value as "active" | "archived")}
-					/>
+					<div className="flex items-center gap-2">
+						{breadcrumb.length > 1 && (
+							<>
+								{breadcrumb.slice(0, -1).map((folder) => (
+									<React.Fragment key={folder.id}>
+										<button
+											type="button"
+											onClick={() => setActiveFolder(folder)}
+											className="text-muted-foreground hover:text-foreground flex items-center gap-1 cursor-pointer transition-colors"
+										>
+											<FolderIcon size={16} />
+											<span className="text-sm">{folder.name}</span>
+										</button>
+										<ChevronRight size={16} className="text-muted-foreground" />
+									</React.Fragment>
+								))}
+							</>
+						)}
+						{React.createElement(activeFolder?.id === "inbox" ? Inbox : FolderIcon, {
+							size: 24,
+						})}
+						<h1 className="text-2xl font-semibold">{activeFolder?.name || "Notes"}</h1>
+						<span className="text-sm text-muted-foreground">
+							({filteredNotes.length})
+						</span>
+					</div>
+
+					{/* Undo/Redo buttons */}
 					<div className="flex items-center gap-1">
 						<button
 							type="button"
@@ -244,54 +224,24 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 					</div>
 				</div>
 
-				{/* Folder title */}
-				<div className="flex items-center gap-2">
-					{parentFolderName && (
-						<>
-							<button
-								type="button"
-								onClick={() => {
-									const parentId = (activeFolder as Subfolder).parent;
-									setActiveFolder(allFolders[parentId]);
-								}}
-								className="text-muted-foreground hover:text-foreground flex items-center gap-1 cursor-pointer"
-							>
-								<Folder size={18} />
-								<span className="text-sm">{parentFolderName}</span>
-							</button>
-							<ChevronRight size={16} className="text-muted-foreground" />
-						</>
-					)}
-					{React.createElement(
-						activeFolder && activeFolder.name === "Inbox" ? Inbox : Folder,
-						{ size: 24 },
-					)}
-					<h1 className="text-2xl font-semibold">
-						{activeFolder && getCurrentFolder(activeFolder.id).name}
-					</h1>
-					<span className="text-sm text-muted-foreground">
-						({filteredNotes.length})
-					</span>
-				</div>
-
-				{/* Subfolders quick access - moved below title */}
-				{!isSubfolder && currentSubfolders.length > 0 && (
+				{/* Child folders quick access */}
+				{childFolders.length > 0 && (
 					<div className="flex flex-wrap gap-2">
-						{currentSubfolders.map((subfolder) => (
+						{childFolders.map((folder) => (
 							<button
-								key={subfolder.id}
+								key={folder.id}
 								type="button"
-								onClick={() => setActiveFolder(subfolder)}
+								onClick={() => setActiveFolder(folder)}
 								className="flex items-center gap-1.5 px-3 py-1.5 bg-card border border-border hover:bg-accent rounded-lg text-sm transition-colors cursor-pointer"
 							>
-								<Folder size={14} />
-								{subfolder.name}
+								<FolderIcon size={14} />
+								{folder.name}
 								<span className="text-xs text-muted-foreground ml-1">
 									{
 										notes.filter(
 											(n) =>
-												n.folder === subfolder.id &&
-												n.archived === (viewMode === "archived"),
+												n.folder === folder.id &&
+												n.archived === (viewMode === "archived")
 										).length
 									}
 								</span>
@@ -300,27 +250,8 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 					</div>
 				)}
 
-				{/* Search */}
-				<div className="relative">
-					<Search
-						size={18}
-						className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-					/>
-					<input
-						type="text"
-						placeholder="Search notes..."
-						value={searchTerm}
-						onChange={(e) => setSearchTerm(e.target.value)}
-						className="w-full pl-10 pr-4 py-2 bg-muted border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent focus:bg-background"
-					/>
-				</div>
-
 				{/* Tag filter */}
-				<TagFilter
-					tags={tags}
-					activeTags={activeTags}
-					setActiveTags={setActiveTags}
-				/>
+				<TagFilter tags={tags} activeTags={activeTags} setActiveTags={setActiveTags} />
 			</div>
 
 			{/* Notes list */}
@@ -328,22 +259,17 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 				{filteredNotes.length === 0 ? (
 					<div className="text-center py-12 text-muted-foreground animate-fadeIn">
 						<p className="text-lg mb-2">
-							No {viewMode} notes in{" "}
-							{getCurrentFolder(activeFolder?.id || "")?.name}
+							No {viewMode} notes in {activeFolder?.name || "this folder"}
 						</p>
 						<p className="text-sm">
-							{searchTerm && "Try a different search term"}
-							{activeTags.length > 0 &&
-								!searchTerm &&
-								"Try removing some tag filters"}
-							{!searchTerm &&
-								activeTags.length === 0 &&
-								(viewMode === "active"
-									? "Create a new note to get started"
-									: "No archived notes yet")}
+							{activeTags.length > 0
+								? "Try removing some tag filters"
+								: viewMode === "active"
+								? "Create a new note to get started"
+								: "No archived notes yet"}
 						</p>
 					</div>
-				) : !isSubfolder && currentSubfolders.length > 0 ? (
+				) : childFolders.length > 0 ? (
 					<div className="space-y-6 animate-fadeIn">
 						{groupedNotes.ungrouped.length > 0 && (
 							<div>
@@ -356,31 +282,27 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 							</div>
 						)}
 
-						{Object.entries(groupedNotes.grouped).map(
-							([subfolderId, subfolderNotes]) => {
-								const subfolder = currentSubfolders.find(
-									(sf) => sf.id === subfolderId,
-								);
-								if (!subfolder || subfolderNotes.length === 0) return null;
+						{Object.entries(groupedNotes.grouped).map(([folderId, folderNotes]) => {
+							const folder = childFolders.find((f) => f.id === folderId);
+							if (!folder || folderNotes.length === 0) return null;
 
-								return (
-									<div key={subfolderId}>
-										<button
-											type="button"
-											onClick={() => setActiveFolder(subfolder)}
-											className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2 hover:text-foreground cursor-pointer"
-										>
-											<Folder size={14} />
-											{subfolder.name}
-											<ChevronRight size={14} />
-										</button>
-										<div className="space-y-2">
-											{subfolderNotes.map(renderNoteItem)}
-										</div>
+							return (
+								<div key={folderId}>
+									<button
+										type="button"
+										onClick={() => setActiveFolder(folder)}
+										className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2 hover:text-foreground cursor-pointer transition-colors"
+									>
+										<FolderIcon size={14} />
+										{folder.name}
+										<ChevronRight size={14} />
+									</button>
+									<div className="space-y-2">
+										{folderNotes.map(renderNoteItem)}
 									</div>
-								);
-							},
-						)}
+								</div>
+							);
+						})}
 					</div>
 				) : (
 					<div className="space-y-2 animate-fadeIn">

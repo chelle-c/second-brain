@@ -1,12 +1,6 @@
-import {
-	Archive,
-	ArchiveRestore,
-	Folder,
-	FolderInput,
-	Inbox,
-	MoreVertical,
-	Trash2,
-} from "lucide-react";
+import { getFolderChildren } from "@/lib/folderHelpers";
+import { useNotesStore } from "@/stores/useNotesStore";
+import type { Folder as FolderType, Note, Tag } from "@/types/notes";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -19,31 +13,28 @@ import {
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useNotesStore } from "@/stores/useNotesStore";
-import type {
-	Note,
-	NotesFolder,
-	NotesFolders,
-	Subfolder,
-	Tag,
-} from "@/types/notes";
+import {
+	Archive,
+	ArchiveRestore,
+	Folder,
+	FolderInput,
+	Inbox,
+	MoreVertical,
+	Trash2,
+} from "lucide-react";
 
 interface NotesDropdownMenuProps {
 	note: Note;
-	allFolders: NotesFolders;
-	activeFolder: NotesFolder | Subfolder | null;
+	folders: FolderType[];
+	activeFolder: FolderType | null;
 	tags: Record<string, Tag>;
 }
 
-export const NotesDropdownMenu: React.FC<NotesDropdownMenuProps> = ({
-	note,
-	allFolders,
-}) => {
-	const { deleteNote, updateNote, archiveNote, unarchiveNote } =
-		useNotesStore();
+export const NotesDropdownMenu: React.FC<NotesDropdownMenuProps> = ({ note, folders }) => {
+	const { deleteNote, updateNote, archiveNote, unarchiveNote } = useNotesStore();
 
-	const moveNote = (noteId: string, newFolder: string) => {
-		updateNote(noteId, { folder: newFolder });
+	const moveNote = (noteId: string, newFolderId: string) => {
+		updateNote(noteId, { folder: newFolderId }); // Use folder instead of folderId
 	};
 
 	const handleArchiveToggle = () => {
@@ -53,6 +44,16 @@ export const NotesDropdownMenu: React.FC<NotesDropdownMenuProps> = ({
 			archiveNote(note.id);
 		}
 	};
+
+	// Get all root folders (including inbox)
+	const rootFolders = folders
+		.filter((f) => !f.archived && !f.parentId)
+		.sort((a, b) => {
+			// Inbox first
+			if (a.id === "inbox") return -1;
+			if (b.id === "inbox") return 1;
+			return (a.order || 0) - (b.order || 0);
+		});
 
 	return (
 		<DropdownMenu>
@@ -68,85 +69,72 @@ export const NotesDropdownMenu: React.FC<NotesDropdownMenuProps> = ({
 			<DropdownMenuContent align="end">
 				<DropdownMenuLabel>Move to folder</DropdownMenuLabel>
 
-				{/* Inbox option - always available */}
-				{note.folder !== "inbox" && (
-					<DropdownMenuItem
-						onClick={() => moveNote(note.id, "inbox")}
-						className="cursor-pointer"
-					>
-						<Inbox size={14} className="mr-2" />
-						Inbox
-					</DropdownMenuItem>
-				)}
+				{rootFolders.map((folder) => {
+					const isCurrentFolder = folder.id === note.folder;
+					const children = getFolderChildren(folders, folder.id).filter(
+						(child) => !child.archived
+					);
+					const hasChildren = children.length > 0;
 
-				{/* Other folders */}
-				{Object.entries(allFolders).map(([key, folder]: [string, unknown]) => {
-					if (key === "inbox") return null;
-					const currentFolder = folder as NotesFolder;
-					const isCurrentFolder = key === note.folder;
-					const hasSubfolders =
-						currentFolder.children && currentFolder.children.length > 0;
+					// If it's a simple folder with no children
+					if (!hasChildren) {
+						if (isCurrentFolder) return null; // Skip if already in this folder
 
-					// If note is in this folder and there are no subfolders, skip it entirely
-					if (isCurrentFolder && !hasSubfolders) return null;
-
-					// Folder without subfolders - simple menu item
-					if (!hasSubfolders) {
 						return (
 							<DropdownMenuItem
-								key={key}
-								onClick={() => moveNote(note.id, key)}
+								key={folder.id}
+								onClick={() => moveNote(note.id, folder.id)}
 								className="cursor-pointer"
 							>
-								<Folder size={14} className="mr-2" />
-								{currentFolder.name}
+								{folder.id === "inbox" ? (
+									<Inbox size={14} className="mr-2" />
+								) : (
+									<Folder size={14} className="mr-2" />
+								)}
+								{folder.name}
 							</DropdownMenuItem>
 						);
 					}
 
-					// Folder with subfolders - submenu
-					// Filter out the subfolder the note is already in
-					const availableSubfolders = (currentFolder.children ?? []).filter(
-						(subfolder: NotesFolder) => subfolder.id !== note.folder,
-					);
-
-					// If note is in root of this folder and no other subfolders, skip
-					if (isCurrentFolder && availableSubfolders.length === 0) return null;
-
+					// Folder with children - show as submenu
 					return (
-						<DropdownMenuSub key={key}>
-							<DropdownMenuSubTrigger
-								onClick={() => !isCurrentFolder && moveNote(note.id, key)}
-								className="cursor-pointer"
-							>
-								<Folder size={14} className="mr-2" />
-								<span>{currentFolder.name}</span>
+						<DropdownMenuSub key={folder.id}>
+							<DropdownMenuSubTrigger className="cursor-pointer">
+								{folder.id === "inbox" ? (
+									<Inbox size={14} className="mr-2" />
+								) : (
+									<Folder size={14} className="mr-2" />
+								)}
+								<span>{folder.name}</span>
 							</DropdownMenuSubTrigger>
 							<DropdownMenuPortal>
 								<DropdownMenuSubContent>
-									{/* Only show root option if note is not already in root */}
+									{/* Option to move to root of this folder */}
 									{!isCurrentFolder && (
-										<>
-											<DropdownMenuItem
-												onClick={() => moveNote(note.id, key)}
-												className="cursor-pointer"
-											>
-												<Folder size={14} className="mr-2" />
-												{currentFolder.name} (root)
-											</DropdownMenuItem>
-											{availableSubfolders.length > 0 && (
-												<DropdownMenuSeparator />
-											)}
-										</>
-									)}
-									{availableSubfolders.map((subfolder: NotesFolder) => (
 										<DropdownMenuItem
-											key={subfolder.id}
-											onClick={() => moveNote(note.id, subfolder.id)}
+											onClick={() => moveNote(note.id, folder.id)}
 											className="cursor-pointer"
 										>
+											<Folder size={14} className="mr-2" />
+											{folder.name}
+										</DropdownMenuItem>
+									)}
+
+									{/* Separator if needed */}
+									{!isCurrentFolder && children.length > 0 && (
+										<DropdownMenuSeparator />
+									)}
+
+									{/* Child folders */}
+									{children.map((child) => (
+										<DropdownMenuItem
+											key={child.id}
+											onClick={() => moveNote(note.id, child.id)}
+											className="cursor-pointer"
+											disabled={child.id === note.folder}
+										>
 											<FolderInput size={14} className="mr-2" />
-											{subfolder.name}
+											{child.name}
 										</DropdownMenuItem>
 									))}
 								</DropdownMenuSubContent>
@@ -157,10 +145,7 @@ export const NotesDropdownMenu: React.FC<NotesDropdownMenuProps> = ({
 
 				<DropdownMenuSeparator />
 
-				<DropdownMenuItem
-					onClick={handleArchiveToggle}
-					className="cursor-pointer"
-				>
+				<DropdownMenuItem onClick={handleArchiveToggle} className="cursor-pointer">
 					{note.archived ? (
 						<>
 							<ArchiveRestore size={14} className="mr-2" />
