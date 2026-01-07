@@ -5,6 +5,7 @@ import Code from "@yoopta/code";
 import YooptaEditor, {
 	createYooptaEditor,
 	type SlateElement,
+	type YooptaContentValue,
 	type YooptaPlugin,
 } from "@yoopta/editor";
 import Embed from "@yoopta/embed";
@@ -91,13 +92,13 @@ export const NoteCreate = ({
 	// Use refs to track current values for the save function
 	const titleValueRef = useRef("");
 	const selectedTagsRef = useRef<string[]>([]);
-	const editorValueRef = useRef<Record<string, unknown>>({});
+	const editorValueRef = useRef<YooptaContentValue>({});
 	const hasContentRef = useRef(false);
 	const hasSavedRef = useRef(false);
 
 	const [title, setTitle] = useState("");
 	const [selectedTags, setSelectedTags] = useState<string[]>([]);
-	const [editorValue, setEditorValue] = useState<Record<string, unknown>>({});
+	const [editorValue, setEditorValue] = useState<YooptaContentValue>({});
 
 	// Sync refs with state
 	useEffect(() => {
@@ -277,7 +278,7 @@ export const NoteCreate = ({
 		);
 	};
 
-	const handleEditorChange = (value: Record<string, unknown>) => {
+	const handleEditorChange = (value: YooptaContentValue) => {
 		setEditorValue(value);
 		hasContentRef.current = true;
 	};

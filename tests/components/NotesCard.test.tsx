@@ -4,7 +4,7 @@ import { Lightbulb, Target } from "lucide-react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NotesCard } from "@/apps/Notes/components/NotesCard";
 import { useNotesStore } from "@/stores/useNotesStore";
-import type { Note, NotesFolders, Tag } from "@/types/notes";
+import type { Folder, Note, Tag } from "@/types/notes";
 
 vi.mock("@/stores/useNotesStore");
 
@@ -21,10 +21,16 @@ vi.mock("@/apps/Notes/components/TagFilter", () => ({
 }));
 
 describe("NotesCard", () => {
-	const mockFolders: NotesFolders = {
-		inbox: { id: "inbox", name: "Inbox", children: [] },
-		personal: { id: "personal", name: "Personal", children: [] },
-		work: { id: "work", name: "Work", children: [] },
+	const mockFoldersList: Folder[] = [
+		{ id: "inbox", name: "Inbox", parentId: null },
+		{ id: "personal", name: "Personal", parentId: null },
+		{ id: "work", name: "Work", parentId: null },
+	];
+
+	const mockFoldersMap: Record<string, Folder> = {
+		inbox: mockFoldersList[0],
+		personal: mockFoldersList[1],
+		work: mockFoldersList[2],
 	};
 
 	const mockTags: Record<string, Tag> = {
@@ -78,11 +84,10 @@ describe("NotesCard", () => {
 	const mockSetActiveFolder = vi.fn();
 	const mockSetActiveTags = vi.fn();
 	const mockOnSelectNote = vi.fn();
-	const mockSetViewMode = vi.fn();
 	const mockOnUndo = vi.fn();
 	const mockOnRedo = vi.fn();
-	const mockGetCurrentFolder = vi.fn(
-		(id: string) => mockFolders[id] || mockFolders.inbox,
+	const mockGetFolderById = vi.fn(
+		(id: string) => mockFoldersMap[id] || mockFoldersMap.inbox,
 	);
 	const mockGetNoteCount = vi.fn(() => 2);
 
@@ -97,17 +102,16 @@ describe("NotesCard", () => {
 	it("should display folder name", () => {
 		render(
 			<NotesCard
-				allFolders={mockFolders}
-				activeFolder={mockFolders.inbox}
+				folders={mockFoldersList}
+				activeFolder={mockFoldersMap.inbox}
 				setActiveFolder={mockSetActiveFolder}
-				getCurrentFolder={mockGetCurrentFolder}
+				getFolderById={mockGetFolderById}
 				tags={mockTags}
 				activeTags={[]}
 				getNoteCount={mockGetNoteCount}
 				setActiveTags={mockSetActiveTags}
 				onSelectNote={mockOnSelectNote}
 				viewMode="active"
-				setViewMode={mockSetViewMode}
 				canUndo={false}
 				canRedo={false}
 				onUndo={mockOnUndo}
@@ -121,17 +125,16 @@ describe("NotesCard", () => {
 	it("should display note count", () => {
 		render(
 			<NotesCard
-				allFolders={mockFolders}
-				activeFolder={mockFolders.inbox}
+				folders={mockFoldersList}
+				activeFolder={mockFoldersMap.inbox}
 				setActiveFolder={mockSetActiveFolder}
-				getCurrentFolder={mockGetCurrentFolder}
+				getFolderById={mockGetFolderById}
 				tags={mockTags}
 				activeTags={[]}
 				getNoteCount={mockGetNoteCount}
 				setActiveTags={mockSetActiveTags}
 				onSelectNote={mockOnSelectNote}
 				viewMode="active"
-				setViewMode={mockSetViewMode}
 				canUndo={false}
 				canRedo={false}
 				onUndo={mockOnUndo}
@@ -146,17 +149,16 @@ describe("NotesCard", () => {
 	it("should render search input", () => {
 		render(
 			<NotesCard
-				allFolders={mockFolders}
-				activeFolder={mockFolders.inbox}
+				folders={mockFoldersList}
+				activeFolder={mockFoldersMap.inbox}
 				setActiveFolder={mockSetActiveFolder}
-				getCurrentFolder={mockGetCurrentFolder}
+				getFolderById={mockGetFolderById}
 				tags={mockTags}
 				activeTags={[]}
 				getNoteCount={mockGetNoteCount}
 				setActiveTags={mockSetActiveTags}
 				onSelectNote={mockOnSelectNote}
 				viewMode="active"
-				setViewMode={mockSetViewMode}
 				canUndo={false}
 				canRedo={false}
 				onUndo={mockOnUndo}
@@ -170,17 +172,16 @@ describe("NotesCard", () => {
 	it("should display active notes when viewMode is active", () => {
 		render(
 			<NotesCard
-				allFolders={mockFolders}
-				activeFolder={mockFolders.inbox}
+				folders={mockFoldersList}
+				activeFolder={mockFoldersMap.inbox}
 				setActiveFolder={mockSetActiveFolder}
-				getCurrentFolder={mockGetCurrentFolder}
+				getFolderById={mockGetFolderById}
 				tags={mockTags}
 				activeTags={[]}
 				getNoteCount={mockGetNoteCount}
 				setActiveTags={mockSetActiveTags}
 				onSelectNote={mockOnSelectNote}
 				viewMode="active"
-				setViewMode={mockSetViewMode}
 				canUndo={false}
 				canRedo={false}
 				onUndo={mockOnUndo}
@@ -196,17 +197,16 @@ describe("NotesCard", () => {
 	it("should display archived notes when viewMode is archived", () => {
 		render(
 			<NotesCard
-				allFolders={mockFolders}
-				activeFolder={mockFolders.inbox}
+				folders={mockFoldersList}
+				activeFolder={mockFoldersMap.inbox}
 				setActiveFolder={mockSetActiveFolder}
-				getCurrentFolder={mockGetCurrentFolder}
+				getFolderById={mockGetFolderById}
 				tags={mockTags}
 				activeTags={[]}
 				getNoteCount={mockGetNoteCount}
 				setActiveTags={mockSetActiveTags}
 				onSelectNote={mockOnSelectNote}
 				viewMode="archived"
-				setViewMode={mockSetViewMode}
 				canUndo={false}
 				canRedo={false}
 				onUndo={mockOnUndo}
@@ -223,17 +223,16 @@ describe("NotesCard", () => {
 		const user = userEvent.setup();
 		render(
 			<NotesCard
-				allFolders={mockFolders}
-				activeFolder={mockFolders.inbox}
+				folders={mockFoldersList}
+				activeFolder={mockFoldersMap.inbox}
 				setActiveFolder={mockSetActiveFolder}
-				getCurrentFolder={mockGetCurrentFolder}
+				getFolderById={mockGetFolderById}
 				tags={mockTags}
 				activeTags={[]}
 				getNoteCount={mockGetNoteCount}
 				setActiveTags={mockSetActiveTags}
 				onSelectNote={mockOnSelectNote}
 				viewMode="active"
-				setViewMode={mockSetViewMode}
 				canUndo={false}
 				canRedo={false}
 				onUndo={mockOnUndo}
@@ -252,17 +251,16 @@ describe("NotesCard", () => {
 		const user = userEvent.setup();
 		render(
 			<NotesCard
-				allFolders={mockFolders}
-				activeFolder={mockFolders.inbox}
+				folders={mockFoldersList}
+				activeFolder={mockFoldersMap.inbox}
 				setActiveFolder={mockSetActiveFolder}
-				getCurrentFolder={mockGetCurrentFolder}
+				getFolderById={mockGetFolderById}
 				tags={mockTags}
 				activeTags={[]}
 				getNoteCount={mockGetNoteCount}
 				setActiveTags={mockSetActiveTags}
 				onSelectNote={mockOnSelectNote}
 				viewMode="active"
-				setViewMode={mockSetViewMode}
 				canUndo={false}
 				canRedo={false}
 				onUndo={mockOnUndo}
@@ -281,17 +279,16 @@ describe("NotesCard", () => {
 		const user = userEvent.setup();
 		render(
 			<NotesCard
-				allFolders={mockFolders}
-				activeFolder={mockFolders.inbox}
+				folders={mockFoldersList}
+				activeFolder={mockFoldersMap.inbox}
 				setActiveFolder={mockSetActiveFolder}
-				getCurrentFolder={mockGetCurrentFolder}
+				getFolderById={mockGetFolderById}
 				tags={mockTags}
 				activeTags={[]}
 				getNoteCount={mockGetNoteCount}
 				setActiveTags={mockSetActiveTags}
 				onSelectNote={mockOnSelectNote}
 				viewMode="active"
-				setViewMode={mockSetViewMode}
 				canUndo={false}
 				canRedo={false}
 				onUndo={mockOnUndo}
@@ -310,17 +307,16 @@ describe("NotesCard", () => {
 	it("should display note tags", () => {
 		render(
 			<NotesCard
-				allFolders={mockFolders}
-				activeFolder={mockFolders.inbox}
+				folders={mockFoldersList}
+				activeFolder={mockFoldersMap.inbox}
 				setActiveFolder={mockSetActiveFolder}
-				getCurrentFolder={mockGetCurrentFolder}
+				getFolderById={mockGetFolderById}
 				tags={mockTags}
 				activeTags={[]}
 				getNoteCount={mockGetNoteCount}
 				setActiveTags={mockSetActiveTags}
 				onSelectNote={mockOnSelectNote}
 				viewMode="active"
-				setViewMode={mockSetViewMode}
 				canUndo={false}
 				canRedo={false}
 				onUndo={mockOnUndo}
@@ -335,17 +331,16 @@ describe("NotesCard", () => {
 	it("should show TagFilter component", () => {
 		render(
 			<NotesCard
-				allFolders={mockFolders}
-				activeFolder={mockFolders.inbox}
+				folders={mockFoldersList}
+				activeFolder={mockFoldersMap.inbox}
 				setActiveFolder={mockSetActiveFolder}
-				getCurrentFolder={mockGetCurrentFolder}
+				getFolderById={mockGetFolderById}
 				tags={mockTags}
 				activeTags={[]}
 				getNoteCount={mockGetNoteCount}
 				setActiveTags={mockSetActiveTags}
 				onSelectNote={mockOnSelectNote}
 				viewMode="active"
-				setViewMode={mockSetViewMode}
 				canUndo={false}
 				canRedo={false}
 				onUndo={mockOnUndo}
@@ -359,17 +354,16 @@ describe("NotesCard", () => {
 	it("should filter notes by active tags", () => {
 		render(
 			<NotesCard
-				allFolders={mockFolders}
-				activeFolder={mockFolders.inbox}
+				folders={mockFoldersList}
+				activeFolder={mockFoldersMap.inbox}
 				setActiveFolder={mockSetActiveFolder}
-				getCurrentFolder={mockGetCurrentFolder}
+				getFolderById={mockGetFolderById}
 				tags={mockTags}
 				activeTags={["ideas"]}
 				getNoteCount={mockGetNoteCount}
 				setActiveTags={mockSetActiveTags}
 				onSelectNote={mockOnSelectNote}
 				viewMode="active"
-				setViewMode={mockSetViewMode}
 				canUndo={false}
 				canRedo={false}
 				onUndo={mockOnUndo}
@@ -401,17 +395,16 @@ describe("NotesCard", () => {
 
 		render(
 			<NotesCard
-				allFolders={mockFolders}
-				activeFolder={mockFolders.inbox}
+				folders={mockFoldersList}
+				activeFolder={mockFoldersMap.inbox}
 				setActiveFolder={mockSetActiveFolder}
-				getCurrentFolder={mockGetCurrentFolder}
+				getFolderById={mockGetFolderById}
 				tags={mockTags}
 				activeTags={[]}
 				getNoteCount={mockGetNoteCount}
 				setActiveTags={mockSetActiveTags}
 				onSelectNote={mockOnSelectNote}
 				viewMode="active"
-				setViewMode={mockSetViewMode}
 				canUndo={false}
 				canRedo={false}
 				onUndo={mockOnUndo}

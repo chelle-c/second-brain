@@ -792,9 +792,10 @@ export const useNotesStore = create<NotesStore>()(
 					break;
 
 				case "DELETE_FOLDER":
+					const affectedSubfolders = (data.affectedSubfolders || []) as Folder[];
 					const affectedFolderIds = [
 						data.id,
-						...(data.affectedSubfolders || []).map((f: Folder) => f.id),
+						...affectedSubfolders.map((f) => f.id),
 					];
 
 					set((state) => ({

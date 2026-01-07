@@ -1146,8 +1146,9 @@ export const useExpenseStore = create<ExpenseStore>()(
 							);
 
 							if (data.relatedExpenses && Array.isArray(data.relatedExpenses)) {
+								const relatedExpenses = data.relatedExpenses as Expense[];
 								const relatedMap = new Map(
-									data.relatedExpenses.map((re: Expense) => [re.id, re]),
+									relatedExpenses.map((re) => [re.id, re]),
 								);
 								updatedExpenses = updatedExpenses.map((e) => {
 									const related = relatedMap.get(e.id);
@@ -1167,7 +1168,8 @@ export const useExpenseStore = create<ExpenseStore>()(
 							let newExpenses = [...state.expenses, beforeExpense];
 
 							if (data.relatedExpenses && Array.isArray(data.relatedExpenses)) {
-								newExpenses = [...newExpenses, ...data.relatedExpenses];
+								const relatedExpenses = data.relatedExpenses as Expense[];
+								newExpenses = [...newExpenses, ...relatedExpenses];
 							}
 
 							return { expenses: newExpenses };
@@ -1187,8 +1189,9 @@ export const useExpenseStore = create<ExpenseStore>()(
 							);
 
 							if (data.relatedExpenses && Array.isArray(data.relatedExpenses)) {
+								const relatedExpenses = data.relatedExpenses as Expense[];
 								const relatedMap = new Map(
-									data.relatedExpenses.map((re: Expense) => [
+									relatedExpenses.map((re) => [
 										re.id,
 										re.isArchived,
 									]),
@@ -1221,8 +1224,9 @@ export const useExpenseStore = create<ExpenseStore>()(
 							);
 
 							if (data.relatedExpenses && Array.isArray(data.relatedExpenses)) {
+								const relatedExpenses = data.relatedExpenses as Expense[];
 								const relatedMap = new Map(
-									data.relatedExpenses.map((re: Expense) => [
+									relatedExpenses.map((re) => [
 										re.id,
 										{ isPaid: re.isPaid, paymentDate: re.paymentDate },
 									]),
@@ -1264,7 +1268,8 @@ export const useExpenseStore = create<ExpenseStore>()(
 							let newExpenses = [...state.expenses, afterExpense];
 
 							if (data.relatedExpenses && Array.isArray(data.relatedExpenses)) {
-								newExpenses = [...newExpenses, ...data.relatedExpenses];
+								const relatedExpenses = data.relatedExpenses as Expense[];
+								newExpenses = [...newExpenses, ...relatedExpenses];
 							}
 
 							return { expenses: newExpenses };
@@ -1298,8 +1303,9 @@ export const useExpenseStore = create<ExpenseStore>()(
 						);
 
 						if (data.relatedExpenses && Array.isArray(data.relatedExpenses)) {
+							const relatedExpenses = data.relatedExpenses as Expense[];
 							const relatedIds = new Set(
-								data.relatedExpenses.map((re: Expense) => re.id),
+								relatedExpenses.map((re) => re.id),
 							);
 							updatedExpenses = updatedExpenses.map((e) =>
 								relatedIds.has(e.id) ? { ...e, isArchived: true } : e,
@@ -1317,8 +1323,9 @@ export const useExpenseStore = create<ExpenseStore>()(
 						);
 
 						if (data.relatedExpenses && Array.isArray(data.relatedExpenses)) {
+							const relatedExpenses = data.relatedExpenses as Expense[];
 							const relatedIds = new Set(
-								data.relatedExpenses.map((re: Expense) => re.id),
+								relatedExpenses.map((re) => re.id),
 							);
 							updatedExpenses = updatedExpenses.map((e) =>
 								relatedIds.has(e.id) ? { ...e, isArchived: false } : e,
@@ -1347,8 +1354,9 @@ export const useExpenseStore = create<ExpenseStore>()(
 						);
 
 						if (data.relatedExpenses && Array.isArray(data.relatedExpenses)) {
+							const relatedExpenses = data.relatedExpenses as Expense[];
 							const relatedIds = new Set(
-								data.relatedExpenses.map((re: Expense) => re.id),
+								relatedExpenses.map((re) => re.id),
 							);
 							updatedExpenses = updatedExpenses.map((e) =>
 								relatedIds.has(e.id)

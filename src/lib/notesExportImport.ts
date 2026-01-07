@@ -81,11 +81,7 @@ function isValidNote(note: unknown): note is ExportedNote {
 		return false;
 	}
 
-	// Accept either folder or folderId, or default to inbox if missing
-	const hasFolder = "folder" in noteObj && typeof noteObj.folder === "string";
-	const hasFolderId = "folderId" in noteObj && typeof noteObj.folderId === "string";
-
-	// Don't require folder/folderId - we'll default to inbox if missing
+	// folder/folderId is optional - we default to inbox if missing
 
 	if (typeof noteObj.createdAt !== "string") {
 		return false;

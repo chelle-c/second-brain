@@ -118,11 +118,16 @@ describe("NotesStorage", () => {
 			const loadedFolders = await notesStorage.loadFolders();
 
 			expect(loadedFolders).toBeDefined();
-			expect(loadedFolders.inbox).toBeDefined();
-			expect(loadedFolders.inbox.name).toBe("Inbox");
-			expect(loadedFolders.personal).toBeDefined();
-			expect(loadedFolders.work).toBeDefined();
-			expect(loadedFolders.work.children).toBeDefined();
+			expect(Array.isArray(loadedFolders)).toBe(true);
+
+			const inbox = loadedFolders.find((f) => f.id === "inbox");
+			const personal = loadedFolders.find((f) => f.id === "personal");
+			const work = loadedFolders.find((f) => f.id === "work");
+
+			expect(inbox).toBeDefined();
+			expect(inbox?.name).toBe("Inbox");
+			expect(personal).toBeDefined();
+			expect(work).toBeDefined();
 		});
 
 		it("should persist folder structure across save and load", async () => {
@@ -130,8 +135,14 @@ describe("NotesStorage", () => {
 
 			// Verify we can load folders multiple times and get same structure
 			const loadedAgain = await notesStorage.loadFolders();
-			expect(loadedAgain.inbox.name).toBe(initialFolders.inbox.name);
-			expect(loadedAgain.work.name).toBe(initialFolders.work.name);
+
+			const initialInbox = initialFolders.find((f) => f.id === "inbox");
+			const initialWork = initialFolders.find((f) => f.id === "work");
+			const loadedInbox = loadedAgain.find((f) => f.id === "inbox");
+			const loadedWork = loadedAgain.find((f) => f.id === "work");
+
+			expect(loadedInbox?.name).toBe(initialInbox?.name);
+			expect(loadedWork?.name).toBe(initialWork?.name);
 		});
 	});
 
