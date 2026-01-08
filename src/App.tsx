@@ -5,6 +5,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import { DebugConsole } from "@/components/DebugConsole";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Loading, PageLoading } from "@/components/ui/loading";
+import { Toaster } from "@/components/ui/sonner";
 import { sqlStorage } from "@/lib/storage";
 import useAppStore from "@/stores/useAppStore";
 import { useBackupStore } from "@/stores/useBackupStore";
@@ -141,6 +142,8 @@ function App() {
 			)}
 
 			{isDevEnv && <DebugConsole />}
+
+			<Toaster position="bottom-right" closeButton />
 		</>
 	);
 }

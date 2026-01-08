@@ -1,7 +1,8 @@
 import { ChevronRight, Folder as FolderIcon, Inbox } from "lucide-react";
 import type React from "react";
 import { useRef } from "react";
-import type { Folder } from "@/types/notes";
+import type { Folder, Note } from "@/types/notes";
+import { useDropZone, useDragState, type DragItem } from "@/hooks/useDragAndDrop";
 
 interface FolderItemProps {
 	folder: Folder;
@@ -31,6 +32,9 @@ interface FolderItemProps {
 	depth?: number;
 	draggable?: boolean;
 	isDragReady?: boolean;
+	// Note drop handling
+	onNoteDrop?: (item: DragItem<Note>) => void;
+	canDropNote?: (item: DragItem<Note>) => boolean;
 }
 
 export const FolderItem: React.FC<FolderItemProps> = ({
@@ -60,8 +64,25 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 	depth = 0,
 	draggable = false,
 	isDragReady = false,
+	onNoteDrop,
+	canDropNote,
 }) => {
 	const inputRef = useRef<HTMLInputElement>(null);
+	const { isDragging: isGlobalDragging, draggedItem } = useDragState();
+
+	// Note drop zone handling
+	const {
+		isOver: isNoteOver,
+		canDrop: canDropNoteHere,
+		dropHandlers: noteDropHandlers,
+	} = useDropZone<Note>({
+		accepts: ["note"],
+		onDrop: (item) => onNoteDrop?.(item),
+		canDrop: (item) => canDropNote?.(item) ?? true,
+	});
+
+	// Check if we're dragging a note (for visual feedback)
+	const isDraggingNote = isGlobalDragging && draggedItem?.type === "note";
 
 	// Get icon
 	let IconComponent = isInbox ? Inbox : FolderIcon;
@@ -105,6 +126,47 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 	// Apply grab cursor when ready to drag, pointer otherwise
 	const cursorStyle = isDragReady && !isDragging ? "grab" : "pointer";
 
+	// Combined drag over handler for both folders and notes
+	const handleDragOver = (e: React.DragEvent) => {
+		// Handle note drag over
+		if (isDraggingNote) {
+			noteDropHandlers.onDragOver(e);
+		} else {
+			// Handle folder drag over
+			onDragOver(e);
+		}
+	};
+
+	// Combined drag enter handler
+	const handleDragEnter = (e: React.DragEvent) => {
+		if (isDraggingNote) {
+			noteDropHandlers.onDragEnter(e);
+		}
+	};
+
+	// Combined drag leave handler
+	const handleDragLeave = (e: React.DragEvent) => {
+		if (isDraggingNote) {
+			noteDropHandlers.onDragLeave(e);
+		} else {
+			onDragLeave(e);
+		}
+	};
+
+	// Combined drop handler
+	const handleDrop = (e: React.DragEvent) => {
+		if (isDraggingNote) {
+			noteDropHandlers.onDrop(e);
+		} else {
+			onDrop(e);
+		}
+	};
+
+	// Visual states
+	const isNoteDropTarget = isDraggingNote && isNoteOver;
+	const canAcceptNote = isDraggingNote && canDropNoteHere;
+	const showNotAllowed = isDraggingNote && isNoteOver && !canDropNoteHere;
+
 	return (
 		<button
 			type="button"
@@ -112,16 +174,19 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 				isInbox ? "mb-2" : ""
 			} ${isActive ? "bg-primary/10 text-primary" : "hover:bg-accent"} ${
 				isDragging ? "opacity-30 cursor-grabbing" : ""
-			} ${isDragOver && !isDragging ? "ring-2 ring-primary ring-inset bg-primary/5" : ""}`}
+			} ${isDragOver && !isDragging ? "bg-accent" : ""} ${
+				isNoteDropTarget && canAcceptNote ? "bg-accent" : ""
+			}`}
 			data-folder-id={dataFolderId}
 			draggable={draggable}
 			onMouseDown={() => !isInbox && onMouseDown()}
 			onMouseUp={onMouseUp}
 			onMouseLeave={onMouseUp}
 			onDragStart={onDragStart}
-			onDragOver={onDragOver}
-			onDragLeave={onDragLeave}
-			onDrop={onDrop}
+			onDragOver={handleDragOver}
+			onDragEnter={handleDragEnter}
+			onDragLeave={handleDragLeave}
+			onDrop={handleDrop}
 			onDragEnd={onDragEnd}
 			onContextMenu={onContextMenu}
 			onClick={onSelect}
@@ -129,7 +194,7 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 				paddingLeft: isInbox ? "8px" : `${depth * 12 + 8}px`,
 				userSelect: "none",
 				WebkitUserSelect: "none",
-				cursor: cursorStyle,
+				cursor: showNotAllowed ? "not-allowed" : cursorStyle,
 			}}
 		>
 			{/* Chevron - decorative only */}

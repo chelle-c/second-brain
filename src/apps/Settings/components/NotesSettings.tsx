@@ -1,7 +1,7 @@
 import { documentDir } from "@tauri-apps/api/path";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
-import { CheckCircle, Download, Loader2, StickyNote, Upload, XCircle } from "lucide-react";
+import { CheckCircle, Download, Loader2, StickyNote, Tags, Upload, XCircle } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,13 +31,15 @@ import {
 } from "@/lib/notesExportImport";
 import { useNotesStore } from "@/stores/useNotesStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
+import { TagManagementModal } from "@/apps/Notes/components/TagManagementModal";
 
 export const NotesSettings = () => {
 	const { notesDefaultFolder, setNotesDefaultFolder } = useSettingsStore();
-	const { folders, notes, setNotes, setFolders } = useNotesStore();
+	const { folders, notes, tags, setNotes, setFolders } = useNotesStore();
 
 	const [isLoading, setIsLoading] = useState(false);
 	const [showImportDialog, setShowImportDialog] = useState(false);
+	const [showTagModal, setShowTagModal] = useState(false);
 	const [importFilePath, setImportFilePath] = useState<string | null>(null);
 	const [importMode, setImportMode] = useState<"replace" | "merge">("merge");
 	const [exportResult, setExportResult] = useState<{
@@ -55,6 +57,8 @@ export const NotesSettings = () => {
 			value: folder.id,
 			label: folder.name,
 		}));
+
+	const tagCount = Object.keys(tags).length;
 
 	const handleExport = async () => {
 		setIsLoading(true);
@@ -195,17 +199,11 @@ export const NotesSettings = () => {
 			const message =
 				importMode === "replace"
 					? `Successfully imported ${validNotes.length} notes${
-							newFolders.length > 0
-								? ` and ${newFolders.length} folders`
-								: ""
+							newFolders.length > 0 ? ` and ${newFolders.length} folders` : ""
 					  }`
 					: `Imported ${validNotes.length} new notes${
 							skipped > 0 ? `, skipped ${skipped} duplicates` : ""
-					  }${
-							newFolders.length > 0
-								? ` (+ ${newFolders.length} folders)`
-								: ""
-					  }`;
+					  }${newFolders.length > 0 ? ` (+ ${newFolders.length} folders)` : ""}`;
 			setImportResult({ success: true, message });
 
 			if (errors.length > 0) {
@@ -254,6 +252,28 @@ export const NotesSettings = () => {
 								))}
 							</SelectContent>
 						</Select>
+					</div>
+
+					<Separator />
+
+					{/* Tags Management */}
+					<div className="flex items-center justify-between">
+						<div className="space-y-0.5">
+							<Label className="text-base font-medium">Tags</Label>
+							<p className="text-sm text-muted-foreground">
+								Manage tags for organizing your notes
+							</p>
+						</div>
+						<Button
+							type="button"
+							onClick={() => setShowTagModal(true)}
+							variant="outline"
+							className="gap-2"
+						>
+							<Tags className="w-4 h-4" />
+							Manage Tags
+							<span className="text-xs text-muted-foreground">({tagCount})</span>
+						</Button>
 					</div>
 
 					<Separator />
@@ -339,6 +359,9 @@ export const NotesSettings = () => {
 					</div>
 				</CardContent>
 			</Card>
+
+			{/* Tag Management Modal */}
+			<TagManagementModal isOpen={showTagModal} onClose={() => setShowTagModal(false)} />
 
 			{/* Import Confirmation Dialog */}
 			<Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>

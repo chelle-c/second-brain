@@ -49,9 +49,3 @@ export interface NotesFolder {
 export interface NotesFolders {
 	[folderId: string]: NotesFolder;
 }
-
-export interface Subfolder {
-	id: string;
-	name: string;
-	parent: string;
-}

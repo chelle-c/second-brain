@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import { ConfirmationModal } from "@/components/ConfirmationModal";
 import { Modal } from "@/components/Modal";
 import {
@@ -10,13 +11,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { buildFolderTree, canMoveFolder } from "@/lib/folderHelpers";
 import { useNotesStore } from "@/stores/useNotesStore";
-import type { Folder } from "@/types/notes";
+import type { Folder, Note } from "@/types/notes";
 import { ActionButton } from "./ActionButton";
 import { ContextMenu } from "./ContextMenu";
 import { FolderIconPicker } from "./FolderIconPicker";
 import { FolderItem } from "./FolderItem";
 import { SearchModal } from "./SearchModal";
 import type { DeleteConfirmation, DraggedFolder, FolderSortOption } from "./types";
+import type { DragItem } from "@/hooks/useDragAndDrop";
 import {
 	Archive,
 	ArchiveX,
@@ -67,6 +69,7 @@ export const FolderNav = ({
 		archiveFolder,
 		unarchiveFolder,
 		moveFolder,
+		moveNote,
 	} = useNotesStore();
 
 	// UI State
@@ -97,7 +100,7 @@ export const FolderNav = ({
 		folderId: string;
 	} | null>(null);
 
-	// Drag and Drop State
+	// Drag and Drop State (for folders)
 	const [draggedFolder, setDraggedFolder] = useState<DraggedFolder | null>(null);
 	const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
 
@@ -113,21 +116,54 @@ export const FolderNav = ({
 	const isEditing = editingFolder !== null;
 	const isAnyEditMode = isCreating || isEditing;
 
+	// Handler for note drop on folder
+	const handleNoteDrop = useCallback(
+		(folderId: string, item: DragItem<Note>) => {
+			const note = item.data;
+			const previousFolder = note.folder;
+			const targetFolder = getFolderById(folderId);
+
+			if (!targetFolder) {
+				toast.error("Target folder not found");
+				return;
+			}
+
+			if (note.folder === folderId) {
+				return;
+			}
+
+			// Move the note
+			moveNote(note.id, folderId);
+
+			// Show success toast with undo
+			toast.success(`Moved "${note.title || "Untitled"}" to ${targetFolder.name}`, {
+				action: {
+					label: "Undo",
+					onClick: () => {
+						moveNote(note.id, previousFolder);
+						toast.success("Move undone");
+					},
+				},
+			});
+		},
+		[getFolderById, moveNote]
+	);
+
+	// Check if note can be dropped on folder
+	const canDropNoteOnFolder = useCallback((folderId: string, item: DragItem<Note>): boolean => {
+		const note = item.data;
+		return note.folder !== folderId;
+	}, []);
+
 	// Filter folders based on view mode
-	// In archived view, show:
-	// 1. Folders that are archived
-	// 2. Non-archived folders that contain archived notes
 	const visibleFolders = useMemo(() => {
 		if (viewMode === "archived") {
-			// Get folder IDs that have archived notes
 			const foldersWithArchivedNotes = new Set(
 				notes.filter((n) => n.archived).map((n) => n.folder)
 			);
 
 			return folders.filter((f) => {
-				// Show if folder is archived
 				if (f.archived) return true;
-				// Show if folder has archived notes (but don't show inbox duplicates)
 				if (foldersWithArchivedNotes.has(f.id)) return true;
 				return false;
 			});
@@ -135,10 +171,9 @@ export const FolderNav = ({
 		return folders.filter((f) => !f.archived);
 	}, [folders, viewMode, notes]);
 
-	// Separate inbox from other folders (only in active view)
+	// Separate inbox from other folders
 	const inbox = useMemo(() => {
 		if (viewMode === "archived") {
-			// Check if inbox has archived notes
 			const inboxHasArchivedNotes = notes.some((n) => n.folder === "inbox" && n.archived);
 			if (inboxHasArchivedNotes) {
 				return folders.find((f) => f.id === "inbox") || null;
@@ -318,9 +353,8 @@ export const FolderNav = ({
 				const result = updateFolder(folderId, { name: editFolderName.trim() });
 				if (result.error) {
 					setFolderError(result.error);
-					// Auto-clear error after 3 seconds
 					setTimeout(() => setFolderError(null), 3000);
-					return; // Don't cancel editing on error
+					return;
 				}
 			}
 			setFolderError(null);
@@ -359,9 +393,8 @@ export const FolderNav = ({
 
 			if (result.error) {
 				setFolderError(result.error);
-				// Auto-clear error after 3 seconds
 				setTimeout(() => setFolderError(null), 3000);
-				return; // Don't cancel creating on error
+				return;
 			}
 
 			setFolderError(null);
@@ -374,7 +407,7 @@ export const FolderNav = ({
 		}
 	}, [newFolderName, newFolderParent, addFolder, cancelCreating]);
 
-	// Drag and Drop Handlers
+	// Folder Drag and Drop Handlers
 	const handleMouseDown = useCallback(
 		(folderId: string) => {
 			if (folderId === "inbox" || isAnyEditMode) {
@@ -591,6 +624,8 @@ export const FolderNav = ({
 						dataFolderId={folder.id}
 						depth={depth}
 						draggable={!isEditing && !isCreating && viewMode !== "archived"}
+						onNoteDrop={(item) => handleNoteDrop(folder.id, item)}
+						canDropNote={(item) => canDropNoteOnFolder(folder.id, item)}
 					/>
 
 					{showNewFolder && newFolderParent === folder.id && (
@@ -874,7 +909,7 @@ export const FolderNav = ({
 					onDrop={(e) => handleDrop(e, null)}
 					onDragLeave={handleDragLeave}
 				>
-					{/* Inbox - show in both active and archived view if it has relevant notes */}
+					{/* Inbox */}
 					{inbox && (
 						<>
 							<FolderItem
@@ -908,6 +943,8 @@ export const FolderNav = ({
 								isInbox={true}
 								depth={0}
 								draggable={false}
+								onNoteDrop={(item) => handleNoteDrop("inbox", item)}
+								canDropNote={(item) => canDropNoteOnFolder("inbox", item)}
 							/>
 
 							{/* Divider */}
@@ -928,7 +965,7 @@ export const FolderNav = ({
 					{/* Other folders */}
 					<ul
 						className={`space-y-0.5 ${
-							dragOverFolder === "root" ? "bg-primary/5 rounded-lg" : ""
+							dragOverFolder === "root" ? "bg-accent/50 rounded-lg" : ""
 						}`}
 						role="tree"
 						aria-label="Folder tree"

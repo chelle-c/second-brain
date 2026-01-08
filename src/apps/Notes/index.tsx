@@ -11,20 +11,34 @@ import { NotesBreadcrumb } from "./components/NotesBreadcrumb";
 import { NotesCard } from "./components/NotesCard";
 import { NotesLayout } from "./components/NotesLayout";
 import { NoteView } from "./components/NoteView";
-import {
-	Archive,
-	ArchiveRestore,
-	BookOpen,
-	CheckCircle,
-	FileWarning,
-	Lightbulb,
-	Trash2,
-} from "lucide-react";
+import { Archive, ArchiveRestore, BookOpen, CheckCircle, Lightbulb, Trash2 } from "lucide-react";
 
 type ViewState = "list" | "view" | "create";
 
+// Default tag definitions (used as fallback if tags store is empty)
+const DEFAULT_TAGS: Record<string, Tag> = {
+	actions: {
+		id: "actions",
+		name: "Actions",
+		icon: CheckCircle,
+		color: "#3b82f6",
+	},
+	ideas: {
+		id: "ideas",
+		name: "Ideas",
+		icon: Lightbulb,
+		color: "#eab308",
+	},
+	reference: {
+		id: "reference",
+		name: "Reference",
+		icon: BookOpen,
+		color: "#10b981",
+	},
+};
+
 export function NotesApp() {
-	const { notes, folders, tags, undo, redo, archiveNote, unarchiveNote, deleteNote } =
+	const { notes, folders, tags, undo, redo, archiveNote, unarchiveNote, deleteNote, addTag } =
 		useNotesStore();
 	const { canUndo, canRedo } = useHistoryStore();
 	const { notesDefaultFolder } = useSettingsStore();
@@ -41,29 +55,18 @@ export function NotesApp() {
 	// Track if folder was changed while viewing/creating a note
 	const lastActiveFolderRef = useRef<Folder | null>(null);
 
-	const defaultTags: Record<string, Tag> = {
-		actions: {
-			id: "actions",
-			name: "Actions",
-			icon: CheckCircle,
-			color: "#3b82f6",
-		},
-		ideas: { id: "ideas", name: "Ideas", icon: Lightbulb, color: "#eab308" },
-		reference: {
-			id: "reference",
-			name: "Reference",
-			icon: BookOpen,
-			color: "#10b981",
-		},
-		uncategorized: {
-			id: "uncategorized",
-			name: "Uncategorized",
-			icon: FileWarning,
-			color: "#6b7280",
-		},
-	};
+	// Initialize default tags if none exist
+	useEffect(() => {
+		if (Object.keys(tags).length === 0) {
+			Object.entries(DEFAULT_TAGS).forEach(([id, tag]) => {
+				addTag({ ...tag, id });
+			});
+		}
+	}, [tags, addTag]);
 
-	const allTags = { ...defaultTags, ...tags };
+	// Merge stored tags with any missing default tags for display
+	// (Tags from store take precedence)
+	const allTags = { ...tags };
 
 	// Set initial folder from settings
 	useEffect(() => {

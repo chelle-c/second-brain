@@ -1,10 +1,20 @@
-import { Calendar, ChevronRight, Folder as FolderIcon, Inbox, Redo2, Undo2 } from "lucide-react";
-import React, { useMemo } from "react";
+import {
+	Calendar,
+	ChevronRight,
+	Folder as FolderIcon,
+	GripVertical,
+	Inbox,
+	Redo2,
+	Undo2,
+} from "lucide-react";
+import React, { useCallback, useMemo, useRef } from "react";
+import { toast } from "sonner";
 import { getFolderBreadcrumb } from "@/lib/folderHelpers";
 import { useNotesStore } from "@/stores/useNotesStore";
 import type { Folder, Note, Tag } from "@/types/notes";
 import { NotesDropdownMenu } from "./NotesDropdownMenu";
 import { TagFilter } from "./TagFilter";
+import { useDraggable, useDropZone, type DragItem } from "@/hooks/useDragAndDrop";
 
 interface NotesCardProps {
 	folders: Folder[];
@@ -23,10 +33,219 @@ interface NotesCardProps {
 	onRedo: () => void;
 }
 
+// Separate component for draggable note item
+const DraggableNoteItem: React.FC<{
+	note: Note;
+	tags: Record<string, Tag>;
+	onSelectNote: (noteId: string) => void;
+	formatDate: (date: Date) => string;
+}> = ({ note, tags, onSelectNote, formatDate }) => {
+	const dragPreviewRef = useRef<HTMLDivElement>(null);
+
+	const { isDragging, dragHandlers } = useDraggable({
+		type: "note",
+		id: note.id,
+		data: note,
+		dragPreviewRef,
+	});
+
+	const handleCardClick = useCallback(() => {
+		if (!isDragging) {
+			onSelectNote(note.id);
+		}
+	}, [isDragging, note.id, onSelectNote]);
+
+	const handleCardKeyDown = useCallback(
+		(e: React.KeyboardEvent) => {
+			if (e.key === "Enter" || e.key === " ") {
+				e.preventDefault();
+				onSelectNote(note.id);
+			}
+		},
+		[note.id, onSelectNote]
+	);
+
+	const handleDragHandleClick = useCallback((e: React.MouseEvent) => {
+		// Prevent the card click from firing when clicking the drag handle
+		e.stopPropagation();
+	}, []);
+
+	const handleDragHandleKeyDown = useCallback((e: React.KeyboardEvent) => {
+		// Prevent the card keydown from firing
+		e.stopPropagation();
+	}, []);
+
+	return (
+		<>
+			{/* Custom drag preview - positioned off-screen but rendered in DOM */}
+			<div
+				ref={dragPreviewRef}
+				className="fixed -left-[9999px] -top-[9999px] bg-card border border-border rounded-lg px-3 py-2 shadow-lg pointer-events-none z-9999 max-w-[200px]"
+				aria-hidden="true"
+			>
+				<span className="text-sm font-medium text-card-foreground truncate block">
+					{note.title || "Untitled"}
+				</span>
+			</div>
+
+			<article
+				onClick={handleCardClick}
+				onKeyDown={handleCardKeyDown}
+				tabIndex={0}
+				role="button"
+				aria-label={`Open note: ${note.title || "Untitled"}`}
+				className={`relative p-4 bg-card border border-border rounded-lg transition-all animate-fadeIn group focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+					isDragging
+						? "opacity-30"
+						: "hover:border-primary/30 hover:shadow-sm cursor-pointer"
+				}`}
+			>
+				<div className="flex justify-between items-start gap-4">
+					<div className="flex items-start gap-2 flex-1 min-w-0">
+						{/* Drag handle - only this element is draggable */}
+						<div
+							{...dragHandlers}
+							onClick={handleDragHandleClick}
+							onKeyDown={handleDragHandleKeyDown}
+							role="button"
+							tabIndex={-1}
+							aria-label="Drag to move note"
+							className={`mt-1 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity p-1 -m-1 rounded hover:bg-accent ${
+								isDragging ? "cursor-grabbing opacity-100" : "cursor-grab"
+							}`}
+						>
+							<GripVertical size={14} />
+						</div>
+						<div className="flex-1 min-w-0">
+							<h3 className="text-card-foreground mb-2 font-medium truncate">
+								{note.title || "Untitled"}
+							</h3>
+
+							{note.tags && note.tags.length > 0 && (
+								<div className="flex flex-wrap gap-1 mb-2">
+									{note.tags.map((tagId) => {
+										const tag = tags[tagId];
+										if (!tag) return null;
+										const Icon = tag.icon;
+										return (
+											<span
+												key={tagId}
+												className="inline-flex items-center gap-1 px-2 py-0.5 bg-muted text-muted-foreground rounded-full text-xs"
+											>
+												{typeof Icon === "function" && <Icon size={10} />}
+												{tag.name}
+											</span>
+										);
+									})}
+								</div>
+							)}
+
+							<div className="flex items-center gap-4 text-xs text-muted-foreground">
+								<span className="flex items-center gap-1">
+									<Calendar size={12} />
+									{formatDate(note.createdAt)}
+								</span>
+							</div>
+						</div>
+					</div>
+					<div
+						className="relative z-10"
+						onClick={(e) => e.stopPropagation()}
+						onKeyDown={(e) => e.stopPropagation()}
+					>
+						<NotesDropdownMenu
+							note={note}
+							folders={[]}
+							activeFolder={null}
+							tags={tags}
+						/>
+					</div>
+				</div>
+			</article>
+		</>
+	);
+};
+
+// Folder section drop zone component
+const FolderSectionDropZone: React.FC<{
+	folder: Folder;
+	children: React.ReactNode;
+	onNoteDrop: (folderId: string, item: DragItem<Note>) => void;
+	onClick: () => void;
+}> = ({ folder, children, onNoteDrop, onClick }) => {
+	const { isOver, canDrop, isDragActive, dropHandlers } = useDropZone<Note>({
+		accepts: ["note"],
+		onDrop: (item) => onNoteDrop(folder.id, item),
+		canDrop: (item) => item.data.folder !== folder.id,
+	});
+
+	const showDropIndicator = isDragActive && isOver;
+	const isInvalidDrop = showDropIndicator && !canDrop;
+
+	return (
+		<div
+			{...dropHandlers}
+			className={`transition-all rounded-lg ${
+				showDropIndicator && canDrop ? "bg-accent/50" : ""
+			} ${isInvalidDrop ? "opacity-50" : ""}`}
+			style={{ cursor: isInvalidDrop ? "not-allowed" : undefined }}
+		>
+			<button
+				type="button"
+				onClick={onClick}
+				className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2 hover:text-foreground cursor-pointer transition-colors"
+			>
+				<FolderIcon size={14} />
+				{folder.name}
+				<ChevronRight size={14} />
+				{showDropIndicator && canDrop && (
+					<span className="text-xs text-primary ml-2">Drop here</span>
+				)}
+			</button>
+			<div className="space-y-2">{children}</div>
+		</div>
+	);
+};
+
+// Current folder drop zone for ungrouped notes
+const CurrentFolderDropZone: React.FC<{
+	folder: Folder;
+	children: React.ReactNode;
+	onNoteDrop: (folderId: string, item: DragItem<Note>) => void;
+}> = ({ folder, children, onNoteDrop }) => {
+	const { isOver, canDrop, isDragActive, dropHandlers } = useDropZone<Note>({
+		accepts: ["note"],
+		onDrop: (item) => onNoteDrop(folder.id, item),
+		canDrop: (item) => item.data.folder !== folder.id,
+	});
+
+	const showDropIndicator = isDragActive && isOver;
+	const isInvalidDrop = showDropIndicator && !canDrop;
+
+	return (
+		<div
+			{...dropHandlers}
+			className={`transition-all rounded-lg ${
+				showDropIndicator && canDrop ? "bg-accent/50" : ""
+			} ${isInvalidDrop ? "opacity-50" : ""}`}
+			style={{ cursor: isInvalidDrop ? "not-allowed" : undefined }}
+		>
+			<h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
+				In {folder.name}
+				{showDropIndicator && canDrop && (
+					<span className="text-xs text-primary">Drop here</span>
+				)}
+			</h3>
+			<div className="space-y-2">{children}</div>
+		</div>
+	);
+};
+
 export const NotesCard: React.FC<NotesCardProps> = ({
 	folders,
 	activeFolder,
 	setActiveFolder,
+	getFolderById,
 	tags,
 	activeTags,
 	setActiveTags,
@@ -37,7 +256,7 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 	onUndo,
 	onRedo,
 }) => {
-	const { notes } = useNotesStore();
+	const { notes, moveNote } = useNotesStore();
 
 	const formatDate = (date: Date) => {
 		const now = new Date();
@@ -49,6 +268,39 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 		if (diffInHours < 168) return `${Math.floor(diffInHours / 24)}d ago`;
 		return noteDate.toLocaleDateString();
 	};
+
+	// Handle note drop on a folder section
+	const handleNoteDrop = useCallback(
+		(folderId: string, item: DragItem<Note>) => {
+			const note = item.data;
+			const previousFolder = note.folder;
+			const targetFolder = getFolderById(folderId);
+
+			if (!targetFolder) {
+				toast.error("Target folder not found");
+				return;
+			}
+
+			if (note.folder === folderId) {
+				return;
+			}
+
+			// Move the note
+			moveNote(note.id, folderId);
+
+			// Show success toast with undo
+			toast.success(`Moved "${note.title || "Untitled"}" to ${targetFolder.name}`, {
+				action: {
+					label: "Undo",
+					onClick: () => {
+						moveNote(note.id, previousFolder);
+						toast.success("Move undone");
+					},
+				},
+			});
+		},
+		[getFolderById, moveNote]
+	);
 
 	// Get direct children of active folder
 	const childFolders = useMemo(() => {
@@ -83,10 +335,21 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 			const matchesFolder = folderIds.includes(note.folder);
 			if (!matchesFolder) return false;
 
-			const matchesTags =
-				activeTags.length === 0 || activeTags.some((tag) => note.tags?.includes(tag));
+			// Handle tag filtering including "uncategorized" special case
+			if (activeTags.length === 0) return true;
 
-			return matchesTags;
+			// Check for "uncategorized" filter
+			const hasUncategorizedFilter = activeTags.includes("uncategorized");
+			const otherTags = activeTags.filter((t) => t !== "uncategorized");
+
+			const noteHasNoTags = !note.tags || note.tags.length === 0;
+			const noteMatchesOtherTags =
+				otherTags.length === 0 || otherTags.some((tag) => note.tags?.includes(tag));
+
+			if (hasUncategorizedFilter && noteHasNoTags) return true;
+			if (otherTags.length > 0 && noteMatchesOtherTags) return true;
+
+			return false;
 		});
 	}, [notes, activeFolder, viewMode, activeTags, folders]);
 
@@ -99,74 +362,54 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 		const grouped: Record<string, Note[]> = {};
 		const ungrouped: Note[] = [];
 
-		filteredNotes.forEach((note) => {
-			const childFolder = childFolders.find((f) => f.id === note.folder);
-			if (childFolder) {
-				if (!grouped[childFolder.id]) {
-					grouped[childFolder.id] = [];
+		// Helper to find which child folder a note belongs to (including nested)
+		const findChildFolderForNote = (noteFolder: string): string | null => {
+			// Check if it's directly in a child folder
+			const directChild = childFolders.find((f) => f.id === noteFolder);
+			if (directChild) return directChild.id;
+
+			// Check if it's in a descendant of a child folder
+			for (const childFolder of childFolders) {
+				const getDescendantIds = (folderId: string): string[] => {
+					const children = folders.filter((f) => f.parentId === folderId);
+					return [folderId, ...children.flatMap((child) => getDescendantIds(child.id))];
+				};
+				const descendantIds = getDescendantIds(childFolder.id);
+				if (descendantIds.includes(noteFolder)) {
+					return childFolder.id;
 				}
-				grouped[childFolder.id].push(note);
-			} else if (note.folder === activeFolder?.id) {
+			}
+
+			return null;
+		};
+
+		filteredNotes.forEach((note) => {
+			if (note.folder === activeFolder?.id) {
+				// Note is directly in the active folder
 				ungrouped.push(note);
+			} else {
+				// Find which child folder this note belongs to
+				const childFolderId = findChildFolderForNote(note.folder);
+				if (childFolderId) {
+					if (!grouped[childFolderId]) {
+						grouped[childFolderId] = [];
+					}
+					grouped[childFolderId].push(note);
+				}
 			}
 		});
 
 		return { ungrouped, grouped };
-	}, [filteredNotes, childFolders, activeFolder]);
+	}, [filteredNotes, childFolders, activeFolder, folders]);
 
 	const renderNoteItem = (note: Note) => (
-		<article
+		<DraggableNoteItem
 			key={note.id}
-			className="relative p-4 bg-card border border-border rounded-lg hover:border-primary/30 hover:shadow-sm transition-all cursor-pointer animate-fadeIn"
-		>
-			<button
-				type="button"
-				onClick={() => onSelectNote(note.id)}
-				className="absolute inset-0 w-full h-full rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-				aria-label={`Open note: ${note.title || "Untitled"}`}
-			/>
-			<div className="flex justify-between items-start gap-4">
-				<div className="flex-1 min-w-0">
-					<h3 className="text-card-foreground mb-2 font-medium truncate">
-						{note.title || "Untitled"}
-					</h3>
-
-					{note.tags && note.tags.length > 0 && (
-						<div className="flex flex-wrap gap-1 mb-2">
-							{note.tags.map((tagId) => {
-								const tag = tags[tagId];
-								if (!tag) return null;
-								const Icon = tag.icon;
-								return (
-									<span
-										key={tagId}
-										className="inline-flex items-center gap-1 px-2 py-0.5 bg-muted text-muted-foreground rounded-full text-xs"
-									>
-										{typeof Icon === "function" && <Icon size={10} />}
-										{tag.name}
-									</span>
-								);
-							})}
-						</div>
-					)}
-
-					<div className="flex items-center gap-4 text-xs text-muted-foreground">
-						<span className="flex items-center gap-1">
-							<Calendar size={12} />
-							{formatDate(note.createdAt)}
-						</span>
-					</div>
-				</div>
-				<div className="relative z-10">
-					<NotesDropdownMenu
-						note={note}
-						folders={folders}
-						activeFolder={activeFolder}
-						tags={tags}
-					/>
-				</div>
-			</div>
-		</article>
+			note={note}
+			tags={tags}
+			onSelectNote={onSelectNote}
+			formatDate={formatDate}
+		/>
 	);
 
 	return (
@@ -271,15 +514,13 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 					</div>
 				) : childFolders.length > 0 ? (
 					<div className="space-y-6 animate-fadeIn">
-						{groupedNotes.ungrouped.length > 0 && (
-							<div>
-								<h3 className="text-sm font-medium text-muted-foreground mb-2">
-									In {activeFolder?.name}
-								</h3>
-								<div className="space-y-2">
-									{groupedNotes.ungrouped.map(renderNoteItem)}
-								</div>
-							</div>
+						{groupedNotes.ungrouped.length > 0 && activeFolder && (
+							<CurrentFolderDropZone
+								folder={activeFolder}
+								onNoteDrop={handleNoteDrop}
+							>
+								{groupedNotes.ungrouped.map(renderNoteItem)}
+							</CurrentFolderDropZone>
 						)}
 
 						{Object.entries(groupedNotes.grouped).map(([folderId, folderNotes]) => {
@@ -287,20 +528,14 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 							if (!folder || folderNotes.length === 0) return null;
 
 							return (
-								<div key={folderId}>
-									<button
-										type="button"
-										onClick={() => setActiveFolder(folder)}
-										className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2 hover:text-foreground cursor-pointer transition-colors"
-									>
-										<FolderIcon size={14} />
-										{folder.name}
-										<ChevronRight size={14} />
-									</button>
-									<div className="space-y-2">
-										{folderNotes.map(renderNoteItem)}
-									</div>
-								</div>
+								<FolderSectionDropZone
+									key={folderId}
+									folder={folder}
+									onNoteDrop={handleNoteDrop}
+									onClick={() => setActiveFolder(folder)}
+								>
+									{folderNotes.map(renderNoteItem)}
+								</FolderSectionDropZone>
 							);
 						})}
 					</div>
