@@ -20,12 +20,12 @@ import Paragraph from "@yoopta/paragraph";
 import Table from "@yoopta/table";
 import Toolbar, { DefaultToolbarRender } from "@yoopta/toolbar";
 import Video from "@yoopta/video";
-import { Hash } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNotesStore } from "@/stores/useNotesStore";
 import type { Folder, Tag } from "@/types/notes";
 import { useLinkPreviewAutoConvert } from "../hooks/useLinkPreviewAutoConvert";
 import LinkPreviewPlugin from "./LinkPreview";
+import { TagSelector } from "./TagSelector";
 
 interface NoteCreateProps {
 	tags: Record<string, Tag>;
@@ -272,6 +272,31 @@ export const NoteCreate = ({
 		}
 	}, [registerBackHandler, handleBack]);
 
+	// Auto-save on unmount (when navigating to another module)
+	useEffect(() => {
+		return () => {
+			// Only save if there's content and hasn't been saved yet
+			if (!hasSavedRef.current && checkHasContent()) {
+				const currentTitle = titleValueRef.current;
+				const currentTags = selectedTagsRef.current;
+				const currentEditorValue = editorValueRef.current;
+				const content = JSON.stringify(currentEditorValue);
+
+				try {
+					hasSavedRef.current = true;
+					addNote({
+						title: currentTitle.trim() || "Untitled",
+						content,
+						tags: currentTags,
+						folder: activeFolder?.id || "inbox",
+					});
+				} catch (error) {
+					console.error("Failed to auto-save note on unmount:", error);
+				}
+			}
+		};
+	}, [addNote, activeFolder, checkHasContent]);
+
 	const handleTagToggle = (tagId: string) => {
 		setSelectedTags((prev) =>
 			prev.includes(tagId) ? prev.filter((t) => t !== tagId) : [...prev, tagId]
@@ -288,7 +313,7 @@ export const NoteCreate = ({
 	};
 
 	return (
-		<div className="h-full overflow-y-auto">
+		<div className="h-full overflow-y-auto bg-card">
 			<div className="max-w-4xl mx-auto px-8 py-6">
 				{/* Title */}
 				<input
@@ -301,29 +326,12 @@ export const NoteCreate = ({
 				/>
 
 				{/* Tags selector */}
-				<div className="flex items-center gap-2 mb-6">
-					<Hash size={16} className="text-muted-foreground" />
-					<div className="flex flex-wrap gap-2">
-						{Object.entries(tags).map(([tagId, tag]) => {
-							const isSelected = selectedTags.includes(tagId);
-							const Icon = tag.icon;
-							return (
-								<button
-									key={tagId}
-									type="button"
-									onClick={() => handleTagToggle(tagId)}
-									className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer ${
-										isSelected
-											? `bg-primary/10 text-primary border border-primary/30`
-											: `bg-muted text-muted-foreground hover:bg-accent border border-border`
-									}`}
-								>
-									{typeof Icon === "function" && <Icon size={12} />}
-									{tag.name}
-								</button>
-							);
-						})}
-					</div>
+				<div className="mb-6">
+					<TagSelector
+						tags={tags}
+						selectedTags={selectedTags}
+						onTagToggle={handleTagToggle}
+					/>
 				</div>
 
 				<div className="border-t pt-6">

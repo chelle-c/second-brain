@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { ConfirmationModal } from "@/components/ConfirmationModal";
 import { Button } from "@/components/ui/button";
 import { useHistoryStore } from "@/stores/useHistoryStore";
@@ -38,7 +39,7 @@ const DEFAULT_TAGS: Record<string, Tag> = {
 };
 
 export function NotesApp() {
-	const { notes, folders, tags, undo, redo, archiveNote, unarchiveNote, deleteNote, addTag } =
+	const { notes, folders, tags, undo, redo, archiveNote, unarchiveNote, deleteNote, restoreNote, addTag } =
 		useNotesStore();
 	const { canUndo, canRedo } = useHistoryStore();
 	const { notesDefaultFolder } = useSettingsStore();
@@ -87,6 +88,10 @@ export function NotesApp() {
 	useEffect(() => {
 		if (viewState !== "list" && activeFolder && lastActiveFolderRef.current) {
 			if (activeFolder.id !== lastActiveFolderRef.current.id) {
+				// If creating a note, trigger save handler first
+				if (viewState === "create" && createBackHandlerRef.current) {
+					createBackHandlerRef.current();
+				}
 				// Folder changed while viewing a note - close the note
 				setSelectedNoteId(null);
 				setViewState("list");
@@ -165,13 +170,22 @@ export function NotesApp() {
 		setViewState("view");
 	}, []);
 
-	const handleCreateNote = () => {
+	const handleCreateNote = useCallback((inFolder?: Folder) => {
+		if (inFolder) {
+			// Update the ref first so the folder change useEffect doesn't reset the view
+			lastActiveFolderRef.current = inFolder;
+			setActiveFolder(inFolder);
+		}
 		setViewState("create");
-	};
+	}, []);
 
 	// Handler for folder selection from sidebar
 	const handleFolderSelect = useCallback(
 		(folder: Folder | null) => {
+			// If we're creating a note, trigger the save handler first
+			if (viewState === "create" && createBackHandlerRef.current) {
+				createBackHandlerRef.current();
+			}
 			setActiveFolder(folder);
 			// If we're viewing or creating a note, go back to list
 			if (viewState !== "list") {
@@ -186,10 +200,30 @@ export function NotesApp() {
 
 	const handleArchiveToggle = useCallback(() => {
 		if (!selectedNote) return;
+		const noteTitle = selectedNote.title || "Untitled";
+
 		if (selectedNote.archived) {
 			unarchiveNote(selectedNote.id);
+			toast.success(`Unarchived "${noteTitle}"`, {
+				action: {
+					label: "Undo",
+					onClick: () => {
+						archiveNote(selectedNote.id);
+						toast.success("Note archived again");
+					},
+				},
+			});
 		} else {
 			archiveNote(selectedNote.id);
+			toast.success(`Archived "${noteTitle}"`, {
+				action: {
+					label: "Undo",
+					onClick: () => {
+						unarchiveNote(selectedNote.id);
+						toast.success("Note unarchived");
+					},
+				},
+			});
 		}
 		handleBackToList();
 	}, [selectedNote, archiveNote, unarchiveNote, handleBackToList]);
@@ -200,11 +234,24 @@ export function NotesApp() {
 
 	const confirmDelete = useCallback(() => {
 		if (selectedNote) {
+			const noteTitle = selectedNote.title || "Untitled";
+			const noteToRestore = { ...selectedNote };
+
 			deleteNote(selectedNote.id);
 			setShowDeleteConfirm(false);
 			handleBackToList();
+
+			toast.success(`Deleted "${noteTitle}"`, {
+				action: {
+					label: "Undo",
+					onClick: () => {
+						restoreNote(noteToRestore);
+						toast.success("Note restored");
+					},
+				},
+			});
 		}
-	}, [selectedNote, deleteNote, handleBackToList]);
+	}, [selectedNote, deleteNote, restoreNote, handleBackToList]);
 
 	const createBackHandlerRef = useRef<(() => void) | null>(null);
 
@@ -359,6 +406,7 @@ export function NotesApp() {
 							onSelectNote={handleSelectNote}
 							isCollapsed={isSidebarCollapsed}
 							onToggleCollapse={setIsSidebarCollapsed}
+							tags={allTags}
 						/>
 					}
 					content={<div className="h-full">{renderContent()}</div>}

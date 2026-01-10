@@ -1,7 +1,9 @@
 import type { Folder, Note, NotesFolders, Tag } from "@/types/notes";
 import type { DatabaseContext } from "../../types/storage";
 import { deepEqual } from "../utils";
+import { getIconNameFromComponent } from "@/components/IconPicker";
 import {
+	// Folder icons
 	Circle,
 	Club,
 	Diamond,
@@ -13,6 +15,40 @@ import {
 	Star,
 	Triangle,
 	X,
+	// Tag icons
+	Tag as TagIcon,
+	Bookmark,
+	Flag,
+	CheckCircle,
+	AlertCircle,
+	Lightbulb,
+	Zap,
+	Flame,
+	Target,
+	BookOpen,
+	FileText,
+	Edit3,
+	Code,
+	Link,
+	Paperclip,
+	List,
+	Calendar,
+	Clock,
+	User,
+	Users,
+	Home,
+	MapPin,
+	Globe,
+	Truck,
+	Mail,
+	Phone,
+	MessageCircle,
+	Music,
+	Play,
+	Coffee,
+	Gift,
+	Palette,
+	Settings,
 	type LucideIcon,
 } from "lucide-react";
 
@@ -28,6 +64,7 @@ interface NormalizedNote {
 }
 
 const ICON_MAP: Record<string, LucideIcon> = {
+	// Folder icons
 	Folder: FolderIcon,
 	Star: Star,
 	Heart: Heart,
@@ -39,15 +76,71 @@ const ICON_MAP: Record<string, LucideIcon> = {
 	Spade: Spade,
 	Diamond: Diamond,
 	Sparkles: Sparkles,
+	// Tag icons
+	Tag: TagIcon,
+	Bookmark: Bookmark,
+	Flag: Flag,
+	CheckCircle: CheckCircle,
+	AlertCircle: AlertCircle,
+	Lightbulb: Lightbulb,
+	Zap: Zap,
+	Flame: Flame,
+	Target: Target,
+	BookOpen: BookOpen,
+	FileText: FileText,
+	Edit3: Edit3,
+	Code: Code,
+	Link: Link,
+	Paperclip: Paperclip,
+	List: List,
+	Calendar: Calendar,
+	Clock: Clock,
+	User: User,
+	Users: Users,
+	Home: Home,
+	MapPin: MapPin,
+	Globe: Globe,
+	Truck: Truck,
+	Mail: Mail,
+	Phone: Phone,
+	MessageCircle: MessageCircle,
+	Music: Music,
+	Play: Play,
+	Coffee: Coffee,
+	Gift: Gift,
+	Palette: Palette,
+	Settings: Settings,
 };
 
 const getIconName = (icon: LucideIcon | undefined): string | null => {
 	if (!icon) return null;
 
+	// 1. First try reference comparison with ICON_MAP (works for icons loaded from DB)
 	for (const [name, component] of Object.entries(ICON_MAP)) {
 		if (component === icon) {
 			return name;
 		}
+	}
+
+	// 2. Try getIconNameFromComponent (handles icons selected from IconPicker)
+	const fromIconPicker = getIconNameFromComponent(icon);
+	if (fromIconPicker && ICON_MAP[fromIconPicker]) {
+		return fromIconPicker;
+	}
+
+	// 3. Try displayName property directly (Lucide icons have this set)
+	const iconComponent = icon as unknown as {
+		displayName?: string;
+		name?: string;
+	};
+	const extractedName = iconComponent.displayName || iconComponent.name;
+	if (extractedName && ICON_MAP[extractedName]) {
+		return extractedName;
+	}
+
+	// 4. Return displayName even if not in ICON_MAP (as last resort)
+	if (extractedName) {
+		return extractedName;
 	}
 
 	return null;
@@ -97,7 +190,26 @@ export class NotesStorage {
 
 	hasTagsChanged(newTags: Record<string, Tag>): boolean {
 		if (!this.context.cache.tags) return true;
-		return !deepEqual(this.context.cache.tags, newTags);
+
+		// Normalize tags by converting icons to names for comparison
+		// This avoids issues with different function references for the same icon
+		const normalizeTagsForComparison = (tags: Record<string, Tag>) => {
+			const normalized: Record<string, { id: string; name: string; color: string; iconName: string | null }> = {};
+			for (const [id, tag] of Object.entries(tags)) {
+				normalized[id] = {
+					id: tag.id,
+					name: tag.name,
+					color: tag.color,
+					iconName: getIconName(tag.icon),
+				};
+			}
+			return normalized;
+		};
+
+		return !deepEqual(
+			normalizeTagsForComparison(this.context.cache.tags),
+			normalizeTagsForComparison(newTags)
+		);
 	}
 
 	// Convert old folder structure to new flat structure
@@ -513,11 +625,14 @@ export class NotesStorage {
 
 			const tags: Record<string, Tag> = {};
 			results.forEach((row) => {
+				// Deserialize icon name back to component
+				const iconComponent = row.icon && ICON_MAP[row.icon] ? ICON_MAP[row.icon] : TagIcon;
+
 				tags[row.id] = {
 					id: row.id,
 					name: row.name,
 					color: row.color,
-					icon: row.icon as unknown as Tag["icon"],
+					icon: iconComponent,
 				};
 			});
 
@@ -535,16 +650,8 @@ export class NotesStorage {
 			await this.context.db.execute("DELETE FROM tags");
 
 			for (const [, tag] of Object.entries(tags)) {
-				let iconName = "Hash";
-				if (typeof tag.icon === "function") {
-					const iconComponent = tag.icon as unknown as {
-						displayName?: string;
-						name?: string;
-					};
-					iconName = iconComponent.displayName || iconComponent.name || "Hash";
-				} else if (typeof tag.icon === "string") {
-					iconName = tag.icon;
-				}
+				// Use getIconName helper for consistent icon name extraction
+				const iconName = getIconName(tag.icon) || "Tag";
 
 				await this.context.db.execute(
 					`INSERT INTO tags (id, name, color, icon)

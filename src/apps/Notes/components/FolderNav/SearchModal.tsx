@@ -1,7 +1,7 @@
-import { Calendar, FileText, Folder, FolderOpen, Search, X } from "lucide-react";
+import { Calendar, Clock, FileText, Folder, FolderOpen, Search, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Modal } from "@/components/Modal";
-import type { Folder as FolderType, Note } from "@/types/notes";
+import type { Folder as FolderType, Note, Tag } from "@/types/notes";
 
 type FilterMode = "all" | "folders" | "notes";
 
@@ -10,6 +10,7 @@ interface SearchModalProps {
 	onClose: () => void;
 	notes: Note[];
 	folders: FolderType[];
+	tags: Record<string, Tag>;
 	onSelectNote: (noteId: string, folderId: string) => void;
 }
 
@@ -20,8 +21,11 @@ interface NoteResult {
 	folderId: string;
 	folderName: string;
 	createdAt: Date;
+	updatedAt: Date;
 	archived: boolean;
 	contentPreview: string;
+	tags: string[];
+	matchedByTag: boolean;
 }
 
 interface FolderResult {
@@ -39,6 +43,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 	onClose,
 	notes,
 	folders,
+	tags,
 	onSelectNote,
 }) => {
 	const [searchTerm, setSearchTerm] = useState("");
@@ -125,6 +130,10 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 
 		const term = searchTerm.toLowerCase();
 
+		// Check if searching by tag (using # prefix)
+		const isTagSearch = term.startsWith("#");
+		const tagSearchTerm = isTagSearch ? term.slice(1).trim() : "";
+
 		const noteResults: NoteResult[] = notes
 			.map((note) => {
 				const blocks = extractBlocksFromContent(note.content);
@@ -132,15 +141,33 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 				const matchingBlock = blocks.find((block) =>
 					block.toLowerCase().includes(term)
 				);
-				return { note, blocks, matchingBlock };
+
+				// Check if any tag matches (by name)
+				const matchingTag = isTagSearch && tagSearchTerm
+					? note.tags?.some((tagId) => {
+							const tag = tags[tagId];
+							return tag?.name.toLowerCase().includes(tagSearchTerm);
+					  })
+					: note.tags?.some((tagId) => {
+							const tag = tags[tagId];
+							return tag?.name.toLowerCase().includes(term);
+					  });
+
+				return { note, blocks, matchingBlock, matchingTag };
 			})
-			.filter(({ note, matchingBlock }) => {
+			.filter(({ note, matchingBlock, matchingTag }) => {
+				// For tag search with # prefix, only match by tag
+				if (isTagSearch) {
+					return matchingTag;
+				}
 				// Check title match
 				if (note.title.toLowerCase().includes(term)) return true;
+				// Check tag match
+				if (matchingTag) return true;
 				// Check if any block matches
 				return matchingBlock !== undefined;
 			})
-			.map(({ note, matchingBlock }) => {
+			.map(({ note, matchingBlock, matchingTag }) => {
 				// Use the matching block as preview, truncated to 120 chars
 				const preview = matchingBlock?.trim() || "";
 				const contentPreview = preview.length > 120
@@ -154,25 +181,30 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 					folderId: note.folder,
 					folderName: getFolderName(note.folder),
 					createdAt: note.createdAt,
+					updatedAt: note.updatedAt,
 					archived: note.archived,
 					contentPreview,
+					tags: note.tags || [],
+					matchedByTag: matchingTag || false,
 				};
 			});
 
-		const folderResults: FolderResult[] = folders
-			.filter((folder) => folder.name.toLowerCase().includes(term))
-			.map((folder) => ({
-				type: "folder" as const,
-				id: folder.id,
-				name: folder.name,
-				parentName: getParentFolderName(folder.parentId),
-				noteCount: getNoteCountForFolder(folder.id),
-			}));
+		const folderResults: FolderResult[] = isTagSearch
+			? [] // Don't search folders when using # tag search
+			: folders
+					.filter((folder) => folder.name.toLowerCase().includes(term))
+					.map((folder) => ({
+						type: "folder" as const,
+						id: folder.id,
+						name: folder.name,
+						parentName: getParentFolderName(folder.parentId),
+						noteCount: getNoteCountForFolder(folder.id),
+					}));
 
 		const allResults: SearchResult[] = [...folderResults, ...noteResults];
 
 		return { noteResults, folderResults, allResults };
-	}, [searchTerm, notes, folders]);
+	}, [searchTerm, notes, folders, tags]);
 
 	const filteredResults = useMemo(() => {
 		switch (filterMode) {
@@ -241,51 +273,93 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 		return noteDate.toLocaleDateString();
 	};
 
-	const renderNoteResult = (result: NoteResult, index: number) => (
-		<button
-			key={`note-${result.id}`}
-			type="button"
-			data-index={index}
-			onClick={() => {
-				onSelectNote(result.id, result.folderId);
-				onClose();
-			}}
-			className={`w-full text-left p-3 rounded-lg border transition-all ${
-				index === selectedIndex
-					? "border-primary bg-primary/10"
-					: "border-border hover:bg-accent"
-			}`}
-			role="option"
-			aria-selected={index === selectedIndex}
-		>
-			<div className="flex items-start justify-between gap-4">
-				<div className="flex-1 min-w-0">
-					<div className="flex items-center gap-2">
-						<FileText size={14} className="shrink-0 text-muted-foreground" />
-						<h4 className="font-medium truncate">{result.title}</h4>
-					</div>
-					{result.contentPreview && (
-						<p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-							{result.contentPreview}
-						</p>
-					)}
-					<div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-						<span className="flex items-center gap-1">
-							<Folder size={12} />
-							{result.folderName}
-						</span>
-						<span className="flex items-center gap-1">
-							<Calendar size={12} />
-							{formatDate(result.createdAt)}
-						</span>
-						{result.archived && (
-							<span className="text-orange-600">Archived</span>
+	const renderNoteResult = (result: NoteResult, index: number) => {
+		const hasUpdated = result.updatedAt &&
+			new Date(result.updatedAt).getTime() !== new Date(result.createdAt).getTime();
+
+		return (
+			<button
+				key={`note-${result.id}`}
+				type="button"
+				data-index={index}
+				onClick={() => {
+					onSelectNote(result.id, result.folderId);
+					onClose();
+				}}
+				className={`w-full text-left p-3 rounded-lg border transition-all ${
+					index === selectedIndex
+						? "border-primary bg-primary/10"
+						: "border-border hover:bg-accent"
+				}`}
+				role="option"
+				aria-selected={index === selectedIndex}
+			>
+				<div className="flex items-start justify-between gap-4">
+					<div className="flex-1 min-w-0">
+						<div className="flex items-center gap-2">
+							<FileText size={14} className="shrink-0 text-muted-foreground" />
+							<h4 className="font-medium truncate">{result.title}</h4>
+							{result.matchedByTag && (
+								<span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded">
+									tag match
+								</span>
+							)}
+						</div>
+
+						{/* Tags display */}
+						{result.tags.length > 0 && (
+							<div className="flex items-center gap-1 mt-1.5 flex-wrap">
+								{result.tags.slice(0, 4).map((tagId) => {
+									const tag = tags[tagId];
+									if (!tag) return null;
+									const Icon = tag.icon;
+									return (
+										<span
+											key={tagId}
+											className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-muted text-muted-foreground rounded text-xs"
+										>
+											{typeof Icon === "function" && <Icon size={10} />}
+											{tag.name}
+										</span>
+									);
+								})}
+								{result.tags.length > 4 && (
+									<span className="text-xs text-muted-foreground">
+										+{result.tags.length - 4}
+									</span>
+								)}
+							</div>
 						)}
+
+						{result.contentPreview && (
+							<p className="text-sm text-muted-foreground mt-1.5 line-clamp-2">
+								{result.contentPreview}
+							</p>
+						)}
+						<div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground flex-wrap">
+							<span className="flex items-center gap-1">
+								<Folder size={12} />
+								{result.folderName}
+							</span>
+							<span className="flex items-center gap-1" title="Created">
+								<Calendar size={12} />
+								{formatDate(result.createdAt)}
+							</span>
+							{hasUpdated && (
+								<span className="flex items-center gap-1" title="Updated">
+									<Clock size={12} />
+									{formatDate(result.updatedAt)}
+								</span>
+							)}
+							{result.archived && (
+								<span className="text-orange-600">Archived</span>
+							)}
+						</div>
 					</div>
 				</div>
-			</div>
-		</button>
-	);
+			</button>
+		);
+	};
 
 	const renderFolderResult = (result: FolderResult, index: number) => (
 		<div
@@ -386,7 +460,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 						value={searchTerm}
 						onChange={(e) => setSearchTerm(e.target.value)}
 						onKeyDown={handleKeyDown}
-						placeholder="Search by title, content, or folder name..."
+						placeholder="Search by title, content, folder name, or #tag..."
 						className="w-full pl-10 pr-10 py-3 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
 					/>
 					{searchTerm && (
@@ -459,7 +533,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 
 				{/* Help Text */}
 				<div className="flex items-center justify-between text-xs text-muted-foreground">
-					<span>Use ↑↓ to navigate, Enter to select, Tab to switch filter</span>
+					<span>↑↓ navigate, Enter select, Tab filter, # for tag search</span>
 					{searchTerm && filteredResults.length > 0 && (
 						<span>
 							{filteredResults.length}{" "}

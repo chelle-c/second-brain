@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ConfirmationModal } from "@/components/ConfirmationModal";
-import { Modal } from "@/components/Modal";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -11,10 +10,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { buildFolderTree, canMoveFolder } from "@/lib/folderHelpers";
 import { useNotesStore } from "@/stores/useNotesStore";
-import type { Folder, Note } from "@/types/notes";
+import type { Folder, Note, Tag } from "@/types/notes";
 import { ActionButton } from "./ActionButton";
 import { ContextMenu } from "./ContextMenu";
-import { FolderIconPicker } from "./FolderIconPicker";
 import { FolderItem } from "./FolderItem";
 import { SearchModal } from "./SearchModal";
 import type { DeleteConfirmation, DraggedFolder, FolderSortOption } from "./types";
@@ -39,12 +37,13 @@ interface FolderNavProps {
 	getFolderById: (id: string) => Folder | undefined;
 	setActiveTags: (tags: string[]) => void;
 	getNoteCount: (folderId: string, archived?: boolean, includeDescendants?: boolean) => number;
-	onCreateNote: () => void;
+	onCreateNote: (inFolder?: Folder) => void;
 	viewMode: "active" | "archived";
 	setViewMode: (mode: "active" | "archived") => void;
 	onSelectNote: (noteId: string) => void;
 	isCollapsed: boolean;
 	onToggleCollapse: (collapsed: boolean) => void;
+	tags: Record<string, Tag>;
 }
 
 export const FolderNav = ({
@@ -60,6 +59,7 @@ export const FolderNav = ({
 	onSelectNote,
 	isCollapsed,
 	onToggleCollapse,
+	tags,
 }: FolderNavProps) => {
 	const {
 		notes,
@@ -76,7 +76,6 @@ export const FolderNav = ({
 	const [expandedFolders, setExpandedFolders] = useState(new Set<string>());
 	const [sortBy, setSortBy] = useState<FolderSortOption>("name-asc");
 	const [showSearchModal, setShowSearchModal] = useState(false);
-	const [showIconPicker, setShowIconPicker] = useState<string | null>(null);
 
 	// Edit State
 	const [editingFolder, setEditingFolder] = useState<string | null>(null);
@@ -375,14 +374,32 @@ export const FolderNav = ({
 	const confirmDelete = useCallback(() => {
 		if (!deleteConfirmation) return;
 
+		const folderToDelete = folders.find((f) => f.id === deleteConfirmation.id);
+		const folderName = deleteConfirmation.name;
+
 		deleteFolder(deleteConfirmation.id);
 
 		if (activeFolder?.id === deleteConfirmation.id) {
 			setActiveFolder(inbox);
 		}
 
+		// Show toast with undo
+		toast.success(`Deleted folder "${folderName}"`, {
+			action: folderToDelete
+				? {
+						label: "Undo",
+						onClick: () => {
+							// Restore the folder using the store's restoreFolder method
+							const { restoreFolder } = useNotesStore.getState();
+							restoreFolder(folderToDelete);
+							toast.success("Folder restored");
+						},
+				  }
+				: undefined,
+		});
+
 		setDeleteConfirmation(null);
-	}, [deleteConfirmation, deleteFolder, activeFolder, setActiveFolder, inbox]);
+	}, [deleteConfirmation, deleteFolder, activeFolder, setActiveFolder, inbox, folders]);
 
 	const addNewFolder = useCallback(() => {
 		if (newFolderName.trim()) {
@@ -562,10 +579,31 @@ export const FolderNav = ({
 	const handleToggleArchive = useCallback(() => {
 		if (!activeFolder || activeFolder.id === "inbox") return;
 
-		if (activeFolder.archived) {
+		const folderName = activeFolder.name;
+		const wasArchived = activeFolder.archived;
+
+		if (wasArchived) {
 			unarchiveFolder(activeFolder.id);
+			toast.success(`Unarchived folder "${folderName}"`, {
+				action: {
+					label: "Undo",
+					onClick: () => {
+						archiveFolder(activeFolder.id);
+						toast.success("Folder archived again");
+					},
+				},
+			});
 		} else {
 			archiveFolder(activeFolder.id);
+			toast.success(`Archived folder "${folderName}"`, {
+				action: {
+					label: "Undo",
+					onClick: () => {
+						unarchiveFolder(activeFolder.id);
+						toast.success("Folder unarchived");
+					},
+				},
+			});
 		}
 	}, [activeFolder, archiveFolder, unarchiveFolder]);
 
@@ -626,6 +664,7 @@ export const FolderNav = ({
 						draggable={!isEditing && !isCreating && viewMode !== "archived"}
 						onNoteDrop={(item) => handleNoteDrop(folder.id, item)}
 						canDropNote={(item) => canDropNoteOnFolder(folder.id, item)}
+						onChangeIcon={(icon) => updateFolder(folder.id, { icon })}
 					/>
 
 					{showNewFolder && newFolderParent === folder.id && (
@@ -699,6 +738,7 @@ export const FolderNav = ({
 				onClose={() => setShowSearchModal(false)}
 				notes={notes}
 				folders={folders}
+				tags={tags}
 				onSelectNote={(noteId, folderId) => {
 					const folder = getFolderById(folderId);
 					setActiveFolder(folder || null);
@@ -707,23 +747,6 @@ export const FolderNav = ({
 				}}
 			/>
 
-			{showIconPicker && (
-				<Modal
-					isOpen={true}
-					onClose={() => setShowIconPicker(null)}
-					title="Choose Folder Icon"
-					description="Select an icon for your folder"
-					className="sm:max-w-lg"
-				>
-					<FolderIconPicker
-						currentIcon={getFolderById(showIconPicker)?.icon}
-						onSelect={(icon) => {
-							updateFolder(showIconPicker, { icon });
-							setShowIconPicker(null);
-						}}
-					/>
-				</Modal>
-			)}
 
 			{contextMenu && (
 				<ContextMenu
@@ -732,6 +755,11 @@ export const FolderNav = ({
 					folderId={contextMenu.folderId}
 					folderName={getFolderById(contextMenu.folderId)?.name || ""}
 					onClose={() => setContextMenu(null)}
+					onCreateNote={() => {
+						const folder = getFolderById(contextMenu.folderId);
+						onCreateNote(folder);
+						setContextMenu(null);
+					}}
 					onRename={(id, name) => {
 						startEditingFolder(id, name);
 						setContextMenu(null);
@@ -743,10 +771,6 @@ export const FolderNav = ({
 					onAddSubfolder={(id) => {
 						setShowNewFolder(true);
 						setNewFolderParent(id);
-						setContextMenu(null);
-					}}
-					onChangeIcon={(id) => {
-						setShowIconPicker(id);
 						setContextMenu(null);
 					}}
 					onArchive={handleToggleArchive}

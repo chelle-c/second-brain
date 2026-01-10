@@ -5,7 +5,7 @@ import {
 	Pencil,
 	Plus,
 	Trash2,
-	Tag as TagIcon,
+	type LucideIcon,
 } from "lucide-react";
 import type React from "react";
 import { useCallback, useState } from "react";
@@ -14,6 +14,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover";
+import { IconPicker, DEFAULT_TAG_ICON } from "@/components/IconPicker";
 import { useNotesStore } from "@/stores/useNotesStore";
 import type { Tag } from "@/types/notes";
 
@@ -46,7 +52,11 @@ export const TagManagementModal: React.FC<TagManagementModalProps> = ({ isOpen, 
 
 	const [editingTagId, setEditingTagId] = useState<string | null>(null);
 	const [editingName, setEditingName] = useState("");
+	const [editingIcon, setEditingIcon] = useState<LucideIcon | null>(null);
+	const [showEditIconPicker, setShowEditIconPicker] = useState(false);
 	const [newTagName, setNewTagName] = useState("");
+	const [newTagIcon, setNewTagIcon] = useState<LucideIcon>(DEFAULT_TAG_ICON);
+	const [showNewIconPicker, setShowNewIconPicker] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
 	// Get all tags as array
@@ -60,15 +70,18 @@ export const TagManagementModal: React.FC<TagManagementModalProps> = ({ isOpen, 
 		[notes]
 	);
 
-	const handleStartEdit = (tagId: string, currentName: string) => {
+	const handleStartEdit = (tagId: string, currentName: string, currentIcon: LucideIcon | undefined) => {
 		setEditingTagId(tagId);
 		setEditingName(currentName);
+		setEditingIcon(currentIcon || DEFAULT_TAG_ICON);
 		setError(null);
 	};
 
 	const handleCancelEdit = () => {
 		setEditingTagId(null);
 		setEditingName("");
+		setEditingIcon(null);
+		setShowEditIconPicker(false);
 		setError(null);
 	};
 
@@ -92,7 +105,10 @@ export const TagManagementModal: React.FC<TagManagementModalProps> = ({ isOpen, 
 			return;
 		}
 
-		updateTag(editingTagId, { name: trimmedName });
+		updateTag(editingTagId, {
+			name: trimmedName,
+			icon: editingIcon || DEFAULT_TAG_ICON,
+		});
 		handleCancelEdit();
 	};
 
@@ -126,11 +142,13 @@ export const TagManagementModal: React.FC<TagManagementModalProps> = ({ isOpen, 
 		addTag({
 			id: tagId,
 			name: trimmedName,
-			icon: TagIcon,
+			icon: newTagIcon,
 			color: "#6b7280",
 		});
 
 		setNewTagName("");
+		setNewTagIcon(DEFAULT_TAG_ICON);
+		setShowNewIconPicker(false);
 		setError(null);
 	};
 
@@ -160,6 +178,11 @@ export const TagManagementModal: React.FC<TagManagementModalProps> = ({ isOpen, 
 		}
 	};
 
+	// Helper to get display icon
+	const getDisplayIcon = (icon: LucideIcon | undefined): LucideIcon => {
+		return icon || DEFAULT_TAG_ICON;
+	};
+
 	return (
 		<Modal
 			isOpen={isOpen}
@@ -185,32 +208,54 @@ export const TagManagementModal: React.FC<TagManagementModalProps> = ({ isOpen, 
 						</p>
 					) : (
 						<div className="space-y-2 max-h-[300px] overflow-y-auto">
-							{tagList.map(({ id, name, icon: Icon }) => {
+							{tagList.map(({ id, name, icon }) => {
 								const usageCount = getTagUsageCount(id);
 								const isEditing = editingTagId === id;
+								const Icon = getDisplayIcon(icon);
+								const EditIcon = editingIcon || DEFAULT_TAG_ICON;
 
 								return (
 									<div
 										key={id}
 										className="flex items-center gap-2 p-2 rounded-lg border border-border bg-card"
 									>
-										{typeof Icon === "function" && (
-											<Icon
-												size={16}
-												className="text-muted-foreground shrink-0"
-											/>
-										)}
-
 										{isEditing ? (
-											<Input
-												value={editingName}
-												onChange={(e) => setEditingName(e.target.value)}
-												onKeyDown={(e) => handleKeyDown(e, "edit")}
-												className="flex-1 h-8"
-												autoFocus
-											/>
+											<>
+												{/* Icon picker for editing */}
+												<Popover open={showEditIconPicker} onOpenChange={setShowEditIconPicker}>
+													<PopoverTrigger asChild>
+														<button
+															type="button"
+															className="h-8 w-8 flex items-center justify-center border border-border rounded-md hover:bg-accent transition-colors shrink-0"
+															title="Change icon"
+														>
+															<EditIcon size={16} />
+														</button>
+													</PopoverTrigger>
+													<PopoverContent className="w-auto p-2" align="start" side="bottom">
+														<IconPicker
+															currentIcon={editingIcon || undefined}
+															onSelect={(newIcon) => {
+																setEditingIcon(newIcon);
+																setShowEditIconPicker(false);
+															}}
+															variant="compact"
+														/>
+													</PopoverContent>
+												</Popover>
+												<Input
+													value={editingName}
+													onChange={(e) => setEditingName(e.target.value)}
+													onKeyDown={(e) => handleKeyDown(e, "edit")}
+													className="flex-1 h-8"
+													autoFocus
+												/>
+											</>
 										) : (
-											<span className="flex-1 text-sm truncate">{name}</span>
+											<>
+												<Icon size={16} className="text-muted-foreground shrink-0" />
+												<span className="flex-1 text-sm truncate">{name}</span>
+											</>
 										)}
 
 										<span className="text-xs text-muted-foreground shrink-0">
@@ -244,7 +289,7 @@ export const TagManagementModal: React.FC<TagManagementModalProps> = ({ isOpen, 
 													type="button"
 													size="sm"
 													variant="ghost"
-													onClick={() => handleStartEdit(id, name)}
+													onClick={() => handleStartEdit(id, name, icon)}
 													className="h-7 w-7 p-0"
 													title="Edit tag"
 												>
@@ -275,6 +320,31 @@ export const TagManagementModal: React.FC<TagManagementModalProps> = ({ isOpen, 
 				<div className="space-y-2">
 					<Label className="text-sm font-medium">Add New Tag</Label>
 					<div className="flex gap-2">
+						{/* Icon picker for new tag */}
+						<Popover open={showNewIconPicker} onOpenChange={setShowNewIconPicker}>
+							<PopoverTrigger asChild>
+								<button
+									type="button"
+									className="h-9 w-9 flex items-center justify-center border border-border rounded-md hover:bg-accent transition-colors shrink-0"
+									title="Choose icon"
+								>
+									{(() => {
+										const NewIcon = newTagIcon;
+										return <NewIcon size={16} />;
+									})()}
+								</button>
+							</PopoverTrigger>
+							<PopoverContent className="w-auto p-2" align="start" side="bottom">
+								<IconPicker
+									currentIcon={newTagIcon}
+									onSelect={(icon) => {
+										setNewTagIcon(icon);
+										setShowNewIconPicker(false);
+									}}
+									variant="compact"
+								/>
+							</PopoverContent>
+						</Popover>
 						<Input
 							value={newTagName}
 							onChange={(e) => {

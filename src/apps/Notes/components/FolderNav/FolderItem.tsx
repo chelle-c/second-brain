@@ -1,6 +1,13 @@
 import { ChevronRight, Folder as FolderIcon, Inbox } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import type React from "react";
-import { useRef } from "react";
+import { useRef, useState } from "react";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover";
+import { IconPicker } from "@/components/IconPicker";
 import type { Folder, Note } from "@/types/notes";
 import { useDropZone, useDragState, type DragItem } from "@/hooks/useDragAndDrop";
 
@@ -35,6 +42,8 @@ interface FolderItemProps {
 	// Note drop handling
 	onNoteDrop?: (item: DragItem<Note>) => void;
 	canDropNote?: (item: DragItem<Note>) => boolean;
+	// Icon change
+	onChangeIcon?: (icon: LucideIcon) => void;
 }
 
 export const FolderItem: React.FC<FolderItemProps> = ({
@@ -66,9 +75,11 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 	isDragReady = false,
 	onNoteDrop,
 	canDropNote,
+	onChangeIcon,
 }) => {
 	const inputRef = useRef<HTMLInputElement>(null);
 	const { isDragging: isGlobalDragging, draggedItem } = useDragState();
+	const [showIconPicker, setShowIconPicker] = useState(false);
 
 	// Note drop zone handling
 	const {
@@ -167,9 +178,17 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 	const canAcceptNote = isDraggingNote && canDropNoteHere;
 	const showNotAllowed = isDraggingNote && isNoteOver && !canDropNoteHere;
 
+	const handleKeyDown = (e: React.KeyboardEvent) => {
+		if (e.key === "Enter" || e.key === " ") {
+			e.preventDefault();
+			onSelect();
+		}
+	};
+
 	return (
-		<button
-			type="button"
+		<div
+			role="button"
+			tabIndex={0}
 			className={`group relative w-full flex items-center rounded-lg transition-all text-left ${
 				isInbox ? "mb-2" : ""
 			} ${isActive ? "bg-primary/10 text-primary" : "hover:bg-accent"} ${
@@ -190,6 +209,7 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 			onDragEnd={onDragEnd}
 			onContextMenu={onContextMenu}
 			onClick={onSelect}
+			onKeyDown={handleKeyDown}
 			style={{
 				paddingLeft: isInbox ? "8px" : `${depth * 12 + 8}px`,
 				userSelect: "none",
@@ -213,11 +233,44 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 					isInbox ? "py-2 px-1" : "py-1.5 px-1"
 				}`}
 			>
-				<IconComponent
-					size={isInbox ? 20 : 16}
-					className="shrink-0"
-					key={`icon-${folder.id}-${folder.icon?.name || "default"}`}
-				/>
+				{!isInbox && onChangeIcon ? (
+					<Popover open={showIconPicker} onOpenChange={setShowIconPicker}>
+						<PopoverTrigger asChild>
+							<button
+								type="button"
+								onClick={(e) => {
+									e.stopPropagation();
+									setShowIconPicker(true);
+								}}
+								className="shrink-0 p-0.5 -m-0.5 rounded hover:bg-accent/50 transition-colors"
+								title="Change icon"
+							>
+								<IconComponent size={16} />
+							</button>
+						</PopoverTrigger>
+						<PopoverContent
+							className="w-auto p-2"
+							align="start"
+							side="right"
+							onClick={(e) => e.stopPropagation()}
+						>
+							<IconPicker
+								currentIcon={folder.icon}
+								onSelect={(icon) => {
+									onChangeIcon(icon);
+									setShowIconPicker(false);
+								}}
+								variant="compact"
+							/>
+						</PopoverContent>
+					</Popover>
+				) : (
+					<IconComponent
+						size={isInbox ? 20 : 16}
+						className="shrink-0"
+						key={`icon-${folder.id}-${folder.icon?.name || "default"}`}
+					/>
+				)}
 				<span className={`font-medium truncate ${isInbox ? "text-base" : "text-sm"}`}>
 					{folder.name}
 				</span>
@@ -232,6 +285,6 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 					{noteCount}
 				</span>
 			</div>
-		</button>
+		</div>
 	);
 };
