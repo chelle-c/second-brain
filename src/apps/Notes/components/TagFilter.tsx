@@ -75,7 +75,7 @@ export const TagFilter = ({ tags, activeTags, setActiveTags }: TagFilterProps) =
 					<ChevronDown size={14} />
 				</button>
 			</PopoverTrigger>
-			<PopoverContent className="min-w-[180px] w-auto p-2" align="start">
+			<PopoverContent className="min-w-[152px] w-auto p-2" align="start">
 				<div className="space-y-1">
 					{/* Clear all button */}
 					{activeCount > 0 && (

@@ -144,9 +144,9 @@ const DraggableNoteItem: React.FC<{
 										return (
 											<span
 												key={`${tagId}-${iconKey}`}
-												className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-muted text-muted-foreground rounded text-xs"
+												className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-secondary text-foreground rounded-md text-xs"
 											>
-												<Icon size={10} />
+												<Icon size={12} />
 												<span className="max-w-[60px] truncate">{tag.name}</span>
 											</span>
 										);

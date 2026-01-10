@@ -49,6 +49,15 @@ import {
 	Gift,
 	Palette,
 	Settings,
+	Moon,
+	Sun,
+	Paintbrush,
+	Coins,
+	Banknote,
+	Glasses,
+	Landmark,
+	Key,
+	WalletCards,
 	type LucideIcon,
 } from "lucide-react";
 
@@ -110,6 +119,15 @@ const ICON_MAP: Record<string, LucideIcon> = {
 	Gift: Gift,
 	Palette: Palette,
 	Settings: Settings,
+	Moon: Moon,
+	Sun: Sun,
+	Paintbrush: Paintbrush,
+	Coins: Coins,
+	Banknote: Banknote,
+	Glasses: Glasses,
+	Landmark: Landmark,
+	Key: Key,
+	WalletCards: WalletCards,
 };
 
 const getIconName = (icon: LucideIcon | undefined): string | null => {

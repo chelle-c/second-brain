@@ -147,7 +147,7 @@ export const NotesDropdownMenu: React.FC<NotesDropdownMenuProps> = ({ note, fold
 						width="16"
 						height="20"
 						viewBox="0 0 16 20"
-						className="text-border flex-shrink-0"
+						className="text-border shrink-0"
 					>
 						{i === depth - 1 ? (
 							// Last indicator shows the bend
@@ -186,27 +186,37 @@ export const NotesDropdownMenu: React.FC<NotesDropdownMenuProps> = ({ note, fold
 						Move to folder
 					</DropdownMenuSubTrigger>
 					<DropdownMenuPortal>
-						<DropdownMenuSubContent className="max-h-[300px] overflow-y-auto">
-							{allFolders.map(({ folder, depth }) => {
-								const isCurrentFolder = folder.id === note.folder;
-								const IconComponent = getFolderIconComponent(folder);
+						<DropdownMenuSubContent className="py-1">
+							<div className="max-h-[300px] overflow-y-auto p-2">
+								{allFolders.map(({ folder, depth }) => {
+									const isCurrentFolder = folder.id === note.folder;
+									const IconComponent = getFolderIconComponent(folder);
 
-								return (
-									<DropdownMenuItem
-										key={folder.id}
-										onClick={() => !isCurrentFolder && moveNote(note.id, folder.id)}
-										className={`cursor-pointer ${isCurrentFolder ? "opacity-50 cursor-not-allowed" : ""}`}
-										disabled={isCurrentFolder}
-									>
-										<NestedIndicator depth={depth} />
-										<IconComponent size={14} className="mr-2 flex-shrink-0" />
-										<span className="truncate">{folder.name}</span>
-										{isCurrentFolder && (
-											<span className="ml-auto text-xs text-muted-foreground">(current)</span>
-										)}
-									</DropdownMenuItem>
-								);
-							})}
+									return (
+										<DropdownMenuItem
+											key={folder.id}
+											onClick={() =>
+												!isCurrentFolder && moveNote(note.id, folder.id)
+											}
+											className={`cursor-pointer ${
+												isCurrentFolder
+													? "opacity-50 cursor-not-allowed"
+													: ""
+											}`}
+											disabled={isCurrentFolder}
+										>
+											<NestedIndicator depth={depth} />
+											<IconComponent size={14} className="mr-2 shrink-0" />
+											<span className="truncate">{folder.name}</span>
+											{isCurrentFolder && (
+												<span className="ml-auto text-xs text-muted-foreground">
+													(current)
+												</span>
+											)}
+										</DropdownMenuItem>
+									);
+								})}
+							</div>
 						</DropdownMenuSubContent>
 					</DropdownMenuPortal>
 				</DropdownMenuSub>
