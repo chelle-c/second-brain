@@ -283,15 +283,51 @@ const createSampleTags = (): Record<string, Tag> => {
 	};
 };
 
+// Helper to create Tiptap document JSON
+const tiptapDoc = (content: object[]) => JSON.stringify({ type: "doc", content });
+const tiptapParagraph = (text: string, marks?: { type: string; attrs?: object }[]) => ({
+	type: "paragraph",
+	content: text ? [{ type: "text", text, ...(marks && { marks }) }] : undefined,
+});
+const tiptapHeading = (level: number, text: string) => ({
+	type: "heading",
+	attrs: { level },
+	content: text ? [{ type: "text", text }] : undefined,
+});
+const tiptapBulletList = (items: string[]) => ({
+	type: "bulletList",
+	content: items.map((text) => ({
+		type: "listItem",
+		content: [tiptapParagraph(text)],
+	})),
+});
+const tiptapOrderedList = (items: string[]) => ({
+	type: "orderedList",
+	content: items.map((text) => ({
+		type: "listItem",
+		content: [tiptapParagraph(text)],
+	})),
+});
+const tiptapTaskList = (items: { text: string; checked: boolean }[]) => ({
+	type: "taskList",
+	content: items.map(({ text, checked }) => ({
+		type: "taskItem",
+		attrs: { checked },
+		content: [tiptapParagraph(text)],
+	})),
+});
+
 // Sample notes with folders and subfolders - using `folder` instead of `folderId`
+// Notes now use Tiptap JSON format
 const createSampleNotes = (): Note[] => {
 	return [
 		// Inbox notes - more variety
 		{
 			id: generateId(),
 			title: "Welcome to Second Brain",
-			content:
-				'{"1ca30168-adf8-47d0-ac5b-97b09152a311":{"id":"1ca30168-adf8-47d0-ac5b-97b09152a311","type":"Paragraph","value":[{"id":"603209ec-513e-41df-a2a6-85b9ccf27337","type":"paragraph","children":[{"text":"This ","highlight":{"color":"#CC772F"}},{"text":"is a test note in your "},{"text":"second brain app","highlight":{"color":"#B35588"}},{"text":". Use it to capture ideas, thoughts, and important information."}]}],"meta":{"order":0,"depth":0,"align":"left"}}}',
+			content: tiptapDoc([
+				tiptapParagraph("This is a test note in your second brain app. Use it to capture ideas, thoughts, and important information."),
+			]),
 			tags: ["reference"],
 			folder: "inbox",
 			createdAt: daysAgo(7),
@@ -301,7 +337,7 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Quick thought about productivity",
-			content: '{"1":{"id":"1","type":"Paragraph","value":[{"id":"1","type":"paragraph","children":[{"text":"Need to organize my task management system better."}]}],"meta":{"order":0,"depth":0}}}',
+			content: tiptapDoc([tiptapParagraph("Need to organize my task management system better.")]),
 			tags: ["ideas"],
 			folder: "inbox",
 			createdAt: daysAgo(1),
@@ -311,7 +347,7 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Call back John about the project",
-			content: '{"1":{"id":"1","type":"Paragraph","value":[{"id":"1","type":"paragraph","children":[{"text":"Remember to call John before Friday to discuss the new requirements."}]}],"meta":{"order":0,"depth":0}}}',
+			content: tiptapDoc([tiptapParagraph("Remember to call John before Friday to discuss the new requirements.")]),
 			tags: ["actions", "urgent"],
 			folder: "inbox",
 			createdAt: daysAgo(0),
@@ -321,7 +357,7 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Shopping list for weekend",
-			content: '{"1":{"id":"1","type":"BulletedList","value":[{"id":"1","type":"bulleted-list","children":[{"text":"Groceries, cleaning supplies, birthday gift"}]}],"meta":{"order":0,"depth":0}}}',
+			content: tiptapDoc([tiptapBulletList(["Groceries", "Cleaning supplies", "Birthday gift"])]),
 			tags: ["personal"],
 			folder: "inbox",
 			createdAt: daysAgo(2),
@@ -331,7 +367,7 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Meeting notes - unsorted",
-			content: '{"1":{"id":"1","type":"Paragraph","value":[{"id":"1","type":"paragraph","children":[{"text":"Need to file this in the right folder later."}]}],"meta":{"order":0,"depth":0}}}',
+			content: tiptapDoc([tiptapParagraph("Need to file this in the right folder later.")]),
 			tags: ["meeting"],
 			folder: "inbox",
 			createdAt: daysAgo(3),
@@ -343,8 +379,10 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Q1 Planning Overview",
-			content:
-				'{"2f6a7c52-135e-43af-a061-b5da96d91fd4":{"id":"2f6a7c52-135e-43af-a061-b5da96d91fd4","type":"HeadingTwo","meta":{"order":0,"depth":0},"value":[{"id":"eb800f95-317f-4e11-9db6-b00d5a3bfb1b","type":"heading-two","props":{"nodeType":"block"},"children":[{"text":"Key milestones for Q1"}]}]}}',
+			content: tiptapDoc([
+				tiptapHeading(2, "Key milestones for Q1"),
+				tiptapOrderedList(["Complete feature design", "Launch beta", "User testing"]),
+			]),
 			tags: ["reference", "goal"],
 			folder: "work",
 			createdAt: daysAgo(5),
@@ -354,7 +392,7 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Performance Review Notes",
-			content: '{"1":{"id":"1","type":"Paragraph","value":[{"id":"1","type":"paragraph","children":[{"text":"Self-assessment for annual review."}]}],"meta":{"order":0,"depth":0}}}',
+			content: tiptapDoc([tiptapParagraph("Self-assessment for annual review.")]),
 			tags: ["personal", "reference"],
 			folder: "work",
 			createdAt: daysAgo(14),
@@ -366,8 +404,11 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Team Sync - Weekly Standup",
-			content:
-				'{"910a0709-5f63-46f8-af94-36b4cd3c0610":{"id":"910a0709-5f63-46f8-af94-36b4cd3c0610","type":"Paragraph","value":[{"id":"3ca41907-de40-47e4-9ee1-d54aa9fc4241","type":"paragraph","children":[{"text":"Discussed roadmap priorities. Action items: Review competitor analysis, prepare demo for stakeholders, schedule follow-up meeting."}]}],"meta":{"order":0,"depth":0}}}',
+			content: tiptapDoc([
+				tiptapParagraph("Discussed roadmap priorities."),
+				tiptapHeading(3, "Action items"),
+				tiptapBulletList(["Review competitor analysis", "Prepare demo for stakeholders", "Schedule follow-up meeting"]),
+			]),
 			tags: ["meeting", "actions"],
 			folder: "work_meetings",
 			createdAt: daysAgo(3),
@@ -377,7 +418,7 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Client Meeting - Acme Corp",
-			content: '{"1":{"id":"1","type":"Paragraph","value":[{"id":"1","type":"paragraph","children":[{"text":"Discussed new contract terms and project timeline."}]}],"meta":{"order":0,"depth":0}}}',
+			content: tiptapDoc([tiptapParagraph("Discussed new contract terms and project timeline.")]),
 			tags: ["meeting"],
 			folder: "work_meetings",
 			createdAt: daysAgo(5),
@@ -387,8 +428,10 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Project Alpha - Requirements",
-			content:
-				'{"a7cf988f-4be4-443d-91cd-2ed6c45c0bc2":{"id":"a7cf988f-4be4-443d-91cd-2ed6c45c0bc2","type":"NumberedList","meta":{"order":1,"depth":0},"value":[{"id":"1527bed0-3417-4938-8e9d-86681d0a8f58","type":"numbered-list","props":{"nodeType":"block"},"children":[{"text":"Complete feature design"}]}]}}',
+			content: tiptapDoc([
+				tiptapHeading(2, "Requirements"),
+				tiptapOrderedList(["Complete feature design", "API integration", "Frontend implementation"]),
+			]),
 			tags: ["reference", "code"],
 			folder: "work_projects",
 			createdAt: daysAgo(10),
@@ -398,7 +441,7 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Alpha Sprint Planning",
-			content: '{"1":{"id":"1","type":"Paragraph","value":[{"id":"1","type":"paragraph","children":[{"text":"Sprint goals and task breakdown for next two weeks."}]}],"meta":{"order":0,"depth":0}}}',
+			content: tiptapDoc([tiptapParagraph("Sprint goals and task breakdown for next two weeks.")]),
 			tags: ["actions", "goal"],
 			folder: "work_projects_alpha",
 			createdAt: daysAgo(4),
@@ -408,7 +451,15 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Beta API Documentation",
-			content: '{"1":{"id":"1","type":"Paragraph","value":[{"id":"1","type":"paragraph","children":[{"text":"API endpoints and authentication flow documentation."}]}],"meta":{"order":0,"depth":0}}}',
+			content: tiptapDoc([
+				tiptapHeading(2, "API Documentation"),
+				tiptapParagraph("API endpoints and authentication flow documentation."),
+				{
+					type: "codeBlock",
+					attrs: { language: "javascript" },
+					content: [{ type: "text", text: "// Example API call\nfetch('/api/users');" }],
+				},
+			]),
 			tags: ["reference", "code"],
 			folder: "work_projects_beta_docs",
 			createdAt: daysAgo(8),
@@ -418,8 +469,13 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Weekly Tasks",
-			content:
-				'{"78b886e6-4cab-4799-a774-38a6fd152f74":{"id":"78b886e6-4cab-4799-a774-38a6fd152f74","type":"TodoList","meta":{"order":4,"depth":0},"value":[{"id":"f4dd7e72-7af7-4617-83cb-e84199447d7b","type":"todo-list","props":{"checked":false},"children":[{"text":"Code review"}]}]}}',
+			content: tiptapDoc([
+				tiptapTaskList([
+					{ text: "Code review", checked: false },
+					{ text: "Update documentation", checked: true },
+					{ text: "Team meeting", checked: false },
+				]),
+			]),
 			tags: ["actions"],
 			folder: "work_tasks",
 			createdAt: daysAgo(2),
@@ -429,7 +485,13 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Deploy to production checklist",
-			content: '{"1":{"id":"1","type":"TodoList","value":[{"id":"1","type":"todo-list","props":{"checked":false},"children":[{"text":"Run tests, update docs, notify team"}]}],"meta":{"order":0,"depth":0}}}',
+			content: tiptapDoc([
+				tiptapTaskList([
+					{ text: "Run tests", checked: false },
+					{ text: "Update docs", checked: false },
+					{ text: "Notify team", checked: false },
+				]),
+			]),
 			tags: ["actions", "urgent", "code"],
 			folder: "work_tasks",
 			createdAt: daysAgo(1),
@@ -441,8 +503,10 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Book Recommendations",
-			content:
-				'{"7a2d54b2-8dd6-4953-a1a3-e47c6a610114":{"id":"7a2d54b2-8dd6-4953-a1a3-e47c6a610114","type":"Paragraph","value":[{"id":"db4f4d3d-446b-4290-83e5-1cf5557569d7","type":"paragraph","children":[{"text":"Books to read","underline":true}]}],"meta":{"order":0,"depth":0}}}',
+			content: tiptapDoc([
+				tiptapParagraph("Books to read", [{ type: "underline" }]),
+				tiptapBulletList(["Atomic Habits", "Deep Work", "The Psychology of Money"]),
+			]),
 			tags: ["reference", "personal"],
 			folder: "personal",
 			createdAt: daysAgo(10),
@@ -452,8 +516,9 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Workout Plan",
-			content:
-				'{"ccad4c65-4642-4f5d-9244-9d48faddd1ae":{"id":"ccad4c65-4642-4f5d-9244-9d48faddd1ae","type":"BulletedList","meta":{"order":1,"depth":0},"value":[{"id":"2cd598bf-0c1f-40a4-a82e-ef2ccecd33c2","type":"bulleted-list","children":[{"text":"Monday: Cardio"}]}]}}',
+			content: tiptapDoc([
+				tiptapBulletList(["Monday: Cardio", "Tuesday: Upper body", "Wednesday: Rest", "Thursday: Lower body", "Friday: Full body"]),
+			]),
 			tags: ["goal", "personal"],
 			folder: "personal_health",
 			createdAt: daysAgo(15),
@@ -463,7 +528,7 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Strength Training Routine",
-			content: '{"1":{"id":"1","type":"Paragraph","value":[{"id":"1","type":"paragraph","children":[{"text":"Upper/lower split - 4 days per week"}]}],"meta":{"order":0,"depth":0}}}',
+			content: tiptapDoc([tiptapParagraph("Upper/lower split - 4 days per week")]),
 			tags: ["goal"],
 			folder: "personal_health_fitness",
 			createdAt: daysAgo(7),
@@ -473,7 +538,7 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Meal Prep Ideas",
-			content: '{"1":{"id":"1","type":"Paragraph","value":[{"id":"1","type":"paragraph","children":[{"text":"High protein meals for the week"}]}],"meta":{"order":0,"depth":0}}}',
+			content: tiptapDoc([tiptapParagraph("High protein meals for the week")]),
 			tags: ["ideas", "personal"],
 			folder: "personal_health_nutrition",
 			createdAt: daysAgo(5),
@@ -483,8 +548,7 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Budget Tracker",
-			content:
-				'{"e76d495c-1492-4e5f-b803-69644e2a1739":{"id":"e76d495c-1492-4e5f-b803-69644e2a1739","type":"BulletedList","meta":{"order":2,"depth":0},"value":[{"id":"6a422bac-1aa0-4d34-b8cd-dede36eed8a9","type":"bulleted-list","children":[{"text":"Monthly expenses review"}]}]}}',
+			content: tiptapDoc([tiptapBulletList(["Monthly expenses review", "Savings goals", "Investment tracking"])]),
 			tags: ["reference"],
 			folder: "personal_finance",
 			createdAt: daysAgo(8),
@@ -494,8 +558,7 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Home Improvement Ideas",
-			content:
-				'{"31ef8ec7-25cf-449d-bb0c-430d30116a20":{"id":"31ef8ec7-25cf-449d-bb0c-430d30116a20","type":"HeadingThree","meta":{"order":0,"depth":0},"value":[{"id":"69e0feca-e45c-4c3f-88c0-bb3329c8a709","type":"heading-three","props":{"nodeType":"block"},"children":[{"text":"Kitchen renovation plans"}]}]}}',
+			content: tiptapDoc([tiptapHeading(3, "Kitchen renovation plans"), tiptapBulletList(["New countertops", "Cabinet refresh", "Lighting upgrade"])]),
 			tags: ["ideas", "personal", "goal"],
 			folder: "personal_home",
 			createdAt: daysAgo(20),
@@ -507,8 +570,7 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Brainstorming Session",
-			content:
-				'{"99a9b1be-21a0-431b-934e-267dadb7de18":{"id":"99a9b1be-21a0-431b-934e-267dadb7de18","type":"NumberedList","meta":{"order":1,"depth":0},"value":[{"id":"9d07b27b-ed06-442c-b078-1b7f77f6a48f","type":"numbered-list","props":{"nodeType":"block"},"children":[{"text":"Mind mapping features"}]}]}}',
+			content: tiptapDoc([tiptapOrderedList(["Mind mapping features", "Collaboration tools", "AI integration"])]),
 			tags: ["ideas"],
 			folder: "ideas",
 			createdAt: daysAgo(14),
@@ -518,8 +580,7 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Feature Wishlist",
-			content:
-				'{"c5ac2094-93fa-46a1-b1ba-6887c0cb0117":{"id":"c5ac2094-93fa-46a1-b1ba-6887c0cb0117","type":"NumberedList","meta":{"order":2,"depth":0},"value":[{"id":"9e274bfc-8966-4c21-a537-fe5aca5adad5","type":"numbered-list","props":{"nodeType":"block"},"children":[{"text":"Export to PDF"}]}]}}',
+			content: tiptapDoc([tiptapOrderedList(["Export to PDF", "Dark mode", "Mobile app", "Cloud sync"])]),
 			tags: ["ideas", "code"],
 			folder: "ideas_app",
 			createdAt: daysAgo(12),
@@ -529,8 +590,7 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Startup Ideas",
-			content:
-				'{"5ce91dd9-bd85-4481-9d31-27e50633fa37":{"id":"5ce91dd9-bd85-4481-9d31-27e50633fa37","type":"NumberedList","meta":{"order":3,"depth":0},"value":[{"id":"86e7e3a8-16a9-4bfc-a916-bbacbfb5f89d","type":"numbered-list","props":{"nodeType":"block"},"children":[{"text":"SaaS products"}]}]}}',
+			content: tiptapDoc([tiptapOrderedList(["SaaS products", "Developer tools", "Productivity apps"])]),
 			tags: ["ideas", "goal"],
 			folder: "ideas_business",
 			createdAt: daysAgo(18),
@@ -542,7 +602,7 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "TypeScript Best Practices",
-			content: '{"1":{"id":"1","type":"Paragraph","value":[{"id":"1","type":"paragraph","children":[{"text":"Notes from TypeScript deep dive course"}]}],"meta":{"order":0,"depth":0}}}',
+			content: tiptapDoc([tiptapParagraph("Notes from TypeScript deep dive course")]),
 			tags: ["reference", "code"],
 			folder: "learning_programming",
 			createdAt: daysAgo(6),
@@ -552,7 +612,7 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "React Performance Optimization",
-			content: '{"1":{"id":"1","type":"Paragraph","value":[{"id":"1","type":"paragraph","children":[{"text":"Memoization, lazy loading, and code splitting"}]}],"meta":{"order":0,"depth":0}}}',
+			content: tiptapDoc([tiptapParagraph("Memoization, lazy loading, and code splitting")]),
 			tags: ["reference", "code"],
 			folder: "learning_programming",
 			createdAt: daysAgo(9),
@@ -562,7 +622,7 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Spanish Vocabulary",
-			content: '{"1":{"id":"1","type":"Paragraph","value":[{"id":"1","type":"paragraph","children":[{"text":"Common phrases and words to memorize"}]}],"meta":{"order":0,"depth":0}}}',
+			content: tiptapDoc([tiptapParagraph("Common phrases and words to memorize")]),
 			tags: ["personal", "goal"],
 			folder: "learning_languages",
 			createdAt: daysAgo(11),
@@ -574,7 +634,7 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Major Project Kickoff - All Hands",
-			content: '{"1":{"id":"1","type":"Paragraph","value":[{"id":"1","type":"paragraph","children":[{"text":"This note has many tags to demonstrate the +N feature."}]}],"meta":{"order":0,"depth":0}}}',
+			content: tiptapDoc([tiptapParagraph("This note has many tags to demonstrate the +N feature.")]),
 			tags: ["actions", "ideas", "reference", "urgent", "goal", "meeting"],
 			folder: "work",
 			createdAt: daysAgo(1),
@@ -584,7 +644,7 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Annual Review & Planning Session",
-			content: '{"1":{"id":"1","type":"Paragraph","value":[{"id":"1","type":"paragraph","children":[{"text":"Another note with multiple tags for testing."}]}],"meta":{"order":0,"depth":0}}}',
+			content: tiptapDoc([tiptapParagraph("Another note with multiple tags for testing.")]),
 			tags: ["meeting", "goal", "personal", "reference", "actions"],
 			folder: "personal",
 			createdAt: daysAgo(4),
@@ -596,7 +656,7 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Random thought",
-			content: '{"1":{"id":"1","type":"Paragraph","value":[{"id":"1","type":"paragraph","children":[{"text":"A note without any tags."}]}],"meta":{"order":0,"depth":0}}}',
+			content: tiptapDoc([tiptapParagraph("A note without any tags.")]),
 			tags: [],
 			folder: "inbox",
 			createdAt: daysAgo(6),
@@ -608,8 +668,7 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Old Project Notes",
-			content:
-				'{"8561d8f6-9c01-4129-9927-36875a3c9a7a":{"id":"8561d8f6-9c01-4129-9927-36875a3c9a7a","type":"Paragraph","value":[{"id":"a188cf5a-d7f9-4bd9-93de-521b6cf3b5ab","type":"paragraph","children":[{"text":"These are archived notes from a completed project. Kept for reference."}]}],"meta":{"order":0,"depth":0}}}',
+			content: tiptapDoc([tiptapParagraph("These are archived notes from a completed project. Kept for reference.")]),
 			tags: ["reference"],
 			folder: "inbox",
 			createdAt: daysAgo(60),
@@ -619,8 +678,7 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Completed Tasks - Q4 2023",
-			content:
-				'{"e1a53903-2fa1-4cfb-b7f0-4586df055130":{"id":"e1a53903-2fa1-4cfb-b7f0-4586df055130","type":"NumberedList","meta":{"order":4,"depth":0},"value":[{"id":"10a44e9c-de34-419c-90b8-c34117272b18","type":"numbered-list","props":{"nodeType":"block"},"children":[{"text":"Archived completed tasks"}]}]}}',
+			content: tiptapDoc([tiptapOrderedList(["Archived completed tasks", "Project documentation", "Final review"])]),
 			tags: ["actions"],
 			folder: "work_tasks",
 			createdAt: daysAgo(90),

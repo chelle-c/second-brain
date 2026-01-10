@@ -1,31 +1,30 @@
-import ActionMenu, { DefaultActionMenuRender } from "@yoopta/action-menu-list";
-import Blockquote from "@yoopta/blockquote";
-import Callout from "@yoopta/callout";
-import Code from "@yoopta/code";
-import YooptaEditor, {
-	createYooptaEditor,
-	type SlateElement,
-	type YooptaContentValue,
-	type YooptaPlugin,
-} from "@yoopta/editor";
-import Embed from "@yoopta/embed";
-import File from "@yoopta/file";
-import { HeadingOne, HeadingThree, HeadingTwo } from "@yoopta/headings";
-import Image from "@yoopta/image";
-import Link, { type LinkElementProps } from "@yoopta/link";
-import LinkTool, { DefaultLinkToolRender } from "@yoopta/link-tool";
-import { BulletedList, NumberedList, TodoList } from "@yoopta/lists";
-import { Bold, CodeMark, Highlight, Italic, Strike, Underline } from "@yoopta/marks";
-import Paragraph from "@yoopta/paragraph";
-import Table from "@yoopta/table";
-import Toolbar, { DefaultToolbarRender } from "@yoopta/toolbar";
-import Video from "@yoopta/video";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEditor, EditorContent, type JSONContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Underline from "@tiptap/extension-underline";
+import Highlight from "@tiptap/extension-highlight";
+import Link from "@tiptap/extension-link";
+import Image from "@tiptap/extension-image";
+import { Table } from "@tiptap/extension-table";
+import TableRow from "@tiptap/extension-table-row";
+import TableHeader from "@tiptap/extension-table-header";
+import TableCell from "@tiptap/extension-table-cell";
+import TaskList from "@tiptap/extension-task-list";
+import TaskItem from "@tiptap/extension-task-item";
+import Placeholder from "@tiptap/extension-placeholder";
+import Typography from "@tiptap/extension-typography";
+import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
+import { common, createLowlight } from "lowlight";
+import { useCallback, useEffect, useRef, useState } from "react";
+
 import { useNotesStore } from "@/stores/useNotesStore";
 import type { Folder, Tag } from "@/types/notes";
-import { useLinkPreviewAutoConvert } from "../hooks/useLinkPreviewAutoConvert";
-import LinkPreviewPlugin from "./LinkPreview";
+import { BubbleMenuBar } from "../editor/components/BubbleMenuBar";
+import { SlashCommands } from "../editor/components/SlashCommandMenu";
+import { Callout } from "../editor/extensions/Callout";
+import { LinkPreview } from "../editor/extensions/LinkPreview";
 import { TagSelector } from "./TagSelector";
+
+const lowlight = createLowlight(common);
 
 interface NoteCreateProps {
 	tags: Record<string, Tag>;
@@ -35,47 +34,9 @@ interface NoteCreateProps {
 	registerBackHandler: (handler: () => void) => void;
 }
 
-const MARKS = [Bold, Italic, CodeMark, Underline, Strike, Highlight];
-
-const fileToBase64 = (file: File): Promise<string> => {
-	return new Promise((resolve, reject) => {
-		const reader = new FileReader();
-		reader.readAsDataURL(file);
-		reader.onload = () => resolve(reader.result as string);
-		reader.onerror = (error) => reject(error);
-	});
-};
-
-const getImageDimensions = (file: File): Promise<{ width: number; height: number }> => {
-	return new Promise((resolve, reject) => {
-		const img = document.createElement("img");
-		const url = URL.createObjectURL(file);
-		img.onload = () => {
-			URL.revokeObjectURL(url);
-			resolve({ width: img.width, height: img.height });
-		};
-		img.onerror = () => {
-			URL.revokeObjectURL(url);
-			reject(new Error("Failed to load image"));
-		};
-		img.src = url;
-	});
-};
-
-const getVideoDimensions = (file: File): Promise<{ width: number; height: number }> => {
-	return new Promise((resolve, reject) => {
-		const video = document.createElement("video");
-		const url = URL.createObjectURL(file);
-		video.onloadedmetadata = () => {
-			URL.revokeObjectURL(url);
-			resolve({ width: video.videoWidth, height: video.videoHeight });
-		};
-		video.onerror = () => {
-			URL.revokeObjectURL(url);
-			reject(new Error("Failed to load video"));
-		};
-		video.src = url;
-	});
+const EMPTY_DOC: JSONContent = {
+	type: "doc",
+	content: [{ type: "paragraph" }],
 };
 
 export const NoteCreate = ({
@@ -85,20 +46,15 @@ export const NoteCreate = ({
 	registerBackHandler,
 }: NoteCreateProps) => {
 	const { addNote } = useNotesStore();
-	const editor = useMemo(() => createYooptaEditor(), []);
-	const selectionRef = useRef<HTMLDivElement>(null);
 	const titleRef = useRef<HTMLInputElement>(null);
 
 	// Use refs to track current values for the save function
 	const titleValueRef = useRef("");
 	const selectedTagsRef = useRef<string[]>([]);
-	const editorValueRef = useRef<YooptaContentValue>({});
-	const hasContentRef = useRef(false);
 	const hasSavedRef = useRef(false);
 
 	const [title, setTitle] = useState("");
 	const [selectedTags, setSelectedTags] = useState<string[]>([]);
-	const [editorValue, setEditorValue] = useState<YooptaContentValue>({});
 
 	// Sync refs with state
 	useEffect(() => {
@@ -109,134 +65,139 @@ export const NoteCreate = ({
 		selectedTagsRef.current = selectedTags;
 	}, [selectedTags]);
 
-	useEffect(() => {
-		editorValueRef.current = editorValue;
-	}, [editorValue]);
+	const editor = useEditor({
+		extensions: [
+			StarterKit.configure({
+				codeBlock: false, // We use CodeBlockLowlight instead
+			}),
+			Underline,
+			Highlight.configure({
+				multicolor: false,
+			}),
+			Link.configure({
+				openOnClick: false,
+				HTMLAttributes: {
+					target: "_blank",
+					rel: "noopener noreferrer",
+				},
+			}),
+			Image.configure({
+				inline: false,
+				allowBase64: true,
+			}),
+			Table.configure({
+				resizable: true,
+			}),
+			TableRow,
+			TableHeader,
+			TableCell,
+			TaskList,
+			TaskItem.configure({
+				nested: true,
+			}),
+			Placeholder.configure({
+				placeholder: "Start writing or type '/' for commands...",
+			}),
+			Typography,
+			CodeBlockLowlight.configure({
+				lowlight,
+			}),
+			Callout,
+			LinkPreview,
+			SlashCommands,
+		],
+		content: EMPTY_DOC,
+		autofocus: false,
+		editorProps: {
+			attributes: {
+				class: "tiptap-editor focus:outline-none min-h-[200px]",
+			},
+			// Handle paste to prevent unwanted code block conversion
+			handlePaste(view, event) {
+				const clipboardData = event.clipboardData;
+				const plainText = clipboardData?.getData("text/plain");
+				const html = clipboardData?.getData("text/html");
 
-	useLinkPreviewAutoConvert(editor);
+				// If user is holding Shift, paste as plain text
+				// Cast to access native event properties
+				const nativeEvent = event as unknown as { shiftKey?: boolean };
+				if (nativeEvent.shiftKey && plainText) {
+					view.dispatch(view.state.tr.insertText(plainText));
+					return true;
+				}
+
+				// Check if clipboard HTML contains pre/code tags that would create code blocks
+				if (html && plainText) {
+					const hasCodeBlock = /<pre[\s>]|<code[\s>]/i.test(html);
+
+					if (hasCodeBlock) {
+						// Check if this looks like IDE/editor clipboard with syntax highlighting
+						const isIDECopy =
+							html.includes("hljs") ||
+							html.includes("syntax") ||
+							html.includes("token") ||
+							html.includes("monaco") ||
+							html.includes("CodeMirror") ||
+							html.includes("ace_") ||
+							html.includes("prism-");
+
+						// Check if HTML is wrapping mostly plain text in code tags
+						const strippedHtml = html
+							.replace(/<[^>]*>/g, "")
+							.replace(/&[a-z]+;/gi, " ")
+							.trim();
+						const isMostlyPlainText =
+							strippedHtml.length > 0 &&
+							Math.abs(strippedHtml.length - plainText.trim().length) / plainText.trim().length < 0.1;
+
+						if (isIDECopy || isMostlyPlainText) {
+							// Insert as plain text instead to avoid code block
+							view.dispatch(view.state.tr.insertText(plainText));
+							return true;
+						}
+					}
+				}
+
+				// Let Tiptap handle the paste normally
+				return false;
+			},
+		},
+	});
 
 	useEffect(() => {
 		titleRef.current?.focus();
 	}, []);
 
-	const plugins = useMemo(
-		() => [
-			Paragraph,
-			HeadingOne,
-			HeadingTwo,
-			HeadingThree,
-			Blockquote,
-			Callout,
-			NumberedList,
-			BulletedList,
-			TodoList,
-			Code,
-			Table as unknown as YooptaPlugin<Record<string, SlateElement>, Record<string, unknown>>,
-			Link.extend({
-				elementProps: {
-					link: (props: LinkElementProps) => ({
-						...props,
-						target: "_blank",
-					}),
-				},
-			}),
-			Embed,
-			Image.extend({
-				options: {
-					onUpload: async (file: File) => {
-						const base64 = await fileToBase64(file);
-						const dimensions = await getImageDimensions(file);
-						return {
-							src: base64,
-							alt: file.name,
-							sizes: { width: dimensions.width, height: dimensions.height },
-						};
-					},
-				},
-			}),
-			Video.extend({
-				options: {
-					onUpload: async (file: File) => {
-						const base64 = await fileToBase64(file);
-						const dimensions = await getVideoDimensions(file);
-						return {
-							src: base64,
-							alt: file.name,
-							sizes: { width: dimensions.width, height: dimensions.height },
-						};
-					},
-				},
-			}),
-			File.extend({
-				options: {
-					onUpload: async (file: File) => {
-						const base64 = await fileToBase64(file);
-						return {
-							src: base64,
-							format: file.type,
-							name: file.name,
-							size: file.size,
-						};
-					},
-				},
-			}),
-			LinkPreviewPlugin,
-		],
-		[]
-	);
-
-	const TOOLS = useMemo(
-		() => ({
-			ActionMenu: { render: DefaultActionMenuRender, tool: ActionMenu },
-			Toolbar: { render: DefaultToolbarRender, tool: Toolbar },
-			LinkTool: { render: DefaultLinkToolRender, tool: LinkTool },
-		}),
-		[]
-	);
-
 	const checkHasContent = useCallback(() => {
 		const currentTitle = titleValueRef.current;
-		const currentEditorValue = editorValueRef.current;
 
 		if (currentTitle.trim()) return true;
 
-		const content = JSON.stringify(currentEditorValue);
-		if (content === "{}" || content === "{}") return false;
+		if (!editor) return false;
+
+		const editorContent = editor.getJSON();
 
 		// Check if there's any actual text in the editor
-		try {
-			const parsed = currentEditorValue as Record<
-				string,
-				{ value?: Array<{ children?: Array<{ text?: string }> }> }
-			>;
-			for (const block of Object.values(parsed)) {
-				if (block.value) {
-					for (const node of block.value) {
-						if (node.children) {
-							for (const child of node.children) {
-								if (child.text?.trim()) {
-									return true;
-								}
-							}
-						}
-					}
-				}
+		const hasText = (content: JSONContent): boolean => {
+			if (content.text?.trim()) return true;
+			if (content.content) {
+				return content.content.some(hasText);
 			}
-		} catch {
 			return false;
-		}
+		};
 
-		return false;
-	}, []);
+		return hasText(editorContent);
+	}, [editor]);
 
 	const saveNote = useCallback(() => {
 		if (hasSavedRef.current) return null;
+		if (!editor) return null;
 
 		const currentTitle = titleValueRef.current;
 		const currentTags = selectedTagsRef.current;
-		const currentEditorValue = editorValueRef.current;
+		const editorContent = editor.getJSON();
 
-		const content = JSON.stringify(currentEditorValue);
+		const content = JSON.stringify(editorContent);
 
 		try {
 			hasSavedRef.current = true;
@@ -253,7 +214,7 @@ export const NoteCreate = ({
 			hasSavedRef.current = false;
 			return null;
 		}
-	}, [addNote, activeFolder]);
+	}, [addNote, activeFolder, editor]);
 
 	const handleBack = useCallback(() => {
 		// Auto-save if there's content and haven't saved yet
@@ -276,26 +237,38 @@ export const NoteCreate = ({
 	useEffect(() => {
 		return () => {
 			// Only save if there's content and hasn't been saved yet
-			if (!hasSavedRef.current && checkHasContent()) {
+			if (!hasSavedRef.current && editor) {
 				const currentTitle = titleValueRef.current;
 				const currentTags = selectedTagsRef.current;
-				const currentEditorValue = editorValueRef.current;
-				const content = JSON.stringify(currentEditorValue);
+				const editorContent = editor.getJSON();
 
-				try {
-					hasSavedRef.current = true;
-					addNote({
-						title: currentTitle.trim() || "Untitled",
-						content,
-						tags: currentTags,
-						folder: activeFolder?.id || "inbox",
-					});
-				} catch (error) {
-					console.error("Failed to auto-save note on unmount:", error);
+				// Check if there's actual content
+				const hasText = (content: JSONContent): boolean => {
+					if (content.text?.trim()) return true;
+					if (content.content) {
+						return content.content.some(hasText);
+					}
+					return false;
+				};
+
+				if (currentTitle.trim() || hasText(editorContent)) {
+					const content = JSON.stringify(editorContent);
+
+					try {
+						hasSavedRef.current = true;
+						addNote({
+							title: currentTitle.trim() || "Untitled",
+							content,
+							tags: currentTags,
+							folder: activeFolder?.id || "inbox",
+						});
+					} catch (error) {
+						console.error("Failed to auto-save note on unmount:", error);
+					}
 				}
 			}
 		};
-	}, [addNote, activeFolder, checkHasContent]);
+	}, [addNote, activeFolder, editor]);
 
 	const handleTagToggle = (tagId: string) => {
 		setSelectedTags((prev) =>
@@ -303,14 +276,13 @@ export const NoteCreate = ({
 		);
 	};
 
-	const handleEditorChange = (value: YooptaContentValue) => {
-		setEditorValue(value);
-		hasContentRef.current = true;
-	};
-
 	const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		setTitle(e.target.value);
 	};
+
+	if (!editor) {
+		return null;
+	}
 
 	return (
 		<div className="h-full overflow-y-auto bg-card">
@@ -335,20 +307,10 @@ export const NoteCreate = ({
 				</div>
 
 				<div className="border-t pt-6">
-					{/* Yoopta Editor */}
-					<div ref={selectionRef} className="w-full min-h-[300px]">
-						<YooptaEditor
-							editor={editor}
-							plugins={plugins}
-							tools={TOOLS}
-							marks={MARKS}
-							selectionBoxRoot={selectionRef}
-							value={editorValue}
-							onChange={handleEditorChange}
-							placeholder="Start writing..."
-							autoFocus={false}
-							width="100%"
-						/>
+					{/* Tiptap Editor */}
+					<div className="w-full min-h-[300px] tiptap-editor-wrapper">
+						<BubbleMenuBar editor={editor} />
+						<EditorContent editor={editor} />
 					</div>
 				</div>
 			</div>

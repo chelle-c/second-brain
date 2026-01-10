@@ -1,8 +1,6 @@
-import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router";
-import { DebugConsole } from "@/components/DebugConsole";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Loading, PageLoading } from "@/components/ui/loading";
 import { Toaster } from "@/components/ui/sonner";
@@ -31,7 +29,6 @@ const Settings = lazy(() =>
 );
 
 function App() {
-	const [isDevEnv, setIsDevEnv] = useState(false);
 	const loadFromFile = useAppStore((state) => state.loadFromFile);
 	const isLoading = useAppStore((state) => state.isLoading);
 	const initializeBackup = useBackupStore((state) => state.initialize);
@@ -39,7 +36,6 @@ function App() {
 
 	const initializeApp = async () => {
 		try {
-			setIsDevEnv(await invoke("is_dev"));
 			await initializeBackup();
 			await loadFromFile();
 		} catch (error) {
@@ -140,8 +136,6 @@ function App() {
 					</Routes>
 				</BrowserRouter>
 			)}
-
-			{isDevEnv && <DebugConsole />}
 
 			<Toaster position="bottom-right" closeButton />
 		</>

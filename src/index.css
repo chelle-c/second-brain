@@ -314,227 +314,294 @@ html {
 	box-sizing: border-box;
 }
 
-/* Yoopta Editor Dark Mode Overrides */
-.dark .yoopta-editor-wrapper {
+/* Tiptap Editor Styles */
+.tiptap-editor-wrapper {
 	color: var(--card-foreground);
 }
 
-.dark .yoopta-editor-wrapper [data-slate-editor="true"] {
+.tiptap-editor {
 	color: var(--card-foreground);
 }
 
-.dark .yoopta-editor-wrapper [data-slate-placeholder="true"] {
-	color: var(--muted-foreground) !important;
-	opacity: 1 !important;
+/* Placeholder styling */
+.tiptap-editor p.is-editor-empty:first-child::before {
+	color: var(--muted-foreground);
+	content: attr(data-placeholder);
+	float: left;
+	height: 0;
+	pointer-events: none;
 }
 
-.dark .yoopta-editor-wrapper h1,
-.dark .yoopta-editor-wrapper h2,
-.dark .yoopta-editor-wrapper h3,
-.dark .yoopta-editor-wrapper p,
-.dark .yoopta-editor-wrapper li,
-.dark .yoopta-editor-wrapper span {
-	color: inherit;
+/* Headings */
+.tiptap-editor h1 {
+	font-size: 2rem;
+	font-weight: 700;
+	line-height: 1.2;
+	margin: 1.5rem 0 0.75rem;
 }
 
-.dark .yoopta-editor-wrapper blockquote {
-	border-left-color: var(--border);
+.tiptap-editor h2 {
+	font-size: 1.5rem;
+	font-weight: 600;
+	line-height: 1.3;
+	margin: 1.25rem 0 0.5rem;
+}
+
+.tiptap-editor h3 {
+	font-size: 1.25rem;
+	font-weight: 600;
+	line-height: 1.4;
+	margin: 1rem 0 0.5rem;
+}
+
+/* Paragraphs */
+.tiptap-editor p {
+	margin: 0.5rem 0;
+	line-height: 1.6;
+}
+
+/* Links */
+.tiptap-editor a {
+	color: var(--primary);
+	text-decoration: underline;
+	cursor: pointer;
+}
+
+.tiptap-editor a:hover {
+	opacity: 0.8;
+}
+
+/* Blockquote */
+.tiptap-editor blockquote {
+	border-left: 3px solid var(--border);
+	margin: 1rem 0;
+	padding-left: 1rem;
+	color: var(--muted-foreground);
+	font-style: italic;
+}
+
+/* Lists */
+.tiptap-editor ul {
+	list-style-type: disc;
+	padding-left: 1.5rem;
+	margin: 0.5rem 0;
+}
+
+.tiptap-editor ol {
+	list-style-type: decimal;
+	padding-left: 1.5rem;
+	margin: 0.5rem 0;
+}
+
+.tiptap-editor li {
+	margin: 0.25rem 0;
+}
+
+.tiptap-editor li p {
+	margin: 0;
+}
+
+/* Task List */
+.tiptap-editor ul[data-type="taskList"] {
+	list-style: none;
+	padding-left: 0;
+}
+
+.tiptap-editor ul[data-type="taskList"] li {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.5rem;
+}
+
+.tiptap-editor ul[data-type="taskList"] li > label {
+	flex-shrink: 0;
+	margin-top: 0.25rem;
+}
+
+.tiptap-editor ul[data-type="taskList"] li > label input[type="checkbox"] {
+	width: 1rem;
+	height: 1rem;
+	accent-color: var(--primary);
+	cursor: pointer;
+}
+
+.tiptap-editor ul[data-type="taskList"] li > div {
+	flex: 1;
+}
+
+.tiptap-editor ul[data-type="taskList"] li[data-checked="true"] > div {
+	text-decoration: line-through;
 	color: var(--muted-foreground);
 }
 
-.dark .yoopta-editor-wrapper code {
+/* Code */
+.tiptap-editor code {
 	background-color: var(--muted);
-	color: var(--foreground);
+	border-radius: 0.25rem;
+	padding: 0.125rem 0.375rem;
+	font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+	font-size: 0.875em;
 }
 
-.dark .yoopta-editor-wrapper pre {
-	background-color: var(--muted) !important;
+/* Code Block */
+.tiptap-editor pre {
+	background-color: var(--muted);
+	border-radius: 0.5rem;
+	padding: 1rem;
+	margin: 0.75rem 0;
+	overflow-x: auto;
 }
 
-.dark .yoopta-editor-wrapper table {
-	border-color: var(--border);
+.tiptap-editor pre code {
+	background: none;
+	padding: 0;
+	font-size: 0.875rem;
+	line-height: 1.5;
 }
 
-.yoopta-table-data-cell, .dark .yoopta-table-data-cell {
-	border: 1px solid var(--accent-foreground) !important;
+/* Syntax highlighting */
+.tiptap-editor .hljs-comment,
+.tiptap-editor .hljs-quote {
+	color: var(--muted-foreground);
+	font-style: italic;
 }
 
-.dark .yoopta-table-data-cell-head {
-	background-color: var(--background) !important;
-	color: var(--primary) !important;
+.tiptap-editor .hljs-keyword,
+.tiptap-editor .hljs-selector-tag,
+.tiptap-editor .hljs-addition {
+	color: #c678dd;
 }
 
-/* Yoopta Toolbar Dark Mode */
-.dark [data-yoopta-toolbar],
-.dark .yoopta-toolbar,
-.dark [class*="yoopta-toolbar"] {
-	background-color: var(--popover) !important;
-	border-color: var(--border) !important;
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+.tiptap-editor .hljs-string,
+.tiptap-editor .hljs-attr {
+	color: #98c379;
 }
 
-.dark [data-yoopta-toolbar] button,
-.dark .yoopta-toolbar button,
-.dark [class*="yoopta-toolbar"] button {
-	color: var(--popover-foreground) !important;
+.tiptap-editor .hljs-number,
+.tiptap-editor .hljs-literal {
+	color: #d19a66;
 }
 
-.dark [data-yoopta-toolbar] button:hover,
-.dark .yoopta-toolbar button:hover,
-.dark [class*="yoopta-toolbar"] button:hover {
-	background-color: var(--accent) !important;
-	color: var(--accent-foreground) !important;
+.tiptap-editor .hljs-function,
+.tiptap-editor .hljs-title {
+	color: #61afef;
 }
 
-.dark [data-yoopta-toolbar] button[data-state="on"],
-.dark .yoopta-toolbar button[data-state="on"],
-.dark [class*="yoopta-toolbar"] button[data-active="true"] {
-	background-color: var(--primary) !important;
-	color: var(--primary-foreground) !important;
+.tiptap-editor .hljs-variable,
+.tiptap-editor .hljs-template-variable {
+	color: #e06c75;
 }
 
-/* Yoopta Action Menu Dark Mode */
-.dark [data-yoopta-action-menu],
-.dark .yoopta-action-menu,
-.dark [class*="yoopta-action-menu"],
-.dark [class*="ActionMenu"] {
-	background-color: var(--popover) !important;
-	border-color: var(--border) !important;
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+/* Mark: Highlight */
+.tiptap-editor mark {
+	background-color: rgba(255, 217, 0, 0.4);
+	border-radius: 0.125rem;
+	padding: 0.0625rem 0.125rem;
 }
 
-.dark [data-yoopta-action-menu] [class*="item"],
-.dark .yoopta-action-menu [class*="item"],
-.dark [class*="yoopta-action-menu"] [class*="item"],
-.dark [class*="ActionMenu"] [class*="item"] {
-	color: var(--popover-foreground) !important;
+.dark .tiptap-editor mark {
+	background-color: rgba(255, 217, 0, 0.3);
 }
 
-.dark [data-yoopta-action-menu] [class*="item"]:hover,
-.dark .yoopta-action-menu [class*="item"]:hover,
-.dark [class*="yoopta-action-menu"] [class*="item"]:hover,
-.dark [class*="ActionMenu"] [class*="item"]:hover {
-	background-color: var(--accent) !important;
-	color: var(--accent-foreground) !important;
+/* Horizontal Rule */
+.tiptap-editor hr {
+	border: none;
+	border-top: 1px solid var(--border);
+	margin: 1.5rem 0;
 }
 
-.dark [data-yoopta-action-menu] [class*="title"],
-.dark [data-yoopta-action-menu] [class*="label"],
-.dark [class*="ActionMenu"] [class*="title"],
-.dark [class*="ActionMenu"] [class*="label"] {
-	color: var(--muted-foreground) !important;
+/* Table */
+.tiptap-editor table {
+	border-collapse: collapse;
+	width: 100%;
+	margin: 1rem 0;
+	table-layout: fixed;
+	overflow: hidden;
 }
 
-/* Yoopta Block Actions (drag handle, menu button) Dark Mode */
-.dark [data-yoopta-block-actions],
-.dark [class*="block-actions"],
-.dark [class*="BlockActions"] {
-	background-color: var(--popover) !important;
-	border-color: var(--border) !important;
+.tiptap-editor th,
+.tiptap-editor td {
+	border: 1px solid var(--border);
+	padding: 0.5rem 0.75rem;
+	position: relative;
+	vertical-align: top;
+	min-width: 100px;
 }
 
-.dark [data-yoopta-block-actions] button,
-.dark [class*="block-actions"] button,
-.dark [class*="BlockActions"] button {
-	color: var(--muted-foreground) !important;
+.tiptap-editor th {
+	background-color: var(--muted);
+	font-weight: 600;
+	text-align: left;
 }
 
-.dark [data-yoopta-block-actions] button:hover,
-.dark [class*="block-actions"] button:hover,
-.dark [class*="BlockActions"] button:hover {
-	color: var(--foreground) !important;
-	background-color: var(--accent) !important;
+.tiptap-editor th > *,
+.tiptap-editor td > * {
+	margin: 0;
 }
 
-/* Yoopta drag handle and plus button */
-.dark [class*="yoopta"] [class*="drag"],
-.dark [class*="yoopta"] [class*="Drag"],
-.dark [class*="yoopta"] [class*="plus"],
-.dark [class*="yoopta"] [class*="Plus"],
-.dark [class*="yoopta"] [class*="add"],
-.dark [class*="yoopta"] [class*="Add"] {
-	color: var(--muted-foreground) !important;
+/* Table resize handle */
+.tiptap-editor .tableWrapper {
+	overflow-x: auto;
+	margin: 1rem 0;
 }
 
-.dark [class*="yoopta"] [class*="drag"]:hover,
-.dark [class*="yoopta"] [class*="Drag"]:hover,
-.dark [class*="yoopta"] [class*="plus"]:hover,
-.dark [class*="yoopta"] [class*="Plus"]:hover,
-.dark [class*="yoopta"] [class*="add"]:hover,
-.dark [class*="yoopta"] [class*="Add"]:hover {
-	color: var(--foreground) !important;
-	background-color: var(--accent) !important;
+.tiptap-editor .resize-cursor {
+	cursor: col-resize;
 }
 
-/* Yoopta Link Tool Dark Mode */
-.dark [data-yoopta-link-tool],
-.dark [class*="link-tool"],
-.dark [class*="LinkTool"] {
-	background-color: var(--popover) !important;
-	border-color: var(--border) !important;
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+/* Selected cells */
+.tiptap-editor .selectedCell::after {
+	background: rgba(var(--primary), 0.1);
+	content: "";
+	left: 0;
+	right: 0;
+	top: 0;
+	bottom: 0;
+	pointer-events: none;
+	position: absolute;
+	z-index: 2;
 }
 
-.dark [data-yoopta-link-tool] input,
-.dark [class*="link-tool"] input,
-.dark [class*="LinkTool"] input {
-	background-color: var(--input) !important;
-	border-color: var(--border) !important;
-	color: var(--foreground) !important;
+/* Image */
+.tiptap-editor img {
+	max-width: 100%;
+	height: auto;
+	border-radius: 0.5rem;
+	margin: 0.75rem 0;
 }
 
-.dark [data-yoopta-link-tool] button,
-.dark [class*="link-tool"] button,
-.dark [class*="LinkTool"] button {
-	color: var(--foreground) !important;
+.tiptap-editor img.ProseMirror-selectednode {
+	outline: 2px solid var(--primary);
 }
 
-/* Yoopta dropdown menus */
-.dark [class*="yoopta"] [role="menu"],
-.dark [class*="yoopta"] [role="listbox"],
-.dark [class*="yoopta"] [class*="dropdown"],
-.dark [class*="yoopta"] [class*="Dropdown"] {
-	background-color: var(--popover) !important;
-	border-color: var(--border) !important;
+/* Tippy tooltip styles for bubble menu */
+.tippy-box[data-theme~="bubble-menu"] {
+	background-color: var(--popover);
+	border: 1px solid var(--border);
+	border-radius: 0.5rem;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.dark [class*="yoopta"] [role="menuitem"],
-.dark [class*="yoopta"] [role="option"] {
-	color: var(--popover-foreground) !important;
+.dark .tippy-box[data-theme~="bubble-menu"] {
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-.dark [class*="yoopta"] [role="menuitem"]:hover,
-.dark [class*="yoopta"] [role="option"]:hover,
-.dark [class*="yoopta"] [role="menuitem"][data-highlighted],
-.dark [class*="yoopta"] [role="option"][data-highlighted] {
-	background-color: var(--accent) !important;
+.tippy-box[data-theme~="bubble-menu"] .tippy-arrow {
+	color: var(--popover);
 }
 
-/* Yoopta callout blocks */
-.dark .yoopta-editor-wrapper [class*="callout"],
-.dark .yoopta-editor-wrapper [class*="Callout"] {
-	background-color: var(--muted) !important;
-	border-color: var(--border) !important;
+/* Focus styles for editor */
+.tiptap-editor:focus {
+	outline: none;
+	box-shadow: none;
 }
 
-/* Yoopta accordion */
-.dark .yoopta-editor-wrapper [class*="accordion"],
-.dark .yoopta-editor-wrapper [class*="Accordion"] {
-	border-color: var(--border) !important;
+/* Gapcursor */
+.tiptap-editor .ProseMirror-gapcursor::after {
+	border-top: 1px solid var(--foreground);
 }
 
-/* Generic fallback for any Yoopta UI components */
-.dark [class*="yoopta-"][class*="menu"],
-.dark [class*="yoopta-"][class*="popup"],
-.dark [class*="yoopta-"][class*="popover"],
-.dark [class*="yoopta-"][class*="modal"],
-.dark [class*="yoopta-"][class*="toolbar"],
-.dark [class*="yoopta-"][class*="action-menu"] > div[class*="yoo-action-menu-bg-"] {
-	background-color: var(--popover) !important;
-	border-color: var(--border) !important;
-	color: var(--popover-foreground) !important;
-}
-
-.dark [class*="yoo-"][class*="toolbar-bg"] {
-	background-color: var(--popover) !important;
+/* Dropcursor */
+.tiptap-editor .ProseMirror-dropcursor {
+	color: var(--primary);
 }

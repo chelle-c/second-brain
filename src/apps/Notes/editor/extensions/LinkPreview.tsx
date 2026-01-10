@@ -1,13 +1,7 @@
+import { mergeAttributes, Node } from "@tiptap/core";
+import { ReactNodeViewRenderer, NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-shell";
-import {
-	Blocks,
-	generateId,
-	type PluginElementRenderProps,
-	type SlateElement,
-	useYooptaEditor,
-	YooptaPlugin,
-} from "@yoopta/editor";
 import { Link } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -21,18 +15,12 @@ interface LinkMetadata {
 	url: string;
 }
 
-interface LinkPreviewProps {
+interface LinkPreviewAttributes {
 	url: string;
 	title?: string;
 	description?: string;
 	image?: string;
 }
-
-type LinkPreviewElement = SlateElement<"link-preview", LinkPreviewProps>;
-
-type LinkPreviewElementMap = {
-	"link-preview": LinkPreviewElement;
-};
 
 // Helper to check if a string is a valid URL
 export const isValidUrl = (str: string): boolean => {
@@ -84,10 +72,7 @@ const UrlInputModal = ({
 		}
 
 		let finalUrl = trimmedUrl;
-		if (
-			!trimmedUrl.startsWith("http://") &&
-			!trimmedUrl.startsWith("https://")
-		) {
+		if (!trimmedUrl.startsWith("http://") && !trimmedUrl.startsWith("https://")) {
 			finalUrl = `https://${trimmedUrl}`;
 		}
 
@@ -100,7 +85,6 @@ const UrlInputModal = ({
 	};
 
 	return createPortal(
-		// biome-ignore lint/a11y/noStaticElementInteractions: Modal backdrop click-to-close pattern
 		<div
 			className="fixed inset-0 z-9999 flex items-center justify-center"
 			onMouseDown={(e) => {
@@ -111,7 +95,6 @@ const UrlInputModal = ({
 			onKeyDown={(e) => e.stopPropagation()}
 		>
 			<div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
-			{/* biome-ignore lint/a11y/noStaticElementInteractions: Event propagation boundary */}
 			<div
 				className="relative z-10 w-full max-w-md mx-4"
 				onMouseDown={(e) => e.stopPropagation()}
@@ -160,43 +143,31 @@ const UrlInputModal = ({
 							</button>
 						</div>
 						<p className="text-xs text-muted-foreground text-center">
-							Press{" "}
-							<kbd className="px-1.5 py-0.5 text-xs bg-muted rounded">Esc</kbd>{" "}
-							to cancel
+							Press <kbd className="px-1.5 py-0.5 text-xs bg-muted rounded">Esc</kbd> to cancel
 						</p>
 					</form>
 				</div>
 			</div>
 		</div>,
-		document.body,
+		document.body
 	);
 };
 
-// The actual render component for displaying the preview
-const LinkPreviewRender = ({
-	element,
-	attributes,
-	children,
-	blockId,
-}: PluginElementRenderProps) => {
-	const editor = useYooptaEditor();
-	const props = element.props as LinkPreviewProps;
+// The render component for displaying the preview
+const LinkPreviewComponent = ({ node, updateAttributes, deleteNode }: NodeViewProps) => {
+	const props = node.attrs as LinkPreviewAttributes;
 	const [metadata, setMetadata] = useState<LinkMetadata | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(false);
-	const [submittedUrl, setSubmittedUrl] = useState<string | null>(null);
 	const [showModal, setShowModal] = useState(!props.url);
 
-	// Use submitted URL as fallback until props update
-	const currentUrl = props.url || submittedUrl;
+	const currentUrl = props.url;
 
 	useEffect(() => {
 		let cancelled = false;
 
 		const fetchMetadata = async () => {
-			if (!currentUrl) {
-				return;
-			}
+			if (!currentUrl) return;
 
 			if (props.title) {
 				setMetadata({
@@ -215,6 +186,14 @@ const LinkPreviewRender = ({
 				});
 				if (!cancelled) {
 					setMetadata(data);
+					// Cache the metadata in attributes
+					if (data.title) {
+						updateAttributes({
+							title: data.title || undefined,
+							description: data.description || undefined,
+							image: data.image || undefined,
+						});
+					}
 				}
 			} catch (err) {
 				console.error("Failed to fetch link metadata:", err);
@@ -234,7 +213,7 @@ const LinkPreviewRender = ({
 		return () => {
 			cancelled = true;
 		};
-	}, [currentUrl, props.title, props.description, props.image]);
+	}, [currentUrl, props.title, props.description, props.image, updateAttributes]);
 
 	const handleOpenUrl = useCallback(
 		(e: React.MouseEvent) => {
@@ -244,50 +223,33 @@ const LinkPreviewRender = ({
 				open(currentUrl);
 			}
 		},
-		[currentUrl],
+		[currentUrl]
 	);
 
 	const handleKeyDown = useCallback(
 		(e: React.KeyboardEvent) => {
 			if (e.key === "Backspace" || e.key === "Delete") {
 				e.preventDefault();
-				Blocks.deleteBlock(editor, { blockId });
+				deleteNode();
 			}
 		},
-		[editor, blockId],
+		[deleteNode]
 	);
 
 	const handleUrlSubmit = useCallback(
 		(url: string) => {
-			// Set local state first for immediate UI update
-			setSubmittedUrl(url);
+			updateAttributes({ url });
 			setShowModal(false);
-
-			const newValue = [
-				{
-					id: generateId(),
-					type: "link-preview",
-					children: [{ text: "" }],
-					props: {
-						url: url,
-					},
-				},
-			];
-
-			Blocks.updateBlock(editor, blockId, {
-				value: newValue,
-			});
 		},
-		[editor, blockId],
+		[updateAttributes]
 	);
 
 	const handleCancel = useCallback(() => {
 		setShowModal(false);
-		// Delete the block if it has no URL
 		if (!currentUrl) {
-			Blocks.deleteBlock(editor, { blockId });
+			deleteNode();
 		}
-	}, [editor, blockId, currentUrl]);
+	}, [currentUrl, deleteNode]);
 
 	const hostname = (() => {
 		try {
@@ -300,157 +262,185 @@ const LinkPreviewRender = ({
 	// Show modal for URL input if no URL yet
 	if (showModal && !currentUrl) {
 		return (
-			<div {...attributes}>
+			<NodeViewWrapper>
 				<div className="my-2 py-4 border border-dashed border-border rounded-lg flex items-center justify-center text-sm text-muted-foreground">
 					Adding link preview...
 				</div>
 				<UrlInputModal onSubmit={handleUrlSubmit} onCancel={handleCancel} />
-				{children}
-			</div>
+			</NodeViewWrapper>
 		);
 	}
 
-	// Placeholder if no URL and modal closed (shouldn't happen normally)
+	// Placeholder if no URL and modal closed
 	if (!currentUrl) {
 		return (
-			<div {...attributes}>
+			<NodeViewWrapper>
 				<div className="my-2 py-4 border border-dashed border-border rounded-lg flex items-center justify-center text-sm text-muted-foreground">
 					No URL provided
 				</div>
-				{children}
-			</div>
+			</NodeViewWrapper>
 		);
 	}
 
 	return (
-		<section
-			{...attributes}
-			contentEditable={false}
-			aria-label="Link preview block"
-			// biome-ignore lint/a11y/noNoninteractiveTabindex: Editor block needs focus for keyboard deletion
-			tabIndex={0}
-			onKeyDown={handleKeyDown}
-		>
-			{/* URL displayed above the embed */}
-			<div className="my-2">
-				<a
-					href={currentUrl}
-					onClick={handleOpenUrl}
-					className="text-sm text-primary hover:underline cursor-pointer inline-flex items-center gap-1"
-				>
-					{currentUrl}
-				</a>
-			</div>
-
-			{/* Discord-style embed card - using inline borderLeft to override Yoopta's reset */}
+		<NodeViewWrapper>
 			<div
-				className="link-preview-card rounded-r bg-muted/50 overflow-hidden max-w-lg"
-				style={{ borderLeft: "4px solid var(--color-ring)" }}
+				contentEditable={false}
+				tabIndex={0}
+				onKeyDown={handleKeyDown}
+				className="outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-lg"
 			>
-				{loading && (
-					<div className="flex items-center justify-center py-6 px-4">
-						<Loading size="sm" text="Loading preview..." />
-					</div>
-				)}
+				{/* URL displayed above the embed */}
+				<div className="my-2">
+					<a
+						href={currentUrl}
+						onClick={handleOpenUrl}
+						className="text-sm text-primary hover:underline cursor-pointer inline-flex items-center gap-1"
+					>
+						{currentUrl}
+					</a>
+				</div>
 
-				{!loading && (error || !metadata?.title) && (
-					<div className="p-3">
-						<span className="text-sm text-muted-foreground">{hostname}</span>
-					</div>
-				)}
+				{/* Discord-style embed card */}
+				<div
+					className="link-preview-card rounded-r bg-muted/50 overflow-hidden max-w-lg"
+					style={{ borderLeft: "4px solid var(--color-ring, hsl(var(--ring)))" }}
+				>
+					{loading && (
+						<div className="flex items-center justify-center py-6 px-4">
+							<Loading size="sm" text="Loading preview..." />
+						</div>
+					)}
 
-				{!loading && metadata?.title && (
-					<div className="p-3">
-						{/* Site name */}
-						{(metadata.site_name || hostname) && (
-							<div className="text-xs text-muted-foreground mb-1">
-								{metadata.site_name || hostname}
-							</div>
-						)}
+					{!loading && (error || !metadata?.title) && (
+						<div className="p-3">
+							<span className="text-sm text-muted-foreground">{hostname}</span>
+						</div>
+					)}
 
-						{/* Title as clickable link */}
-						<a
-							href={currentUrl}
-							onClick={handleOpenUrl}
-							className="text-sm font-semibold text-primary hover:underline cursor-pointer line-clamp-2"
-						>
-							{metadata.title}
-						</a>
+					{!loading && metadata?.title && (
+						<div className="p-3">
+							{/* Site name */}
+							{(metadata.site_name || hostname) && (
+								<div className="text-xs text-muted-foreground mb-1">
+									{metadata.site_name || hostname}
+								</div>
+							)}
 
-						{/* Description */}
-						{metadata.description && (
-							<p className="text-sm text-foreground/80 mt-1 line-clamp-3">
-								{metadata.description}
-							</p>
-						)}
+							{/* Title as clickable link */}
+							<a
+								href={currentUrl}
+								onClick={handleOpenUrl}
+								className="text-sm font-semibold text-primary hover:underline cursor-pointer line-clamp-2"
+							>
+								{metadata.title}
+							</a>
 
-						{/* Image */}
-						{metadata.image && (
-							<div className="mt-3 rounded overflow-hidden max-w-[400px]">
-								<img
-									src={metadata.image}
-									alt={metadata.title || "Link Preview"}
-									className="w-full h-auto max-h-[200px] object-cover"
-									onError={(e) => {
-										const parent = (e.target as HTMLImageElement).parentElement;
-										if (parent) {
-											parent.style.display = "none";
-										}
-									}}
-								/>
-							</div>
-						)}
-					</div>
-				)}
+							{/* Description */}
+							{metadata.description && (
+								<p className="text-sm text-foreground/80 mt-1 line-clamp-3">
+									{metadata.description}
+								</p>
+							)}
+
+							{/* Image */}
+							{metadata.image && (
+								<div className="mt-3 rounded overflow-hidden max-w-[400px]">
+									<img
+										src={metadata.image}
+										alt={metadata.title || "Link Preview"}
+										className="w-full h-auto max-h-[200px] object-cover"
+										onError={(e) => {
+											const parent = (e.target as HTMLImageElement).parentElement;
+											if (parent) {
+												parent.style.display = "none";
+											}
+										}}
+									/>
+								</div>
+							)}
+						</div>
+					)}
+				</div>
 			</div>
-			{/* Hidden children to satisfy Slate's requirements */}
-			<span style={{ display: "none" }}>{children}</span>
-		</section>
+		</NodeViewWrapper>
 	);
 };
 
-const LinkPreviewPlugin = new YooptaPlugin<LinkPreviewElementMap>({
-	type: "LinkPreview",
-	elements: {
-		"link-preview": {
-			render: LinkPreviewRender,
-			props: {
-				url: "",
+export interface LinkPreviewOptions {
+	HTMLAttributes: Record<string, unknown>;
+}
+
+declare module "@tiptap/core" {
+	interface Commands<ReturnType> {
+		linkPreview: {
+			setLinkPreview: (attributes?: { url?: string }) => ReturnType;
+		};
+	}
+}
+
+export const LinkPreview = Node.create<LinkPreviewOptions>({
+	name: "linkPreview",
+	group: "block",
+	atom: true,
+	draggable: true,
+
+	addOptions() {
+		return {
+			HTMLAttributes: {},
+		};
+	},
+
+	addAttributes() {
+		return {
+			url: {
+				default: "",
 			},
-		},
+			title: {
+				default: null,
+			},
+			description: {
+				default: null,
+			},
+			image: {
+				default: null,
+			},
+		};
 	},
-	options: {
-		display: {
-			title: "Link Preview",
-			description: "Embed a link with rich preview",
-		},
-		shortcuts: ["bookmark", "preview"],
+
+	parseHTML() {
+		return [
+			{
+				tag: 'div[data-type="link-preview"]',
+			},
+		];
 	},
-	parsers: {
-		html: {
-			deserialize: {
-				nodeNames: ["A"],
-				parse: (el) => {
-					const href = el.getAttribute("href");
-					if (href && el.textContent === href) {
-						return {
-							id: "",
-							type: "link-preview",
-							children: [{ text: "" }],
-							props: {
-								url: href,
-							},
-						};
-					}
-					return undefined;
+
+	renderHTML({ HTMLAttributes }: { HTMLAttributes: Record<string, unknown> }) {
+		return [
+			"div",
+			mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
+				"data-type": "link-preview",
+			}),
+		];
+	},
+
+	addNodeView() {
+		return ReactNodeViewRenderer(LinkPreviewComponent);
+	},
+
+	addCommands() {
+		return {
+			setLinkPreview:
+				(attributes) =>
+				({ commands }) => {
+					return commands.insertContent({
+						type: this.name,
+						attrs: attributes,
+					});
 				},
-			},
-			serialize: (element, _content) => {
-				const props = element.props as LinkPreviewProps;
-				return `<a href="${props.url}" target="_blank" rel="noopener noreferrer">${props.title || props.url}</a>`;
-			},
-		},
+		};
 	},
 });
 
-export default LinkPreviewPlugin;
+export default LinkPreview;

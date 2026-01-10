@@ -1,245 +1,231 @@
 import { useNotesStore } from "@/stores/useNotesStore";
 import type { Note } from "@/types/notes";
-import { useLinkPreviewAutoConvert } from "../hooks/useLinkPreviewAutoConvert";
-import LinkPreviewPlugin from "./LinkPreview";
-import Accordion from "@yoopta/accordion";
-import ActionMenuList, {
-	DefaultActionMenuRender,
-} from "@yoopta/action-menu-list";
-import Blockquote from "@yoopta/blockquote";
-import Callout from "@yoopta/callout";
-import Code from "@yoopta/code";
-import Divider, { type DividerElementProps } from "@yoopta/divider";
-import YooptaEditor, { createYooptaEditor } from "@yoopta/editor";
-import Embed from "@yoopta/embed";
-import File from "@yoopta/file";
-import { HeadingOne, HeadingThree, HeadingTwo } from "@yoopta/headings";
-import Image from "@yoopta/image";
-import Link, { type LinkElementProps } from "@yoopta/link";
-import LinkTool, { DefaultLinkToolRender } from "@yoopta/link-tool";
-import { BulletedList, NumberedList, TodoList } from "@yoopta/lists";
+import { useEditor, EditorContent, type JSONContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Underline from "@tiptap/extension-underline";
+import Highlight from "@tiptap/extension-highlight";
+import Link from "@tiptap/extension-link";
+import Image from "@tiptap/extension-image";
+import { Table } from "@tiptap/extension-table";
+import TableRow from "@tiptap/extension-table-row";
+import TableHeader from "@tiptap/extension-table-header";
+import TableCell from "@tiptap/extension-table-cell";
+import TaskList from "@tiptap/extension-task-list";
+import TaskItem from "@tiptap/extension-task-item";
+import Placeholder from "@tiptap/extension-placeholder";
+import Typography from "@tiptap/extension-typography";
+import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
+import { common, createLowlight } from "lowlight";
+import { useCallback, useEffect, useMemo, useRef } from "react";
+
+import { BubbleMenuBar } from "../editor/components/BubbleMenuBar";
+import { SlashCommands } from "../editor/components/SlashCommandMenu";
+import { Callout } from "../editor/extensions/Callout";
+import { LinkPreview } from "../editor/extensions/LinkPreview";
 import {
-	Bold,
-	CodeMark,
-	Highlight,
-	Italic,
-	Strike,
-	Underline,
-} from "@yoopta/marks";
-import Paragraph from "@yoopta/paragraph";
-import Table from "@yoopta/table";
-import Toolbar, { DefaultToolbarRender } from "@yoopta/toolbar";
-import Video from "@yoopta/video";
-import { useMemo, useRef, useState } from "react";
+	convertYooptaToTiptap,
+	isYooptaFormat,
+	isTiptapFormat,
+} from "../editor/utils/convertYooptaToTiptap";
 
-const fileToBase64 = (file: File): Promise<string> => {
-	return new Promise((resolve, reject) => {
-		const reader = new FileReader();
-		reader.readAsDataURL(file);
-		reader.onload = () => resolve(reader.result as string);
-		reader.onerror = (error) => reject(error);
-	});
-};
+const lowlight = createLowlight(common);
 
-// Helper function to get image dimensions
-const getImageDimensions = (
-	file: File,
-): Promise<{ width: number; height: number }> => {
-	return new Promise((resolve, reject) => {
-		const img = document.createElement("img");
-		const url = URL.createObjectURL(file);
-
-		img.onload = () => {
-			URL.revokeObjectURL(url);
-			resolve({ width: img.width, height: img.height });
-		};
-
-		img.onerror = () => {
-			URL.revokeObjectURL(url);
-			reject(new Error("Failed to load image"));
-		};
-
-		img.src = url;
-	});
-};
-
-// Helper function to get video dimensions
-const getVideoDimensions = (
-	file: File,
-): Promise<{ width: number; height: number }> => {
-	return new Promise((resolve, reject) => {
-		const video = document.createElement("video");
-		const url = URL.createObjectURL(file);
-
-		video.onloadedmetadata = () => {
-			URL.revokeObjectURL(url);
-			resolve({ width: video.videoWidth, height: video.videoHeight });
-		};
-
-		video.onerror = () => {
-			URL.revokeObjectURL(url);
-			reject(new Error("Failed to load video"));
-		};
-
-		video.src = url;
-	});
-};
-
-const plugins = [
-	Paragraph,
-	// biome-ignore lint/suspicious/noExplicitAny: Table plugin types are incompatible with Yoopta's type system
-	Table as any,
-	Divider.extend({
-		elementProps: {
-			divider: (props: DividerElementProps) => ({
-				...props,
-				color: "#007aff",
-			}),
-		},
-	}),
-	Accordion,
-	HeadingOne,
-	HeadingTwo,
-	HeadingThree,
-	Blockquote,
-	Callout,
-	NumberedList,
-	BulletedList,
-	TodoList,
-	Code,
-	Link.extend({
-		elementProps: {
-			link: (props: LinkElementProps) => ({
-				...props,
-				target: "_blank",
-			}),
-		},
-	}),
-	Embed,
-	Image.extend({
-		options: {
-			onUpload: async (file: File) => {
-				try {
-					const base64 = await fileToBase64(file);
-					const dimensions = await getImageDimensions(file);
-
-					return {
-						src: base64,
-						alt: file.name,
-						sizes: {
-							width: dimensions.width,
-							height: dimensions.height,
-						},
-					};
-				} catch (error) {
-					console.error("Error uploading image:", error);
-					throw error;
-				}
-			},
-		},
-	}),
-	Video.extend({
-		options: {
-			onUpload: async (file: File) => {
-				try {
-					const base64 = await fileToBase64(file);
-					const dimensions = await getVideoDimensions(file);
-
-					return {
-						src: base64,
-						alt: file.name,
-						sizes: {
-							width: dimensions.width,
-							height: dimensions.height,
-						},
-					};
-				} catch (error) {
-					console.error("Error uploading video:", error);
-					throw error;
-				}
-			},
-		},
-	}),
-	File.extend({
-		options: {
-			onUpload: async (file: File) => {
-				try {
-					const base64 = await fileToBase64(file);
-
-					return {
-						src: base64,
-						format: file.type,
-						name: file.name,
-						size: file.size,
-					};
-				} catch (error) {
-					console.error("Error uploading file:", error);
-					throw error;
-				}
-			},
-		},
-	}),
-	LinkPreviewPlugin,
-];
-
-const TOOLS = {
-	ActionMenu: {
-		render: DefaultActionMenuRender,
-		tool: ActionMenuList,
-	},
-	Toolbar: {
-		render: DefaultToolbarRender,
-		tool: Toolbar,
-	},
-	LinkTool: {
-		render: DefaultLinkToolRender,
-		tool: LinkTool,
-	},
-};
-
-const MARKS = [Bold, Italic, CodeMark, Underline, Strike, Highlight];
+// Debounce delay for saving content (ms)
+const SAVE_DEBOUNCE_MS = 500;
 
 interface EditorSetupProps {
 	note: Note;
 }
 
+// Parse content and convert if needed
+const parseContent = (content: string): JSONContent => {
+	if (!content) {
+		return { type: "doc", content: [{ type: "paragraph" }] };
+	}
+
+	try {
+		const parsed = JSON.parse(content);
+
+		// Check if it's already Tiptap format
+		if (isTiptapFormat(parsed)) {
+			return parsed as JSONContent;
+		}
+
+		// Check if it's Yoopta format and convert
+		if (isYooptaFormat(parsed)) {
+			return convertYooptaToTiptap(parsed);
+		}
+
+		// Unknown format, return as empty
+		return { type: "doc", content: [{ type: "paragraph" }] };
+	} catch {
+		// If parsing fails, return empty document
+		return { type: "doc", content: [{ type: "paragraph" }] };
+	}
+};
+
+// Create extensions outside component to avoid recreation on every render
+const createExtensions = () => [
+	StarterKit.configure({
+		codeBlock: false, // We use CodeBlockLowlight instead
+	}),
+	Underline,
+	Highlight.configure({
+		multicolor: false,
+	}),
+	Link.configure({
+		openOnClick: false,
+		HTMLAttributes: {
+			target: "_blank",
+			rel: "noopener noreferrer",
+		},
+	}),
+	Image.configure({
+		inline: false,
+		allowBase64: true,
+	}),
+	Table.configure({
+		resizable: true,
+	}),
+	TableRow,
+	TableHeader,
+	TableCell,
+	TaskList,
+	TaskItem.configure({
+		nested: true,
+	}),
+	Placeholder.configure({
+		placeholder: "Type '/' for commands...",
+	}),
+	Typography,
+	CodeBlockLowlight.configure({
+		lowlight,
+	}),
+	Callout,
+	LinkPreview,
+	SlashCommands,
+];
+
 export const EditorSetup = ({ note }: EditorSetupProps) => {
 	const { updateNote } = useNotesStore();
-	const [value, setValue] = useState(() => {
-		try {
-			return note.content ? JSON.parse(note.content) : {};
-		} catch {
-			return {};
-		}
+
+	// Refs for debounced saving
+	const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const lastSavedContentRef = useRef<string>(note.content || "");
+
+	// Parse initial content
+	const initialContent = parseContent(note.content);
+
+	// Memoize extensions to prevent recreation on every render
+	const extensions = useMemo(() => createExtensions(), []);
+
+	const editor = useEditor({
+		extensions,
+		content: initialContent,
+		autofocus: true,
+		editorProps: {
+			attributes: {
+				class: "tiptap-editor focus:outline-none min-h-[200px]",
+			},
+			// Handle paste to prevent unwanted code block conversion
+			handlePaste(view, event) {
+				const clipboardData = event.clipboardData;
+				const plainText = clipboardData?.getData("text/plain");
+				const html = clipboardData?.getData("text/html");
+
+				// If user is holding Shift, paste as plain text
+				// Cast to access native event properties
+				const nativeEvent = event as unknown as { shiftKey?: boolean };
+				if (nativeEvent.shiftKey && plainText) {
+					view.dispatch(view.state.tr.insertText(plainText));
+					return true;
+				}
+
+				// Check if clipboard HTML contains pre/code tags that would create code blocks
+				if (html && plainText) {
+					const hasCodeBlock = /<pre[\s>]|<code[\s>]/i.test(html);
+
+					if (hasCodeBlock) {
+						// Check if this looks like IDE/editor clipboard with syntax highlighting
+						const isIDECopy =
+							html.includes("hljs") ||
+							html.includes("syntax") ||
+							html.includes("token") ||
+							html.includes("monaco") ||
+							html.includes("CodeMirror") ||
+							html.includes("ace_") ||
+							html.includes("prism-");
+
+						// Check if HTML is wrapping mostly plain text in code tags
+						// (e.g., copying from a code editor or terminal)
+						const strippedHtml = html
+							.replace(/<[^>]*>/g, "")
+							.replace(/&[a-z]+;/gi, " ")
+							.trim();
+						const isMostlyPlainText =
+							strippedHtml.length > 0 &&
+							Math.abs(strippedHtml.length - plainText.trim().length) / plainText.trim().length < 0.1;
+
+						if (isIDECopy || isMostlyPlainText) {
+							// Insert as plain text instead to avoid code block
+							view.dispatch(view.state.tr.insertText(plainText));
+							return true;
+						}
+					}
+				}
+
+				// Let Tiptap handle the paste normally
+				return false;
+			},
+		},
+		onUpdate: ({ editor }) => {
+			// Debounced save
+			if (saveTimeoutRef.current) {
+				clearTimeout(saveTimeoutRef.current);
+			}
+
+			saveTimeoutRef.current = setTimeout(() => {
+				const content = JSON.stringify(editor.getJSON());
+				if (content !== lastSavedContentRef.current) {
+					updateNote(note.id, { content }, false);
+					lastSavedContentRef.current = content;
+				}
+				saveTimeoutRef.current = null;
+			}, SAVE_DEBOUNCE_MS);
+		},
 	});
-	const editor = useMemo(() => createYooptaEditor(), []);
-	const selectionRef = useRef(null);
 
-	// Enable automatic URL to LinkPreview conversion
-	useLinkPreviewAutoConvert(editor);
-
-	const onChange = async (value: Record<string, unknown>) => {
-		setValue(value);
-
-		const content = JSON.stringify(value);
-		if (content !== note.content) {
-			updateNote(note.id, { content });
+	// Flush pending saves on unmount
+	const flushPendingSave = useCallback(() => {
+		if (saveTimeoutRef.current) {
+			clearTimeout(saveTimeoutRef.current);
+			saveTimeoutRef.current = null;
 		}
-	};
+		if (editor) {
+			const content = JSON.stringify(editor.getJSON());
+			if (content !== lastSavedContentRef.current) {
+				updateNote(note.id, { content }, false);
+				lastSavedContentRef.current = content;
+			}
+		}
+	}, [editor, note.id, updateNote]);
+
+	useEffect(() => {
+		return () => {
+			flushPendingSave();
+		};
+	}, [flushPendingSave]);
+
+	if (!editor) {
+		return null;
+	}
 
 	return (
-		<div className="w-full yoopta-editor-wrapper" ref={selectionRef}>
-			<YooptaEditor
-				editor={editor}
-				plugins={plugins}
-				tools={TOOLS}
-				marks={MARKS}
-				selectionBoxRoot={selectionRef}
-				value={value}
-				onChange={onChange}
-				autoFocus
-				width="100%"
-			/>
+		<div className="w-full tiptap-editor-wrapper">
+			<BubbleMenuBar editor={editor} />
+			<EditorContent editor={editor} />
 		</div>
 	);
 };
+
+export default EditorSetup;

@@ -235,7 +235,15 @@ export const FolderNav = ({
 	// Keyboard shortcuts
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
-			if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+			// Skip if focus is in an input, textarea, or contenteditable element (like the Tiptap editor)
+			const target = e.target as HTMLElement;
+			if (
+				target instanceof HTMLInputElement ||
+				target instanceof HTMLTextAreaElement ||
+				target.isContentEditable ||
+				target.closest('[contenteditable="true"]') ||
+				target.closest(".tiptap-editor-wrapper")
+			) {
 				return;
 			}
 
