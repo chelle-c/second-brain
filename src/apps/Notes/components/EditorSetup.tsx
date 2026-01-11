@@ -15,6 +15,10 @@ import TaskItem from "@tiptap/extension-task-item";
 import Placeholder from "@tiptap/extension-placeholder";
 import Typography from "@tiptap/extension-typography";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
+import Color from "@tiptap/extension-color";
+import { TextStyle } from "@tiptap/extension-text-style";
+import FontFamily from "@tiptap/extension-font-family";
+import TextAlign from "@tiptap/extension-text-align";
 import { common, createLowlight } from "lowlight";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 
@@ -22,6 +26,8 @@ import { BubbleMenuBar } from "../editor/components/BubbleMenuBar";
 import { SlashCommands } from "../editor/components/SlashCommandMenu";
 import { Callout } from "../editor/extensions/Callout";
 import { LinkPreview } from "../editor/extensions/LinkPreview";
+import { DragHandle } from "../editor/extensions/DragHandle";
+import { TableOfContentsSidebar } from "./TableOfContentsSidebar";
 import {
 	convertYooptaToTiptap,
 	isYooptaFormat,
@@ -70,8 +76,14 @@ const createExtensions = () => [
 		codeBlock: false, // We use CodeBlockLowlight instead
 	}),
 	Underline,
+	TextStyle,
+	Color,
 	Highlight.configure({
-		multicolor: false,
+		multicolor: true, // Enable background colors
+	}),
+	FontFamily,
+	TextAlign.configure({
+		types: ["heading", "paragraph"],
 	}),
 	Link.configure({
 		openOnClick: false,
@@ -103,6 +115,7 @@ const createExtensions = () => [
 	}),
 	Callout,
 	LinkPreview,
+	DragHandle,
 	SlashCommands,
 ];
 
@@ -223,7 +236,12 @@ export const EditorSetup = ({ note }: EditorSetupProps) => {
 	return (
 		<div className="w-full tiptap-editor-wrapper">
 			<BubbleMenuBar editor={editor} />
-			<EditorContent editor={editor} />
+			<div className="flex items-stretch">
+				<div className={`flex-1 min-w-0 transition-all duration-200`}>
+					<EditorContent editor={editor} />
+				</div>
+				<TableOfContentsSidebar editor={editor} />
+			</div>
 		</div>
 	);
 };

@@ -41,7 +41,7 @@ const CalloutComponent = ({ node, updateAttributes }: NodeViewProps) => {
 	return (
 		<NodeViewWrapper>
 			<div className={`callout flex gap-3 p-4 my-2 rounded-lg border-l-4 ${styles[type]}`}>
-				<div className="flex-shrink-0 pt-0.5">
+				<div className="flex items-center shrink-0 pt-0.5">
 					<button
 						type="button"
 						onClick={() => {

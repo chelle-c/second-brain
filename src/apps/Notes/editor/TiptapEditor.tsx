@@ -13,6 +13,10 @@ import TaskItem from "@tiptap/extension-task-item";
 import Placeholder from "@tiptap/extension-placeholder";
 import Typography from "@tiptap/extension-typography";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
+import Color from "@tiptap/extension-color";
+import { TextStyle } from "@tiptap/extension-text-style";
+import FontFamily from "@tiptap/extension-font-family";
+import TextAlign from "@tiptap/extension-text-align";
 import { common, createLowlight } from "lowlight";
 import { useEffect, useRef } from "react";
 
@@ -20,6 +24,7 @@ import { BubbleMenuBar } from "./components/BubbleMenuBar";
 import { SlashCommands } from "./components/SlashCommandMenu";
 import { Callout } from "./extensions/Callout";
 import { LinkPreview } from "./extensions/LinkPreview";
+import { DragHandle } from "./extensions/DragHandle";
 
 const lowlight = createLowlight(common);
 
@@ -47,8 +52,14 @@ export const TiptapEditor = ({
 				codeBlock: false, // We use CodeBlockLowlight instead
 			}),
 			Underline,
+			TextStyle,
+			Color,
 			Highlight.configure({
-				multicolor: false,
+				multicolor: true, // Enable background colors
+			}),
+			FontFamily,
+			TextAlign.configure({
+				types: ["heading", "paragraph"],
 			}),
 			Link.configure({
 				openOnClick: false,
@@ -80,6 +91,7 @@ export const TiptapEditor = ({
 			}),
 			Callout,
 			LinkPreview,
+			DragHandle,
 			SlashCommands,
 		],
 		content,

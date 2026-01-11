@@ -228,7 +228,7 @@ const CommandList = forwardRef<CommandListRef, CommandListProps>(
 									: "hover:bg-accent/50"
 							}`}
 						>
-							<div className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded bg-muted">
+							<div className="shrink-0 w-8 h-8 flex items-center justify-center rounded bg-muted">
 								<Icon className="w-4 h-4" />
 							</div>
 							<div className="flex-1 min-w-0">

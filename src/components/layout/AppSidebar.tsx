@@ -68,7 +68,7 @@ export function AppSidebar() {
 
 	return (
 		<Sidebar variant="inset" collapsible="offcanvas">
-			<SidebarHeader className="px-6 py-5 flex flex-row items-center gap-3 border-b border-sidebar-border">
+			<SidebarHeader className="py-5 flex flex-row items-center gap-3 border-b border-sidebar-border">
 				<div className="p-2 bg-sidebar-accent rounded-lg">
 					<Brain size={28} className="text-sidebar-accent-foreground" />
 				</div>
@@ -79,7 +79,7 @@ export function AppSidebar() {
 					</div>
 				</div>
 			</SidebarHeader>
-			<SidebarContent className="px-3 py-4">
+			<SidebarContent className="py-4">
 				<SidebarGroup>
 					<SidebarGroupContent>
 						<SidebarMenu className="space-y-1">
@@ -92,7 +92,7 @@ export function AppSidebar() {
 									>
 										<SidebarMenuItem>
 											<CollapsibleTrigger asChild>
-												<SidebarMenuButton className="group/btn cursor-pointer h-10 px-3 hover:bg-sidebar-accent rounded-lg transition-colors">
+												<SidebarMenuButton className="group/btn cursor-pointer h-8 px-3 hover:bg-sidebar-accent rounded-md transition-colors">
 													<div className="w-full flex items-center gap-3">
 														<item.icon
 															size={18}
@@ -152,7 +152,7 @@ export function AppSidebar() {
 										<NavLink to={`/${item.url}`} className="block">
 											{({ isActive }) => (
 												<SidebarMenuButton
-													className={`group/btn cursor-pointer h-10 px-3 rounded-lg transition-colors ${
+													className={`group/btn cursor-pointer h-8 px-3 rounded-lg transition-colors ${
 														isActive
 															? "bg-sidebar-accent"
 															: "hover:bg-sidebar-accent"
