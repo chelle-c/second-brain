@@ -18,6 +18,7 @@ export interface AppSettings {
 	// Expense settings
 	expenseDefaultView: ExpenseViewType;
 	expenseCurrency: string;
+	expenseNotificationLeadDays: number; // Days before due date to start notifying (0-30)
 
 	// Income settings
 	incomeDefaultView: IncomeViewType;

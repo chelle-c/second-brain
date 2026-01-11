@@ -495,6 +495,7 @@ class BackupService {
 				paymentDate: row.paymentDate ? new Date(row.paymentDate) : null,
 				type: (row.type || "need") as ExpenseType,
 				importance: (row.importance || "none") as ImportanceLevel,
+				notify: (row as any).notify === 1,
 				createdAt: new Date(row.createdAt),
 				updatedAt: new Date(row.updatedAt),
 				parentExpenseId: row.parentExpenseId || undefined,

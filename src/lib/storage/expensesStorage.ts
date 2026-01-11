@@ -202,6 +202,7 @@ export class ExpensesStorage {
 						paymentDate: row.paymentDate ? new Date(row.paymentDate) : null,
 						type: row.type as any,
 						importance: row.importance as any,
+						notify: (row as any).notify === 1,
 						createdAt: new Date(row.createdAt),
 						updatedAt: new Date(row.updatedAt),
 						parentExpenseId: row.parentExpenseId || undefined,
@@ -296,9 +297,9 @@ export class ExpensesStorage {
 				await this.context.db.execute(
 					`INSERT INTO expenses (
 						id, name, amount, category, paymentMethod, dueDate, isRecurring, recurrence,
-						isArchived, isPaid, paymentDate, type, importance, createdAt,
+						isArchived, isPaid, paymentDate, type, importance, notify, createdAt,
 						updatedAt, parentExpenseId, monthlyOverrides, isModified, initialState
-					) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+					) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 					[
 						expense.id,
 						expense.name,
@@ -313,6 +314,7 @@ export class ExpensesStorage {
 						expense.paymentDate ? expense.paymentDate.toISOString() : null,
 						expense.type,
 						expense.importance,
+						expense.notify ? 1 : 0,
 						expense.createdAt.toISOString(),
 						expense.updatedAt.toISOString(),
 						expense.parentExpenseId || null,

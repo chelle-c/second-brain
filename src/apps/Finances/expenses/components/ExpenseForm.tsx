@@ -19,6 +19,7 @@ import type {
 import { ConfirmRegenerationModal } from "@/components/ConfirmRegenerationModal";
 import { format, isSameDay, startOfMonth } from "date-fns";
 import {
+	Bell,
 	Calendar,
 	CheckCircle,
 	CreditCard,
@@ -63,6 +64,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 		paymentDate: null,
 		type: "need",
 		importance: "none",
+		notify: false,
 	});
 
 	const [amountString, setAmountString] = useState("0");
@@ -97,6 +99,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 				paymentDate: editingExpense.paymentDate,
 				type: editingExpense.type || "need",
 				importance: editingExpense.importance || "none",
+				notify: editingExpense.notify || false,
 			});
 			setAmountString(editingExpense.amount.toString());
 			setHasDueDate(editingExpense.dueDate !== null);
@@ -281,6 +284,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 			paymentDate: null,
 			type: "need",
 			importance: "none",
+			notify: false,
 		});
 		setAmountString("0");
 		setHasDueDate(true);
@@ -711,6 +715,29 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 									size={18}
 								/>
 							</div>
+						</div>
+					)}
+
+					{/* Notification toggle - only show when there's a due date */}
+					{(hasDueDate || formData.isRecurring) && (
+						<div className="bg-blue-500/10 p-4 rounded-lg">
+							<label className="flex items-center gap-3 cursor-pointer">
+								<input
+									type="checkbox"
+									checked={formData.notify}
+									onChange={(e) =>
+										setFormData({ ...formData, notify: e.target.checked })
+									}
+									className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-400"
+								/>
+								<span className="text-sm font-medium text-foreground flex items-center gap-2">
+									<Bell size={16} />
+									Notify Before Due Date
+								</span>
+							</label>
+							<p className="text-xs text-muted-foreground mt-2 ml-8">
+								Receive a desktop notification when this expense is due soon
+							</p>
 						</div>
 					)}
 

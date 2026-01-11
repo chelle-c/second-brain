@@ -157,6 +157,7 @@ const useAppStore = create<AppStore>()(
 							notesDefaultFolder: settingsState.notesDefaultFolder,
 							expenseDefaultView: settingsState.expenseDefaultView,
 							expenseCurrency: settingsState.expenseCurrency,
+							expenseNotificationLeadDays: settingsState.expenseNotificationLeadDays,
 							incomeDefaultView: settingsState.incomeDefaultView,
 							incomeWeekStartDay: settingsState.incomeWeekStartDay,
 							incomeCurrency: settingsState.incomeCurrency,

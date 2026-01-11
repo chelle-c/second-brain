@@ -710,6 +710,7 @@ const generateRecurringOccurrences = (
 			isPaid,
 			paymentDate: isPaid ? dueDate : undefined,
 			parentExpenseId: parentId,
+			notify: baseExpense.notify || false,
 			initialState: {
 				amount: baseExpense.amount,
 				dueDate,
@@ -744,6 +745,7 @@ const createSampleExpenses = (): Expense[] => {
 		importance: "critical" as const,
 		createdAt: daysAgo(90),
 		updatedAt: daysAgo(5),
+		notify: false,
 		monthlyOverrides: {},
 	};
 
@@ -759,6 +761,7 @@ const createSampleExpenses = (): Expense[] => {
 		importance: "critical" as const,
 		createdAt: daysAgo(90),
 		updatedAt: daysAgo(10),
+		notify: false,
 		monthlyOverrides: {},
 	};
 
@@ -774,6 +777,7 @@ const createSampleExpenses = (): Expense[] => {
 		importance: "high" as const,
 		createdAt: daysAgo(60),
 		updatedAt: daysAgo(15),
+		notify: false,
 		monthlyOverrides: {},
 	};
 
@@ -789,6 +793,7 @@ const createSampleExpenses = (): Expense[] => {
 		importance: "high" as const,
 		createdAt: daysAgo(120),
 		updatedAt: daysAgo(20),
+		notify: false,
 		monthlyOverrides: {},
 	};
 
@@ -804,6 +809,7 @@ const createSampleExpenses = (): Expense[] => {
 		importance: "none" as const,
 		createdAt: daysAgo(180),
 		updatedAt: daysAgo(5),
+		notify: false,
 		monthlyOverrides: {},
 	};
 
@@ -819,6 +825,7 @@ const createSampleExpenses = (): Expense[] => {
 		importance: "medium" as const,
 		createdAt: daysAgo(200),
 		updatedAt: daysAgo(10),
+		notify: false,
 		monthlyOverrides: {},
 	};
 
@@ -856,6 +863,7 @@ const createSampleExpenses = (): Expense[] => {
 			dueDate: new Date(now.getFullYear(), now.getMonth(), 1),
 			isPaid: true,
 			paymentDate: new Date(now.getFullYear(), now.getMonth(), 1),
+			notify: false,
 		},
 		...rentOccurrences,
 
@@ -864,6 +872,7 @@ const createSampleExpenses = (): Expense[] => {
 			...electricityBase,
 			dueDate: new Date(now.getFullYear(), now.getMonth(), 15),
 			isPaid: false,
+			notify: false,
 		},
 		...electricityOccurrences,
 
@@ -872,6 +881,7 @@ const createSampleExpenses = (): Expense[] => {
 			...internetBase,
 			dueDate: new Date(now.getFullYear(), now.getMonth(), 20),
 			isPaid: false,
+			notify: false,
 		},
 		...internetOccurrences,
 
@@ -880,6 +890,7 @@ const createSampleExpenses = (): Expense[] => {
 			...phonePlanBase,
 			dueDate: new Date(now.getFullYear(), now.getMonth(), 25),
 			isPaid: false,
+			notify: false,
 		},
 		...phonePlanOccurrences,
 
@@ -889,6 +900,7 @@ const createSampleExpenses = (): Expense[] => {
 			dueDate: new Date(now.getFullYear(), now.getMonth(), 10),
 			isPaid: true,
 			paymentDate: daysAgo(5),
+			notify: false,
 		},
 		...streamingOccurrences,
 
@@ -898,6 +910,7 @@ const createSampleExpenses = (): Expense[] => {
 			dueDate: new Date(now.getFullYear(), now.getMonth(), 5),
 			isPaid: true,
 			paymentDate: daysAgo(10),
+			notify: false,
 		},
 		...gymOccurrences,
 
@@ -914,6 +927,7 @@ const createSampleExpenses = (): Expense[] => {
 			isPaid: false,
 			type: "want",
 			importance: "none",
+			notify: false,
 			createdAt: daysAgo(3),
 			updatedAt: daysAgo(3),
 			monthlyOverrides: {},
@@ -930,6 +944,7 @@ const createSampleExpenses = (): Expense[] => {
 			isPaid: false,
 			type: "need",
 			importance: "critical",
+			notify: false,
 			createdAt: daysAgo(10),
 			updatedAt: daysAgo(10),
 			monthlyOverrides: {},
@@ -946,6 +961,7 @@ const createSampleExpenses = (): Expense[] => {
 			isPaid: false,
 			type: "want",
 			importance: "medium",
+			notify: false,
 			createdAt: daysAgo(2),
 			updatedAt: daysAgo(2),
 			monthlyOverrides: {},
@@ -963,6 +979,7 @@ const createSampleExpenses = (): Expense[] => {
 			paymentDate: daysAgo(2),
 			type: "need",
 			importance: "high",
+			notify: false,
 			createdAt: daysAgo(2),
 			updatedAt: daysAgo(2),
 			monthlyOverrides: {},

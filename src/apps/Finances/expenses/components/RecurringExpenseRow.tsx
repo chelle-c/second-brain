@@ -1,6 +1,8 @@
 import {
 	Archive,
 	ArchiveRestore,
+	Bell,
+	BellOff,
 	Check,
 	CheckCircle,
 	ChevronDown,
@@ -81,7 +83,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 	showPaid = true,
 }) => {
 	const [isExpanded, setIsExpanded] = useState(false);
-	const { toggleExpensePaid, resetOccurrence, setEditingExpense } =
+	const { toggleExpensePaid, toggleExpenseNotify, resetOccurrence, setEditingExpense } =
 		useExpenseStore();
 	const { expenseCurrency } = useSettingsStore();
 	const { resolvedTheme } = useThemeStore();
@@ -156,7 +158,35 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 					</div>
 				</td>
 
-				{/* Column 2: Name */}
+				{/* Column 2: Notify */}
+				<td className="py-3 px-2">
+					{parentExpense.dueDate ? (
+						<button
+							type="button"
+							onClick={(e) => {
+								e.stopPropagation();
+								toggleExpenseNotify(parentExpense.id);
+							}}
+							className={`p-1.5 rounded-lg transition-all duration-200 hover:scale-110
+							${
+								parentExpense.notify
+									? "text-blue-500 bg-blue-500/10 hover:bg-blue-500/20"
+									: "text-muted-foreground bg-muted hover:bg-accent"
+							}`}
+							title={parentExpense.notify ? "Disable notification" : "Enable notification"}
+						>
+							{parentExpense.notify ? (
+								<Bell size={16} />
+							) : (
+								<BellOff size={16} />
+							)}
+						</button>
+					) : (
+						<span className="text-muted-foreground/30">—</span>
+					)}
+				</td>
+
+				{/* Column 3: Name */}
 				<td
 					className="py-3 px-3"
 					onClick={() => setIsExpanded(!isExpanded)}
@@ -182,19 +212,19 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 					</div>
 				</td>
 
-				{/* Column 3: Payment Method */}
+				{/* Column 4: Payment Method */}
 				<td className="py-3 px-2">
 					<span className="text-xs text-muted-foreground">
 						{parentExpense.paymentMethod || "None"}
 					</span>
 				</td>
 
-				{/* Column 4: Importance */}
+				{/* Column 5: Importance */}
 				<td className="py-3 px-2 text-center">
 					<ImportanceIcon level={parentExpense.importance || "none"} />
 				</td>
 
-				{/* Column 5: Category */}
+				{/* Column 6: Category */}
 				<td className="w-min py-3 px-2 text-center">
 					<span
 						className="px-2 py-0.5 rounded-full text-xs font-semibold inline-flex items-center"
@@ -208,7 +238,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 					</span>
 				</td>
 
-				{/* Column 6: Type */}
+				{/* Column 7: Type */}
 				<td className="py-3 px-3">
 					<span
 						className={`text-xs font-medium ${
@@ -221,7 +251,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 					</span>
 				</td>
 
-				{/* Column 7: Amount */}
+				{/* Column 8: Amount */}
 				<td className="py-3 px-3">
 					<span className="font-semibold text-primary text-sm">
 						{formatCurrency(parentExpense.amount, expenseCurrency)}
@@ -229,7 +259,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 					<div className="text-xs text-muted-foreground">base amount</div>
 				</td>
 
-				{/* Column 8: Due Date */}
+				{/* Column 9: Due Date */}
 				<td className="py-3 px-3">
 					<div className="text-sm text-foreground">
 						{sortedOccurrences.length > 0 && sortedOccurrences[0].dueDate
@@ -241,12 +271,12 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 					<div className="text-xs text-muted-foreground">first occurrence</div>
 				</td>
 
-				{/* Column 9: Payment Date */}
+				{/* Column 10: Payment Date */}
 				<td className="py-3 px-3">
 					<span className="text-sm text-muted-foreground">—</span>
 				</td>
 
-				{/* Column 10: Actions */}
+				{/* Column 11: Actions */}
 				<td className="py-3 px-3">
 					<div className="flex items-center justify-center gap-1">
 						<button
@@ -350,7 +380,12 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 							</button>
 						</td>
 
-						{/* Column 2: Instance info */}
+						{/* Column 2: Notify (inherited from parent) */}
+						<td className="py-2 px-2">
+							<span className="text-muted-foreground/30 ml-6">—</span>
+						</td>
+
+						{/* Column 3: Instance info */}
 						<td className="py-2 px-3 pl-8">
 							<div className="flex items-center gap-2">
 								<span
@@ -376,7 +411,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 							</div>
 						</td>
 
-						{/* Column 3: Payment Method */}
+						{/* Column 4: Payment Method */}
 						<td className="py-2 px-2">
 							<span
 								className={`text-xs ${
@@ -389,22 +424,22 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 							</span>
 						</td>
 
-						{/* Column 4: Importance (inherited) */}
+						{/* Column 5: Importance (inherited) */}
 						<td className="py-2 px-2 text-center">
 							<span className="text-muted-foreground text-xs">—</span>
 						</td>
 
-						{/* Column 5: Category (empty) */}
+						{/* Column 6: Category (empty) */}
 						<td className="py-2 px-3">
 							<span className="text-muted-foreground text-xs">—</span>
 						</td>
 
-						{/* Column 6: Type (empty) */}
+						{/* Column 7: Type (empty) */}
 						<td className="py-2 px-3">
 							<span className="text-muted-foreground text-xs">—</span>
 						</td>
 
-						{/* Column 7: Amount */}
+						{/* Column 8: Amount */}
 						<td className="py-2 px-3">
 							<span
 								className={`font-medium text-sm ${
@@ -419,7 +454,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 							</span>
 						</td>
 
-						{/* Column 8: Due Date */}
+						{/* Column 9: Due Date */}
 						<td className="py-2 px-3">
 							<span className="text-sm text-muted-foreground">
 								{occurrence.dueDate
@@ -428,7 +463,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 							</span>
 						</td>
 
-						{/* Column 9: Payment Date */}
+						{/* Column 10: Payment Date */}
 						<td className="py-2 px-3">
 							{occurrence.isPaid && occurrence.paymentDate ? (
 								<span className="text-xs text-muted-foreground">
@@ -441,7 +476,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 							)}
 						</td>
 
-						{/* Column 10: Actions */}
+						{/* Column 11: Actions */}
 						<td className="py-2 px-3">
 							<div className="flex items-center justify-center gap-1">
 								<button

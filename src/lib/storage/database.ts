@@ -235,6 +235,7 @@ class SqlStorage {
 				paymentDate TEXT,
 				type TEXT NOT NULL,
 				importance TEXT NOT NULL,
+				notify INTEGER DEFAULT 0,
 				createdAt TEXT NOT NULL,
 				updatedAt TEXT NOT NULL,
 				parentExpenseId TEXT,
@@ -393,7 +394,10 @@ class SqlStorage {
 				name: string;
 				type: string;
 				defaultValue: string;
-			}> = [{ name: "paymentMethod", type: "TEXT", defaultValue: "'None'" }];
+			}> = [
+				{ name: "paymentMethod", type: "TEXT", defaultValue: "'None'" },
+				{ name: "notify", type: "INTEGER", defaultValue: "0" },
+			];
 
 			for (const column of requiredColumns) {
 				if (!existingColumns.has(column.name)) {

@@ -30,6 +30,7 @@ interface SettingsStore extends AppSettings {
 	setNotesDefaultFolder: (folderId: string) => void;
 	setExpenseDefaultView: (view: ExpenseViewType) => void;
 	setExpenseCurrency: (currency: string) => void;
+	setExpenseNotificationLeadDays: (days: number) => void;
 	setIncomeDefaultView: (view: IncomeViewType) => void;
 	setIncomeWeekStartDay: (day: WeekStartDay) => void;
 	setIncomeCurrency: (currency: string) => void;
@@ -145,6 +146,14 @@ export const useSettingsStore = create<SettingsStore>()(
 
 		setExpenseCurrency: (currency) => {
 			set({ expenseCurrency: currency });
+
+			if (useAppStore.getState().autoSaveEnabled) {
+				useAppStore.getState().saveToFile(AppToSave.All);
+			}
+		},
+
+		setExpenseNotificationLeadDays: (days) => {
+			set({ expenseNotificationLeadDays: days });
 
 			if (useAppStore.getState().autoSaveEnabled) {
 				useAppStore.getState().saveToFile(AppToSave.All);

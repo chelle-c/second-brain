@@ -24,6 +24,7 @@ export interface Expense {
 	paymentDate?: Date | null;
 	type: ExpenseType;
 	importance: ImportanceLevel;
+	notify: boolean;
 	createdAt: Date;
 	updatedAt: Date;
 	parentExpenseId?: string;
@@ -44,6 +45,7 @@ export interface ExpenseFormData {
 	paymentDate?: Date | null;
 	type: ExpenseType;
 	importance: ImportanceLevel;
+	notify: boolean;
 }
 
 export type RecurrenceFrequency =

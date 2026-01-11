@@ -1,6 +1,7 @@
 import { documentDir } from "@tauri-apps/api/path";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import {
+	Bell,
 	CheckCircle,
 	CreditCard,
 	DollarSign,
@@ -41,7 +42,11 @@ import { Separator } from "@/components/ui/separator";
 import { useBackupStore } from "@/stores/useBackupStore";
 import { useExpenseStore } from "@/stores/useExpenseStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
-import { CURRENCY_OPTIONS, type ExpenseViewType } from "@/types/settings";
+import {
+	CURRENCY_OPTIONS,
+	EXPENSE_NOTIFICATION_LEAD_DAYS,
+	type ExpenseViewType,
+} from "@/types/settings";
 
 const expenseViewOptions: { value: ExpenseViewType; label: string }[] = [
 	{ value: "upcoming", label: "Upcoming Expenses" },
@@ -53,8 +58,11 @@ export const ExpenseSettings = () => {
 	const {
 		expenseDefaultView,
 		expenseCurrency,
+		expenseNotificationLeadDays,
+		notificationsEnabled,
 		setExpenseDefaultView,
 		setExpenseCurrency,
+		setExpenseNotificationLeadDays,
 	} = useSettingsStore();
 	const { categories, categoryColors, paymentMethods, expenses } =
 		useExpenseStore();
@@ -229,6 +237,45 @@ export const ExpenseSettings = () => {
 							</SelectContent>
 						</Select>
 					</div>
+
+					<Separator />
+
+					<div className="flex items-center justify-between">
+						<div className="space-y-0.5">
+							<Label className="text-base font-medium flex items-center gap-2">
+								<Bell className="w-4 h-4" />
+								Expense Notifications
+							</Label>
+							<p className="text-sm text-muted-foreground">
+								When to notify about upcoming expenses with reminders enabled
+							</p>
+						</div>
+						<Select
+							value={expenseNotificationLeadDays.toString()}
+							onValueChange={(value) =>
+								setExpenseNotificationLeadDays(Number(value))
+							}
+							disabled={!notificationsEnabled}
+						>
+							<SelectTrigger className="w-[200px]">
+								<SelectValue placeholder="Select timing" />
+							</SelectTrigger>
+							<SelectContent>
+								{EXPENSE_NOTIFICATION_LEAD_DAYS.map((option) => (
+									<SelectItem key={option.value} value={option.value.toString()}>
+										{option.label}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</div>
+
+					{!notificationsEnabled && (
+						<div className="p-3 bg-muted rounded-lg text-sm text-muted-foreground">
+							Enable desktop notifications in General settings to receive expense
+							reminders.
+						</div>
+					)}
 
 					<Separator />
 

@@ -1,6 +1,8 @@
 import {
 	Archive,
 	ArchiveRestore,
+	Bell,
+	BellOff,
 	Calendar,
 	Check,
 	CheckCircle,
@@ -97,8 +99,13 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 	onSelectedYearChange,
 	categoryColors = {},
 }) => {
-	const { expenses, showPaidExpenses, setShowPaidExpenses, setEditingExpense } =
-		useExpenseStore();
+	const {
+		expenses,
+		showPaidExpenses,
+		setShowPaidExpenses,
+		setEditingExpense,
+		toggleExpenseNotify,
+	} = useExpenseStore();
 	const { expenseCurrency } = useSettingsStore();
 	const { resolvedTheme } = useThemeStore();
 	const isDarkMode = resolvedTheme === "dark";
@@ -393,6 +400,11 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 									<SortIcon column="isPaid" />
 								</button>
 							</th>
+							<th className="text-center py-3 px-2 font-medium text-muted-foreground">
+								<span className="flex items-center gap-1 justify-center" title="Notification reminders">
+									<Bell size={14} />
+								</span>
+							</th>
 							<th className="text-left py-3 px-3 font-medium text-muted-foreground">
 								<button
 									type="button"
@@ -536,6 +548,29 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 												<Check size={18} />
 											)}
 										</button>
+									</td>
+									<td className="py-3 px-2">
+										{expense.dueDate ? (
+											<button
+												type="button"
+												onClick={() => toggleExpenseNotify(expense.id)}
+												className={`p-1.5 rounded-lg transition-all duration-200 hover:scale-110
+												${
+													expense.notify
+														? "text-blue-500 bg-blue-500/10 hover:bg-blue-500/20"
+														: "text-muted-foreground bg-muted hover:bg-accent"
+												}`}
+												title={expense.notify ? "Disable notification" : "Enable notification"}
+											>
+												{expense.notify ? (
+													<Bell size={16} />
+												) : (
+													<BellOff size={16} />
+												)}
+											</button>
+										) : (
+											<span className="text-muted-foreground/30">—</span>
+										)}
 									</td>
 									<td className="py-3 px-3">
 										<div className="flex items-center gap-2">

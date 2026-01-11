@@ -4,6 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Loading, PageLoading } from "@/components/ui/loading";
 import { Toaster } from "@/components/ui/sonner";
+import { checkExpenseNotifications } from "@/lib/notifications";
 import { sqlStorage } from "@/lib/storage";
 import useAppStore from "@/stores/useAppStore";
 import { useBackupStore } from "@/stores/useBackupStore";

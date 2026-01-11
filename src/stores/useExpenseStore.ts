@@ -105,6 +105,7 @@ interface ExpenseStore {
 	addPaymentMethod: (name: string) => void;
 	updatePaymentMethod: (oldName: string, newName: string) => void;
 	deletePaymentMethod: (name: string) => void;
+	toggleExpenseNotify: (id: string) => void;
 
 	// Undo/Redo
 	undo: () => void;
@@ -210,6 +211,7 @@ export const useExpenseStore = create<ExpenseStore>()(
 				paymentDate: null,
 				type: expenseData.type,
 				importance: expenseData.importance,
+				notify: expenseData.notify || false,
 				createdAt: new Date(),
 				updatedAt: new Date(),
 				monthlyOverrides: {},
@@ -1115,6 +1117,36 @@ export const useExpenseStore = create<ExpenseStore>()(
 				paymentMethods: updatedMethods,
 				expenses: updatedExpenses,
 			});
+
+			if (useAppStore.getState().autoSaveEnabled) {
+				useAppStore.getState().saveToFile(AppToSave.Expenses);
+			}
+		},
+
+		toggleExpenseNotify: (id) => {
+			const { expenses } = get();
+			const expense = expenses.find((e) => e.id === id);
+
+			if (!expense) return;
+
+			// For recurring parent expenses, toggle notify on all occurrences too
+			if (expense.isRecurring && !expense.parentExpenseId) {
+				set({
+					expenses: expenses.map((e) =>
+						e.id === id || e.parentExpenseId === id
+							? { ...e, notify: !expense.notify, updatedAt: new Date() }
+							: e,
+					),
+				});
+			} else {
+				set({
+					expenses: expenses.map((e) =>
+						e.id === id
+							? { ...e, notify: !e.notify, updatedAt: new Date() }
+							: e,
+					),
+				});
+			}
 
 			if (useAppStore.getState().autoSaveEnabled) {
 				useAppStore.getState().saveToFile(AppToSave.Expenses);
