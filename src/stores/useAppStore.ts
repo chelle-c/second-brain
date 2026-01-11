@@ -151,6 +151,9 @@ const useAppStore = create<AppStore>()(
 						},
 						settings: {
 							autoSaveEnabled: settingsState.autoSaveEnabled,
+							launchAtLogin: settingsState.launchAtLogin,
+							minimizeToTray: settingsState.minimizeToTray,
+							notificationsEnabled: settingsState.notificationsEnabled,
 							notesDefaultFolder: settingsState.notesDefaultFolder,
 							expenseDefaultView: settingsState.expenseDefaultView,
 							expenseCurrency: settingsState.expenseCurrency,

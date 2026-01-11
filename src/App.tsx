@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { sqlStorage } from "@/lib/storage";
 import useAppStore from "@/stores/useAppStore";
 import { useBackupStore } from "@/stores/useBackupStore";
+import { useSettingsStore } from "@/stores/useSettingsStore";
 import { AppToSave } from "@/types";
 
 // Lazy load route modules for code splitting
@@ -38,6 +39,10 @@ function App() {
 		try {
 			await initializeBackup();
 			await loadFromFile();
+			// Initialize desktop settings (sync autostart state with system)
+			await useSettingsStore.getState().initializeDesktopSettings();
+			// Check for expense notifications (once per day)
+			await checkExpenseNotifications();
 		} catch (error) {
 			console.error("Failed to initialize app:", error);
 		}
@@ -47,7 +52,7 @@ function App() {
 		initializeApp();
 	}, [loadFromFile]);
 
-	// Handle window close - save all data before closing
+	// Handle window close - save data and either minimize to tray or close
 	useEffect(() => {
 		const appWindow = getCurrentWindow();
 
@@ -58,23 +63,36 @@ function App() {
 				return;
 			}
 
-			// Prevent default close - we'll close manually after saving
+			const minimizeToTray = useSettingsStore.getState().minimizeToTray;
+
+			// Prevent default close - we'll handle it manually
 			event.preventDefault();
 			isSavingRef.current = true;
 			console.log("Window close requested - saving data...");
 
 			try {
-				// Force save all data before closing
+				// Force save all data before closing/hiding
 				await useAppStore.getState().saveToFile(AppToSave.All);
-				// Ensure database is properly closed
-				await sqlStorage.close();
-				console.log("Data saved successfully before close");
+				console.log("Data saved successfully");
+
+				if (minimizeToTray) {
+					// Just hide the window - app stays in tray
+					await appWindow.hide();
+					console.log("Window hidden to tray");
+				} else {
+					// Actually close the app
+					await sqlStorage.close();
+					console.log("Database closed, destroying window");
+					await appWindow.destroy();
+				}
 			} catch (error) {
-				console.error("Error saving data on close:", error);
+				console.error("Error handling close:", error);
+				// If something goes wrong, try to close anyway
+				if (!minimizeToTray) {
+					await appWindow.destroy();
+				}
 			} finally {
 				isSavingRef.current = false;
-				// Now close the window
-				await appWindow.destroy();
 			}
 		});
 

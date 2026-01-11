@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use tauri::AppHandle;
 
 #[derive(Serialize, Deserialize)]
 pub struct LinkMetadata {
@@ -12,6 +13,11 @@ pub struct LinkMetadata {
 #[tauri::command]
 pub fn is_dev() -> bool {
     cfg!(debug_assertions)
+}
+
+#[tauri::command]
+pub fn quit_app(app: AppHandle) {
+    app.exit(0);
 }
 
 #[tauri::command]

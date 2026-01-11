@@ -1,5 +1,14 @@
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
+import {
+	enable as enableAutostart,
+	disable as disableAutostart,
+	isEnabled as isAutostartEnabled,
+} from "@tauri-apps/plugin-autostart";
+import {
+	isPermissionGranted,
+	requestPermission,
+} from "@tauri-apps/plugin-notification";
 import { AppToSave } from "@/types";
 import type { IncomeViewType } from "@/types/income";
 import {
@@ -12,8 +21,12 @@ import useAppStore from "./useAppStore";
 
 interface SettingsStore extends AppSettings {
 	// Actions
+	initializeDesktopSettings: () => Promise<void>;
 	setSettings: (settings: Partial<AppSettings>, skipSave?: boolean) => void;
 	setAutoSaveEnabled: (enabled: boolean) => void;
+	setLaunchAtLogin: (enabled: boolean) => Promise<void>;
+	setMinimizeToTray: (enabled: boolean) => void;
+	setNotificationsEnabled: (enabled: boolean) => Promise<void>;
 	setNotesDefaultFolder: (folderId: string) => void;
 	setExpenseDefaultView: (view: ExpenseViewType) => void;
 	setExpenseCurrency: (currency: string) => void;
@@ -27,6 +40,16 @@ interface SettingsStore extends AppSettings {
 export const useSettingsStore = create<SettingsStore>()(
 	subscribeWithSelector((set) => ({
 		...DEFAULT_SETTINGS,
+
+		initializeDesktopSettings: async () => {
+			try {
+				// Sync autostart state with system
+				const autostartEnabled = await isAutostartEnabled();
+				set({ launchAtLogin: autostartEnabled });
+			} catch (error) {
+				console.error("Failed to initialize desktop settings:", error);
+			}
+		},
 
 		setSettings: (settings, skipSave = false) => {
 			set(settings);
@@ -55,6 +78,53 @@ export const useSettingsStore = create<SettingsStore>()(
 
 			// Always save when changing autosave (so the preference persists)
 			useAppStore.getState().saveToFile(AppToSave.All);
+		},
+
+		setLaunchAtLogin: async (enabled) => {
+			try {
+				if (enabled) {
+					await enableAutostart();
+				} else {
+					await disableAutostart();
+				}
+				set({ launchAtLogin: enabled });
+
+				if (useAppStore.getState().autoSaveEnabled) {
+					useAppStore.getState().saveToFile(AppToSave.All);
+				}
+			} catch (error) {
+				console.error("Failed to toggle autostart:", error);
+			}
+		},
+
+		setMinimizeToTray: (enabled) => {
+			set({ minimizeToTray: enabled });
+
+			if (useAppStore.getState().autoSaveEnabled) {
+				useAppStore.getState().saveToFile(AppToSave.All);
+			}
+		},
+
+		setNotificationsEnabled: async (enabled) => {
+			if (enabled) {
+				// Check and request permission if needed
+				let permissionGranted = await isPermissionGranted();
+				if (!permissionGranted) {
+					const permission = await requestPermission();
+					permissionGranted = permission === "granted";
+				}
+
+				if (!permissionGranted) {
+					console.warn("Notification permission denied");
+					return;
+				}
+			}
+
+			set({ notificationsEnabled: enabled });
+
+			if (useAppStore.getState().autoSaveEnabled) {
+				useAppStore.getState().saveToFile(AppToSave.All);
+			}
 		},
 
 		setNotesDefaultFolder: (folderId) => {

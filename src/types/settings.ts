@@ -7,6 +7,11 @@ export interface AppSettings {
 	// General settings
 	autoSaveEnabled: boolean;
 
+	// Desktop settings
+	launchAtLogin: boolean;
+	minimizeToTray: boolean;
+	notificationsEnabled: boolean;
+
 	// Notes settings
 	notesDefaultFolder: string; // folder id, "inbox" is default
 
@@ -23,9 +28,13 @@ export interface AppSettings {
 
 export const DEFAULT_SETTINGS: AppSettings = {
 	autoSaveEnabled: true,
+	launchAtLogin: false,
+	minimizeToTray: true,
+	notificationsEnabled: true,
 	notesDefaultFolder: "inbox",
 	expenseDefaultView: "upcoming",
 	expenseCurrency: "USD",
+	expenseNotificationLeadDays: 7, // Default: notify 7 days before due date
 	incomeDefaultView: "monthly",
 	incomeWeekStartDay: 1, // Monday
 	incomeCurrency: "USD",
@@ -55,4 +64,14 @@ export const WEEK_DAYS = [
 	{ value: 4, label: "Thursday" },
 	{ value: 5, label: "Friday" },
 	{ value: 6, label: "Saturday" },
+] as const;
+
+export const EXPENSE_NOTIFICATION_LEAD_DAYS = [
+	{ value: 0, label: "On due date" },
+	{ value: 1, label: "1 day before" },
+	{ value: 3, label: "3 days before" },
+	{ value: 7, label: "1 week before" },
+	{ value: 14, label: "2 weeks before" },
+	{ value: 21, label: "3 weeks before" },
+	{ value: 30, label: "1 month before" },
 ] as const;
