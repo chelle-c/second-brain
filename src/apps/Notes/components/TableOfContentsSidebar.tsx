@@ -261,7 +261,7 @@ export const TableOfContentsSidebar = ({ editor }: TableOfContentsSidebarProps) 
 				</div>
 
 				{/* Content */}
-				<div className="h-[calc(100vh-132px)] overflow-y-auto p-2">
+				<div className="h-[calc(100vh-156px)] overflow-y-auto p-2">
 					{items.length === 0 ? (
 						<p className="text-xs text-muted-foreground italic p-2">
 							No headings found. Add headings to see the table of contents.

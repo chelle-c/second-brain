@@ -242,7 +242,7 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 									e.stopPropagation();
 									setShowIconPicker(true);
 								}}
-								className="shrink-0 p-0.5 -m-0.5 rounded hover:bg-accent/50 transition-colors"
+								className="shrink-0 p-0.5 -m-0.5 rounded hover:bg-accent/50 transition-colors cursor-pointer"
 								title="Change icon"
 							>
 								<IconComponent size={16} />
