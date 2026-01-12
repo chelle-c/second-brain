@@ -1,6 +1,7 @@
 import { addDays, differenceInDays, format, startOfDay } from "date-fns";
 import {
 	isPermissionGranted,
+	requestPermission,
 	sendNotification,
 } from "@tauri-apps/plugin-notification";
 import { useExpenseStore } from "@/stores/useExpenseStore";
@@ -15,9 +16,12 @@ interface NotificationOptions {
 
 const LAST_EXPENSE_NOTIFICATION_KEY = "last-expense-notification-date";
 
+// Guard against duplicate calls from React StrictMode
+let isCheckingNotifications = false;
+
 /**
  * Send a desktop notification if notifications are enabled in settings.
- * Silently fails if notifications are disabled or permission is not granted.
+ * Requests permission if not already granted.
  */
 export async function notify(options: NotificationOptions): Promise<boolean> {
 	try {
@@ -25,16 +29,29 @@ export async function notify(options: NotificationOptions): Promise<boolean> {
 		const notificationsEnabled =
 			useSettingsStore.getState().notificationsEnabled;
 		if (!notificationsEnabled) {
+			console.log("Notifications disabled in settings");
 			return false;
 		}
 
 		// Check if permission is granted
-		const permissionGranted = await isPermissionGranted();
+		let permissionGranted = await isPermissionGranted();
+		console.log("Notification permission granted:", permissionGranted);
+
+		// Request permission if not granted
 		if (!permissionGranted) {
-			return false;
+			console.log("Requesting notification permission...");
+			const permission = await requestPermission();
+			permissionGranted = permission === "granted";
+			console.log("Permission request result:", permission);
+
+			if (!permissionGranted) {
+				console.log("Notification permission denied");
+				return false;
+			}
 		}
 
 		// Send the notification
+		console.log("Sending notification:", options);
 		sendNotification(options);
 		return true;
 	} catch (error) {
@@ -70,45 +87,43 @@ function getUpcomingNotifiableExpenses(): Expense[] {
 }
 
 /**
- * Format the expense notification message.
+ * Format the due date text for an expense.
+ */
+function getDueText(expense: Expense): string {
+	const daysUntil = differenceInDays(
+		startOfDay(expense.dueDate!),
+		startOfDay(new Date()),
+	);
+	return daysUntil === 0
+		? "today"
+		: daysUntil === 1
+			? "tomorrow"
+			: `in ${daysUntil} days`;
+}
+
+/**
+ * Format the expense notification title (shows total amount).
+ */
+function formatExpenseNotificationTitle(expenses: Expense[]): string {
+	const totalAmount = expenses.reduce((sum, e) => sum + e.amount, 0);
+	return `$${totalAmount.toFixed(2)} in expenses due soon`;
+}
+
+/**
+ * Format the expense notification body (lists each expense).
  */
 function formatExpenseNotificationBody(expenses: Expense[]): string {
 	if (expenses.length === 0) return "";
 
-	if (expenses.length === 1) {
-		const expense = expenses[0];
-		const daysUntil = differenceInDays(
-			startOfDay(expense.dueDate!),
-			startOfDay(new Date()),
-		);
-		const dueText =
-			daysUntil === 0
-				? "due today"
-				: daysUntil === 1
-					? "due tomorrow"
-					: `due in ${daysUntil} days`;
-
-		return `${expense.name} ($${expense.amount.toFixed(2)}) is ${dueText}`;
-	}
-
-	// Multiple expenses
-	const totalAmount = expenses.reduce((sum, e) => sum + e.amount, 0);
-	const soonest = expenses.reduce((min, e) =>
-		e.dueDate! < min.dueDate! ? e : min,
-	);
-	const daysUntilSoonest = differenceInDays(
-		startOfDay(soonest.dueDate!),
-		startOfDay(new Date()),
+	// Sort by due date
+	const sorted = [...expenses].sort(
+		(a, b) => a.dueDate!.getTime() - b.dueDate!.getTime(),
 	);
 
-	const timeText =
-		daysUntilSoonest === 0
-			? "starting today"
-			: daysUntilSoonest === 1
-				? "starting tomorrow"
-				: `within ${daysUntilSoonest} days`;
-
-	return `${expenses.length} expenses totaling $${totalAmount.toFixed(2)} are due ${timeText}`;
+	// List each expense with its due date
+	return sorted
+		.map((e) => `• ${e.name} ($${e.amount.toFixed(2)}) - ${getDueText(e)}`)
+		.join("\n");
 }
 
 /**
@@ -137,16 +152,34 @@ function markExpenseNotificationsShown(): void {
  * This should be called once on app startup after data is loaded.
  */
 export async function checkExpenseNotifications(): Promise<void> {
+	// Guard against duplicate calls from React StrictMode
+	if (isCheckingNotifications) {
+		console.log("Expense notifications: Already checking, skipping duplicate call");
+		return;
+	}
+	isCheckingNotifications = true;
+
 	try {
+		const settingsState = useSettingsStore.getState();
+		const expenseState = useExpenseStore.getState();
+
+		console.log("Expense notifications check:", {
+			notificationsEnabled: settingsState.notificationsEnabled,
+			leadDays: settingsState.expenseNotificationLeadDays,
+			totalExpenses: expenseState.expenses.length,
+			expensesWithNotify: expenseState.expenses.filter(e => e.notify).length,
+		});
+
 		// Check if notifications are enabled
-		const notificationsEnabled =
-			useSettingsStore.getState().notificationsEnabled;
+		const notificationsEnabled = settingsState.notificationsEnabled;
 		if (!notificationsEnabled) {
 			console.log("Expense notifications: Desktop notifications disabled");
 			return;
 		}
 
 		// Check if we've already shown notifications today
+		const lastNotificationDate = localStorage.getItem(LAST_EXPENSE_NOTIFICATION_KEY);
+		console.log("Last notification date in localStorage:", lastNotificationDate);
 		if (!shouldShowExpenseNotifications()) {
 			console.log("Expense notifications: Already shown today");
 			return;
@@ -154,28 +187,43 @@ export async function checkExpenseNotifications(): Promise<void> {
 
 		// Get upcoming expenses with notify enabled
 		const upcomingExpenses = getUpcomingNotifiableExpenses();
+		console.log("Upcoming notifiable expenses:", upcomingExpenses.map(e => ({ name: e.name, dueDate: e.dueDate, notify: e.notify })));
 
 		if (upcomingExpenses.length === 0) {
 			console.log("Expense notifications: No upcoming expenses to notify");
-			// Still mark as shown so we don't keep checking
-			markExpenseNotificationsShown();
+			// Don't mark as shown - check again next app restart in case data wasn't loaded
 			return;
 		}
 
 		// Format and send the notification
+		const title = formatExpenseNotificationTitle(upcomingExpenses);
 		const body = formatExpenseNotificationBody(upcomingExpenses);
-		const title =
-			upcomingExpenses.length === 1
-				? "Expense Reminder"
-				: `${upcomingExpenses.length} Expenses Due Soon`;
 
 		const sent = await notify({ title, body });
 
 		if (sent) {
 			console.log("Expense notification sent:", title, body);
 			markExpenseNotificationsShown();
+		} else {
+			console.log("Expense notification failed to send (notifications disabled or permission denied)");
 		}
 	} catch (error) {
 		console.error("Failed to check expense notifications:", error);
+	} finally {
+		isCheckingNotifications = false;
 	}
+}
+
+/**
+ * Reset the expense notification check (for testing).
+ * Call this from the console: resetExpenseNotificationCheck()
+ */
+export function resetExpenseNotificationCheck(): void {
+	localStorage.removeItem(LAST_EXPENSE_NOTIFICATION_KEY);
+	console.log("Expense notification check reset - will show on next app restart");
+}
+
+// Expose to window for console access
+if (typeof window !== "undefined") {
+	(window as any).resetExpenseNotificationCheck = resetExpenseNotificationCheck;
 }

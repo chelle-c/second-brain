@@ -2,6 +2,7 @@ import { DEFAULT_CATEGORY_COLORS, DEFAULT_EXPENSE_CATEGORIES } from "@/lib/expen
 import type { Expense } from "@/types/expense";
 import type { IncomeEntry, IncomeWeeklyTargets } from "@/types/income";
 import type { Folder, Note, Tag } from "@/types/notes";
+import { DEFAULT_SETTINGS } from "@/types/settings";
 import type { LucideIcon } from "lucide-react";
 import {
 	Star,
@@ -921,13 +922,13 @@ const createSampleExpenses = (): Expense[] => {
 			amount: 199.99,
 			category: "Shopping",
 			paymentMethod: "None",
-			dueDate: daysFromNow(7),
+			dueDate: daysFromNow(3),
 			isRecurring: false,
 			isArchived: false,
 			isPaid: false,
 			type: "want",
 			importance: "none",
-			notify: false,
+			notify: true, // Notify enabled - due in 3 days for testing
 			createdAt: daysAgo(3),
 			updatedAt: daysAgo(3),
 			monthlyOverrides: {},
@@ -938,13 +939,13 @@ const createSampleExpenses = (): Expense[] => {
 			amount: 450,
 			category: "Transportation",
 			paymentMethod: "None",
-			dueDate: daysFromNow(14),
+			dueDate: daysFromNow(3),
 			isRecurring: false,
 			isArchived: false,
 			isPaid: false,
 			type: "need",
 			importance: "critical",
-			notify: false,
+			notify: true, // Notify enabled - due in 3 days for testing
 			createdAt: daysAgo(10),
 			updatedAt: daysAgo(10),
 			monthlyOverrides: {},
@@ -1072,6 +1073,13 @@ export const seedTestDatabase = async (): Promise<void> => {
 			lastSaved: new Date(),
 			version: "0.0.5",
 		});
+
+		// Save settings with expense notification lead days set to 3 for testing
+		await sqlStorage.saveSettings({
+			...DEFAULT_SETTINGS,
+			expenseNotificationLeadDays: 3, // 3 days before due date for testing
+		});
+		console.log("✓ Settings configured (notification lead time: 3 days)");
 
 		console.log("Test database seeded successfully!");
 	} catch (error) {
