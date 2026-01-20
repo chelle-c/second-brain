@@ -77,6 +77,8 @@ function App() {
 				console.log("Data saved successfully");
 
 				if (minimizeToTray) {
+					// Checkpoint the database to ensure data is persisted
+					await sqlStorage.checkpoint();
 					// Just hide the window - app stays in tray
 					await appWindow.hide();
 					console.log("Window hidden to tray");

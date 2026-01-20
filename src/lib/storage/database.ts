@@ -667,9 +667,33 @@ class SqlStorage {
 		});
 	}
 
-	// Load all data
-	async loadData(): Promise<AppData> {
+	// Verify database connection is working
+	private async verifyConnection(): Promise<boolean> {
+		try {
+			const result = await this.assertDb().select<Array<{ test: number }>>(
+				"SELECT 1 as test"
+			);
+			return result.length > 0 && result[0].test === 1;
+		} catch (error) {
+			console.error("Database connection verification failed:", error);
+			return false;
+		}
+	}
+
+	// Load all data with retry logic
+	async loadData(retryCount = 0): Promise<AppData> {
+		const MAX_RETRIES = 2;
+		const RETRY_DELAY_MS = 500;
+
 		if (!this.initialized) await this.initialize();
+
+		// Verify connection before loading
+		const isConnected = await this.verifyConnection();
+		if (!isConnected) {
+			console.warn("Database connection verification failed, attempting to reinitialize...");
+			this.initialized = false;
+			await this.initialize();
+		}
 
 		try {
 			const notes = await this.loadNotes();
@@ -680,6 +704,16 @@ class SqlStorage {
 			const income = await this.loadIncome();
 			const settings = await this.loadSettings();
 			const theme = await this.loadTheme();
+
+			// Check if folders loaded correctly (should always have at least initial folders)
+			// If folders are empty, this likely indicates a loading issue - retry
+			if (folders.length === 0 && retryCount < MAX_RETRIES) {
+				console.warn(
+					`Data load returned empty folders (attempt ${retryCount + 1}/${MAX_RETRIES + 1}), retrying...`
+				);
+				await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+				return this.loadData(retryCount + 1);
+			}
 
 			return {
 				notes,
@@ -695,6 +729,16 @@ class SqlStorage {
 			};
 		} catch (error) {
 			console.error("Failed to load data:", error);
+
+			// Retry on failure
+			if (retryCount < MAX_RETRIES) {
+				console.warn(
+					`Data load failed (attempt ${retryCount + 1}/${MAX_RETRIES + 1}), retrying...`
+				);
+				await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+				return this.loadData(retryCount + 1);
+			}
+
 			return {
 				notes: [],
 				folders: [],
@@ -819,6 +863,20 @@ class SqlStorage {
 			// Clear cache
 			this.cache = {};
 		});
+	}
+
+	// Checkpoint the WAL file without closing the database
+	// Useful when minimizing to tray to ensure data is persisted
+	async checkpoint(): Promise<void> {
+		if (!this.db || !this.initialized) return;
+
+		try {
+			await this.operationQueue;
+			await this.db.execute("PRAGMA wal_checkpoint(PASSIVE)");
+			console.log("Database checkpoint completed");
+		} catch (error) {
+			console.error("Error during database checkpoint:", error);
+		}
 	}
 
 	async close(): Promise<void> {

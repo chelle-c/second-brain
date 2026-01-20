@@ -632,30 +632,35 @@ export class NotesStorage {
 
 	async loadTags(): Promise<Record<string, Tag>> {
 		return this.context.queueOperation(async () => {
-			const results = await this.context.db.select<
-				Array<{
-					id: string;
-					name: string;
-					color: string;
-					icon: string;
-				}>
-			>("SELECT * FROM tags");
+			try {
+				const results = await this.context.db.select<
+					Array<{
+						id: string;
+						name: string;
+						color: string;
+						icon: string;
+					}>
+				>("SELECT * FROM tags");
 
-			const tags: Record<string, Tag> = {};
-			results.forEach((row) => {
-				// Deserialize icon name back to component
-				const iconComponent = row.icon && ICON_MAP[row.icon] ? ICON_MAP[row.icon] : TagIcon;
+				const tags: Record<string, Tag> = {};
+				results.forEach((row) => {
+					// Deserialize icon name back to component
+					const iconComponent = row.icon && ICON_MAP[row.icon] ? ICON_MAP[row.icon] : TagIcon;
 
-				tags[row.id] = {
-					id: row.id,
-					name: row.name,
-					color: row.color,
-					icon: iconComponent,
-				};
-			});
+					tags[row.id] = {
+						id: row.id,
+						name: row.name,
+						color: row.color,
+						icon: iconComponent,
+					};
+				});
 
-			this.context.cache.tags = tags;
-			return tags;
+				this.context.cache.tags = tags;
+				return tags;
+			} catch (error) {
+				console.error("Error loading tags:", error);
+				return {};
+			}
 		});
 	}
 
