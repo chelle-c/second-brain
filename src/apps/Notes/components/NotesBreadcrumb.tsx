@@ -39,12 +39,12 @@ export function NotesBreadcrumb({
 				</button>
 
 				<div className="flex items-center gap-2 min-w-0">
-					{React.createElement(activeFolder?.id === "inbox" ? Inbox : Folder, {
+					{React.createElement(activeFolder?.id === "inbox" || !activeFolder ? Inbox : Folder, {
 						size: 18,
 						className: "text-muted-foreground shrink-0",
 					})}
 					<span className="text-sm text-muted-foreground truncate">
-						{activeFolder?.name || "Notes"}
+						{activeFolder?.name || "Inbox"}
 					</span>
 					<span className="text-sm text-muted-foreground">/</span>
 					<span className="text-sm font-medium truncate">
