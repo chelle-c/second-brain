@@ -813,7 +813,7 @@ export const FolderNav = ({
 						<div className="inline-flex">
 							<ActionButton
 								icon={Plus}
-								onClick={onCreateNote}
+								onClick={() => onCreateNote(activeFolder || undefined)}
 								variant="primary"
 								title="New Note (Ctrl/Cmd + =)"
 								ariaLabel="Create new note"

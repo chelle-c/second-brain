@@ -481,7 +481,7 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 						{activeFolder && React.createElement(getFolderIconComponent(activeFolder), {
 							size: 24,
 						})}
-						<h1 className="text-2xl font-semibold">{activeFolder?.name || "Notes"}</h1>
+						<h1 className="text-2xl font-semibold">{activeFolder?.name || "Inbox"}</h1>
 						<span className="text-sm text-muted-foreground">
 							({filteredNotes.length})
 						</span>
