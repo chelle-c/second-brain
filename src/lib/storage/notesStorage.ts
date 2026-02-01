@@ -329,7 +329,7 @@ export class NotesStorage {
 	async loadNotes(): Promise<Note[]> {
 		return this.context.queueOperation(async () => {
 			try {
-				const tableInfo = await this.context.db.select<Array<{ name: string }>>(
+				const tableInfo = await this.context.getDb().select<Array<{ name: string }>>(
 					"PRAGMA table_info(notes)"
 				);
 
@@ -348,7 +348,7 @@ export class NotesStorage {
 
 				query += " FROM notes";
 
-				const results = await this.context.db.select<
+				const results = await this.context.getDb().select<
 					Array<{
 						id: string;
 						title: string;
@@ -431,12 +431,12 @@ export class NotesStorage {
 				);
 			});
 
-			await this.context.db.execute("DELETE FROM notes");
+			await this.context.getDb().execute("DELETE FROM notes");
 
 			for (const note of notes) {
 				const folder = note.folder || "inbox";
 
-				await this.context.db.execute(
+				await this.context.getDb().execute(
 					`INSERT INTO notes (id, title, content, tags, folder, createdAt, updatedAt, archived)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 					[
@@ -479,7 +479,7 @@ export class NotesStorage {
 	async loadFolders(): Promise<Folder[]> {
 		return this.context.queueOperation(async () => {
 			try {
-				const tables = await this.context.db.select<Array<{ name: string }>>(
+				const tables = await this.context.getDb().select<Array<{ name: string }>>(
 					"SELECT name FROM sqlite_master WHERE type='table' AND name='folders_new'"
 				);
 
@@ -489,7 +489,7 @@ export class NotesStorage {
 					return initialFolders;
 				}
 
-				const results = await this.context.db.select<
+				const results = await this.context.getDb().select<
 					Array<{
 						id: string;
 						name: string;
@@ -529,7 +529,7 @@ export class NotesStorage {
 				console.error("Error loading folders:", error);
 
 				try {
-					const results = await this.context.db.select<Array<{ data: string }>>(
+					const results = await this.context.getDb().select<Array<{ data: string }>>(
 						"SELECT data FROM folders WHERE id = 1"
 					);
 
@@ -594,7 +594,7 @@ export class NotesStorage {
 		}
 
 		return this.context.queueOperation(async () => {
-			await this.context.db.execute("DELETE FROM folders_new");
+			await this.context.getDb().execute("DELETE FROM folders_new");
 
 			// Sort folders so parents are inserted before children
 			const sortedFolders = this.sortFoldersForInsert(folders);
@@ -602,7 +602,7 @@ export class NotesStorage {
 			for (const folder of sortedFolders) {
 				const iconName = getIconName(folder.icon);
 
-				await this.context.db.execute(
+				await this.context.getDb().execute(
 					`INSERT INTO folders_new (id, name, parentId, icon, archived, \`order\`, createdAt, updatedAt)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 					[
@@ -633,7 +633,7 @@ export class NotesStorage {
 	async loadTags(): Promise<Record<string, Tag>> {
 		return this.context.queueOperation(async () => {
 			try {
-				const results = await this.context.db.select<
+				const results = await this.context.getDb().select<
 					Array<{
 						id: string;
 						name: string;
@@ -670,13 +670,13 @@ export class NotesStorage {
 		}
 
 		return this.context.queueOperation(async () => {
-			await this.context.db.execute("DELETE FROM tags");
+			await this.context.getDb().execute("DELETE FROM tags");
 
 			for (const [, tag] of Object.entries(tags)) {
 				// Use getIconName helper for consistent icon name extraction
 				const iconName = getIconName(tag.icon) || "Tag";
 
-				await this.context.db.execute(
+				await this.context.getDb().execute(
 					`INSERT INTO tags (id, name, color, icon)
 					VALUES (?, ?, ?, ?)`,
 					[tag.id, tag.name, tag.color, iconName]

@@ -42,7 +42,7 @@ describe("NotesStorage", () => {
     `);
 
 		const context = {
-			db,
+			getDb: () => db,
 			queueOperation: async <T>(op: () => Promise<T>) => op(),
 			cache: {},
 		};

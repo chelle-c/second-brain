@@ -33,21 +33,28 @@ const checkIsDevMode = async (): Promise<boolean> => {
 };
 
 class SqlStorage {
-	private initialized = false;
-	private initPromise: Promise<void> | null = null;
 	private db: Database | null = null;
 	private appDataPath: string | null = null;
 	private operationQueue: Promise<void> = Promise.resolve();
 	private cache: StorageCache = {};
 	private currentEnvironment: DatabaseEnvironment = "production";
+	private environmentInitialized = false;
+	private tablesCreated = false;
+	private storageInitialized = false;
+
+	// Connection management
+	private connectionRefCount = 0;
+	private closeTimeout: ReturnType<typeof setTimeout> | null = null;
+	private connectionPromise: Promise<void> | null = null;
+	private static readonly CLOSE_DELAY_MS = 2000; // Close after 2 seconds of inactivity
 
 	private notesStorage!: NotesStorage;
 	private expensesStorage!: ExpensesStorage;
 	private incomeStorage!: IncomeStorage;
 
-	private assertDb(): Database {
+	private getDb(): Database {
 		if (!this.db) {
-			throw new Error("Database not initialized");
+			throw new Error("Database connection not open");
 		}
 		return this.db;
 	}
@@ -67,12 +74,135 @@ class SqlStorage {
 		return this.appDataPath;
 	}
 
-	private queueOperation = async <T>(operation: () => Promise<T>): Promise<T> => {
-		// Ensure database is initialized before any operation
-		if (!this.initialized) {
-			await this.initialize();
+	// Check if connection is currently open
+	isOpen(): boolean {
+		return this.db !== null;
+	}
+
+	// Ensure environment is determined (only needs to happen once)
+	private async ensureEnvironment(): Promise<void> {
+		if (this.environmentInitialized) return;
+
+		const isDev = await checkIsDevMode();
+		this.currentEnvironment = isDev ? "test" : "production";
+		this.environmentInitialized = true;
+	}
+
+	// Open the database connection
+	private async openConnection(): Promise<void> {
+		// If already connecting, wait for that to complete
+		if (this.connectionPromise) {
+			await this.connectionPromise;
+			return;
 		}
 
+		if (this.db) {
+			// Connection already open
+			return;
+		}
+
+		// Create a promise to track the connection process
+		this.connectionPromise = this.doOpenConnection();
+		try {
+			await this.connectionPromise;
+		} finally {
+			this.connectionPromise = null;
+		}
+	}
+
+	private async doOpenConnection(): Promise<void> {
+		await this.ensureEnvironment();
+
+		const dataPath = await this.getDataPath();
+		const dbFileName = this.getDatabaseFileName();
+		const dbPath = joinPath(dataPath, dbFileName);
+
+		console.log(`Opening database connection: ${dbPath}`);
+		this.db = await Database.load(`sqlite:${dbPath}`);
+
+		// Use DELETE journal mode instead of WAL for better compatibility with open/close pattern
+		await this.db.execute("PRAGMA journal_mode=DELETE");
+		await this.db.execute("PRAGMA synchronous=FULL");
+		await this.db.execute("PRAGMA busy_timeout=5000");
+
+		// Create tables if needed (only on first connection)
+		if (!this.tablesCreated) {
+			await this.createTables();
+			await this.runMigrations();
+			await this.verifySchema();
+			this.tablesCreated = true;
+		}
+
+		// Initialize storage classes once
+		if (!this.storageInitialized) {
+			const context = this.getContext();
+			this.notesStorage = new NotesStorage(context);
+			this.expensesStorage = new ExpensesStorage(context);
+			this.incomeStorage = new IncomeStorage(context);
+			this.storageInitialized = true;
+		}
+
+		console.log(`Database connection opened (${this.currentEnvironment} environment)`);
+	}
+
+	// Close the database connection immediately
+	private async closeConnectionNow(): Promise<void> {
+		if (!this.db) {
+			// Connection already closed
+			return;
+		}
+
+		try {
+			await this.db.close();
+			console.log("Database connection closed");
+		} catch (error) {
+			console.error("Error closing database connection:", error);
+		}
+
+		this.db = null;
+	}
+
+	// Schedule the connection to close after a delay
+	private scheduleClose(): void {
+		// Cancel any existing close timer
+		if (this.closeTimeout) {
+			clearTimeout(this.closeTimeout);
+			this.closeTimeout = null;
+		}
+
+		// Only schedule close if no pending operations
+		if (this.connectionRefCount === 0) {
+			this.closeTimeout = setTimeout(() => {
+				this.closeTimeout = null;
+				if (this.connectionRefCount === 0) {
+					this.closeConnectionNow();
+				}
+			}, SqlStorage.CLOSE_DELAY_MS);
+		}
+	}
+
+	// Execute a function with an open database connection
+	// Connection stays open and closes after a period of inactivity
+	private async withConnection<T>(fn: () => Promise<T>): Promise<T> {
+		// Cancel any pending close
+		if (this.closeTimeout) {
+			clearTimeout(this.closeTimeout);
+			this.closeTimeout = null;
+		}
+
+		this.connectionRefCount++;
+
+		try {
+			await this.openConnection();
+			return await fn();
+		} finally {
+			this.connectionRefCount--;
+			// Schedule delayed close
+			this.scheduleClose();
+		}
+	}
+
+	private queueOperation = async <T>(operation: () => Promise<T>): Promise<T> => {
 		const timeoutPromise = new Promise<T>((_, reject) => {
 			setTimeout(
 				() => reject(new Error("Database operation timeout after 10 seconds")),
@@ -93,85 +223,28 @@ class SqlStorage {
 	};
 
 	private getContext(): DatabaseContext {
-		if (!this.db) throw new Error("Database not initialized");
 		return {
-			db: this.db,
+			getDb: () => this.getDb(),
 			queueOperation: this.queueOperation,
 			cache: this.cache,
 		};
 	}
 
+	// Legacy initialize method for backward compatibility
 	async initialize(environment?: DatabaseEnvironment): Promise<void> {
-		// If already initializing, wait for the existing promise
-		if (this.initPromise) {
-			return this.initPromise;
+		if (environment) {
+			this.currentEnvironment = environment;
+			this.environmentInitialized = true;
 		}
-
-		// If environment is specified and different from current, force re-initialization
-		if (environment && environment !== this.currentEnvironment && this.initialized) {
-			await this.close();
-		}
-
-		if (this.initialized && this.db) {
-			return;
-		}
-
-		this.initPromise = this._doInitialize(environment);
-
-		try {
-			await this.initPromise;
-		} finally {
-			this.initPromise = null;
-		}
-	}
-
-	private async _doInitialize(environment?: DatabaseEnvironment): Promise<void> {
-
-		try {
-			if (!environment) {
-				const isDev = await checkIsDevMode();
-				this.currentEnvironment = isDev ? "test" : "production";
-			} else {
-				this.currentEnvironment = environment;
-			}
-
-			const dataPath = await this.getDataPath();
-			const dbFileName = this.getDatabaseFileName();
-			const dbPath = joinPath(dataPath, dbFileName);
-
-			console.log(`Connecting to database: ${dbPath}`);
-			this.db = await Database.load(`sqlite:${dbPath}`);
-
-			await this.db.execute("PRAGMA journal_mode=WAL");
-			await this.db.execute("PRAGMA synchronous=NORMAL");
-			await this.db.execute("PRAGMA busy_timeout=5000");
-
-			await this.createTables();
-			await this.runMigrations();
-			await this.verifySchema();
-
-			this.notesStorage = new NotesStorage(this.getContext());
-			this.expensesStorage = new ExpensesStorage(this.getContext());
-			this.incomeStorage = new IncomeStorage(this.getContext());
-
-			this.initialized = true;
-			console.log(
-				`Database initialized (${this.currentEnvironment} environment, file: ${dbFileName}, version: ${DATA_VERSION})`
-			);
-		} catch (error) {
-			console.error("Failed to initialize database:", error);
-			this.initialized = false;
-			this.db = null;
-			throw error;
-		} finally {
-		}
+		// Just ensure environment is set, actual connection happens on-demand
+		await this.ensureEnvironment();
 	}
 
 	private async createTables(): Promise<void> {
-		if (!this.db) throw new Error("Database not initialized");
+		const db = this.getDb();
 
 		// Create notes table with folder field
-		await this.db.execute(`
+		await db.execute(`
 			CREATE TABLE IF NOT EXISTS notes (
 				id TEXT PRIMARY KEY,
 				title TEXT NOT NULL,
@@ -185,7 +258,7 @@ class SqlStorage {
 		`);
 
 		// Legacy folders table (single row JSON)
-		await this.db.execute(`
+		await db.execute(`
 			CREATE TABLE IF NOT EXISTS folders (
 				id INTEGER PRIMARY KEY CHECK (id = 1),
 				data TEXT NOT NULL
@@ -193,7 +266,7 @@ class SqlStorage {
 		`);
 
 		// New normalized folders table
-		await this.db.execute(`
+		await db.execute(`
 			CREATE TABLE IF NOT EXISTS folders_new (
 				id TEXT PRIMARY KEY,
 				name TEXT NOT NULL,
@@ -207,11 +280,11 @@ class SqlStorage {
 			)
 		`);
 
-		await this.db.execute(`
+		await db.execute(`
 			CREATE INDEX IF NOT EXISTS idx_folders_parent ON folders_new(parentId)
 		`);
 
-		await this.db.execute(`
+		await db.execute(`
 			CREATE TABLE IF NOT EXISTS tags (
 				id TEXT PRIMARY KEY,
 				name TEXT NOT NULL,
@@ -220,7 +293,7 @@ class SqlStorage {
 			)
 		`);
 
-		await this.db.execute(`
+		await db.execute(`
 			CREATE TABLE IF NOT EXISTS expenses (
 				id TEXT PRIMARY KEY,
 				name TEXT NOT NULL,
@@ -245,7 +318,7 @@ class SqlStorage {
 			)
 		`);
 
-		await this.db.execute(`
+		await db.execute(`
 			CREATE TABLE IF NOT EXISTS income_entries (
 				id TEXT PRIMARY KEY,
 				date TEXT NOT NULL,
@@ -255,21 +328,21 @@ class SqlStorage {
 			)
 		`);
 
-		await this.db.execute(`
+		await db.execute(`
 			CREATE TABLE IF NOT EXISTS income_weekly_targets (
 				id TEXT PRIMARY KEY,
 				amount REAL NOT NULL
 			)
 		`);
 
-		await this.db.execute(`
+		await db.execute(`
 			CREATE TABLE IF NOT EXISTS settings (
 				key TEXT PRIMARY KEY,
 				value TEXT NOT NULL
 			)
 		`);
 
-		await this.db.execute(`
+		await db.execute(`
 			CREATE TABLE IF NOT EXISTS metadata (
 				id INTEGER PRIMARY KEY CHECK (id = 1),
 				lastSaved TEXT NOT NULL,
@@ -279,12 +352,12 @@ class SqlStorage {
 	}
 
 	private async runMigrations(): Promise<void> {
-		if (!this.db) throw new Error("Database not initialized");
+		const db = this.getDb();
 
 		let currentVersion = "0.0.0";
 
 		try {
-			const versionResult = await this.db.select<Array<{ version: string }>>(
+			const versionResult = await db.select<Array<{ version: string }>>(
 				"SELECT version FROM metadata WHERE id = 1"
 			);
 			if (versionResult.length > 0 && versionResult[0].version) {
@@ -300,7 +373,7 @@ class SqlStorage {
 
 		if (currentVersion !== DATA_VERSION) {
 			try {
-				await this.db.execute(
+				await db.execute(
 					`INSERT OR REPLACE INTO metadata (id, lastSaved, version) VALUES (1, ?, ?)`,
 					[new Date().toISOString(), DATA_VERSION]
 				);
@@ -311,15 +384,15 @@ class SqlStorage {
 	}
 
 	private async migrateFoldersTable(): Promise<void> {
-		if (!this.db) throw new Error("Database not initialized");
+		const db = this.getDb();
 
 		try {
-			const tables = await this.db.select<Array<{ name: string }>>(
+			const tables = await db.select<Array<{ name: string }>>(
 				"SELECT name FROM sqlite_master WHERE type='table' AND name='folders_new'"
 			);
 
 			if (tables.length === 0) {
-				await this.db.execute(`
+				await db.execute(`
 					CREATE TABLE folders_new (
 						id TEXT PRIMARY KEY,
 						name TEXT NOT NULL,
@@ -333,7 +406,7 @@ class SqlStorage {
 					)
 				`);
 
-				await this.db.execute(`
+				await db.execute(`
 					CREATE INDEX idx_folders_parent ON folders_new(parentId)
 				`);
 			}
@@ -344,10 +417,10 @@ class SqlStorage {
 	}
 
 	private async migrateNotesTable(): Promise<void> {
-		if (!this.db) throw new Error("Database not initialized");
+		const db = this.getDb();
 
 		try {
-			const tableInfo = await this.db.select<Array<{ name: string }>>(
+			const tableInfo = await db.select<Array<{ name: string }>>(
 				"PRAGMA table_info(notes)"
 			);
 
@@ -357,20 +430,20 @@ class SqlStorage {
 			const hasNewColumn = columnNames.includes("folder");
 
 			if (hasOldColumn && !hasNewColumn) {
-				await this.db.execute(`
+				await db.execute(`
 					ALTER TABLE notes ADD COLUMN folder TEXT DEFAULT 'inbox'
 				`);
 
-				await this.db.execute(`
+				await db.execute(`
 					UPDATE notes SET folder = COALESCE(folderId, 'inbox')
 				`);
 			} else if (!hasNewColumn) {
-				await this.db.execute(`
+				await db.execute(`
 					ALTER TABLE notes ADD COLUMN folder TEXT DEFAULT 'inbox'
 				`);
 			}
 
-			await this.db.execute(`
+			await db.execute(`
 				UPDATE notes SET folder = 'inbox'
 				WHERE folder IS NULL OR folder = '' OR TRIM(folder) = ''
 			`);
@@ -381,10 +454,10 @@ class SqlStorage {
 	}
 
 	private async ensureExpensesColumns(): Promise<void> {
-		if (!this.db) throw new Error("Database not initialized");
+		const db = this.getDb();
 
 		try {
-			const tableInfo = await this.db.select<Array<{ name: string; type: string }>>(
+			const tableInfo = await db.select<Array<{ name: string; type: string }>>(
 				"PRAGMA table_info(expenses)"
 			);
 
@@ -402,7 +475,7 @@ class SqlStorage {
 			for (const column of requiredColumns) {
 				if (!existingColumns.has(column.name)) {
 					try {
-						await this.db.execute(
+						await db.execute(
 							`ALTER TABLE expenses ADD COLUMN ${column.name} ${column.type} DEFAULT ${column.defaultValue}`
 						);
 					} catch (alterError) {
@@ -412,12 +485,12 @@ class SqlStorage {
 				}
 			}
 
-			const paymentMethodsResult = await this.db.select<Array<{ value: string }>>(
+			const paymentMethodsResult = await db.select<Array<{ value: string }>>(
 				"SELECT value FROM settings WHERE key = 'expense_paymentMethods'"
 			);
 
 			if (paymentMethodsResult.length === 0) {
-				await this.db.execute(
+				await db.execute(
 					`INSERT OR REPLACE INTO settings (key, value) VALUES ('expense_paymentMethods', ?)`,
 					[JSON.stringify(DEFAULT_PAYMENT_METHODS)]
 				);
@@ -429,10 +502,10 @@ class SqlStorage {
 	}
 
 	private async verifySchema(): Promise<void> {
-		if (!this.db) throw new Error("Database not initialized");
+		const db = this.getDb();
 
 		try {
-			const tableInfo = await this.db.select<Array<{ name: string }>>(
+			const tableInfo = await db.select<Array<{ name: string }>>(
 				"PRAGMA table_info(expenses)"
 			);
 
@@ -476,98 +549,110 @@ class SqlStorage {
 
 	// Public API - Notes
 	async loadNotes() {
-		if (!this.initialized) await this.initialize();
-		return this.notesStorage.loadNotes();
+		return this.withConnection(async () => {
+			return this.notesStorage.loadNotes();
+		});
 	}
 
 	async saveNotes(notes: Note[]) {
-		if (!this.initialized) await this.initialize();
-		return this.notesStorage.saveNotes(notes);
+		return this.withConnection(async () => {
+			return this.notesStorage.saveNotes(notes);
+		});
 	}
 
 	async loadFolders() {
-		if (!this.initialized) await this.initialize();
-		return this.notesStorage.loadFolders();
+		return this.withConnection(async () => {
+			return this.notesStorage.loadFolders();
+		});
 	}
 
 	async saveFolders(folders: Folder[]) {
-		if (!this.initialized) await this.initialize();
-		return this.notesStorage.saveFolders(folders);
+		return this.withConnection(async () => {
+			return this.notesStorage.saveFolders(folders);
+		});
 	}
 
 	async loadTags() {
-		if (!this.initialized) await this.initialize();
-		return this.notesStorage.loadTags();
+		return this.withConnection(async () => {
+			return this.notesStorage.loadTags();
+		});
 	}
 
 	async saveTags(tags: Record<string, Tag>) {
-		if (!this.initialized) await this.initialize();
-		return this.notesStorage.saveTags(tags);
+		return this.withConnection(async () => {
+			return this.notesStorage.saveTags(tags);
+		});
 	}
 
 	// Public API - Expenses
 	async loadExpenses() {
-		if (!this.initialized) await this.initialize();
-		return this.expensesStorage.loadExpenses();
+		return this.withConnection(async () => {
+			return this.expensesStorage.loadExpenses();
+		});
 	}
 
 	async saveExpenses(expenses: AppData["expenses"]) {
-		if (!this.initialized) await this.initialize();
-		return this.expensesStorage.saveExpenses(expenses);
+		return this.withConnection(async () => {
+			return this.expensesStorage.saveExpenses(expenses);
+		});
 	}
 
 	// Public API - Income
 	async loadIncome() {
-		if (!this.initialized) await this.initialize();
-		return this.incomeStorage.loadIncome();
+		return this.withConnection(async () => {
+			return this.incomeStorage.loadIncome();
+		});
 	}
 
 	async saveIncome(income: AppData["income"]) {
-		if (!this.initialized) await this.initialize();
-		return this.incomeStorage.saveIncome(income);
+		return this.withConnection(async () => {
+			return this.incomeStorage.saveIncome(income);
+		});
 	}
 
 	// Public API - Settings
 	async loadSettings(): Promise<AppSettings> {
-		if (!this.initialized) await this.initialize();
+		return this.withConnection(async () => {
+			return this.queueOperation(async () => {
+				const db = this.getDb();
+				const results = await db.select<Array<{ key: string; value: string }>>(
+					"SELECT key, value FROM settings"
+				);
 
-		return this.queueOperation(async () => {
-			const results = await this.assertDb().select<Array<{ key: string; value: string }>>(
-				"SELECT key, value FROM settings"
-			);
-
-			if (results.length === 0) {
-				return DEFAULT_SETTINGS;
-			}
-
-			const settings: Record<string, unknown> = {};
-			for (const row of results) {
-				try {
-					settings[row.key] = JSON.parse(row.value);
-				} catch {
-					settings[row.key] = row.value;
+				if (results.length === 0) {
+					return DEFAULT_SETTINGS;
 				}
-			}
 
-			this.cache.settings = {
-				...DEFAULT_SETTINGS,
-				...(settings as Partial<AppSettings>),
-			};
-			return this.cache.settings;
+				const settings: Record<string, unknown> = {};
+				for (const row of results) {
+					try {
+						settings[row.key] = JSON.parse(row.value);
+					} catch {
+						settings[row.key] = row.value;
+					}
+				}
+
+				this.cache.settings = {
+					...DEFAULT_SETTINGS,
+					...(settings as Partial<AppSettings>),
+				};
+				return this.cache.settings;
+			});
 		});
 	}
 
 	async saveSettings(settings: AppSettings): Promise<void> {
-		if (!this.initialized) await this.initialize();
-
-		return this.queueOperation(async () => {
-			for (const [key, value] of Object.entries(settings)) {
-				await this.assertDb().execute(
-					`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`,
-					[key, JSON.stringify(value)]
-				);
-			}
-			this.cache.settings = settings;
+		return this.withConnection(async () => {
+			return this.queueOperation(async () => {
+				const db = this.getDb();
+				for (const [key, value] of Object.entries(settings)) {
+					await db.execute(
+						`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`,
+						[key, JSON.stringify(value)]
+					);
+				}
+				this.cache.settings = settings;
+			});
 		});
 	}
 
@@ -578,48 +663,50 @@ class SqlStorage {
 
 	// Public API - Theme
 	async loadTheme(): Promise<ThemeSettings> {
-		if (!this.initialized) await this.initialize();
+		return this.withConnection(async () => {
+			return this.queueOperation(async () => {
+				const db = this.getDb();
+				const results = await db.select<Array<{ key: string; value: string }>>(
+					"SELECT key, value FROM settings WHERE key LIKE 'theme_%'"
+				);
 
-		return this.queueOperation(async () => {
-			const results = await this.assertDb().select<Array<{ key: string; value: string }>>(
-				"SELECT key, value FROM settings WHERE key LIKE 'theme_%'"
-			);
-
-			if (results.length === 0) {
-				this.cache.theme = DEFAULT_THEME_SETTINGS;
-				return DEFAULT_THEME_SETTINGS;
-			}
-
-			const theme: Record<string, unknown> = {};
-			for (const row of results) {
-				const key = row.key.replace("theme_", "");
-				try {
-					theme[key] = JSON.parse(row.value);
-				} catch {
-					theme[key] = row.value;
+				if (results.length === 0) {
+					this.cache.theme = DEFAULT_THEME_SETTINGS;
+					return DEFAULT_THEME_SETTINGS;
 				}
-			}
 
-			const fullTheme = {
-				...DEFAULT_THEME_SETTINGS,
-				...(theme as Partial<ThemeSettings>),
-			};
-			this.cache.theme = fullTheme;
-			return fullTheme;
+				const theme: Record<string, unknown> = {};
+				for (const row of results) {
+					const key = row.key.replace("theme_", "");
+					try {
+						theme[key] = JSON.parse(row.value);
+					} catch {
+						theme[key] = row.value;
+					}
+				}
+
+				const fullTheme = {
+					...DEFAULT_THEME_SETTINGS,
+					...(theme as Partial<ThemeSettings>),
+				};
+				this.cache.theme = fullTheme;
+				return fullTheme;
+			});
 		});
 	}
 
 	async saveTheme(theme: ThemeSettings): Promise<void> {
-		if (!this.initialized) await this.initialize();
-
-		return this.queueOperation(async () => {
-			for (const [key, value] of Object.entries(theme)) {
-				await this.assertDb().execute(
-					`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`,
-					[`theme_${key}`, JSON.stringify(value)]
-				);
-			}
-			this.cache.theme = theme;
+		return this.withConnection(async () => {
+			return this.queueOperation(async () => {
+				const db = this.getDb();
+				for (const [key, value] of Object.entries(theme)) {
+					await db.execute(
+						`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`,
+						[`theme_${key}`, JSON.stringify(value)]
+					);
+				}
+				this.cache.theme = theme;
+			});
 		});
 	}
 
@@ -630,54 +717,43 @@ class SqlStorage {
 
 	// Metadata
 	async loadMetadata(): Promise<AppMetadata> {
-		if (!this.initialized) await this.initialize();
+		return this.withConnection(async () => {
+			return this.queueOperation(async () => {
+				const db = this.getDb();
+				const results = await db.select<
+					Array<{ lastSaved: string; version: string }>
+				>("SELECT * FROM metadata WHERE id = 1");
 
-		return this.queueOperation(async () => {
-			const results = await this.assertDb().select<
-				Array<{ lastSaved: string; version: string }>
-			>("SELECT * FROM metadata WHERE id = 1");
+				if (results.length === 0) {
+					const defaultMetadata: AppMetadata = {
+						lastSaved: new Date(),
+						version: DATA_VERSION,
+					};
+					await db.execute(
+						`INSERT OR REPLACE INTO metadata (id, lastSaved, version) VALUES (1, ?, ?)`,
+						[defaultMetadata.lastSaved.toISOString(), defaultMetadata.version]
+					);
+					return defaultMetadata;
+				}
 
-			if (results.length === 0) {
-				const defaultMetadata: AppMetadata = {
-					lastSaved: new Date(),
-					version: DATA_VERSION,
+				return {
+					lastSaved: new Date(results[0].lastSaved),
+					version: results[0].version,
 				};
-				await this.assertDb().execute(
-					`INSERT OR REPLACE INTO metadata (id, lastSaved, version) VALUES (1, ?, ?)`,
-					[defaultMetadata.lastSaved.toISOString(), defaultMetadata.version]
-				);
-				return defaultMetadata;
-			}
-
-			return {
-				lastSaved: new Date(results[0].lastSaved),
-				version: results[0].version,
-			};
+			});
 		});
 	}
 
 	async saveMetadata(metadata: AppMetadata): Promise<void> {
-		if (!this.initialized) await this.initialize();
-
-		return this.queueOperation(async () => {
-			await this.assertDb().execute(
-				`INSERT OR REPLACE INTO metadata (id, lastSaved, version) VALUES (1, ?, ?)`,
-				[metadata.lastSaved.toISOString(), metadata.version]
-			);
+		return this.withConnection(async () => {
+			return this.queueOperation(async () => {
+				const db = this.getDb();
+				await db.execute(
+					`INSERT OR REPLACE INTO metadata (id, lastSaved, version) VALUES (1, ?, ?)`,
+					[metadata.lastSaved.toISOString(), metadata.version]
+				);
+			});
 		});
-	}
-
-	// Verify database connection is working
-	private async verifyConnection(): Promise<boolean> {
-		try {
-			const result = await this.assertDb().select<Array<{ test: number }>>(
-				"SELECT 1 as test"
-			);
-			return result.length > 0 && result[0].test === 1;
-		} catch (error) {
-			console.error("Database connection verification failed:", error);
-			return false;
-		}
 	}
 
 	// Load all data with retry logic
@@ -685,154 +761,207 @@ class SqlStorage {
 		const MAX_RETRIES = 2;
 		const RETRY_DELAY_MS = 500;
 
-		if (!this.initialized) await this.initialize();
+		return this.withConnection(async () => {
+			try {
+				const notes = await this.notesStorage.loadNotes();
+				const folders = await this.notesStorage.loadFolders();
+				const tags = await this.notesStorage.loadTags();
+				const expenses = await this.expensesStorage.loadExpenses();
+				const income = await this.incomeStorage.loadIncome();
 
-		// Verify connection before loading
-		const isConnected = await this.verifyConnection();
-		if (!isConnected) {
-			console.warn("Database connection verification failed, attempting to reinitialize...");
-			this.initialized = false;
-			await this.initialize();
-		}
-
-		try {
-			const notes = await this.loadNotes();
-			const folders = await this.loadFolders();
-			const tags = await this.loadTags();
-			const expenses = await this.loadExpenses();
-			const metadata = await this.loadMetadata();
-			const income = await this.loadIncome();
-			const settings = await this.loadSettings();
-			const theme = await this.loadTheme();
-
-			// Check if folders loaded correctly (should always have at least initial folders)
-			// If folders are empty, this likely indicates a loading issue - retry
-			if (folders.length === 0 && retryCount < MAX_RETRIES) {
-				console.warn(
-					`Data load returned empty folders (attempt ${retryCount + 1}/${MAX_RETRIES + 1}), retrying...`
+				// Load settings inline
+				const settingsResults = await this.getDb().select<Array<{ key: string; value: string }>>(
+					"SELECT key, value FROM settings"
 				);
-				await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
-				return this.loadData(retryCount + 1);
-			}
+				const settingsObj: Record<string, unknown> = {};
+				for (const row of settingsResults) {
+					try {
+						settingsObj[row.key] = JSON.parse(row.value);
+					} catch {
+						settingsObj[row.key] = row.value;
+					}
+				}
+				const settings = { ...DEFAULT_SETTINGS, ...(settingsObj as Partial<AppSettings>) };
+				this.cache.settings = settings;
 
-			return {
-				notes,
-				folders,
-				tags,
-				expenses,
-				income,
-				settings,
-				theme,
-				isLoading: false,
-				lastSaved: metadata.lastSaved,
-				autoSaveEnabled: settings.autoSaveEnabled,
-			};
-		} catch (error) {
-			console.error("Failed to load data:", error);
-
-			// Retry on failure
-			if (retryCount < MAX_RETRIES) {
-				console.warn(
-					`Data load failed (attempt ${retryCount + 1}/${MAX_RETRIES + 1}), retrying...`
+				// Load theme inline
+				const themeResults = await this.getDb().select<Array<{ key: string; value: string }>>(
+					"SELECT key, value FROM settings WHERE key LIKE 'theme_%'"
 				);
-				await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
-				return this.loadData(retryCount + 1);
-			}
+				const themeObj: Record<string, unknown> = {};
+				for (const row of themeResults) {
+					const key = row.key.replace("theme_", "");
+					try {
+						themeObj[key] = JSON.parse(row.value);
+					} catch {
+						themeObj[key] = row.value;
+					}
+				}
+				const theme = { ...DEFAULT_THEME_SETTINGS, ...(themeObj as Partial<ThemeSettings>) };
+				this.cache.theme = theme;
 
-			return {
-				notes: [],
-				folders: [],
-				tags: {},
-				expenses: {
-					expenses: [],
-					selectedMonth: new Date(),
-					overviewMode: "remaining",
-					categories: DEFAULT_EXPENSE_CATEGORIES,
-					categoryColors: DEFAULT_CATEGORY_COLORS,
-					paymentMethods: DEFAULT_PAYMENT_METHODS,
-				},
-				income: {
-					entries: [],
-					weeklyTargets: [],
-					viewType: "weekly",
-				},
-				settings: DEFAULT_SETTINGS,
-				theme: DEFAULT_THEME_SETTINGS,
-				isLoading: false,
-				lastSaved: new Date(),
-				autoSaveEnabled: DEFAULT_SETTINGS.autoSaveEnabled,
-			};
-		}
+				// Load metadata inline
+				const metadataResults = await this.getDb().select<
+					Array<{ lastSaved: string; version: string }>
+				>("SELECT * FROM metadata WHERE id = 1");
+				const metadata = metadataResults.length > 0
+					? { lastSaved: new Date(metadataResults[0].lastSaved), version: metadataResults[0].version }
+					: { lastSaved: new Date(), version: DATA_VERSION };
+
+				// Check if folders loaded correctly (should always have at least initial folders)
+				if (folders.length === 0 && retryCount < MAX_RETRIES) {
+					console.warn(
+						`Data load returned empty folders (attempt ${retryCount + 1}/${MAX_RETRIES + 1}), retrying...`
+					);
+					// Close connection before retry
+					await this.closeConnectionNow();
+					await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+					return this.loadData(retryCount + 1);
+				}
+
+				return {
+					notes,
+					folders,
+					tags,
+					expenses,
+					income,
+					settings,
+					theme,
+					isLoading: false,
+					lastSaved: metadata.lastSaved,
+					autoSaveEnabled: settings.autoSaveEnabled,
+				};
+			} catch (error) {
+				console.error("Failed to load data:", error);
+
+				// Retry on failure
+				if (retryCount < MAX_RETRIES) {
+					console.warn(
+						`Data load failed (attempt ${retryCount + 1}/${MAX_RETRIES + 1}), retrying...`
+					);
+					// Close connection before retry
+					await this.closeConnectionNow();
+					await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+					return this.loadData(retryCount + 1);
+				}
+
+				return {
+					notes: [],
+					folders: [],
+					tags: {},
+					expenses: {
+						expenses: [],
+						selectedMonth: new Date(),
+						overviewMode: "remaining",
+						categories: DEFAULT_EXPENSE_CATEGORIES,
+						categoryColors: DEFAULT_CATEGORY_COLORS,
+						paymentMethods: DEFAULT_PAYMENT_METHODS,
+					},
+					income: {
+						entries: [],
+						weeklyTargets: [],
+						viewType: "weekly",
+					},
+					settings: DEFAULT_SETTINGS,
+					theme: DEFAULT_THEME_SETTINGS,
+					isLoading: false,
+					lastSaved: new Date(),
+					autoSaveEnabled: DEFAULT_SETTINGS.autoSaveEnabled,
+				};
+			}
+		});
 	}
 
 	// Save data with change detection
 	async saveData(data: AppData, appToSave: AppToSave): Promise<void> {
-		if (!this.initialized) await this.initialize();
+		return this.withConnection(async () => {
+			try {
+				let hasChanges = false;
 
-		try {
-			let hasChanges = false;
+				if (appToSave === AppToSave.NotesApp) {
+					const notesChanged = this.notesStorage.hasNotesChanged(data.notes);
+					const foldersChanged = this.notesStorage.hasFoldersChanged(data.folders);
+					const tagsChanged = this.notesStorage.hasTagsChanged(data.tags || {});
 
-			if (appToSave === AppToSave.NotesApp) {
-				const notesChanged = this.notesStorage.hasNotesChanged(data.notes);
-				const foldersChanged = this.notesStorage.hasFoldersChanged(data.folders);
-				const tagsChanged = this.notesStorage.hasTagsChanged(data.tags || {});
+					if (notesChanged || foldersChanged || tagsChanged) {
+						hasChanges = true;
+						if (notesChanged) await this.notesStorage.saveNotes(data.notes);
+						if (foldersChanged) await this.notesStorage.saveFolders(data.folders);
+						if (tagsChanged) await this.notesStorage.saveTags(data.tags || {});
+					}
+				} else if (appToSave === AppToSave.Expenses) {
+					if (this.expensesStorage.hasExpensesChanged(data.expenses)) {
+						hasChanges = true;
+						await this.expensesStorage.saveExpenses(data.expenses);
+					}
+				} else if (appToSave === AppToSave.Income) {
+					if (this.incomeStorage.hasIncomeChanged(data.income)) {
+						hasChanges = true;
+						await this.incomeStorage.saveIncome(data.income);
+					}
+				} else if (appToSave === AppToSave.All) {
+					const notesChanged = this.notesStorage.hasNotesChanged(data.notes);
+					const foldersChanged = this.notesStorage.hasFoldersChanged(data.folders);
+					const tagsChanged = this.notesStorage.hasTagsChanged(data.tags || {});
+					const expensesChanged = this.expensesStorage.hasExpensesChanged(data.expenses);
+					const incomeChanged = this.incomeStorage.hasIncomeChanged(data.income);
+					const settingsChanged = this.hasSettingsChanged(data.settings);
+					const themeChanged = this.hasThemeChanged(data.theme);
 
-				if (notesChanged || foldersChanged || tagsChanged) {
-					hasChanges = true;
-					if (notesChanged) await this.saveNotes(data.notes);
-					if (foldersChanged) await this.saveFolders(data.folders);
-					if (tagsChanged) await this.saveTags(data.tags || {});
+					if (
+						notesChanged ||
+						foldersChanged ||
+						tagsChanged ||
+						expensesChanged ||
+						incomeChanged ||
+						settingsChanged ||
+						themeChanged
+					) {
+						hasChanges = true;
+						if (notesChanged) await this.notesStorage.saveNotes(data.notes);
+						if (foldersChanged) await this.notesStorage.saveFolders(data.folders);
+						if (tagsChanged) await this.notesStorage.saveTags(data.tags || {});
+						if (expensesChanged) await this.expensesStorage.saveExpenses(data.expenses);
+						if (incomeChanged) await this.incomeStorage.saveIncome(data.income);
+						if (settingsChanged) {
+							const db = this.getDb();
+							for (const [key, value] of Object.entries(data.settings)) {
+								await db.execute(
+									`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`,
+									[key, JSON.stringify(value)]
+								);
+							}
+							this.cache.settings = data.settings;
+						}
+						if (themeChanged) {
+							const db = this.getDb();
+							for (const [key, value] of Object.entries(data.theme)) {
+								await db.execute(
+									`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`,
+									[`theme_${key}`, JSON.stringify(value)]
+								);
+							}
+							this.cache.theme = data.theme;
+						}
+					}
 				}
-			} else if (appToSave === AppToSave.Expenses) {
-				if (this.expensesStorage.hasExpensesChanged(data.expenses)) {
-					hasChanges = true;
-					await this.saveExpenses(data.expenses);
-				}
-			} else if (appToSave === AppToSave.Income) {
-				if (this.incomeStorage.hasIncomeChanged(data.income)) {
-					hasChanges = true;
-					await this.saveIncome(data.income);
-				}
-			} else if (appToSave === AppToSave.All) {
-				const notesChanged = this.notesStorage.hasNotesChanged(data.notes);
-				const foldersChanged = this.notesStorage.hasFoldersChanged(data.folders);
-				const tagsChanged = this.notesStorage.hasTagsChanged(data.tags || {});
-				const expensesChanged = this.expensesStorage.hasExpensesChanged(data.expenses);
-				const incomeChanged = this.incomeStorage.hasIncomeChanged(data.income);
-				const settingsChanged = this.hasSettingsChanged(data.settings);
-				const themeChanged = this.hasThemeChanged(data.theme);
 
-				if (
-					notesChanged ||
-					foldersChanged ||
-					tagsChanged ||
-					expensesChanged ||
-					incomeChanged ||
-					settingsChanged ||
-					themeChanged
-				) {
-					hasChanges = true;
-					if (notesChanged) await this.saveNotes(data.notes);
-					if (foldersChanged) await this.saveFolders(data.folders);
-					if (tagsChanged) await this.saveTags(data.tags || {});
-					if (expensesChanged) await this.saveExpenses(data.expenses);
-					if (incomeChanged) await this.saveIncome(data.income);
-					if (settingsChanged) await this.saveSettings(data.settings);
-					if (themeChanged) await this.saveTheme(data.theme);
+				if (hasChanges) {
+					const metadata: AppMetadata = {
+						lastSaved: new Date(),
+						version: DATA_VERSION,
+					};
+					const db = this.getDb();
+					await db.execute(
+						`INSERT OR REPLACE INTO metadata (id, lastSaved, version) VALUES (1, ?, ?)`,
+						[metadata.lastSaved.toISOString(), metadata.version]
+					);
 				}
+			} catch (error) {
+				console.error("Failed to save data:", error);
+				throw error;
 			}
-
-			if (hasChanges) {
-				const metadata: AppMetadata = {
-					lastSaved: new Date(),
-					version: DATA_VERSION,
-				};
-				await this.saveMetadata(metadata);
-			}
-		} catch (error) {
-			console.error("Failed to save data:", error);
-			throw error;
-		}
+		});
 	}
 
 	// Utility methods
@@ -847,39 +976,40 @@ class SqlStorage {
 	}
 
 	async clearAllData(): Promise<void> {
-		if (!this.initialized) await this.initialize();
+		return this.withConnection(async () => {
+			return this.queueOperation(async () => {
+				const db = this.getDb();
+				await db.execute("DELETE FROM notes");
+				await db.execute("DELETE FROM folders");
+				await db.execute("DELETE FROM folders_new");
+				await db.execute("DELETE FROM tags");
+				await db.execute("DELETE FROM expenses");
+				await db.execute("DELETE FROM income_entries");
+				await db.execute("DELETE FROM income_weekly_targets");
+				await db.execute("DELETE FROM settings");
+				await db.execute("DELETE FROM metadata");
 
-		return this.queueOperation(async () => {
-			await this.assertDb().execute("DELETE FROM notes");
-			await this.assertDb().execute("DELETE FROM folders");
-			await this.assertDb().execute("DELETE FROM folders_new");
-			await this.assertDb().execute("DELETE FROM tags");
-			await this.assertDb().execute("DELETE FROM expenses");
-			await this.assertDb().execute("DELETE FROM income_entries");
-			await this.assertDb().execute("DELETE FROM income_weekly_targets");
-			await this.assertDb().execute("DELETE FROM settings");
-			await this.assertDb().execute("DELETE FROM metadata");
-
-			// Clear cache
-			this.cache = {};
+				// Clear cache
+				this.cache = {};
+			});
 		});
 	}
 
-	// Checkpoint the WAL file without closing the database
-	// Useful when minimizing to tray to ensure data is persisted
+	// Checkpoint method - no longer needed with DELETE journal mode
+	// Kept for backward compatibility, does nothing
 	async checkpoint(): Promise<void> {
-		if (!this.db || !this.initialized) return;
-
-		try {
-			await this.operationQueue;
-			await this.db.execute("PRAGMA wal_checkpoint(PASSIVE)");
-			console.log("Database checkpoint completed");
-		} catch (error) {
-			console.error("Error during database checkpoint:", error);
-		}
+		// No-op - DELETE journal mode doesn't use WAL files
+		console.log("Checkpoint called (no-op with DELETE journal mode)");
 	}
 
+	// Close method - ensures connection is closed
 	async close(): Promise<void> {
+		// Cancel any pending close timer
+		if (this.closeTimeout) {
+			clearTimeout(this.closeTimeout);
+			this.closeTimeout = null;
+		}
+
 		// Wait for any pending operations to complete
 		try {
 			await this.operationQueue;
@@ -887,41 +1017,43 @@ class SqlStorage {
 			// Ignore errors from pending operations
 		}
 
-		this.operationQueue = Promise.resolve();
-
-		if (this.db) {
+		// Wait for any pending connection to complete
+		if (this.connectionPromise) {
 			try {
-				await this.db.execute("PRAGMA wal_checkpoint(TRUNCATE)");
-				await this.db.close();
-			} catch (error) {
-				console.error("Error closing database:", error);
+				await this.connectionPromise;
+			} catch {
+				// Ignore connection errors
 			}
-			this.db = null;
 		}
 
-		this.initialized = false;
-		this.initPromise = null;
-		this.cache = {};
+		this.operationQueue = Promise.resolve();
+		this.connectionRefCount = 0;
+		await this.closeConnectionNow();
 	}
 
 	async switchEnvironment(environment: DatabaseEnvironment): Promise<void> {
 		await this.close();
 		this.currentEnvironment = environment;
-		await this.initialize(environment);
+		this.environmentInitialized = true;
+		this.tablesCreated = false; // Force table check on next connection
+		this.storageInitialized = false; // Force storage class re-initialization
 	}
 
 	async reinitialize(): Promise<void> {
 		await this.close();
-		await this.initialize(this.currentEnvironment);
+		this.tablesCreated = false; // Force table check on next connection
+		this.storageInitialized = false; // Force storage class re-initialization
 	}
 
 	async getDatabaseFilePath(): Promise<string> {
+		await this.ensureEnvironment();
 		const dataPath = await this.getDataPath();
 		return joinPath(dataPath, this.getDatabaseFileName());
 	}
 
+	// Check if database is currently initialized (connection could be open)
 	isInitialized(): boolean {
-		return this.initialized && this.db !== null;
+		return this.environmentInitialized;
 	}
 }
 

@@ -1,6 +1,7 @@
 mod commands;
 
 use tauri::{
+    Emitter,
     Manager,
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
@@ -44,7 +45,13 @@ pub fn run() {
                 .tooltip("Second Brain")
                 .on_menu_event(|app, event| match event.id().as_ref() {
                     "quit" => {
-                        app.exit(0);
+                        // Emit event to frontend so it can save data before quitting
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.emit("tray-quit-requested", ());
+                        } else {
+                            // If no window, just exit
+                            app.exit(0);
+                        }
                     }
                     "show" => {
                         if let Some(window) = app.get_webview_window("main") {

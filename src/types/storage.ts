@@ -15,7 +15,7 @@ export interface StorageCache {
 }
 
 export interface DatabaseContext {
-	db: Database;
+	getDb: () => Database;
 	queueOperation: <T>(operation: () => Promise<T>) => Promise<T>;
 	cache: StorageCache;
 }

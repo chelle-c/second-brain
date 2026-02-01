@@ -31,7 +31,7 @@ export class IncomeStorage {
 
 	async loadIncome(): Promise<AppData["income"]> {
 		return this.context.queueOperation(async () => {
-			const entries = await this.context.db.select<
+			const entries = await this.context.getDb().select<
 				Array<{
 					id: string;
 					date: string;
@@ -41,11 +41,11 @@ export class IncomeStorage {
 				}>
 			>("SELECT * FROM income_entries");
 
-			const targets = await this.context.db.select<
+			const targets = await this.context.getDb().select<
 				Array<{ id: string; amount: number }>
 			>("SELECT * FROM income_weekly_targets");
 
-			const viewTypeResult = await this.context.db.select<
+			const viewTypeResult = await this.context.getDb().select<
 				Array<{ value: string }>
 			>("SELECT value FROM settings WHERE key = 'income_viewType'");
 
@@ -107,8 +107,8 @@ export class IncomeStorage {
 			const viewTypeChanged =
 				oldIncome && oldIncome.viewType !== income.viewType;
 
-			await this.context.db.execute("DELETE FROM income_entries");
-			await this.context.db.execute("DELETE FROM income_weekly_targets");
+			await this.context.getDb().execute("DELETE FROM income_entries");
+			await this.context.getDb().execute("DELETE FROM income_weekly_targets");
 
 			const seenEntryIds = new Set<string>();
 			const seenTargetIds = new Set<string>();
@@ -119,7 +119,7 @@ export class IncomeStorage {
 				}
 				seenEntryIds.add(entry.id);
 
-				await this.context.db.execute(
+				await this.context.getDb().execute(
 					`INSERT INTO income_entries (id, date, amount, hours, minutes)
 					VALUES (?, ?, ?, ?, ?)`,
 					[
@@ -138,14 +138,14 @@ export class IncomeStorage {
 				}
 				seenTargetIds.add(target.id);
 
-				await this.context.db.execute(
+				await this.context.getDb().execute(
 					`INSERT INTO income_weekly_targets (id, amount)
 					VALUES (?, ?)`,
 					[target.id, target.amount],
 				);
 			}
 
-			await this.context.db.execute(
+			await this.context.getDb().execute(
 				`INSERT OR REPLACE INTO settings (key, value) VALUES ('income_viewType', ?)`,
 				[income.viewType],
 			);

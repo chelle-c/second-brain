@@ -123,7 +123,7 @@ export class ExpensesStorage {
 	async loadExpenses(): Promise<AppData["expenses"]> {
 		return this.context.queueOperation(async () => {
 			// First, check what columns exist in the expenses table
-			const tableInfo = await this.context.db.select<Array<{ name: string }>>(
+			const tableInfo = await this.context.getDb().select<Array<{ name: string }>>(
 				"PRAGMA table_info(expenses)",
 			);
 			const existingColumns = new Set(tableInfo.map((col) => col.name));
@@ -138,7 +138,7 @@ export class ExpensesStorage {
 				   FROM expenses`;
 
 			const expenses =
-				await this.context.db.select<
+				await this.context.getDb().select<
 					Array<{
 						id: string;
 						name: string;
@@ -162,19 +162,19 @@ export class ExpensesStorage {
 					}>
 				>(selectQuery);
 
-			const selectedMonthResult = await this.context.db.select<
+			const selectedMonthResult = await this.context.getDb().select<
 				Array<{ value: string }>
 			>("SELECT value FROM settings WHERE key = 'expense_selectedMonth'");
-			const overviewModeResult = await this.context.db.select<
+			const overviewModeResult = await this.context.getDb().select<
 				Array<{ value: string }>
 			>("SELECT value FROM settings WHERE key = 'expense_overviewMode'");
-			const categoriesResult = await this.context.db.select<
+			const categoriesResult = await this.context.getDb().select<
 				Array<{ value: string }>
 			>("SELECT value FROM settings WHERE key = 'expense_categories'");
-			const categoryColorsResult = await this.context.db.select<
+			const categoryColorsResult = await this.context.getDb().select<
 				Array<{ value: string }>
 			>("SELECT value FROM settings WHERE key = 'expense_categoryColors'");
-			const paymentMethodsResult = await this.context.db.select<
+			const paymentMethodsResult = await this.context.getDb().select<
 				Array<{ value: string }>
 			>("SELECT value FROM settings WHERE key = 'expense_paymentMethods'");
 
@@ -278,7 +278,7 @@ export class ExpensesStorage {
 					));
 
 			// Delete all expenses and reinsert (simpler than tracking updates)
-			await this.context.db.execute("DELETE FROM expenses");
+			await this.context.getDb().execute("DELETE FROM expenses");
 
 			const seenIds = new Set<string>();
 
@@ -294,7 +294,7 @@ export class ExpensesStorage {
 					initialState = { ...initialState, paymentMethod: "None" };
 				}
 
-				await this.context.db.execute(
+				await this.context.getDb().execute(
 					`INSERT INTO expenses (
 						id, name, amount, category, paymentMethod, dueDate, isRecurring, recurrence,
 						isArchived, isPaid, paymentDate, type, importance, notify, createdAt,
@@ -327,23 +327,23 @@ export class ExpensesStorage {
 				);
 			}
 
-			await this.context.db.execute(
+			await this.context.getDb().execute(
 				`INSERT OR REPLACE INTO settings (key, value) VALUES ('expense_selectedMonth', ?)`,
 				[expenses.selectedMonth.toISOString()],
 			);
-			await this.context.db.execute(
+			await this.context.getDb().execute(
 				`INSERT OR REPLACE INTO settings (key, value) VALUES ('expense_overviewMode', ?)`,
 				[expenses.overviewMode],
 			);
-			await this.context.db.execute(
+			await this.context.getDb().execute(
 				`INSERT OR REPLACE INTO settings (key, value) VALUES ('expense_categories', ?)`,
 				[JSON.stringify(expenses.categories)],
 			);
-			await this.context.db.execute(
+			await this.context.getDb().execute(
 				`INSERT OR REPLACE INTO settings (key, value) VALUES ('expense_categoryColors', ?)`,
 				[JSON.stringify(expenses.categoryColors)],
 			);
-			await this.context.db.execute(
+			await this.context.getDb().execute(
 				`INSERT OR REPLACE INTO settings (key, value) VALUES ('expense_paymentMethods', ?)`,
 				[JSON.stringify(expenses.paymentMethods || DEFAULT_PAYMENT_METHODS)],
 			);
