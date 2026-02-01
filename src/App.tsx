@@ -102,49 +102,48 @@ function App() {
 		const appWindow = getCurrentWindow();
 
 		const unlistenPromise = appWindow.onCloseRequested(async (event) => {
-			// Prevent multiple simultaneous save attempts
-			if (isSavingRef.current) {
-				event.preventDefault();
-				return;
-			}
-
 			const minimizeToTray = useSettingsStore.getState().minimizeToTray;
 
 			// Prevent default close - we'll handle it manually
 			event.preventDefault();
+
+			if (minimizeToTray) {
+				// Hide window immediately for instant feedback
+				await appWindow.hide();
+				console.log("Window hidden to tray");
+
+				// Save data in background (non-blocking)
+				useAppStore.getState().saveToFile(AppToSave.All).catch((error) => {
+					console.error("Background save failed:", error);
+				});
+				return;
+			}
+
+			// For actual close, we need to save first
+			if (isSavingRef.current) return;
 			isSavingRef.current = true;
 			console.log("Window close requested - saving data...");
 
 			try {
-				// Force save all data before closing/hiding
+				// Force save all data before closing
 				await useAppStore.getState().saveToFile(AppToSave.All);
 				console.log("Data saved successfully");
 
-				if (minimizeToTray) {
-					// Checkpoint the database to ensure data is persisted (no-op with on-demand connections)
-					await sqlStorage.checkpoint();
-					// Just hide the window - app stays in tray
-					await appWindow.hide();
-					console.log("Window hidden to tray");
-				} else {
-					// Actually close the app
-					await sqlStorage.close();
-					console.log("Database closed, destroying window");
+				// Actually close the app
+				await sqlStorage.close();
+				console.log("Database closed, destroying window");
 
-					// Verify connection is closed before destroying window
-					if (sqlStorage.isOpen()) {
-						console.warn("Database connection still open, waiting...");
-						await new Promise((resolve) => setTimeout(resolve, 100));
-					}
-
-					await appWindow.destroy();
+				// Verify connection is closed before destroying window
+				if (sqlStorage.isOpen()) {
+					console.warn("Database connection still open, waiting...");
+					await new Promise((resolve) => setTimeout(resolve, 100));
 				}
+
+				await appWindow.destroy();
 			} catch (error) {
 				console.error("Error handling close:", error);
 				// If something goes wrong, try to close anyway
-				if (!minimizeToTray) {
-					await appWindow.destroy();
-				}
+				await appWindow.destroy();
 			} finally {
 				isSavingRef.current = false;
 			}
