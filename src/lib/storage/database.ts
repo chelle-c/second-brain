@@ -206,7 +206,7 @@ class SqlStorage {
 		const timeoutPromise = new Promise<T>((_, reject) => {
 			setTimeout(
 				() => reject(new Error("Database operation timeout after 10 seconds")),
-				10000
+				10000,
 			);
 		});
 
@@ -251,6 +251,7 @@ class SqlStorage {
 				content TEXT NOT NULL,
 				tags TEXT DEFAULT '[]',
 				folder TEXT NOT NULL DEFAULT 'inbox',
+				reminder TEXT DEFAULT NULL,
 				createdAt TEXT NOT NULL,
 				updatedAt TEXT NOT NULL,
 				archived INTEGER DEFAULT 0
@@ -358,7 +359,7 @@ class SqlStorage {
 
 		try {
 			const versionResult = await db.select<Array<{ version: string }>>(
-				"SELECT version FROM metadata WHERE id = 1"
+				"SELECT version FROM metadata WHERE id = 1",
 			);
 			if (versionResult.length > 0 && versionResult[0].version) {
 				currentVersion = versionResult[0].version;
@@ -370,12 +371,13 @@ class SqlStorage {
 		await this.ensureExpensesColumns();
 		await this.migrateFoldersTable();
 		await this.migrateNotesTable();
+		await this.migrateNotesReminders();
 
 		if (currentVersion !== DATA_VERSION) {
 			try {
 				await db.execute(
 					`INSERT OR REPLACE INTO metadata (id, lastSaved, version) VALUES (1, ?, ?)`,
-					[new Date().toISOString(), DATA_VERSION]
+					[new Date().toISOString(), DATA_VERSION],
 				);
 			} catch (error) {
 				console.error("Failed to update metadata version:", error);
@@ -388,7 +390,7 @@ class SqlStorage {
 
 		try {
 			const tables = await db.select<Array<{ name: string }>>(
-				"SELECT name FROM sqlite_master WHERE type='table' AND name='folders_new'"
+				"SELECT name FROM sqlite_master WHERE type='table' AND name='folders_new'",
 			);
 
 			if (tables.length === 0) {
@@ -420,9 +422,7 @@ class SqlStorage {
 		const db = this.getDb();
 
 		try {
-			const tableInfo = await db.select<Array<{ name: string }>>(
-				"PRAGMA table_info(notes)"
-			);
+			const tableInfo = await db.select<Array<{ name: string }>>("PRAGMA table_info(notes)");
 
 			const columnNames = tableInfo.map((col) => col.name);
 
@@ -453,12 +453,31 @@ class SqlStorage {
 		}
 	}
 
+	/**
+	 * Ensure the `reminder` column exists on the notes table.
+	 * Existing rows that lack it get NULL (no reminder) automatically.
+	 */
+	private async migrateNotesReminders(): Promise<void> {
+		const db = this.getDb();
+		try {
+			const tableInfo = await db.select<Array<{ name: string }>>("PRAGMA table_info(notes)");
+			const hasReminder = tableInfo.some((col) => col.name === "reminder");
+			if (!hasReminder) {
+				await db.execute(`ALTER TABLE notes ADD COLUMN reminder TEXT DEFAULT NULL`);
+				console.log("Migration: added 'reminder' column to notes table");
+			}
+		} catch (error) {
+			console.error("Error migrating notes reminder column:", error);
+			throw error;
+		}
+	}
+
 	private async ensureExpensesColumns(): Promise<void> {
 		const db = this.getDb();
 
 		try {
 			const tableInfo = await db.select<Array<{ name: string; type: string }>>(
-				"PRAGMA table_info(expenses)"
+				"PRAGMA table_info(expenses)",
 			);
 
 			const existingColumns = new Set(tableInfo.map((col) => col.name));
@@ -476,7 +495,7 @@ class SqlStorage {
 				if (!existingColumns.has(column.name)) {
 					try {
 						await db.execute(
-							`ALTER TABLE expenses ADD COLUMN ${column.name} ${column.type} DEFAULT ${column.defaultValue}`
+							`ALTER TABLE expenses ADD COLUMN ${column.name} ${column.type} DEFAULT ${column.defaultValue}`,
 						);
 					} catch (alterError) {
 						console.error(`Failed to add column ${column.name}:`, alterError);
@@ -486,13 +505,13 @@ class SqlStorage {
 			}
 
 			const paymentMethodsResult = await db.select<Array<{ value: string }>>(
-				"SELECT value FROM settings WHERE key = 'expense_paymentMethods'"
+				"SELECT value FROM settings WHERE key = 'expense_paymentMethods'",
 			);
 
 			if (paymentMethodsResult.length === 0) {
 				await db.execute(
 					`INSERT OR REPLACE INTO settings (key, value) VALUES ('expense_paymentMethods', ?)`,
-					[JSON.stringify(DEFAULT_PAYMENT_METHODS)]
+					[JSON.stringify(DEFAULT_PAYMENT_METHODS)],
 				);
 			}
 		} catch (error) {
@@ -506,7 +525,7 @@ class SqlStorage {
 
 		try {
 			const tableInfo = await db.select<Array<{ name: string }>>(
-				"PRAGMA table_info(expenses)"
+				"PRAGMA table_info(expenses)",
 			);
 
 			const columns = new Set(tableInfo.map((col) => col.name));
@@ -537,8 +556,8 @@ class SqlStorage {
 			if (missingColumns.length > 0) {
 				throw new Error(
 					`Schema verification failed. Missing columns in expenses table: ${missingColumns.join(
-						", "
-					)}`
+						", ",
+					)}`,
 				);
 			}
 		} catch (error) {
@@ -616,7 +635,7 @@ class SqlStorage {
 			return this.queueOperation(async () => {
 				const db = this.getDb();
 				const results = await db.select<Array<{ key: string; value: string }>>(
-					"SELECT key, value FROM settings"
+					"SELECT key, value FROM settings",
 				);
 
 				if (results.length === 0) {
@@ -646,10 +665,10 @@ class SqlStorage {
 			return this.queueOperation(async () => {
 				const db = this.getDb();
 				for (const [key, value] of Object.entries(settings)) {
-					await db.execute(
-						`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`,
-						[key, JSON.stringify(value)]
-					);
+					await db.execute(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`, [
+						key,
+						JSON.stringify(value),
+					]);
 				}
 				this.cache.settings = settings;
 			});
@@ -667,7 +686,7 @@ class SqlStorage {
 			return this.queueOperation(async () => {
 				const db = this.getDb();
 				const results = await db.select<Array<{ key: string; value: string }>>(
-					"SELECT key, value FROM settings WHERE key LIKE 'theme_%'"
+					"SELECT key, value FROM settings WHERE key LIKE 'theme_%'",
 				);
 
 				if (results.length === 0) {
@@ -700,10 +719,10 @@ class SqlStorage {
 			return this.queueOperation(async () => {
 				const db = this.getDb();
 				for (const [key, value] of Object.entries(theme)) {
-					await db.execute(
-						`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`,
-						[`theme_${key}`, JSON.stringify(value)]
-					);
+					await db.execute(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`, [
+						`theme_${key}`,
+						JSON.stringify(value),
+					]);
 				}
 				this.cache.theme = theme;
 			});
@@ -720,9 +739,9 @@ class SqlStorage {
 		return this.withConnection(async () => {
 			return this.queueOperation(async () => {
 				const db = this.getDb();
-				const results = await db.select<
-					Array<{ lastSaved: string; version: string }>
-				>("SELECT * FROM metadata WHERE id = 1");
+				const results = await db.select<Array<{ lastSaved: string; version: string }>>(
+					"SELECT * FROM metadata WHERE id = 1",
+				);
 
 				if (results.length === 0) {
 					const defaultMetadata: AppMetadata = {
@@ -731,7 +750,7 @@ class SqlStorage {
 					};
 					await db.execute(
 						`INSERT OR REPLACE INTO metadata (id, lastSaved, version) VALUES (1, ?, ?)`,
-						[defaultMetadata.lastSaved.toISOString(), defaultMetadata.version]
+						[defaultMetadata.lastSaved.toISOString(), defaultMetadata.version],
 					);
 					return defaultMetadata;
 				}
@@ -750,7 +769,7 @@ class SqlStorage {
 				const db = this.getDb();
 				await db.execute(
 					`INSERT OR REPLACE INTO metadata (id, lastSaved, version) VALUES (1, ?, ?)`,
-					[metadata.lastSaved.toISOString(), metadata.version]
+					[metadata.lastSaved.toISOString(), metadata.version],
 				);
 			});
 		});
@@ -770,9 +789,9 @@ class SqlStorage {
 				const income = await this.incomeStorage.loadIncome();
 
 				// Load settings inline
-				const settingsResults = await this.getDb().select<Array<{ key: string; value: string }>>(
-					"SELECT key, value FROM settings"
-				);
+				const settingsResults = await this.getDb().select<
+					Array<{ key: string; value: string }>
+				>("SELECT key, value FROM settings");
 				const settingsObj: Record<string, unknown> = {};
 				for (const row of settingsResults) {
 					try {
@@ -785,9 +804,9 @@ class SqlStorage {
 				this.cache.settings = settings;
 
 				// Load theme inline
-				const themeResults = await this.getDb().select<Array<{ key: string; value: string }>>(
-					"SELECT key, value FROM settings WHERE key LIKE 'theme_%'"
-				);
+				const themeResults = await this.getDb().select<
+					Array<{ key: string; value: string }>
+				>("SELECT key, value FROM settings WHERE key LIKE 'theme_%'");
 				const themeObj: Record<string, unknown> = {};
 				for (const row of themeResults) {
 					const key = row.key.replace("theme_", "");
@@ -797,21 +816,28 @@ class SqlStorage {
 						themeObj[key] = row.value;
 					}
 				}
-				const theme = { ...DEFAULT_THEME_SETTINGS, ...(themeObj as Partial<ThemeSettings>) };
+				const theme = {
+					...DEFAULT_THEME_SETTINGS,
+					...(themeObj as Partial<ThemeSettings>),
+				};
 				this.cache.theme = theme;
 
 				// Load metadata inline
 				const metadataResults = await this.getDb().select<
 					Array<{ lastSaved: string; version: string }>
 				>("SELECT * FROM metadata WHERE id = 1");
-				const metadata = metadataResults.length > 0
-					? { lastSaved: new Date(metadataResults[0].lastSaved), version: metadataResults[0].version }
-					: { lastSaved: new Date(), version: DATA_VERSION };
+				const metadata =
+					metadataResults.length > 0 ?
+						{
+							lastSaved: new Date(metadataResults[0].lastSaved),
+							version: metadataResults[0].version,
+						}
+					:	{ lastSaved: new Date(), version: DATA_VERSION };
 
 				// Check if folders loaded correctly (should always have at least initial folders)
 				if (folders.length === 0 && retryCount < MAX_RETRIES) {
 					console.warn(
-						`Data load returned empty folders (attempt ${retryCount + 1}/${MAX_RETRIES + 1}), retrying...`
+						`Data load returned empty folders (attempt ${retryCount + 1}/${MAX_RETRIES + 1}), retrying...`,
 					);
 					// Close connection before retry
 					await this.closeConnectionNow();
@@ -837,7 +863,7 @@ class SqlStorage {
 				// Retry on failure
 				if (retryCount < MAX_RETRIES) {
 					console.warn(
-						`Data load failed (attempt ${retryCount + 1}/${MAX_RETRIES + 1}), retrying...`
+						`Data load failed (attempt ${retryCount + 1}/${MAX_RETRIES + 1}), retrying...`,
 					);
 					// Close connection before retry
 					await this.closeConnectionNow();
@@ -928,7 +954,7 @@ class SqlStorage {
 							for (const [key, value] of Object.entries(data.settings)) {
 								await db.execute(
 									`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`,
-									[key, JSON.stringify(value)]
+									[key, JSON.stringify(value)],
 								);
 							}
 							this.cache.settings = data.settings;
@@ -938,7 +964,7 @@ class SqlStorage {
 							for (const [key, value] of Object.entries(data.theme)) {
 								await db.execute(
 									`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`,
-									[`theme_${key}`, JSON.stringify(value)]
+									[`theme_${key}`, JSON.stringify(value)],
 								);
 							}
 							this.cache.theme = data.theme;
@@ -954,7 +980,7 @@ class SqlStorage {
 					const db = this.getDb();
 					await db.execute(
 						`INSERT OR REPLACE INTO metadata (id, lastSaved, version) VALUES (1, ?, ?)`,
-						[metadata.lastSaved.toISOString(), metadata.version]
+						[metadata.lastSaved.toISOString(), metadata.version],
 					);
 				}
 			} catch (error) {

@@ -7,11 +7,10 @@ import { useNotesStore } from "@/stores/useNotesStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
 import type { Folder, Tag } from "@/types/notes";
 import { FolderNav } from "./components/FolderNav";
-import { NoteCreate } from "./components/NoteCreate";
+import { NoteEditor } from "./components/NoteEditor";
 import { NotesBreadcrumb } from "./components/NotesBreadcrumb";
 import { NotesCard } from "./components/NotesCard";
 import { NotesLayout } from "./components/NotesLayout";
-import { NoteView } from "./components/NoteView";
 import { Archive, ArchiveRestore, BookOpen, CheckCircle, Lightbulb, Trash2 } from "lucide-react";
 
 type ViewState = "list" | "view" | "create";
@@ -283,8 +282,8 @@ export function NotesApp() {
 							onRedo={redo}
 						/>
 						<div className="flex-1 overflow-hidden">
-							<NoteCreate
-								tags={allTags}
+							<NoteEditor
+								tags={tags}
 								activeFolder={activeFolder}
 								onBack={handleBackToList}
 								onNoteCreated={handleNoteCreated}
@@ -315,17 +314,16 @@ export function NotesApp() {
 											size="sm"
 											className="flex items-center gap-2"
 										>
-											{selectedNote.archived ? (
+											{selectedNote.archived ?
 												<>
 													<ArchiveRestore size={16} />
 													Unarchive
 												</>
-											) : (
-												<>
+											:	<>
 													<Archive size={16} />
 													Archive
 												</>
-											)}
+											}
 										</Button>
 										<Button
 											type="button"
@@ -341,11 +339,7 @@ export function NotesApp() {
 								}
 							/>
 							<div className="flex-1 overflow-hidden">
-								<NoteView
-									note={selectedNote}
-									tags={allTags}
-									onBack={handleBackToList}
-								/>
+								<NoteEditor note={selectedNote} tags={tags} onBack={handleBackToList} />
 							</div>
 						</div>
 					);

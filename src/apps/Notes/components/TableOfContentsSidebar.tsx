@@ -44,9 +44,8 @@ const findHeadingElement = (editor: Editor, pos: number): HTMLElement | null => 
 		// Fallback: try domAtPos
 		const domAtPos = view.domAtPos(pos);
 		if (domAtPos.node) {
-			const element = domAtPos.node instanceof Element
-				? domAtPos.node
-				: domAtPos.node.parentElement;
+			const element =
+				domAtPos.node instanceof Element ? domAtPos.node : domAtPos.node.parentElement;
 			// Walk up to find the heading element
 			if (element) {
 				const heading = element.closest("h1, h2, h3, h4, h5, h6");
@@ -105,7 +104,8 @@ export const TableOfContentsSidebar = ({ editor }: TableOfContentsSidebarProps) 
 		if (!editor) return;
 
 		const editorElement = editor.view.dom;
-		scrollContainerRef.current = editorElement.closest(".overflow-y-auto") ||
+		scrollContainerRef.current =
+			editorElement.closest(".overflow-y-auto") ||
 			editorElement.closest("[class*='overflow']") ||
 			document.querySelector(".h-full.overflow-y-auto");
 	}, [editor]);
@@ -223,15 +223,16 @@ export const TableOfContentsSidebar = ({ editor }: TableOfContentsSidebarProps) 
 	// Don't render if no editor
 	if (!editor) return null;
 
-	// Collapsed state - just show toggle button
+	// ── collapsed ─────────────────────────────────────────────────────────────────
 	if (!isOpen) {
 		return (
-			<div className="w-10 ml-2 shrink-0">
-				<div className="sticky top-0">
+			// Shrink left margin; height fills viewport via the parent sticky wrapper
+			<div className="w-8 shrink-0">
+				<div className="sticky top-0 h-screen flex flex-col">
 					<button
 						type="button"
 						onClick={toggleOpen}
-						className="p-2 rounded-lg bg-muted hover:bg-accent transition-colors"
+						className="p-1.5 rounded-lg bg-muted hover:bg-accent transition-colors"
 						title="Show Table of Contents"
 					>
 						<PanelRightOpen className="w-4 h-4" />
@@ -241,14 +242,17 @@ export const TableOfContentsSidebar = ({ editor }: TableOfContentsSidebarProps) 
 		);
 	}
 
+	// ── expanded ──────────────────────────────────────────────────────────────────
 	return (
-		<div className="w-56 ml-4 shrink-0">
-			<div className="sticky top-0 border border-border rounded-sm bg-card/95 backdrop-blur-sm shadow-sm overflow-hidden">
+		// mr-2 keeps a small gap from the window edge; h-screen + sticky keeps it
+		// pinned for the full page height
+		<div className="w-52 mr-2 shrink-0">
+			<div className="sticky top-0 h-screen flex flex-col border border-border rounded-sm bg-card/95 backdrop-blur-sm shadow-sm overflow-hidden">
 				{/* Header */}
-				<div className="flex items-center justify-between p-3 border-b border-border bg-muted/50">
+				<div className="flex items-center justify-between p-3 border-b border-border bg-muted/50 flex-shrink-0">
 					<div className="flex items-center gap-2 text-sm font-medium text-foreground">
 						<List className="w-4 h-4" />
-						<span>Table of Contents</span>
+						<span>Contents</span>
 					</div>
 					<button
 						type="button"
@@ -260,14 +264,13 @@ export const TableOfContentsSidebar = ({ editor }: TableOfContentsSidebarProps) 
 					</button>
 				</div>
 
-				{/* Content */}
-				<div className="h-[calc(100vh-156px)] overflow-y-auto p-2">
-					{items.length === 0 ? (
+				{/* Scrollable content – flex-1 fills remaining height */}
+				<div className="flex-1 overflow-y-auto p-2">
+					{items.length === 0 ?
 						<p className="text-xs text-muted-foreground italic p-2">
 							No headings found. Add headings to see the table of contents.
 						</p>
-					) : (
-						<nav>
+					:	<nav>
 							<ul className="space-y-0.5">
 								{items.map((item) => {
 									const isActive = activeId === item.id;
@@ -278,9 +281,9 @@ export const TableOfContentsSidebar = ({ editor }: TableOfContentsSidebarProps) 
 												onClick={() => scrollToHeading(item)}
 												disabled={isActive}
 												className={`w-full text-left text-sm py-1.5 px-2 rounded transition-colors truncate ${
-													isActive
-														? "bg-accent text-accent-foreground font-medium cursor-default"
-														: "text-muted-foreground hover:bg-accent/50 hover:text-foreground cursor-pointer"
+													isActive ?
+														"bg-accent text-accent-foreground font-medium cursor-default"
+													:	"text-muted-foreground hover:bg-accent/50 hover:text-foreground cursor-pointer"
 												}`}
 												style={{
 													paddingLeft: `${(item.level - 1) * 0.75 + 0.5}rem`,
@@ -289,7 +292,9 @@ export const TableOfContentsSidebar = ({ editor }: TableOfContentsSidebarProps) 
 											>
 												<span
 													className={`inline-block w-5 mr-1 text-xs ${
-														isActive ? "text-primary" : "text-muted-foreground/50"
+														isActive ? "text-primary" : (
+															"text-muted-foreground/50"
+														)
 													}`}
 												>
 													H{item.level}
@@ -301,7 +306,7 @@ export const TableOfContentsSidebar = ({ editor }: TableOfContentsSidebarProps) 
 								})}
 							</ul>
 						</nav>
-					)}
+					}
 				</div>
 			</div>
 		</div>

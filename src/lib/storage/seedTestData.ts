@@ -1,7 +1,7 @@
 import { DEFAULT_CATEGORY_COLORS, DEFAULT_EXPENSE_CATEGORIES } from "@/lib/expenseHelpers";
 import type { Expense } from "@/types/expense";
 import type { IncomeEntry, IncomeWeeklyTargets } from "@/types/income";
-import type { Folder, Note, Tag } from "@/types/notes";
+import type { Folder, Note, NoteReminder, Tag } from "@/types/notes";
 import { DEFAULT_SETTINGS } from "@/types/settings";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -37,6 +37,23 @@ const daysFromNow = (days: number): Date => {
 	const date = new Date();
 	date.setDate(date.getDate() + days);
 	return date;
+};
+
+// Helper to create a reminder
+const createReminder = (
+	daysFromNowVal: number,
+	hour: number = 10,
+	minute: number = 0,
+	notifications: { unit: "minutes" | "hours" | "days"; value: number }[] = [
+		{ unit: "minutes", value: 15 },
+	],
+): NoteReminder => {
+	const dt = daysFromNow(daysFromNowVal);
+	dt.setHours(hour, minute, 0, 0);
+	return {
+		dateTime: dt.toISOString(),
+		notifications,
+	};
 };
 
 // Sample folders structure with new flat format
@@ -319,7 +336,7 @@ const tiptapTaskList = (items: { text: string; checked: boolean }[]) => ({
 });
 
 // Sample notes with folders and subfolders - using `folder` instead of `folderId`
-// Notes now use Tiptap JSON format
+// Notes now use Tiptap JSON format and some have reminders
 const createSampleNotes = (): Note[] => {
 	return [
 		// Inbox notes - more variety
@@ -327,7 +344,9 @@ const createSampleNotes = (): Note[] => {
 			id: generateId(),
 			title: "Welcome to Second Brain",
 			content: tiptapDoc([
-				tiptapParagraph("This is a test note in your second brain app. Use it to capture ideas, thoughts, and important information."),
+				tiptapParagraph(
+					"This is a test note in your second brain app. Use it to capture ideas, thoughts, and important information.",
+				),
 			]),
 			tags: ["reference"],
 			folder: "inbox",
@@ -338,7 +357,9 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Quick thought about productivity",
-			content: tiptapDoc([tiptapParagraph("Need to organize my task management system better.")]),
+			content: tiptapDoc([
+				tiptapParagraph("Need to organize my task management system better."),
+			]),
 			tags: ["ideas"],
 			folder: "inbox",
 			createdAt: daysAgo(1),
@@ -348,22 +369,35 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Call back John about the project",
-			content: tiptapDoc([tiptapParagraph("Remember to call John before Friday to discuss the new requirements.")]),
+			content: tiptapDoc([
+				tiptapParagraph(
+					"Remember to call John before Friday to discuss the new requirements.",
+				),
+			]),
 			tags: ["actions", "urgent"],
 			folder: "inbox",
 			createdAt: daysAgo(0),
 			updatedAt: daysAgo(0),
 			archived: false,
+			// Reminder: tomorrow at 9am, notify 1 hour and 15 min before
+			reminder: createReminder(1, 9, 0, [
+				{ unit: "hours", value: 1 },
+				{ unit: "minutes", value: 15 },
+			]),
 		},
 		{
 			id: generateId(),
 			title: "Shopping list for weekend",
-			content: tiptapDoc([tiptapBulletList(["Groceries", "Cleaning supplies", "Birthday gift"])]),
+			content: tiptapDoc([
+				tiptapBulletList(["Groceries", "Cleaning supplies", "Birthday gift"]),
+			]),
 			tags: ["personal"],
 			folder: "inbox",
 			createdAt: daysAgo(2),
 			updatedAt: daysAgo(1),
 			archived: false,
+			// Reminder: in 3 days at 10am
+			reminder: createReminder(3, 10, 0, [{ unit: "days", value: 1 }]),
 		},
 		{
 			id: generateId(),
@@ -399,6 +433,11 @@ const createSampleNotes = (): Note[] => {
 			createdAt: daysAgo(14),
 			updatedAt: daysAgo(7),
 			archived: false,
+			// Reminder: in 7 days at 2pm
+			reminder: createReminder(7, 14, 0, [
+				{ unit: "days", value: 1 },
+				{ unit: "hours", value: 2 },
+			]),
 		},
 
 		// Work subfolder notes
@@ -408,7 +447,11 @@ const createSampleNotes = (): Note[] => {
 			content: tiptapDoc([
 				tiptapParagraph("Discussed roadmap priorities."),
 				tiptapHeading(3, "Action items"),
-				tiptapBulletList(["Review competitor analysis", "Prepare demo for stakeholders", "Schedule follow-up meeting"]),
+				tiptapBulletList([
+					"Review competitor analysis",
+					"Prepare demo for stakeholders",
+					"Schedule follow-up meeting",
+				]),
 			]),
 			tags: ["meeting", "actions"],
 			folder: "work_meetings",
@@ -419,19 +462,27 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Client Meeting - Acme Corp",
-			content: tiptapDoc([tiptapParagraph("Discussed new contract terms and project timeline.")]),
+			content: tiptapDoc([
+				tiptapParagraph("Discussed new contract terms and project timeline."),
+			]),
 			tags: ["meeting"],
 			folder: "work_meetings",
 			createdAt: daysAgo(5),
 			updatedAt: daysAgo(5),
 			archived: false,
+			// Reminder: in 2 days at 11am
+			reminder: createReminder(2, 11, 0, [{ unit: "minutes", value: 30 }]),
 		},
 		{
 			id: generateId(),
 			title: "Project Alpha - Requirements",
 			content: tiptapDoc([
 				tiptapHeading(2, "Requirements"),
-				tiptapOrderedList(["Complete feature design", "API integration", "Frontend implementation"]),
+				tiptapOrderedList([
+					"Complete feature design",
+					"API integration",
+					"Frontend implementation",
+				]),
 			]),
 			tags: ["reference", "code"],
 			folder: "work_projects",
@@ -442,7 +493,9 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Alpha Sprint Planning",
-			content: tiptapDoc([tiptapParagraph("Sprint goals and task breakdown for next two weeks.")]),
+			content: tiptapDoc([
+				tiptapParagraph("Sprint goals and task breakdown for next two weeks."),
+			]),
 			tags: ["actions", "goal"],
 			folder: "work_projects_alpha",
 			createdAt: daysAgo(4),
@@ -498,6 +551,17 @@ const createSampleNotes = (): Note[] => {
 			createdAt: daysAgo(1),
 			updatedAt: daysAgo(0),
 			archived: false,
+			// Reminder fires 6 minutes from now; notification set to 5 minutes before
+			// (i.e. the notification will fire ~1 minute from now, well within the
+			// 30-second polling grace window on either side).
+			reminder: (() => {
+				const target = new Date();
+				target.setMinutes(target.getMinutes() + 6, 0, 0); // 6 min from now, zero seconds
+				return {
+					dateTime: target.toISOString(),
+					notifications: [{ unit: "minutes" as const, value: 5 }],
+				};
+			})(),
 		},
 
 		// Personal folder and subfolder notes
@@ -505,7 +569,7 @@ const createSampleNotes = (): Note[] => {
 			id: generateId(),
 			title: "Book Recommendations",
 			content: tiptapDoc([
-				tiptapParagraph("Books to read", [{ type: "underline" }]),
+				tiptapParagraph("Books to read"),
 				tiptapBulletList(["Atomic Habits", "Deep Work", "The Psychology of Money"]),
 			]),
 			tags: ["reference", "personal"],
@@ -518,7 +582,13 @@ const createSampleNotes = (): Note[] => {
 			id: generateId(),
 			title: "Workout Plan",
 			content: tiptapDoc([
-				tiptapBulletList(["Monday: Cardio", "Tuesday: Upper body", "Wednesday: Rest", "Thursday: Lower body", "Friday: Full body"]),
+				tiptapBulletList([
+					"Monday: Cardio",
+					"Tuesday: Upper body",
+					"Wednesday: Rest",
+					"Thursday: Lower body",
+					"Friday: Full body",
+				]),
 			]),
 			tags: ["goal", "personal"],
 			folder: "personal_health",
@@ -549,17 +619,28 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Budget Tracker",
-			content: tiptapDoc([tiptapBulletList(["Monthly expenses review", "Savings goals", "Investment tracking"])]),
+			content: tiptapDoc([
+				tiptapBulletList([
+					"Monthly expenses review",
+					"Savings goals",
+					"Investment tracking",
+				]),
+			]),
 			tags: ["reference"],
 			folder: "personal_finance",
 			createdAt: daysAgo(8),
 			updatedAt: daysAgo(2),
 			archived: false,
+			// Reminder: end of month
+			reminder: createReminder(14, 18, 0, [{ unit: "days", value: 2 }]),
 		},
 		{
 			id: generateId(),
 			title: "Home Improvement Ideas",
-			content: tiptapDoc([tiptapHeading(3, "Kitchen renovation plans"), tiptapBulletList(["New countertops", "Cabinet refresh", "Lighting upgrade"])]),
+			content: tiptapDoc([
+				tiptapHeading(3, "Kitchen renovation plans"),
+				tiptapBulletList(["New countertops", "Cabinet refresh", "Lighting upgrade"]),
+			]),
 			tags: ["ideas", "personal", "goal"],
 			folder: "personal_home",
 			createdAt: daysAgo(20),
@@ -571,7 +652,13 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Brainstorming Session",
-			content: tiptapDoc([tiptapOrderedList(["Mind mapping features", "Collaboration tools", "AI integration"])]),
+			content: tiptapDoc([
+				tiptapOrderedList([
+					"Mind mapping features",
+					"Collaboration tools",
+					"AI integration",
+				]),
+			]),
 			tags: ["ideas"],
 			folder: "ideas",
 			createdAt: daysAgo(14),
@@ -581,7 +668,9 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Feature Wishlist",
-			content: tiptapDoc([tiptapOrderedList(["Export to PDF", "Dark mode", "Mobile app", "Cloud sync"])]),
+			content: tiptapDoc([
+				tiptapOrderedList(["Export to PDF", "Dark mode", "Mobile app", "Cloud sync"]),
+			]),
 			tags: ["ideas", "code"],
 			folder: "ideas_app",
 			createdAt: daysAgo(12),
@@ -591,7 +680,9 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Startup Ideas",
-			content: tiptapDoc([tiptapOrderedList(["SaaS products", "Developer tools", "Productivity apps"])]),
+			content: tiptapDoc([
+				tiptapOrderedList(["SaaS products", "Developer tools", "Productivity apps"]),
+			]),
 			tags: ["ideas", "goal"],
 			folder: "ideas_business",
 			createdAt: daysAgo(18),
@@ -629,13 +720,17 @@ const createSampleNotes = (): Note[] => {
 			createdAt: daysAgo(11),
 			updatedAt: daysAgo(3),
 			archived: false,
+			// Reminder: daily study reminder
+			reminder: createReminder(1, 8, 0, [{ unit: "minutes", value: 15 }]),
 		},
 
 		// Note with many tags to show "+n" indicator
 		{
 			id: generateId(),
 			title: "Major Project Kickoff - All Hands",
-			content: tiptapDoc([tiptapParagraph("This note has many tags to demonstrate the +N feature.")]),
+			content: tiptapDoc([
+				tiptapParagraph("This note has many tags to demonstrate the +N feature."),
+			]),
 			tags: ["actions", "ideas", "reference", "urgent", "goal", "meeting"],
 			folder: "work",
 			createdAt: daysAgo(1),
@@ -669,7 +764,11 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Old Project Notes",
-			content: tiptapDoc([tiptapParagraph("These are archived notes from a completed project. Kept for reference.")]),
+			content: tiptapDoc([
+				tiptapParagraph(
+					"These are archived notes from a completed project. Kept for reference.",
+				),
+			]),
 			tags: ["reference"],
 			folder: "inbox",
 			createdAt: daysAgo(60),
@@ -679,7 +778,13 @@ const createSampleNotes = (): Note[] => {
 		{
 			id: generateId(),
 			title: "Completed Tasks - Q4 2023",
-			content: tiptapDoc([tiptapOrderedList(["Archived completed tasks", "Project documentation", "Final review"])]),
+			content: tiptapDoc([
+				tiptapOrderedList([
+					"Archived completed tasks",
+					"Project documentation",
+					"Final review",
+				]),
+			]),
 			tags: ["actions"],
 			folder: "work_tasks",
 			createdAt: daysAgo(90),
@@ -698,7 +803,7 @@ const generateRecurringOccurrences = (
 	>,
 	dayOfMonth: number,
 	months: number = 12,
-	paidCount: number = 0
+	paidCount: number = 0,
 ): Expense[] => {
 	const now = new Date();
 	return Array.from({ length: months }, (_, i) => i).map((month) => {
@@ -837,7 +942,7 @@ const createSampleExpenses = (): Expense[] => {
 		electricityBase,
 		15,
 		12,
-		1
+		1,
 	);
 	const internetOccurrences = generateRecurringOccurrences(internetId, internetBase, 20, 12, 2);
 	const phonePlanOccurrences = generateRecurringOccurrences(
@@ -845,14 +950,14 @@ const createSampleExpenses = (): Expense[] => {
 		phonePlanBase,
 		25,
 		12,
-		1
+		1,
 	);
 	const streamingOccurrences = generateRecurringOccurrences(
 		streamingId,
 		streamingBase,
 		10,
 		12,
-		2
+		2,
 	);
 	const gymOccurrences = generateRecurringOccurrences(gymId, gymBase, 5, 12, 1);
 
@@ -928,7 +1033,7 @@ const createSampleExpenses = (): Expense[] => {
 			isPaid: false,
 			type: "want",
 			importance: "none",
-			notify: true, // Notify enabled - due in 3 days for testing
+			notify: true,
 			createdAt: daysAgo(3),
 			updatedAt: daysAgo(3),
 			monthlyOverrides: {},
@@ -945,7 +1050,7 @@ const createSampleExpenses = (): Expense[] => {
 			isPaid: false,
 			type: "need",
 			importance: "critical",
-			notify: true, // Notify enabled - due in 3 days for testing
+			notify: true,
 			createdAt: daysAgo(10),
 			updatedAt: daysAgo(10),
 			monthlyOverrides: {},
@@ -992,19 +1097,16 @@ const createSampleExpenses = (): Expense[] => {
 const createSampleIncomeEntries = (): IncomeEntry[] => {
 	const entries: IncomeEntry[] = [];
 
-	// Generate entries for the past 4 weeks
 	for (let week = 0; week < 4; week++) {
-		// Work days (Mon-Fri) with some variation
 		for (let day = 1; day <= 5; day++) {
 			const date = new Date();
 			date.setDate(date.getDate() - week * 7 - (7 - day));
 
-			// Skip some days randomly for realism
 			if (Math.random() > 0.85) continue;
 
-			const hours = 6 + Math.floor(Math.random() * 4); // 6-9 hours
-			const minutes = Math.floor(Math.random() * 4) * 15; // 0, 15, 30, or 45
-			const hourlyRate = 25 + Math.random() * 10; // $25-35/hour
+			const hours = 6 + Math.floor(Math.random() * 4);
+			const minutes = Math.floor(Math.random() * 4) * 15;
+			const hourlyRate = 25 + Math.random() * 10;
 			const amount = Math.round((hours + minutes / 60) * hourlyRate * 100) / 100;
 
 			entries.push({
@@ -1028,25 +1130,21 @@ export const seedTestDatabase = async (): Promise<void> => {
 	console.log("Seeding test database with sample data...");
 
 	try {
-		// Clear existing data first
 		await sqlStorage.clearAllData();
 
-		// Save folders
 		const folders = createSampleFolders();
 		await sqlStorage.saveFolders(folders);
 		console.log(`✓ ${folders.length} folders created`);
 
-		// Save tags
 		const tags = createSampleTags();
 		await sqlStorage.saveTags(tags);
 		console.log(`✓ ${Object.keys(tags).length} tags created`);
 
-		// Save notes
 		const notes = createSampleNotes();
 		await sqlStorage.saveNotes(notes);
-		console.log(`✓ ${notes.length} notes created`);
+		const notesWithReminders = notes.filter((n) => n.reminder).length;
+		console.log(`✓ ${notes.length} notes created (${notesWithReminders} with reminders)`);
 
-		// Save expenses
 		const expenses = createSampleExpenses();
 		await sqlStorage.saveExpenses({
 			expenses,
@@ -1058,7 +1156,6 @@ export const seedTestDatabase = async (): Promise<void> => {
 		});
 		console.log(`✓ ${expenses.length} expenses created`);
 
-		// Save income entries
 		const incomeEntries = createSampleIncomeEntries();
 		const weeklyTargets = createSampleWeeklyTargets();
 		await sqlStorage.saveIncome({
@@ -1068,16 +1165,14 @@ export const seedTestDatabase = async (): Promise<void> => {
 		});
 		console.log(`✓ ${incomeEntries.length} income entries created`);
 
-		// Save metadata
 		await sqlStorage.saveMetadata({
 			lastSaved: new Date(),
 			version: "0.0.5",
 		});
 
-		// Save settings with expense notification lead days set to 3 for testing
 		await sqlStorage.saveSettings({
 			...DEFAULT_SETTINGS,
-			expenseNotificationLeadDays: 3, // 3 days before due date for testing
+			expenseNotificationLeadDays: 3,
 		});
 		console.log("✓ Settings configured (notification lead time: 3 days)");
 
@@ -1088,5 +1183,4 @@ export const seedTestDatabase = async (): Promise<void> => {
 	}
 };
 
-// Export for use in dev tools or console
 export default seedTestDatabase;

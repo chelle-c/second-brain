@@ -9,7 +9,12 @@ import {
 	Undo2,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { AVAILABLE_ICONS, getValidIcon, getIconNameFromComponent, DEFAULT_TAG_ICON } from "@/components/IconPicker";
+import {
+	AVAILABLE_ICONS,
+	getValidIcon,
+	getIconNameFromComponent,
+	DEFAULT_TAG_ICON,
+} from "@/components/IconPicker";
 
 // Helper to get a valid tag icon component, with fallback
 const getTagIcon = (icon: LucideIcon | undefined): LucideIcon => {
@@ -41,6 +46,52 @@ interface NotesCardProps {
 	onRedo: () => void;
 }
 
+// ── text-preview helper ──────────────────────────────────────────────────────
+/**
+ * Extract plain text from a Tiptap JSON document with proper spacing,
+ * then truncate to ≤ 80 characters for a meaningful preview.
+ */
+function extractPreviewText(content: string): string {
+	if (!content) return "";
+	try {
+		const doc = JSON.parse(content);
+		const parts: string[] = [];
+
+		const walk = (node: any): void => {
+			if (node.text) {
+				parts.push(node.text);
+			}
+			if (node.content && Array.isArray(node.content)) {
+				node.content.forEach((child: any, index: number) => {
+					walk(child);
+					// Add space between block-level siblings
+					if (index < node.content.length - 1) {
+						const isBlock = [
+							"paragraph",
+							"heading",
+							"bulletList",
+							"orderedList",
+							"taskList",
+							"listItem",
+							"codeBlock",
+							"blockquote",
+						].includes(child.type);
+						if (isBlock) {
+							parts.push(" ");
+						}
+					}
+				});
+			}
+		};
+
+		walk(doc);
+		const text = parts.join("").replace(/\s+/g, " ").trim();
+		return text.length > 80 ? text.slice(0, 80) + "…" : text;
+	} catch {
+		return "";
+	}
+}
+
 // Separate component for draggable note item
 const DraggableNoteItem: React.FC<{
 	note: Note;
@@ -60,9 +111,7 @@ const DraggableNoteItem: React.FC<{
 	});
 
 	const handleCardClick = useCallback(() => {
-		if (!isDragging) {
-			onSelectNote(note.id);
-		}
+		if (!isDragging) onSelectNote(note.id);
 	}, [isDragging, note.id, onSelectNote]);
 
 	const handleCardKeyDown = useCallback(
@@ -72,22 +121,23 @@ const DraggableNoteItem: React.FC<{
 				onSelectNote(note.id);
 			}
 		},
-		[note.id, onSelectNote]
+		[note.id, onSelectNote],
 	);
 
 	const handleDragHandleClick = useCallback((e: React.MouseEvent) => {
-		// Prevent the card click from firing when clicking the drag handle
 		e.stopPropagation();
 	}, []);
 
 	const handleDragHandleKeyDown = useCallback((e: React.KeyboardEvent) => {
-		// Prevent the card keydown from firing
 		e.stopPropagation();
 	}, []);
 
+	// Memoised preview so we don't re-parse on every render
+	const previewText = useMemo(() => extractPreviewText(note.content), [note.content]);
+
 	return (
 		<>
-			{/* Custom drag preview - positioned off-screen but rendered in DOM */}
+			{/* Custom drag preview */}
 			<div
 				ref={dragPreviewRef}
 				className="fixed -left-[9999px] -top-[9999px] bg-card border border-border rounded-lg px-3 py-2 shadow-lg pointer-events-none z-9999 max-w-[200px]"
@@ -105,13 +155,13 @@ const DraggableNoteItem: React.FC<{
 				role="button"
 				aria-label={`Open note: ${note.title || "Untitled"}`}
 				className={`relative pl-1.5 pr-3 py-2.5 bg-card border border-border rounded-lg transition-all animate-fadeIn group focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
-					isDragging
-						? "opacity-30"
-						: "hover:border-primary/30 hover:shadow-sm cursor-pointer"
+					isDragging ? "opacity-30" : (
+						"hover:border-primary/30 hover:shadow-sm cursor-pointer"
+					)
 				}`}
 			>
 				<div className="flex items-center gap-2">
-					{/* Drag handle - always visible */}
+					{/* Drag handle */}
 					<div
 						{...dragHandlers}
 						onClick={handleDragHandleClick}
@@ -139,15 +189,17 @@ const DraggableNoteItem: React.FC<{
 										const tag = tags[tagId];
 										if (!tag) return null;
 										const Icon = getTagIcon(tag.icon);
-										// Use getIconNameFromComponent for reliable key generation
-										const iconKey = getIconNameFromComponent(tag.icon) || "default";
+										const iconKey =
+											getIconNameFromComponent(tag.icon) || "default";
 										return (
 											<span
 												key={`${tagId}-${iconKey}`}
 												className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-secondary text-foreground rounded-md text-xs"
 											>
 												<Icon size={12} />
-												<span className="max-w-[60px] truncate">{tag.name}</span>
+												<span className="max-w-[60px] truncate">
+													{tag.name}
+												</span>
 											</span>
 										);
 									})}
@@ -160,18 +212,44 @@ const DraggableNoteItem: React.FC<{
 							)}
 						</div>
 
-						{/* Metadata row */}
-						<div className="flex items-center gap-3 text-xs text-muted-foreground">
-							<span className="flex items-center gap-1" title="Created">
+						{/* Content preview – up to 2 lines, indented */}
+						{previewText && (
+							<p
+								className="ml-1 text-xs text-muted-foreground/70 truncate leading-snug"
+								style={
+									{
+										/* two-line clamp via webkit (widely supported in Electron/WebKit) */
+										display: "-webkit-box",
+										WebkitLineClamp: 2,
+										WebkitBoxOrient: "vertical",
+										overflow: "hidden",
+									} as React.CSSProperties
+								}
+							>
+								{previewText}
+							</p>
+						)}
+
+						{/* Metadata row – with labels */}
+						<div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+							<span className="flex items-center gap-1">
 								<Calendar size={11} />
+								<span className="font-medium text-muted-foreground/60">
+									Created
+								</span>
 								{formatDate(note.createdAt)}
 							</span>
-							{note.updatedAt && new Date(note.updatedAt).getTime() !== new Date(note.createdAt).getTime() && (
-								<span className="flex items-center gap-1" title="Updated">
-									<Clock size={11} />
-									{formatDate(note.updatedAt)}
-								</span>
-							)}
+							{note.updatedAt &&
+								new Date(note.updatedAt).getTime() !==
+									new Date(note.createdAt).getTime() && (
+									<span className="flex items-center gap-1">
+										<Clock size={11} />
+										<span className="font-medium text-muted-foreground/60">
+											Updated
+										</span>
+										{formatDate(note.updatedAt)}
+									</span>
+								)}
 						</div>
 					</div>
 
@@ -339,7 +417,7 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 				},
 			});
 		},
-		[getFolderById, moveNote]
+		[getFolderById, moveNote],
 	);
 
 	// Get breadcrumb path
@@ -431,9 +509,19 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 	);
 
 	// Recursive folder section renderer
-	const renderFolderSection = (node: { folder: Folder; notes: Note[]; children: { folder: Folder; notes: Note[]; children: unknown[] }[] }, depth: number = 0): React.ReactNode => {
+	const renderFolderSection = (
+		node: {
+			folder: Folder;
+			notes: Note[];
+			children: { folder: Folder; notes: Note[]; children: unknown[] }[];
+		},
+		depth: number = 0,
+	): React.ReactNode => {
 		return (
-			<div key={node.folder.id} className={depth > 0 ? "ml-4 border-l border-border pl-4 py-2" : ""}>
+			<div
+				key={node.folder.id}
+				className={depth > 0 ? "ml-4 border-l border-border pl-4 py-2" : ""}
+			>
 				<FolderSectionDropZone
 					folder={node.folder}
 					onNoteDrop={handleNoteDrop}
@@ -445,7 +533,20 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 				{/* Render nested child folders */}
 				{node.children.length > 0 && (
 					<div className="mt-3">
-						{node.children.map((child) => renderFolderSection(child as { folder: Folder; notes: Note[]; children: { folder: Folder; notes: Note[]; children: unknown[] }[] }, depth + 1))}
+						{node.children.map((child) =>
+							renderFolderSection(
+								child as {
+									folder: Folder;
+									notes: Note[];
+									children: {
+										folder: Folder;
+										notes: Note[];
+										children: unknown[];
+									}[];
+								},
+								depth + 1,
+							),
+						)}
 					</div>
 				)}
 			</div>
@@ -472,15 +573,19 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 												<BreadcrumbIcon size={16} />
 												<span className="text-sm">{folder.name}</span>
 											</button>
-											<ChevronRight size={16} className="text-muted-foreground" />
+											<ChevronRight
+												size={16}
+												className="text-muted-foreground"
+											/>
 										</React.Fragment>
 									);
 								})}
 							</>
 						)}
-						{activeFolder && React.createElement(getFolderIconComponent(activeFolder), {
-							size: 24,
-						})}
+						{activeFolder &&
+							React.createElement(getFolderIconComponent(activeFolder), {
+								size: 24,
+							})}
 						<h1 className="text-2xl font-semibold">{activeFolder?.name || "Inbox"}</h1>
 						<span className="text-sm text-muted-foreground">
 							({filteredNotes.length})
@@ -516,21 +621,20 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 
 			{/* Notes list */}
 			<div className="flex-1 overflow-y-auto">
-				{filteredNotes.length === 0 ? (
+				{filteredNotes.length === 0 ?
 					<div className="text-center py-12 text-muted-foreground animate-fadeIn">
 						<p className="text-lg mb-2">
 							No {viewMode} notes in {activeFolder?.name || "this folder"}
 						</p>
 						<p className="text-sm">
-							{activeTags.length > 0
-								? "Try removing some tag filters"
-								: viewMode === "active"
-								? "Create a new note to get started"
-								: "No archived notes yet"}
+							{activeTags.length > 0 ?
+								"Try removing some tag filters"
+							: viewMode === "active" ?
+								"Create a new note to get started"
+							:	"No archived notes yet"}
 						</p>
 					</div>
-				) : (
-					<div className="space-y-4 animate-fadeIn">
+				:	<div className="space-y-4 animate-fadeIn">
 						{/* Notes directly in this folder */}
 						{folderHierarchy.directNotes.length > 0 && activeFolder && (
 							<CurrentFolderDropZone
@@ -542,9 +646,21 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 						)}
 
 						{/* Nested folders with their notes */}
-						{folderHierarchy.nestedFolders.map((node) => renderFolderSection(node as { folder: Folder; notes: Note[]; children: { folder: Folder; notes: Note[]; children: unknown[] }[] }))}
+						{folderHierarchy.nestedFolders.map((node) =>
+							renderFolderSection(
+								node as {
+									folder: Folder;
+									notes: Note[];
+									children: {
+										folder: Folder;
+										notes: Note[];
+										children: unknown[];
+									}[];
+								},
+							),
+						)}
 					</div>
-				)}
+				}
 			</div>
 		</div>
 	);

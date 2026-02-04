@@ -28,11 +28,6 @@ import { Callout } from "../editor/extensions/Callout";
 import { LinkPreview } from "../editor/extensions/LinkPreview";
 import { DragHandle } from "../editor/extensions/DragHandle";
 import { TableOfContentsSidebar } from "./TableOfContentsSidebar";
-import {
-	convertYooptaToTiptap,
-	isYooptaFormat,
-	isTiptapFormat,
-} from "../editor/utils/convertYooptaToTiptap";
 
 const lowlight = createLowlight(common);
 
@@ -45,27 +40,12 @@ interface EditorSetupProps {
 
 // Parse content and convert if needed
 const parseContent = (content: string): JSONContent => {
-	if (!content) {
-		return { type: "doc", content: [{ type: "paragraph" }] };
-	}
-
+	if (!content) return { type: "doc", content: [{ type: "paragraph" }] };
 	try {
 		const parsed = JSON.parse(content);
-
-		// Check if it's already Tiptap format
-		if (isTiptapFormat(parsed)) {
-			return parsed as JSONContent;
-		}
-
-		// Check if it's Yoopta format and convert
-		if (isYooptaFormat(parsed)) {
-			return convertYooptaToTiptap(parsed);
-		}
-
-		// Unknown format, return as empty
+		if (parsed && parsed.type === "doc") return parsed as JSONContent;
 		return { type: "doc", content: [{ type: "paragraph" }] };
 	} catch {
-		// If parsing fails, return empty document
 		return { type: "doc", content: [{ type: "paragraph" }] };
 	}
 };

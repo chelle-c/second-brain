@@ -17,6 +17,8 @@ import {
 	Undo,
 	Redo,
 	ChevronDown,
+	ListTodo, // ← new: task-list icon
+	List, // ← new: bullet-list icon
 } from "lucide-react";
 import { useCallback, useState, useRef, useEffect } from "react";
 
@@ -207,7 +209,7 @@ export const BubbleMenuBar = ({ editor }: BubbleMenuBarProps) => {
 			editor={editor}
 			className="flex items-center gap-0.5 p-1 rounded-lg border border-border bg-popover shadow-lg"
 		>
-			{showLinkInput ? (
+			{showLinkInput ?
 				<div className="flex items-center gap-1 px-1">
 					<input
 						type="url"
@@ -245,8 +247,7 @@ export const BubbleMenuBar = ({ editor }: BubbleMenuBarProps) => {
 						Cancel
 					</button>
 				</div>
-			) : (
-				<>
+			:	<>
 					{/* Undo/Redo */}
 					<ToolbarButton
 						onClick={() => editor.chain().focus().undo().run()}
@@ -357,7 +358,9 @@ export const BubbleMenuBar = ({ editor }: BubbleMenuBarProps) => {
 								<PaintBucket className="w-4 h-4" />
 								<div
 									className="w-3 h-0.5 rounded-full"
-									style={{ backgroundColor: getCurrentHighlight() || "transparent" }}
+									style={{
+										backgroundColor: getCurrentHighlight() || "transparent",
+									}}
 								/>
 							</div>
 						</ToolbarButton>
@@ -473,17 +476,45 @@ export const BubbleMenuBar = ({ editor }: BubbleMenuBarProps) => {
 					<Divider />
 
 					{/* Link */}
-					{editor.isActive("link") ? (
+					{editor.isActive("link") ?
 						<ToolbarButton onClick={removeLink} isActive={false} title="Remove Link">
 							<Unlink className="w-4 h-4" />
 						</ToolbarButton>
-					) : (
-						<ToolbarButton onClick={openLinkInput} isActive={false} title="Add Link">
+					:	<ToolbarButton onClick={openLinkInput} isActive={false} title="Add Link">
 							<Link className="w-4 h-4" />
 						</ToolbarButton>
-					)}
+					}
+
+					<Divider />
+
+					{/* Bullet ↔ Task list toggle */}
+					<ToolbarButton
+						onClick={() => {
+							if (editor.isActive("taskList")) {
+								// Convert task list → bullet list
+								editor.chain().focus().toggleTaskList().toggleBulletList().run();
+							} else if (editor.isActive("bulletList")) {
+								// Convert bullet list → task list
+								editor.chain().focus().toggleBulletList().toggleTaskList().run();
+							} else {
+								// Neither active – start a task list
+								editor.chain().focus().toggleTaskList().run();
+							}
+						}}
+						isActive={editor.isActive("taskList") || editor.isActive("bulletList")}
+						title={
+							editor.isActive("taskList") ? "Convert to bullet list"
+							: editor.isActive("bulletList") ?
+								"Convert to task list"
+							:	"Toggle task list"
+						}
+					>
+						{editor.isActive("taskList") ?
+							<List className="w-4 h-4" />
+						:	<ListTodo className="w-4 h-4" />}
+					</ToolbarButton>
 				</>
-			)}
+			}
 		</BubbleMenu>
 	);
 };
