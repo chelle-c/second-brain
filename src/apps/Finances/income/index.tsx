@@ -3,7 +3,7 @@ import { Redo2, Undo2 } from "lucide-react";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { AnimatedToggle } from "@/components/AnimatedToggle";
-import { years } from "@/lib/dateUtils";
+import { years } from "@/lib/date-utils/constants";
 import { useHistoryStore } from "@/stores/useHistoryStore";
 import { useIncomeStore } from "@/stores/useIncomeStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";

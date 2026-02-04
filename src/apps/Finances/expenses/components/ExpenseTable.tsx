@@ -32,7 +32,7 @@ import {
 	formatDate,
 	getDueDateColor,
 	getRelativeDateText,
-} from "@/lib/dateUtils";
+} from "@/lib/date-utils/formatting";
 import {
 	DEFAULT_CATEGORY_COLORS,
 	getCategoryDisplayColor,

@@ -12,7 +12,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { getWeeksForYear } from "@/lib/dateUtils";
+import { getWeeksForYear } from "@/lib/date-utils/formatting";
 import { useSettingsStore } from "@/stores/useSettingsStore";
 import type { IncomeWeekSelection } from "@/types/income";
 import type { WeekStartDay } from "@/types/settings";

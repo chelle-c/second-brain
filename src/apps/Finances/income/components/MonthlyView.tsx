@@ -12,7 +12,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { getCurrencySymbol } from "@/lib/currencyUtils";
-import { getMonthlyData } from "@/lib/dateUtils";
+import { getMonthlyData } from "@/lib/date-utils/income";
 import { useIncomeStore } from "@/stores/useIncomeStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
 import { useThemeStore } from "@/stores/useThemeStore";

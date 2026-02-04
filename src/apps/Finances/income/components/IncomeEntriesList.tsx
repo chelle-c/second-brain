@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getCurrencySymbol } from "@/lib/currencyUtils";
-import { getAvailableDates, parsePasteText } from "@/lib/dateUtils";
+import { getAvailableDates} from "@/lib/date-utils/formatting";
+import { parsePasteText } from "@/lib/date-utils/income";
 import { useIncomeStore } from "@/stores/useIncomeStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
 import type {

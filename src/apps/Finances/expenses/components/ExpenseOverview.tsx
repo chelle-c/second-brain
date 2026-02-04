@@ -2,7 +2,7 @@ import { TrendingUp } from "lucide-react";
 import { AnimatedToggle } from "@/components/AnimatedToggle";
 import { PieChart, type PieChartData } from "@/components/charts";
 import { getCurrencySymbol } from "@/lib/currencyUtils";
-import { formatCurrency } from "@/lib/dateUtils";
+import { formatCurrency } from "@/lib/date-utils/formatting";
 import { DEFAULT_CATEGORY_COLORS } from "@/lib/expenseHelpers";
 import { useExpenseStore } from "@/stores/useExpenseStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";

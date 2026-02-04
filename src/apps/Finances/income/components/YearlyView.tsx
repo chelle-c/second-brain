@@ -2,7 +2,7 @@ import { FileText } from "lucide-react";
 import { useMemo } from "react";
 import { BarChart, type BarChartData } from "@/components/charts";
 import { getCurrencySymbol } from "@/lib/currencyUtils";
-import { getYearlyData } from "@/lib/dateUtils";
+import { getYearlyData } from "@/lib/date-utils/income";
 import { useIncomeStore } from "@/stores/useIncomeStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
 import { useThemeStore } from "@/stores/useThemeStore";

@@ -14,7 +14,7 @@ import {
 	Trash2,
 } from "lucide-react";
 import { useState } from "react";
-import { formatCurrency, formatDate } from "@/lib/dateUtils";
+import { formatCurrency, formatDate } from "@/lib/date-utils/formatting";
 import {
 	DEFAULT_CATEGORY_COLORS,
 	getCategoryDisplayColor,
