@@ -74,3 +74,15 @@ export interface NotesFolder {
 export interface NotesFolders {
 	[folderId: string]: NotesFolder;
 }
+
+export interface DeleteConfirmation {
+	type: "folder";
+	id: string;
+	name: string;
+}
+
+export interface DraggedFolder {
+	folder: Folder;
+}
+
+export type FolderSortOption = "name-asc" | "name-desc" | "created-asc" | "created-desc";

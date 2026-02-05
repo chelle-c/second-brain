@@ -482,7 +482,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 						<div className="mb-5">
 							{reminder ?
 								<div className="flex flex-wrap items-center gap-2 p-2.5 rounded-lg bg-primary/5 border border-primary/20">
-									<Bell size={16} className="text-primary flex-shrink-0" />
+									<Bell size={16} className="text-primary shrink-0" />
 									<div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm flex-1 min-w-0">
 										<span className="text-foreground font-medium">
 											{formatReminderDateTime(reminder).date}{" "}
@@ -495,7 +495,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 											Notify: {formatNotifSummary(reminder)}
 										</span>
 									</div>
-									<div className="flex items-center gap-1 flex-shrink-0">
+									<div className="flex items-center gap-1 shrink-0">
 										<button
 											type="button"
 											onClick={() => setShowReminderModal(true)}
@@ -536,7 +536,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 				</div>
 
 				{/* ── Right column: ToC ────────────────────────────────────────── */}
-				<div className="flex-shrink-0 h-full sticky top-0" style={{ height: "100vh" }}>
+				<div className="shrink-0 h-full sticky top-0" style={{ height: "100vh" }}>
 					<TableOfContentsSidebar editor={editor} />
 				</div>
 			</div>

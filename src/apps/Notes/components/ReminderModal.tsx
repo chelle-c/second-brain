@@ -153,7 +153,7 @@ const NotificationRow: React.FC<{
 					id={`${rowId}-unit`}
 					value={notif.unit}
 					onChange={handleUnitChange}
-					className="flex-shrink-0 px-2 py-1.5 text-sm border border-input rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+					className="shrink-0 px-2 py-1.5 text-sm border border-input rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
 				>
 					<option value="minutes">Minutes</option>
 					<option value="hours">Hours</option>

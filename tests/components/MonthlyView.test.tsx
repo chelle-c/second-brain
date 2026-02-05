@@ -17,11 +17,11 @@ vi.mock("@/components/charts", () => ({
 }));
 
 // Mock getMonthlyData
-vi.mock("@/lib/dateUtils", () => ({
+vi.mock("@/lib/date-utils/income", () => ({
 	getMonthlyData: vi.fn(),
 }));
 
-import { getMonthlyData } from "@/lib/dateUtils";
+import { getMonthlyData } from "@/lib/date-utils/income";
 
 describe("MonthlyView", () => {
 	const mockOnYearChange = vi.fn();

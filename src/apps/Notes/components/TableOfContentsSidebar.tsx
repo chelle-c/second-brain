@@ -249,7 +249,7 @@ export const TableOfContentsSidebar = ({ editor }: TableOfContentsSidebarProps) 
 		<div className="w-52 mr-2 shrink-0">
 			<div className="sticky top-0 h-screen flex flex-col border border-border rounded-sm bg-card/95 backdrop-blur-sm shadow-sm overflow-hidden">
 				{/* Header */}
-				<div className="flex items-center justify-between p-3 border-b border-border bg-muted/50 flex-shrink-0">
+				<div className="flex items-center justify-between p-3 border-b border-border bg-muted/50 shrink-0">
 					<div className="flex items-center gap-2 text-sm font-medium text-foreground">
 						<List className="w-4 h-4" />
 						<span>Contents</span>

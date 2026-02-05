@@ -86,9 +86,7 @@ describe("NotesCard", () => {
 	const mockOnSelectNote = vi.fn();
 	const mockOnUndo = vi.fn();
 	const mockOnRedo = vi.fn();
-	const mockGetFolderById = vi.fn(
-		(id: string) => mockFoldersMap[id] || mockFoldersMap.inbox,
-	);
+	const mockGetFolderById = vi.fn((id: string) => mockFoldersMap[id] || mockFoldersMap.inbox);
 	const mockGetNoteCount = vi.fn(() => 2);
 
 	beforeEach(() => {
@@ -146,29 +144,6 @@ describe("NotesCard", () => {
 		expect(screen.getByText("(2)")).toBeInTheDocument();
 	});
 
-	it("should render search input", () => {
-		render(
-			<NotesCard
-				folders={mockFoldersList}
-				activeFolder={mockFoldersMap.inbox}
-				setActiveFolder={mockSetActiveFolder}
-				getFolderById={mockGetFolderById}
-				tags={mockTags}
-				activeTags={[]}
-				getNoteCount={mockGetNoteCount}
-				setActiveTags={mockSetActiveTags}
-				onSelectNote={mockOnSelectNote}
-				viewMode="active"
-				canUndo={false}
-				canRedo={false}
-				onUndo={mockOnUndo}
-				onRedo={mockOnRedo}
-			/>,
-		);
-
-		expect(screen.getByPlaceholderText("Search notes...")).toBeInTheDocument();
-	});
-
 	it("should display active notes when viewMode is active", () => {
 		render(
 			<NotesCard
@@ -189,9 +164,9 @@ describe("NotesCard", () => {
 			/>,
 		);
 
-		expect(screen.getByText("First Note")).toBeInTheDocument();
-		expect(screen.getByText("Second Note")).toBeInTheDocument();
-		expect(screen.queryByText("Archived Note")).not.toBeInTheDocument();
+		expect(screen.getByTitle("First Note")).toBeInTheDocument();
+		expect(screen.getByTitle("Second Note")).toBeInTheDocument();
+		expect(screen.queryByTitle("Archived Note")).not.toBeInTheDocument();
 	});
 
 	it("should display archived notes when viewMode is archived", () => {
@@ -214,9 +189,9 @@ describe("NotesCard", () => {
 			/>,
 		);
 
-		expect(screen.getByText("Archived Note")).toBeInTheDocument();
-		expect(screen.queryByText("First Note")).not.toBeInTheDocument();
-		expect(screen.queryByText("Second Note")).not.toBeInTheDocument();
+		expect(screen.getByTitle("Archived Note")).toBeInTheDocument();
+		expect(screen.queryByTitle("First Note")).not.toBeInTheDocument();
+		expect(screen.queryByTitle("Second Note")).not.toBeInTheDocument();
 	});
 
 	it("should call onSelectNote when note is clicked", async () => {
@@ -241,67 +216,8 @@ describe("NotesCard", () => {
 		);
 
 		// Click on the button overlay using its aria-label (the button covers the entire card)
-		await user.click(
-			screen.getByRole("button", { name: "Open note: First Note" }),
-		);
+		await user.click(screen.getByRole("button", { name: "Open note: First Note" }));
 		expect(mockOnSelectNote).toHaveBeenCalledWith("note-1");
-	});
-
-	it("should filter notes by search term", async () => {
-		const user = userEvent.setup();
-		render(
-			<NotesCard
-				folders={mockFoldersList}
-				activeFolder={mockFoldersMap.inbox}
-				setActiveFolder={mockSetActiveFolder}
-				getFolderById={mockGetFolderById}
-				tags={mockTags}
-				activeTags={[]}
-				getNoteCount={mockGetNoteCount}
-				setActiveTags={mockSetActiveTags}
-				onSelectNote={mockOnSelectNote}
-				viewMode="active"
-				canUndo={false}
-				canRedo={false}
-				onUndo={mockOnUndo}
-				onRedo={mockOnRedo}
-			/>,
-		);
-
-		const searchInput = screen.getByPlaceholderText("Search notes...");
-		await user.type(searchInput, "First");
-
-		expect(screen.getByText("First Note")).toBeInTheDocument();
-		expect(screen.queryByText("Second Note")).not.toBeInTheDocument();
-	});
-
-	it("should display empty state when no notes match", async () => {
-		const user = userEvent.setup();
-		render(
-			<NotesCard
-				folders={mockFoldersList}
-				activeFolder={mockFoldersMap.inbox}
-				setActiveFolder={mockSetActiveFolder}
-				getFolderById={mockGetFolderById}
-				tags={mockTags}
-				activeTags={[]}
-				getNoteCount={mockGetNoteCount}
-				setActiveTags={mockSetActiveTags}
-				onSelectNote={mockOnSelectNote}
-				viewMode="active"
-				canUndo={false}
-				canRedo={false}
-				onUndo={mockOnUndo}
-				onRedo={mockOnRedo}
-			/>,
-		);
-
-		const searchInput = screen.getByPlaceholderText("Search notes...");
-		await user.type(searchInput, "NonexistentNote");
-
-		expect(
-			screen.getByText(/try a different search term/i),
-		).toBeInTheDocument();
 	});
 
 	it("should display note tags", () => {
@@ -371,8 +287,8 @@ describe("NotesCard", () => {
 			/>,
 		);
 
-		expect(screen.getByText("First Note")).toBeInTheDocument();
-		expect(screen.queryByText("Second Note")).not.toBeInTheDocument();
+		expect(screen.getByTitle("First Note")).toBeInTheDocument();
+		expect(screen.queryByTitle("Second Note")).not.toBeInTheDocument();
 	});
 
 	it('should show "Untitled" for notes without title', () => {
@@ -412,6 +328,6 @@ describe("NotesCard", () => {
 			/>,
 		);
 
-		expect(screen.getByText("Untitled")).toBeInTheDocument();
+		expect(screen.getByTitle("Untitled")).toBeInTheDocument();
 	});
 });

@@ -180,7 +180,7 @@ const DraggableNoteItem: React.FC<{
 					<div className="flex-1 min-w-0">
 						{/* Title row with tags */}
 						<div className="flex items-center gap-2 mb-1">
-							<h3 className="text-card-foreground font-medium truncate shrink min-w-0">
+							<h3 title={note.title || "Untitled"} className="text-card-foreground font-medium truncate shrink min-w-0">
 								{note.title || "Untitled"}
 							</h3>
 							{note.tags && note.tags.length > 0 && (

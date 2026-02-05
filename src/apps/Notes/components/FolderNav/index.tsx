@@ -15,7 +15,7 @@ import { ActionButton } from "./ActionButton";
 import { ContextMenu } from "./ContextMenu";
 import { FolderItem } from "./FolderItem";
 import { SearchModal } from "./SearchModal";
-import type { DeleteConfirmation, DraggedFolder, FolderSortOption } from "./types";
+import type { DeleteConfirmation, DraggedFolder, FolderSortOption } from "@/types/notes";
 import type { DragItem } from "@/hooks/useDragAndDrop";
 import {
 	Archive,
