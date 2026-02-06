@@ -147,7 +147,9 @@ export function Calendar() {
 						onDateChange={handleDateChange}
 					/>
 				</div>
-				<FilterBar filters={filters} onFilterChange={setFilters} />
+				<div className="flex justify-end">
+					<FilterBar filters={filters} onFilterChange={setFilters} />
+				</div>
 			</div>
 
 			{/* Active view – fills remaining vertical space */}

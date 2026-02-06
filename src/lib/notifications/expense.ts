@@ -124,7 +124,7 @@ export async function checkExpenseNotificationsOnStartup(): Promise<void> {
 		return;
 	}
 
-	const sent = await notificationService.sendOnce({
+	await notificationService.sendOnce({
 		dedupeKey: batchKey(),
 		title: batchTitle(upcoming),
 		body: batchBody(upcoming),

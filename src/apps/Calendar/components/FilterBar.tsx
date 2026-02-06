@@ -1,4 +1,4 @@
-import { StickyNote, DollarSign, TrendingUp, EyeOff } from "lucide-react";
+import { StickyNote, DollarSign, TrendingUp, EyeOff, Eye } from "lucide-react";
 import type { CalendarFilters } from "@/types/calendar";
 
 interface FilterBarProps {
@@ -19,7 +19,7 @@ export function FilterBar({ filters, onFilterChange }: FilterBarProps) {
 
 	return (
 		<div
-			className="flex flex-wrap items-center gap-2"
+			className="flex flex-wrap items-center justify-end gap-2"
 			role="group"
 			aria-label="Calendar filters"
 		>
@@ -66,13 +66,17 @@ export function FilterBar({ filters, onFilterChange }: FilterBarProps) {
 				className={[
 					"inline-flex items-center gap-1.5 text-sm font-medium rounded-full px-3 py-1 transition-all border",
 					"focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2",
-					filters.hideCompleted ?
+					!filters.hideCompleted ?
 						"bg-secondary border-border text-secondary-foreground"
 					:	"opacity-50 border-muted bg-muted/30 text-muted-foreground",
 				].join(" ")}
 			>
-				<EyeOff className="w-3.5 h-3.5" aria-hidden="true" />
-				Hide completed
+				{filters.hideCompleted ? (
+					<EyeOff className="w-3.5 h-3.5" aria-hidden="true" />
+				) : (
+					<Eye className="w-3.5 h-3.5" aria-hidden="true" />
+				)}
+				Show completed tasks
 			</button>
 		</div>
 	);

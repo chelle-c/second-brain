@@ -12,7 +12,7 @@
  *      all-day row's actual rendered height.
  */
 
-import { useRef, useEffect, useState, useLayoutEffect } from "react";
+import { Fragment, useRef, useEffect, useState, useLayoutEffect } from "react";
 import { addDays, format, isToday } from "date-fns";
 import type { CalendarEvent } from "@/types/calendar";
 import { eventsOnDate, splitEventsByTime } from "@/apps/Calendar/calendarEvents";
@@ -121,12 +121,17 @@ export function WeekView({ weekStart, events, startHour }: WeekViewProps) {
 	// Background classes for sticky cells: solid when stuck, transparent when not.
 	// card colour is the app's surface colour; using the CSS variable directly
 	// gives us both light and dark mode for free.
-	const stickyBg = isStuck ? { background: "var(--card)" } : {};
+	const stickyBg: React.CSSProperties = {
+		background: isStuck ? "var(--card)" : "transparent",
+		transition: "background 0.4s ease",
+	};
 
 	// ── render ──────────────────────────────────────────────────────────────
 	return (
 		<div className="flex flex-col flex-1 min-h-0">
 			<div ref={scrollRef} className="flex-1 overflow-y-auto">
+				{/* Zero-height sentinel – when it scrolls out of view, isStuck becomes true */}
+				<div ref={sentinelRef} className="h-0 w-full" />
 				<div ref={gridRef} className="relative" style={gridStyle}>
 
 					{/* ══════════════════════════════════════════════════════════════
@@ -135,17 +140,10 @@ export function WeekView({ weekStart, events, startHour }: WeekViewProps) {
 					<div
 						className="border-r border-border sticky z-10"
 						style={{ top: 0, height: HEADER_H, ...stickyBg }}
-					>
-						{/* Transparent base layer when not stuck */}
-						{!isStuck && <div className="w-full h-full bg-muted" />}
-					</div>
+					/>
 
 					{days.map((day, i) => {
 						const today = isToday(day);
-						// When not stuck use the original semi-transparent tint;
-						// when stuck use the solid card bg (already in stickyBg).
-						const cellBg =
-							isStuck ? stickyBg : { background: today ? undefined : undefined }; // let Tailwind classes handle it
 
 						return (
 							<div
@@ -153,12 +151,8 @@ export function WeekView({ weekStart, events, startHour }: WeekViewProps) {
 								className={[
 									"border-l border-border border-b sticky z-10",
 									"text-center flex flex-col items-center justify-center",
-									!isStuck ?
-										today ? "bg-secondary"
-										:	"bg-muted"
-									:	"",
 								].join(" ")}
-								style={{ top: 0, height: HEADER_H, ...cellBg }}
+								style={{ top: 0, height: HEADER_H, ...stickyBg }}
 							>
 								<span
 									className={`text-[11px] font-semibold uppercase ${today ? "text-primary" : "text-muted-foreground"}`}
@@ -187,8 +181,7 @@ export function WeekView({ weekStart, events, startHour }: WeekViewProps) {
 								className="border-r border-border border-b sticky z-10 flex items-center justify-end"
 								style={{ top: HEADER_H, paddingRight: 8, ...stickyBg }}
 							>
-								{!isStuck && <div className="absolute inset-0 bg-muted -z-10" />}
-								<span className="text-[10px] font-semibold text-muted-foreground whitespace-nowrap relative z-0">
+								<span className="text-[10px] font-semibold text-muted-foreground whitespace-nowrap">
 									All day
 								</span>
 							</div>
@@ -196,10 +189,7 @@ export function WeekView({ weekStart, events, startHour }: WeekViewProps) {
 							{dayData.map((d, i) => (
 								<div
 									key={`ad-${i}`}
-									className={[
-										"border-l border-border border-b sticky z-10 p-0.5 flex flex-col gap-0.5",
-										!isStuck ? "bg-muted" : "",
-									].join(" ")}
+									className="border-l border-border border-b sticky z-10 p-0.5 flex flex-col gap-0.5"
 									style={{ top: HEADER_H, ...stickyBg }}
 								>
 									{d.allDay.map((ev) => (
@@ -213,7 +203,7 @@ export function WeekView({ weekStart, events, startHour }: WeekViewProps) {
 					{/* ══════════════════════════════════════════════════════════════
               ROWS 2…N – Hour rows                                         */}
 					{hours.map((hour, hIdx) => (
-						<>
+						<Fragment key={hour}>
 							{/* Time label */}
 							<div
 								key={`t-${hour}`}
@@ -272,7 +262,7 @@ export function WeekView({ weekStart, events, startHour }: WeekViewProps) {
 									</div>
 								);
 							})}
-						</>
+						</Fragment>
 					))}
 
 					{/* ══════════════════════════════════════════════════════════════

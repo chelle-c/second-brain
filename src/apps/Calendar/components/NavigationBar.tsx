@@ -13,7 +13,7 @@ interface NavigationBarProps {
 	onDateChange: (date: Date) => void;
 }
 
-function headingText(view: CalendarViewType, date: Date): string {
+export function headingText(view: CalendarViewType, date: Date): string {
 	switch (view) {
 		case "day":
 			return format(date, "EEEE, MMMM d, yyyy");
