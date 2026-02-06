@@ -40,7 +40,7 @@ export function EventChip({ event, compact = false, onSelect }: EventChipProps) 
 	// outline-color is set via a CSS custom property on the element so that
 	// the browser's focus-visible ring picks it up without an invalid style key.
 	const chipStyle: React.CSSProperties = {
-		backgroundColor: `${event.color}18`,
+		backgroundColor: `${event.color}50`,
 		borderLeftColor: event.color,
 		// Tailwind's focus-visible:outline-* reads --tw-ring-color / the
 		// browser default; we override via this custom property which modern
@@ -131,18 +131,13 @@ function NoteDetail({
 
 	return (
 		<div className="flex flex-col gap-0.5 ml-5">
-			{note.content && (
-				<p className="text-muted-foreground truncate" style={{ maxWidth: 180 }}>
-					{note.content.replace(/\n/g, " ").slice(0, 60)}
-				</p>
-			)}
 			{visibleTags.length > 0 && (
 				<div className="flex flex-wrap gap-0.5">
 					{visibleTags.map((tag) => (
 						<span
 							key={tag.name}
 							className="inline-block text-[10px] font-medium rounded-full px-1.5 py-0.5"
-							style={{ backgroundColor: `${tag.color}25`, color: tag.color }}
+							style={{ backgroundColor: `${tag.color}`, color: `bg-primary` }}
 						>
 							{tag.name}
 						</span>

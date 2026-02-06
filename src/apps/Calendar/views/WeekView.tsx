@@ -20,7 +20,7 @@ import { useCurrentTimeIndicator } from "@/apps/Calendar/useCurrentTimeIndicator
 import { EventChip } from "@/apps/Calendar/components/EventChip";
 
 // ── layout constants ────────────────────────────────────────────────────────
-const TIME_COL_PX = 72;
+const TIME_COL_PX = 96;
 const HOUR_PX = 64;
 const QTR_PX = HOUR_PX / 4;
 const HEADER_H = 52; // day-name row height (fixed)
@@ -128,12 +128,6 @@ export function WeekView({ weekStart, events, startHour }: WeekViewProps) {
 		<div className="flex flex-col flex-1 min-h-0">
 			<div ref={scrollRef} className="flex-1 overflow-y-auto">
 				<div ref={gridRef} className="relative" style={gridStyle}>
-					{/* ── sentinel (zero-height, at the very top of the grid) ───── */}
-					<div
-						ref={sentinelRef}
-						className="col-span-8"
-						style={{ height: 0, pointerEvents: "none" }}
-					/>
 
 					{/* ══════════════════════════════════════════════════════════════
               ROW 0 – Day names (sticky)                                   */}
@@ -143,7 +137,7 @@ export function WeekView({ weekStart, events, startHour }: WeekViewProps) {
 						style={{ top: 0, height: HEADER_H, ...stickyBg }}
 					>
 						{/* Transparent base layer when not stuck */}
-						{!isStuck && <div className="w-full h-full bg-muted/20" />}
+						{!isStuck && <div className="w-full h-full bg-muted" />}
 					</div>
 
 					{days.map((day, i) => {
@@ -160,8 +154,8 @@ export function WeekView({ weekStart, events, startHour }: WeekViewProps) {
 									"border-l border-border border-b sticky z-10",
 									"text-center flex flex-col items-center justify-center",
 									!isStuck ?
-										today ? "bg-primary/10"
-										:	"bg-muted/20"
+										today ? "bg-secondary"
+										:	"bg-muted"
 									:	"",
 								].join(" ")}
 								style={{ top: 0, height: HEADER_H, ...cellBg }}
@@ -193,7 +187,7 @@ export function WeekView({ weekStart, events, startHour }: WeekViewProps) {
 								className="border-r border-border border-b sticky z-10 flex items-center justify-end"
 								style={{ top: HEADER_H, paddingRight: 8, ...stickyBg }}
 							>
-								{!isStuck && <div className="absolute inset-0 bg-muted/20 -z-10" />}
+								{!isStuck && <div className="absolute inset-0 bg-muted -z-10" />}
 								<span className="text-[10px] font-semibold text-muted-foreground whitespace-nowrap relative z-0">
 									All day
 								</span>
@@ -204,7 +198,7 @@ export function WeekView({ weekStart, events, startHour }: WeekViewProps) {
 									key={`ad-${i}`}
 									className={[
 										"border-l border-border border-b sticky z-10 p-0.5 flex flex-col gap-0.5",
-										!isStuck ? "bg-muted/10" : "",
+										!isStuck ? "bg-muted" : "",
 									].join(" ")}
 									style={{ top: HEADER_H, ...stickyBg }}
 								>
@@ -282,9 +276,9 @@ export function WeekView({ weekStart, events, startHour }: WeekViewProps) {
 					))}
 
 					{/* ══════════════════════════════════════════════════════════════
-              NOW LINE – z-2 (below event chips which are z-3).
-              top = measured header height + nowPx
-              left = TIME_COL_PX, right = 0  →  spans all 7 day columns.   */}
+						NOW LINE – z-2 (below event chips which are z-3).
+						top = measured header height + nowPx
+						left = TIME_COL_PX, right = 0  →  spans all 7 day columns.   */}
 					{showNow && (
 						<div
 							className="absolute z-2 pointer-events-none"

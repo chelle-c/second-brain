@@ -79,7 +79,6 @@ class NotificationService {
 	// ── registration ────────────────────────────────────────────────────────
 	register(moduleId: string, provider: NotificationProvider): void {
 		this.providers.set(moduleId, provider);
-		console.log(`[NotificationService] registered: ${moduleId}`);
 	}
 
 	unregister(moduleId: string): void {
@@ -97,14 +96,12 @@ class NotificationService {
 		// immediate first notification.  Calling tick() here races with sendOnce
 		// and causes double-fires because sessionStorage hasn't been written yet.
 		this.intervalId = setInterval(() => this.tick(), POLL_MS);
-		console.log("[NotificationService] started (first tick in " + POLL_MS / 1000 + "s)");
 	}
 
 	stop(): void {
 		if (this.intervalId === null) return;
 		clearInterval(this.intervalId);
 		this.intervalId = null;
-		console.log("[NotificationService] stopped");
 	}
 
 	// ── tick ─────────────────────────────────────────────────────────────────
@@ -131,7 +128,6 @@ class NotificationService {
 
 					this.markFired(n.dedupeKey);
 					sendNotification({ title: n.title, body: n.body });
-					console.log(`[NotificationService][${moduleId}] fired →`, n.title);
 				}
 			} catch (err) {
 				console.error(`[NotificationService][${moduleId}] error:`, err);
@@ -150,15 +146,10 @@ class NotificationService {
 	 */
 	async sendOnce(options: SendOnceOptions): Promise<boolean> {
 		if (!useSettingsStore.getState().notificationsEnabled) {
-			console.log("[NotificationService] sendOnce: notifications disabled");
 			return false;
 		}
 
 		if (this.alreadyFired(options.dedupeKey)) {
-			console.log(
-				"[NotificationService] sendOnce: already fired this session →",
-				options.dedupeKey,
-			);
 			return false;
 		}
 
@@ -169,20 +160,17 @@ class NotificationService {
 			ok = false;
 		}
 		if (!ok) {
-			console.log("[NotificationService] sendOnce: permission denied");
 			return false;
 		}
 
 		this.markFired(options.dedupeKey);
 		sendNotification({ title: options.title, body: options.body });
-		console.log("[NotificationService] sendOnce →", options.title);
 		return true;
 	}
 
 	/** Clear a session dedupe flag (testing / manual reset). */
 	resetDedupe(dedupeKey: string): void {
 		sessionStorage.removeItem(this.sessionKey(dedupeKey));
-		console.log("[NotificationService] resetDedupe →", dedupeKey);
 	}
 }
 

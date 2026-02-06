@@ -40,56 +40,31 @@ function getUpcoming(): Expense[] {
 	const today = startOfDay(new Date());
 	const cutoff = addDays(today, leadDays);
 
-	console.log(
-		`[ExpenseNotif] getUpcoming: total=${expenses.length} leadDays=${leadDays} ` +
-			`today=${today.toISOString()} cutoff=${cutoff.toISOString()}`,
-	);
-
 	const result: Expense[] = [];
 
 	for (const e of expenses) {
 		if (!e.notify) {
-			console.log(
-				`[ExpenseNotif]   SKIP notify=false  id=${e.id.slice(0, 12)} name="${e.name}"`,
-			);
 			continue;
 		}
 		if (!e.dueDate) {
-			console.log(
-				`[ExpenseNotif]   SKIP no dueDate    id=${e.id.slice(0, 12)} name="${e.name}"`,
-			);
 			continue;
 		}
 		if (e.isPaid) {
-			console.log(
-				`[ExpenseNotif]   SKIP isPaid        id=${e.id.slice(0, 12)} name="${e.name}"`,
-			);
 			continue;
 		}
 		if (e.isArchived) {
-			console.log(
-				`[ExpenseNotif]   SKIP isArchived    id=${e.id.slice(0, 12)} name="${e.name}"`,
-			);
 			continue;
 		}
 		if (e.isRecurring && !e.parentExpenseId) {
-			console.log(
-				`[ExpenseNotif]   SKIP recurring stub id=${e.id.slice(0, 12)} name="${e.name}"`,
-			);
 			continue;
 		}
 
 		const due = startOfDay(e.dueDate);
 		const inWindow = due >= today && due <= cutoff;
-		console.log(
-			`[ExpenseNotif]   CHECK due=${due.toISOString()} inWindow=${inWindow} ` +
-				`id=${e.id.slice(0, 12)} name="${e.name}"`,
-		);
 
 		if (inWindow) result.push(e);
 	}
 
-	console.log(`[ExpenseNotif] getUpcoming → ${result.length} notifiable`);
 	return result;
 }
 
@@ -143,28 +118,23 @@ export function expenseProvider(now: number): PendingNotification[] {
  * tick runs 30 s later it will see the key and skip.
  */
 export async function checkExpenseNotificationsOnStartup(): Promise<void> {
-	console.log("[ExpenseNotif] startup check");
 
 	const upcoming = getUpcoming();
 	if (upcoming.length === 0) {
-		console.log("[ExpenseNotif] startup: nothing to notify");
 		return;
 	}
 
-	console.log(`[ExpenseNotif] startup: sending batch for ${upcoming.length} expense(s)`);
 	const sent = await notificationService.sendOnce({
 		dedupeKey: batchKey(),
 		title: batchTitle(upcoming),
 		body: batchBody(upcoming),
 	});
-	console.log(`[ExpenseNotif] startup: sendOnce returned ${sent}`);
 }
 
 // ── testing helpers (console) ───────────────────────────────────────────────
 
 export function resetExpenseNotificationCheck(): void {
 	notificationService.resetDedupe(batchKey());
-	console.log("[ExpenseNotif] reset – next tick or restart will re-fire");
 }
 
 if (typeof window !== "undefined") {

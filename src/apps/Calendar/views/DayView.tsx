@@ -17,7 +17,7 @@ import { useCurrentTimeIndicator } from "@/apps/Calendar/useCurrentTimeIndicator
 import { EventChip } from "@/apps/Calendar/components/EventChip";
 
 // ── layout constants (kept in sync with WeekView) ──────────────────────────
-const TIME_COL_PX = 72;
+const TIME_COL_PX = 96;
 const HOUR_PX = 64;
 const QTR_PX = HOUR_PX / 4; // 16 px
 
@@ -137,26 +137,15 @@ export function DayView({ date, events, startHour }: DayViewProps) {
 							/>
 							{/* Line spans the event area */}
 							<div className="h-0.5 bg-red-500" style={{ marginLeft: TIME_COL_PX }} />
-							{/* Small time label tucked into the time column */}
-							<span
-								className="absolute -translate-y-full text-[10px] font-bold text-red-500 bg-card rounded whitespace-nowrap"
-								style={{ left: 4, paddingLeft: 2, paddingRight: 4 }}
-							>
-								{quarterTime.toLocaleTimeString(undefined, {
-									hour: "numeric",
-									minute: "2-digit",
-									hour12: true,
-								})}
-							</span>
 						</div>
 					)}
 
 					{/* ── timed event chips (z-3 – ABOVE the now line) ────────── */}
 					{/*
-            This overlay div covers the same area as the hour-row grid.
-            Each chip is absolutely positioned using the same pxAt() that
-            the now line uses, guaranteeing consistent alignment.
-          */}
+						This overlay div covers the same area as the hour-row grid.
+						Each chip is absolutely positioned using the same pxAt() that
+						the now line uses, guaranteeing consistent alignment.
+					*/}
 					<div
 						className="absolute inset-0 pointer-events-none"
 						style={{ left: TIME_COL_PX }}
