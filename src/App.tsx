@@ -6,10 +6,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { useAppLifecycle } from "@/hooks/useAppLifecycle";
 import useAppStore from "@/stores/useAppStore";
 
-// Lazy load route modules for code splitting
-const NotesApp = lazy(() =>
-	import("@/apps/Notes").then((m) => ({ default: m.NotesApp })),
-);
+const NotesApp = lazy(() => import("@/apps/Notes").then((m) => ({ default: m.NotesApp })));
 const ExpensesTracker = lazy(() =>
 	import("@/apps/Finances/expenses").then((m) => ({
 		default: m.ExpensesTracker,
@@ -18,25 +15,19 @@ const ExpensesTracker = lazy(() =>
 const IncomeTracker = lazy(() =>
 	import("@/apps/Finances/income").then((m) => ({ default: m.IncomeTracker })),
 );
-const MindMapApp = lazy(() =>
-	import("@/apps/MindMap").then((m) => ({ default: m.MindMapApp })),
-);
-const Settings = lazy(() =>
-	import("@/apps/Settings").then((m) => ({ default: m.Settings })),
-);
+const MindMapApp = lazy(() => import("@/apps/MindMap").then((m) => ({ default: m.MindMapApp })));
+const Calendar = lazy(() => import("@/apps/Calendar").then((m) => ({ default: m.Calendar })));
+const Settings = lazy(() => import("@/apps/Settings").then((m) => ({ default: m.Settings })));
 
 function App() {
 	const isLoading = useAppStore((state) => state.isLoading);
-
-	// Initialize app and handle lifecycle events (close, quit, etc.)
 	useAppLifecycle();
 
 	return (
 		<>
-			{isLoading ? (
+			{isLoading ?
 				<Loading fullScreen size="lg" />
-			) : (
-				<BrowserRouter>
+			:	<BrowserRouter>
 					<Routes>
 						<Route path="/" element={<AppLayout />}>
 							<Route index element={<Navigate to="/brain" replace />} />
@@ -65,6 +56,14 @@ function App() {
 								}
 							/>
 							<Route
+								path="calendar"
+								element={
+									<Suspense fallback={<PageLoading />}>
+										<Calendar />
+									</Suspense>
+								}
+							/>
+							<Route
 								path="mindmap"
 								element={
 									<Suspense fallback={<PageLoading />}>
@@ -83,8 +82,7 @@ function App() {
 						</Route>
 					</Routes>
 				</BrowserRouter>
-			)}
-
+			}
 			<Toaster position="bottom-right" closeButton />
 		</>
 	);

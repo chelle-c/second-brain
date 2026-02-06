@@ -1,30 +1,24 @@
 import type { IncomeViewType } from "./income";
+import type { CalendarViewType } from "./calendar";
 
 export type ExpenseViewType = "upcoming" | "monthly" | "all";
-export type WeekStartDay = 0 | 1 | 2 | 3 | 4 | 5 | 6; // 0 = Sunday, 1 = Monday, etc.
+export type WeekStartDay = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 export interface AppSettings {
-	// General settings
 	autoSaveEnabled: boolean;
-
-	// Desktop settings
 	launchAtLogin: boolean;
 	minimizeToTray: boolean;
 	notificationsEnabled: boolean;
-
-	// Notes settings
-	notesDefaultFolder: string; // folder id, "inbox" is default
-
-	// Expense settings
+	notesDefaultFolder: string;
 	expenseDefaultView: ExpenseViewType;
 	expenseCurrency: string;
-	expenseNotificationLeadDays: number; // Days before due date to start notifying (0-30)
-
-	// Income settings
+	expenseNotificationLeadDays: number;
 	incomeDefaultView: IncomeViewType;
 	incomeWeekStartDay: WeekStartDay;
 	incomeCurrency: string;
 	incomeDefaultWeeklyTarget: number;
+	calendarDayStartHour: number;
+	calendarDefaultView: CalendarViewType;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -35,11 +29,13 @@ export const DEFAULT_SETTINGS: AppSettings = {
 	notesDefaultFolder: "inbox",
 	expenseDefaultView: "upcoming",
 	expenseCurrency: "USD",
-	expenseNotificationLeadDays: 7, // Default: notify 7 days before due date
+	expenseNotificationLeadDays: 7,
 	incomeDefaultView: "monthly",
-	incomeWeekStartDay: 1, // Monday
+	incomeWeekStartDay: 1,
 	incomeCurrency: "USD",
 	incomeDefaultWeeklyTarget: 1000,
+	calendarDayStartHour: 6,
+	calendarDefaultView: "month",
 };
 
 export const CURRENCY_OPTIONS = [
@@ -76,3 +72,25 @@ export const EXPENSE_NOTIFICATION_LEAD_DAYS = [
 	{ value: 21, label: "3 weeks before" },
 	{ value: 30, label: "1 month before" },
 ] as const;
+
+/**
+ * Every hour 0-23 as a selectable option.  The label uses the same
+ * locale-aware formatting the time grid itself uses so the picker and the
+ * grid always agree.
+ */
+export const CALENDAR_DAY_START_OPTIONS: { value: number; label: string }[] = Array.from(
+	{ length: 24 },
+	(_, h) => {
+		// Build a Date at that hour so toLocaleTimeString formats it identically
+		// to how the calendar grid labels its rows.
+		const d = new Date(2000, 0, 1, h, 0, 0, 0);
+		return {
+			value: h,
+			label: d.toLocaleTimeString(undefined, {
+				hour: "2-digit",
+				minute: "2-digit",
+				hour12: true,
+			}),
+		};
+	},
+);

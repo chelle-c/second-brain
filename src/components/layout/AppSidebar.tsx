@@ -1,8 +1,8 @@
 import {
+	CalendarDays,
 	Brain,
 	ChevronRight,
 	DollarSign,
-	Network,
 	Settings,
 	StickyNote,
 	TrendingUp,
@@ -55,9 +55,9 @@ export function AppSidebar() {
 			],
 		},
 		{
-			title: "Mind Map",
-			url: "mindmap",
-			icon: Network,
+			title: "Calendar",
+			url: "calendar",
+			icon: CalendarDays,
 		},
 		{
 			title: "Settings",

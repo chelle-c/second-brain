@@ -2,8 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useRef } from "react";
-import { checkExpenseNotifications } from "@/lib/notifications";
-import { startReminderService, stopReminderService } from "@/lib/reminderService";
+import { bootstrapNotifications, checkExpenseNotificationsOnStartup } from "@/lib/notifications";
 import { sqlStorage } from "@/lib/storage";
 import useAppStore from "@/stores/useAppStore";
 import { useBackupStore } from "@/stores/useBackupStore";
@@ -23,29 +22,20 @@ export function useAppLifecycle() {
 
 	// ── initialisation ──────────────────────────────────────────────────────
 	useEffect(() => {
-		let started = false;
-
 		const initializeApp = async () => {
 			try {
 				await initializeBackup();
 				await loadFromFile();
 				await useSettingsStore.getState().initializeDesktopSettings();
-				await checkExpenseNotifications();
 
-				// Start note-reminder polling *after* data is loaded
-				startReminderService();
-				started = true;
+				bootstrapNotifications(); // registers providers + starts polling
+				await checkExpenseNotificationsOnStartup(); // fires the "once per day" startup batch immediately
 			} catch (error) {
 				console.error("Failed to initialize app:", error);
 			}
 		};
 
 		initializeApp();
-
-		// Cleanup: stop polling when the effect tears down
-		return () => {
-			if (started) stopReminderService();
-		};
 	}, [loadFromFile, initializeBackup]);
 
 	// ── tray quit ───────────────────────────────────────────────────────────
@@ -55,7 +45,6 @@ export function useAppLifecycle() {
 			isSavingRef.current = true;
 			console.log("Tray quit requested – saving data…");
 			try {
-				stopReminderService();
 				await useAppStore.getState().saveToFile(AppToSave.All);
 				console.log("Data saved successfully");
 				await sqlStorage.close();
@@ -100,7 +89,6 @@ export function useAppLifecycle() {
 			isSavingRef.current = true;
 			console.log("Window close requested – saving data…");
 			try {
-				stopReminderService();
 				await useAppStore.getState().saveToFile(AppToSave.All);
 				console.log("Data saved successfully");
 				await sqlStorage.close();

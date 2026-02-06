@@ -14,15 +14,10 @@ import { useSettingsStore } from "./useSettingsStore";
 import { useThemeStore } from "./useThemeStore";
 
 interface AppStore {
-	// -- Metadata
 	isLoading: boolean;
 	lastSaved: Date | null;
 	autoSaveEnabled: boolean;
-
-	// Getters
 	getIsLoading: () => boolean;
-
-	// Actions - Storage
 	loadFromFile: () => Promise<void>;
 	saveToFile: (appToSave: AppToSave) => Promise<void>;
 	toggleAutoSave: () => void;
@@ -30,36 +25,29 @@ interface AppStore {
 
 const useAppStore = create<AppStore>()(
 	subscribeWithSelector((set, get) => ({
-		// Initial state
 		isLoading: true,
 		lastSaved: null,
 		autoSaveEnabled: true,
 
-		// Getters
 		getIsLoading: () => get().isLoading,
 
-		// Setters
 		loadFromFile: async () => {
 			set({ isLoading: true });
 			try {
-				// Ensure database is initialized
 				if (!sqlStorage.isInitialized()) {
 					await sqlStorage.initialize();
 				}
 
 				const data = await sqlStorage.loadData();
 
-				// Use setters that don't trigger save for notes
 				useNotesStore.getState().setNotes(data.notes || [], true);
 				useNotesStore.getState().setFolders(data.folders || [], true);
 				useNotesStore.getState().setTags(data.tags || {});
 
-				// Use setters that don't trigger save for income
 				useIncomeStore.getState().setIncomeEntries(data.income.entries || []);
 				useIncomeStore.getState().setIncomeWeeklyTargets(data.income.weeklyTargets || []);
 				useIncomeStore.getState().setIncomeViewType(data.income.viewType || "weekly");
 
-				// Process expenses data
 				const processedExpenses = data.expenses.expenses.map((e: Expense) => ({
 					...e,
 					dueDate: e.dueDate ? new Date(e.dueDate) : null,
@@ -73,34 +61,34 @@ const useAppStore = create<AppStore>()(
 					parentExpenseId: e.parentExpenseId,
 					monthlyOverrides: e.monthlyOverrides || {},
 					isModified: e.isModified || false,
-					initialState: e.initialState
-						? {
+					initialState:
+						e.initialState ?
+							{
 								amount: e.initialState.amount,
-								dueDate: e.initialState.dueDate
-									? new Date(e.initialState.dueDate)
-									: null,
+								dueDate:
+									e.initialState.dueDate ?
+										new Date(e.initialState.dueDate)
+									:	null,
 								paymentMethod: e.initialState.paymentMethod || "None",
-						  }
-						: undefined,
+							}
+						:	undefined,
 				}));
 
-				// Use bulk setter that doesn't trigger saves
 				useExpenseStore.getState().setExpenseData({
 					expenses: processedExpenses,
-					selectedMonth: data.expenses.selectedMonth
-						? new Date(data.expenses.selectedMonth)
-						: new Date(),
+					selectedMonth:
+						data.expenses.selectedMonth ?
+							new Date(data.expenses.selectedMonth)
+						:	new Date(),
 					overviewMode: data.expenses.overviewMode || "remaining",
 					categories: data.expenses.categories || DEFAULT_EXPENSE_CATEGORIES,
 					categoryColors: data.expenses.categoryColors || DEFAULT_CATEGORY_COLORS,
 					paymentMethods: data.expenses.paymentMethods || DEFAULT_PAYMENT_METHODS,
 				});
 
-				// Load settings
 				const settings = data.settings || DEFAULT_SETTINGS;
 				useSettingsStore.getState().setSettings(settings, true);
 
-				// Load theme settings
 				const themeSettings = data.theme || DEFAULT_THEME_SETTINGS;
 				useThemeStore.getState().setThemeSettings(themeSettings, true);
 				useThemeStore.getState().initializeTheme();
@@ -126,7 +114,6 @@ const useAppStore = create<AppStore>()(
 			const notesState = useNotesStore.getState();
 
 			try {
-				// Ensure database is initialized before saving
 				if (!sqlStorage.isInitialized()) {
 					await sqlStorage.initialize();
 				}
@@ -162,6 +149,8 @@ const useAppStore = create<AppStore>()(
 							incomeWeekStartDay: settingsState.incomeWeekStartDay,
 							incomeCurrency: settingsState.incomeCurrency,
 							incomeDefaultWeeklyTarget: settingsState.incomeDefaultWeeklyTarget,
+							calendarDayStartHour: settingsState.calendarDayStartHour,
+							calendarDefaultView: settingsState.calendarDefaultView,
 						},
 						theme: {
 							mode: themeState.mode,
@@ -171,7 +160,7 @@ const useAppStore = create<AppStore>()(
 						lastSaved: new Date(),
 						autoSaveEnabled: state.autoSaveEnabled,
 					},
-					appToSave
+					appToSave,
 				);
 				set({ lastSaved: new Date() });
 			} catch (error) {
@@ -182,7 +171,7 @@ const useAppStore = create<AppStore>()(
 		toggleAutoSave: () => {
 			set((state) => ({ autoSaveEnabled: !state.autoSaveEnabled }));
 		},
-	}))
+	})),
 );
 
 export default useAppStore;

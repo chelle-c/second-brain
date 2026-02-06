@@ -1,4 +1,5 @@
 import {
+	CalendarDays,
 	Database,
 	DollarSign,
 	type LucideIcon,
@@ -21,6 +22,7 @@ const sections: Section[] = [
 	{ id: "notes", label: "Notes", icon: StickyNote },
 	{ id: "expenses", label: "Expense Tracker", icon: DollarSign },
 	{ id: "income", label: "Income Tracker", icon: TrendingUp },
+	{ id: "calendar", label: "Calendar", icon: CalendarDays },
 	{ id: "backup", label: "Backup", icon: Database },
 ];
 
@@ -37,14 +39,12 @@ export const Layout = ({ children }: LayoutProps) => {
 		if (!container) return;
 
 		const handleScroll = () => {
-			const containerRect = container.getBoundingClientRect();
 			const scrollTop = container.scrollTop;
 
 			for (let i = sections.length - 1; i >= 0; i--) {
 				const section = document.getElementById(sections[i].id);
 				if (section) {
-					const sectionTop =
-						section.offsetTop - containerRect.top - container.offsetTop;
+					const sectionTop = section.offsetTop - container.offsetTop;
 					if (scrollTop >= sectionTop - 150) {
 						setActiveSection(sections[i].id);
 						break;
@@ -86,9 +86,9 @@ export const Layout = ({ children }: LayoutProps) => {
 										key={section.id}
 										onClick={() => scrollToSection(section.id)}
 										className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left ${
-											activeSection === section.id
-												? "bg-primary text-primary-foreground"
-												: "text-muted-foreground hover:text-foreground hover:bg-accent"
+											activeSection === section.id ?
+												"bg-primary text-primary-foreground"
+											:	"text-muted-foreground hover:text-foreground hover:bg-accent"
 										}`}
 									>
 										<Icon className="w-4 h-4 shrink-0" />
