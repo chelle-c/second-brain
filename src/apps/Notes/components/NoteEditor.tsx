@@ -412,11 +412,10 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 		});
 
 	return (
-		<div className="h-full overflow-y-auto bg-card">
-			<div className="flex h-full">
-				{/* ── Left column ─────────────────────────────────────────────── */}
-				<div className="flex-1 min-w-0 overflow-y-auto">
-					<div className="max-w-4xl mx-auto px-8 py-6">
+		<div className="h-full flex bg-card">
+			{/* ── Scrollable content area ────────────────────────────────── */}
+			<div className="flex-1 min-w-0 overflow-y-auto">
+				<div className="max-w-4xl mx-auto px-8 py-6">
 						{/* ── Title ────────────────────────────────────────────── */}
 						{isCreateMode || isEditingTitle ?
 							<input
@@ -532,13 +531,12 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 								<EditorContent editor={editor} />
 							</div>
 						</div>
-					</div>
 				</div>
+			</div>
 
-				{/* ── Right column: ToC ────────────────────────────────────────── */}
-				<div className="shrink-0 h-full sticky top-0" style={{ height: "100vh" }}>
-					<TableOfContentsSidebar editor={editor} />
-				</div>
+			{/* ── Right column: ToC ──────────────────────────────────────── */}
+			<div className="shrink-0 h-full">
+				<TableOfContentsSidebar editor={editor} />
 			</div>
 
 			{/* ── Reminder Modal ───────────────────────────────────────────────── */}

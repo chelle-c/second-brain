@@ -226,17 +226,18 @@ export const TableOfContentsSidebar = ({ editor }: TableOfContentsSidebarProps) 
 	// ── collapsed ─────────────────────────────────────────────────────────────────
 	if (!isOpen) {
 		return (
-			// Shrink left margin; height fills viewport via the parent sticky wrapper
-			<div className="w-8 shrink-0">
-				<div className="sticky top-0 h-screen flex flex-col">
-					<button
-						type="button"
-						onClick={toggleOpen}
-						className="p-1.5 rounded-lg bg-muted hover:bg-accent transition-colors"
-						title="Show Table of Contents"
-					>
-						<PanelRightOpen className="w-4 h-4" />
-					</button>
+			<div className="shrink-0 h-full mr-2">
+				<div className="h-full flex flex-col border border-border rounded-sm bg-card/95 backdrop-blur-sm shadow-sm overflow-hidden">
+					<div className="flex items-center justify-center p-3 border-b border-border bg-muted/50 shrink-0">
+						<button
+							type="button"
+							onClick={toggleOpen}
+							className="p-1 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
+							title="Show Table of Contents"
+						>
+							<PanelRightOpen className="w-4 h-4" />
+						</button>
+					</div>
 				</div>
 			</div>
 		);
@@ -244,10 +245,8 @@ export const TableOfContentsSidebar = ({ editor }: TableOfContentsSidebarProps) 
 
 	// ── expanded ──────────────────────────────────────────────────────────────────
 	return (
-		// mr-2 keeps a small gap from the window edge; h-screen + sticky keeps it
-		// pinned for the full page height
-		<div className="w-52 mr-2 shrink-0">
-			<div className="sticky top-0 h-screen flex flex-col border border-border rounded-sm bg-card/95 backdrop-blur-sm shadow-sm overflow-hidden">
+		<div className="w-52 mr-2 shrink-0 h-full">
+			<div className="h-full flex flex-col border border-border rounded-sm bg-card/95 backdrop-blur-sm shadow-sm overflow-hidden">
 				{/* Header */}
 				<div className="flex items-center justify-between p-3 border-b border-border bg-muted/50 shrink-0">
 					<div className="flex items-center gap-2 text-sm font-medium text-foreground">

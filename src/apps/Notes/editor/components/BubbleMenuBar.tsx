@@ -492,10 +492,13 @@ export const BubbleMenuBar = ({ editor }: BubbleMenuBarProps) => {
 						onClick={() => {
 							if (editor.isActive("taskList")) {
 								// Convert task list → bullet list
-								editor.chain().focus().toggleTaskList().toggleBulletList().run();
+								// Two separate transactions so the second operates on committed state
+								editor.chain().focus().toggleTaskList().run();
+								editor.chain().focus().toggleBulletList().run();
 							} else if (editor.isActive("bulletList")) {
 								// Convert bullet list → task list
-								editor.chain().focus().toggleBulletList().toggleTaskList().run();
+								editor.chain().focus().toggleBulletList().run();
+								editor.chain().focus().toggleTaskList().run();
 							} else {
 								// Neither active – start a task list
 								editor.chain().focus().toggleTaskList().run();
