@@ -14,10 +14,13 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { useMemo } from "react";
 import { useThemeStore } from "@/stores/useThemeStore";
 import {
+	THEME_FAMILY_OPTIONS,
 	THEME_MODE_OPTIONS,
 	THEME_PALETTE_OPTIONS,
+	type ThemeFamily,
 	type ThemeMode,
 	type ThemePalette,
 } from "@/types/theme";
@@ -40,6 +43,28 @@ export const AppearanceSettings = () => {
 		palette,
 		setPalette,
 	} = useThemeStore();
+
+	const currentFamily = useMemo(
+		() =>
+			THEME_PALETTE_OPTIONS.find((o) => o.value === palette)?.family ??
+			"tailwind",
+		[palette],
+	);
+
+	const filteredPalettes = useMemo(
+		() => THEME_PALETTE_OPTIONS.filter((o) => o.family === currentFamily),
+		[currentFamily],
+	);
+
+	const handleFamilyChange = (family: ThemeFamily) => {
+		if (family === currentFamily) return;
+		const firstPalette = THEME_PALETTE_OPTIONS.find(
+			(o) => o.family === family,
+		);
+		if (firstPalette) {
+			setPalette(firstPalette.value);
+		}
+	};
 
 	return (
 		<Card id="appearance" className="scroll-mt-6">
@@ -83,6 +108,31 @@ export const AppearanceSettings = () => {
 				</div>
 				<div className="flex items-center justify-between">
 					<div className="space-y-0.5">
+						<Label className="text-base font-medium">Theme Name</Label>
+						<p className="text-sm text-muted-foreground">
+							Select a theme family
+						</p>
+					</div>
+					<Select
+						value={currentFamily}
+						onValueChange={(value) =>
+							handleFamilyChange(value as ThemeFamily)
+						}
+					>
+						<SelectTrigger className="w-[200px]">
+							<SelectValue placeholder="Select theme name" />
+						</SelectTrigger>
+						<SelectContent>
+							{THEME_FAMILY_OPTIONS.map((option) => (
+								<SelectItem key={option.value} value={option.value}>
+									{option.label}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</div>
+				<div className="flex items-center justify-between">
+					<div className="space-y-0.5">
 						<Label className="text-base font-medium">Color Scheme</Label>
 						<p className="text-sm text-muted-foreground">
 							Select your preferred color palette
@@ -96,7 +146,7 @@ export const AppearanceSettings = () => {
 							<SelectValue placeholder="Select color scheme" />
 						</SelectTrigger>
 						<SelectContent>
-							{THEME_PALETTE_OPTIONS.map((option) => (
+							{filteredPalettes.map((option) => (
 								<SelectItem key={option.value} value={option.value}>
 									<div className="flex items-center gap-2">
 										<span

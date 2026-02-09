@@ -1,0 +1,111 @@
+/* Catppuccin Latte Theme
+ * Light mode: Latte base with lavender accents
+ * Dark mode: Frappé base with lavender accents
+ * https://catppuccin.com
+ */
+
+/* Light Theme - Latte / Lavender */
+:root[data-palette="catppuccin-latte"] {
+	/* Core UI colors */
+	--background: #e6e9ef; /* mantle */
+	--foreground: #4c4f69; /* text */
+	--card: #ffffff;
+	--card-foreground: #4c4f69; /* text */
+	--popover: #ffffff;
+	--popover-foreground: #4c4f69; /* text */
+
+	/* Primary - Lavender */
+	--primary: #7287fd; /* lavender */
+	--primary-foreground: #eff1f5; /* base */
+
+	/* Secondary - Light lavender tint */
+	--secondary: #cdd4fc;
+	--secondary-foreground: #5c5f77; /* subtext1 */
+
+	/* Muted */
+	--muted: #eff1f5; /* base */
+	--muted-foreground: #6c6f85; /* subtext0 */
+
+	/* Accent - Light sapphire tint */
+	--accent: #bee1ea;
+	--accent-foreground: #6c6f85; /* subtext0 */
+
+	/* Destructive */
+	--destructive: #d20f39; /* red */
+
+	/* Borders & Inputs */
+	--border: #b3b9d2; /* lavender-tinted border */
+	--input: #b3b9d2;
+	--ring: #7287fd; /* lavender */
+
+	/* Charts */
+	--chart-1: #7287fd; /* lavender */
+	--chart-2: #8839ef; /* mauve */
+	--chart-3: #209fb5; /* sapphire */
+	--chart-4: #ea76cb; /* pink */
+	--chart-5: #179299; /* teal */
+
+	/* Sidebar - uses Frappé dark tones */
+	--theme-sidebar-bg: #292c3c; /* mantle */
+	--theme-sidebar-hover: #babbf1; /* lavender */
+	--theme-sidebar-fg: #c6d0f5; /* text */
+	--theme-sidebar-primary: #232634; /* crust */
+	--theme-sidebar-primary-fg: #c6d0f5; /* text */
+	--theme-sidebar-accent: #414559; /* surface0 */
+	--theme-sidebar-accent-fg: #c6d0f5; /* text */
+	--theme-sidebar-border: #414559; /* surface0 */
+	--theme-sidebar-ring: #babbf1; /* lavender */
+}
+
+/* Dark Theme - Frappé / Lavender */
+:root[data-palette="catppuccin-latte"].dark {
+	/* Core UI colors */
+	--background: #232634; /* crust */
+	--foreground: #c6d0f5; /* text */
+	--card: #292c3c; /* mantle */
+	--card-foreground: #c6d0f5; /* text */
+	--popover: #292c3c; /* mantle */
+	--popover-foreground: #c6d0f5; /* text */
+
+	/* Primary - Lavender */
+	--primary: #babbf1; /* lavender */
+	--primary-foreground: #232634; /* crust */
+
+	/* Secondary - Lavender-tinted surface */
+	--secondary: #484273;
+	--secondary-foreground: #b5bfe2; /* subtext1 */
+
+	/* Muted */
+	--muted: #303446; /* base */
+	--muted-foreground: #949cbb; /* overlay2 */
+
+	/* Accent - Sapphire-tinted surface */
+	--accent: #365c67;
+	--accent-foreground: #b5bfe2; /* subtext1 */
+
+	/* Destructive */
+	--destructive: #e78284; /* red */
+
+	/* Borders & Inputs */
+	--border: #51576d; /* surface1 */
+	--input: #51576d; /* surface1 */
+	--ring: #babbf1; /* lavender */
+
+	/* Charts */
+	--chart-1: #babbf1; /* lavender */
+	--chart-2: #ca9ee6; /* mauve */
+	--chart-3: #85c1dc; /* sapphire */
+	--chart-4: #f4b8e4; /* pink */
+	--chart-5: #81c8be; /* teal */
+
+	/* Sidebar */
+	--theme-sidebar-bg: #292c3c; /* mantle */
+	--theme-sidebar-hover: #babbf1; /* lavender */
+	--theme-sidebar-fg: #c6d0f5; /* text */
+	--theme-sidebar-primary: #c6d0f5; /* text */
+	--theme-sidebar-primary-fg: #232634; /* crust */
+	--theme-sidebar-accent: #414559; /* surface0 */
+	--theme-sidebar-accent-fg: #b5bfe2; /* subtext1 */
+	--theme-sidebar-border: #414559; /* surface0 */
+	--theme-sidebar-ring: #babbf1; /* lavender */
+}

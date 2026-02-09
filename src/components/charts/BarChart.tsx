@@ -27,23 +27,37 @@ interface BarChartProps {
 	margin?: { top: number; right: number; bottom: number; left: number };
 }
 
+const getDefaultTheme = () => {
+	const style = getComputedStyle(document.documentElement);
+	return {
+		barColor: style.getPropertyValue("--primary").trim() || "#0EA5E9",
+		textColor: style.getPropertyValue("--foreground").trim() || "#374151",
+		mutedTextColor:
+			style.getPropertyValue("--muted-foreground").trim() || "#6B7280",
+		gridColor: style.getPropertyValue("--border").trim() || "#E5E7EB",
+	};
+};
+
 const BarChartInner = ({
 	data,
-	barColor = "#0EA5E9",
+	barColor,
 	showLabels = true,
 	labelFormatter = (v) => v.toString(),
 	yAxisFormatter = (v) => v.toString(),
 	renderTooltip,
-	theme = {
-		textColor: "#374151",
-		mutedTextColor: "#6B7280",
-		gridColor: "#E5E7EB",
-	},
+	theme,
 	barSize,
 	margin = { top: 25, right: 20, bottom: 30, left: 50 },
 	width,
 	height,
 }: BarChartProps & { width: number; height: number }) => {
+	const defaults = useMemo(() => getDefaultTheme(), []);
+	const resolvedBarColor = barColor ?? defaults.barColor;
+	const resolvedTheme = theme ?? {
+		textColor: defaults.textColor,
+		mutedTextColor: defaults.mutedTextColor,
+		gridColor: defaults.gridColor,
+	};
 	const [tooltip, setTooltip] = useState<{
 		data: BarChartData;
 		x: number;
@@ -108,7 +122,7 @@ const BarChartInner = ({
 					<GridRows
 						scale={yScale}
 						width={innerWidth}
-						stroke={theme.gridColor}
+						stroke={resolvedTheme.gridColor}
 						strokeDasharray="3 3"
 					/>
 
@@ -120,7 +134,7 @@ const BarChartInner = ({
 							y={yScale(tick)}
 							textAnchor="end"
 							verticalAnchor="middle"
-							fill={theme.mutedTextColor}
+							fill={resolvedTheme.mutedTextColor}
 							fontSize={12}
 						>
 							{yAxisFormatter(tick)}
@@ -146,7 +160,7 @@ const BarChartInner = ({
 									y={barY}
 									width={calculatedBarWidth}
 									height={animatedBarHeight}
-									fill={barColor}
+									fill={resolvedBarColor}
 									rx={4}
 									style={{ cursor: "pointer" }}
 									onMouseMove={(event) => {
@@ -164,7 +178,7 @@ const BarChartInner = ({
 										x={barX + calculatedBarWidth / 2}
 										y={barY - 8}
 										textAnchor="middle"
-										fill={theme.textColor}
+										fill={resolvedTheme.textColor}
 										fontSize={13}
 										fontWeight={600}
 									>
@@ -184,7 +198,7 @@ const BarChartInner = ({
 									x={x}
 									y={innerHeight + 16}
 									textAnchor="middle"
-									fill={theme.textColor}
+									fill={resolvedTheme.textColor}
 									fontSize={13}
 									fontWeight={500}
 								>
@@ -195,7 +209,7 @@ const BarChartInner = ({
 										x={x}
 										y={innerHeight + 30}
 										textAnchor="middle"
-										fill={theme.mutedTextColor}
+										fill={resolvedTheme.mutedTextColor}
 										fontSize={11}
 									>
 										{String(d.secondaryLabel)}

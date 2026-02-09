@@ -202,7 +202,7 @@ export const ExpenseOverview: React.FC = () => {
 											backgroundColor:
 												categoryColors[entry.name] ||
 												DEFAULT_CATEGORY_COLORS[entry.name] ||
-												"#93C5FD",
+												"var(--chart-1)",
 										}}
 									/>
 									<span className="text-xs sm:text-sm font-medium text-muted-foreground truncate">

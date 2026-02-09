@@ -31,20 +31,18 @@ const MonthlyView: React.FC<MonthlyViewProps> = ({
 	const { incomeEntries } = useIncomeStore();
 	const { incomeCurrency } = useSettingsStore();
 	const currencySymbol = getCurrencySymbol(incomeCurrency);
-	const { resolvedTheme } = useThemeStore();
-	const isDark = resolvedTheme === "dark";
+	const { resolvedTheme, palette } = useThemeStore();
 
-	// Get theme-aware bar color from CSS variable
-	const barColor = useMemo(() => {
-		return getComputedStyle(document.documentElement)
-			.getPropertyValue("--primary")
-			.trim();
-	}, []);
-
-	// Theme-aware colors
-	const textColor = isDark ? "#e2e8f0" : "#374151";
-	const mutedTextColor = isDark ? "#94a3b8" : "#6B7280";
-	const gridColor = isDark ? "#334155" : "#E5E7EB";
+	// Get theme-aware colors from CSS variables
+	const { barColor, textColor, mutedTextColor, gridColor } = useMemo(() => {
+		const style = getComputedStyle(document.documentElement);
+		return {
+			barColor: style.getPropertyValue("--primary").trim(),
+			textColor: style.getPropertyValue("--foreground").trim(),
+			mutedTextColor: style.getPropertyValue("--muted-foreground").trim(),
+			gridColor: style.getPropertyValue("--border").trim(),
+		};
+	}, [resolvedTheme, palette]);
 
 	const monthlyData = getMonthlyData(incomeEntries, selectedYear);
 

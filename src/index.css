@@ -10,6 +10,10 @@
 @import "./styles/themes/teal-emerald.css";
 @import "./styles/themes/indigo-violet.css";
 @import "./styles/themes/fuchsia-pink.css";
+@import "./styles/themes/catppuccin-latte.css";
+@import "./styles/themes/catppuccin-frappe.css";
+@import "./styles/themes/catppuccin-macchiato.css";
+@import "./styles/themes/catppuccin-mocha.css";
 
 @custom-variant dark (&:is(.dark *));
 

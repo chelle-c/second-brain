@@ -1,0 +1,111 @@
+/* Catppuccin Mocha Theme
+ * Light mode: Latte base with mauve accents
+ * Dark mode: Mocha base with mauve accents
+ * https://catppuccin.com
+ */
+
+/* Light Theme - Latte / Mauve */
+:root[data-palette="catppuccin-mocha"] {
+	/* Core UI colors */
+	--background: #e6e9ef; /* mantle */
+	--foreground: #4c4f69; /* text */
+	--card: #ffffff;
+	--card-foreground: #4c4f69; /* text */
+	--popover: #ffffff;
+	--popover-foreground: #4c4f69; /* text */
+
+	/* Primary - Mauve */
+	--primary: #8839ef; /* mauve */
+	--primary-foreground: #eff1f5; /* base */
+
+	/* Secondary - Light mauve tint */
+	--secondary: #d6c5f4;
+	--secondary-foreground: #5c5f77; /* subtext1 */
+
+	/* Muted */
+	--muted: #eff1f5; /* base */
+	--muted-foreground: #6c6f85; /* subtext0 */
+
+	/* Accent - Light pink tint */
+	--accent: #f2c6e0;
+	--accent-foreground: #6c6f85; /* subtext0 */
+
+	/* Destructive */
+	--destructive: #d20f39; /* red */
+
+	/* Borders & Inputs */
+	--border: #b6b0d0; /* mauve-tinted border */
+	--input: #b6b0d0;
+	--ring: #8839ef; /* mauve */
+
+	/* Charts */
+	--chart-1: #8839ef; /* mauve */
+	--chart-2: #ea76cb; /* pink */
+	--chart-3: #7287fd; /* lavender */
+	--chart-4: #dd7878; /* flamingo */
+	--chart-5: #1e66f5; /* blue */
+
+	/* Sidebar - uses Mocha dark tones */
+	--theme-sidebar-bg: #181825; /* mantle */
+	--theme-sidebar-hover: #cba6f7; /* mauve */
+	--theme-sidebar-fg: #cdd6f4; /* text */
+	--theme-sidebar-primary: #11111b; /* crust */
+	--theme-sidebar-primary-fg: #cdd6f4; /* text */
+	--theme-sidebar-accent: #313244; /* surface0 */
+	--theme-sidebar-accent-fg: #cdd6f4; /* text */
+	--theme-sidebar-border: #313244; /* surface0 */
+	--theme-sidebar-ring: #cba6f7; /* mauve */
+}
+
+/* Dark Theme - Mocha / Mauve */
+:root[data-palette="catppuccin-mocha"].dark {
+	/* Core UI colors */
+	--background: #11111b; /* crust */
+	--foreground: #cdd6f4; /* text */
+	--card: #181825; /* mantle */
+	--card-foreground: #cdd6f4; /* text */
+	--popover: #181825; /* mantle */
+	--popover-foreground: #cdd6f4; /* text */
+
+	/* Primary - Mauve */
+	--primary: #cba6f7; /* mauve */
+	--primary-foreground: #11111b; /* crust */
+
+	/* Secondary - Mauve-tinted surface */
+	--secondary: #3b2a55;
+	--secondary-foreground: #bac2de; /* subtext1 */
+
+	/* Muted */
+	--muted: #1e1e2e; /* base */
+	--muted-foreground: #9399b2; /* overlay2 */
+
+	/* Accent - Pink-tinted surface */
+	--accent: #4d2940;
+	--accent-foreground: #bac2de; /* subtext1 */
+
+	/* Destructive */
+	--destructive: #f38ba8; /* red */
+
+	/* Borders & Inputs */
+	--border: #45475a; /* surface1 */
+	--input: #45475a; /* surface1 */
+	--ring: #cba6f7; /* mauve */
+
+	/* Charts */
+	--chart-1: #cba6f7; /* mauve */
+	--chart-2: #f5c2e7; /* pink */
+	--chart-3: #b4befe; /* lavender */
+	--chart-4: #f2cdcd; /* flamingo */
+	--chart-5: #89b4fa; /* blue */
+
+	/* Sidebar */
+	--theme-sidebar-bg: #181825; /* mantle */
+	--theme-sidebar-hover: #cba6f7; /* mauve */
+	--theme-sidebar-fg: #cdd6f4; /* text */
+	--theme-sidebar-primary: #cdd6f4; /* text */
+	--theme-sidebar-primary-fg: #11111b; /* crust */
+	--theme-sidebar-accent: #313244; /* surface0 */
+	--theme-sidebar-accent-fg: #bac2de; /* subtext1 */
+	--theme-sidebar-border: #313244; /* surface0 */
+	--theme-sidebar-ring: #cba6f7; /* mauve */
+}

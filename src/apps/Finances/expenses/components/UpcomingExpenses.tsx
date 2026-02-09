@@ -311,7 +311,7 @@ export const UpcomingExpenses = () => {
 													backgroundColor:
 														categoryColors[entry.name] ||
 														DEFAULT_CATEGORY_COLORS[entry.name] ||
-														"#93C5FD",
+														"var(--chart-1)",
 												}}
 											/>
 											<span className="text-sm font-medium text-muted-foreground">

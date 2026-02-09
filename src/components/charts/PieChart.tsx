@@ -2,7 +2,7 @@ import { Group } from "@visx/group";
 import { ParentSize } from "@visx/responsive";
 import { scaleOrdinal } from "@visx/scale";
 import { Pie } from "@visx/shape";
-import { Fragment, useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export interface PieChartData {
 	name: string;
@@ -20,21 +20,24 @@ interface PieChartProps {
 const PieChartInner = ({
 	data,
 	colors,
-	defaultColor = "#93C5FD",
+	defaultColor,
 	opacity = 1,
 	renderTooltip,
 	width,
 	height,
 }: PieChartProps & { width: number; height: number }) => {
+	const resolvedDefaultColor = useMemo(() => {
+		if (defaultColor) return defaultColor;
+		const style = getComputedStyle(document.documentElement);
+		return style.getPropertyValue("--chart-1").trim() || "#93C5FD";
+	}, [defaultColor]);
+
 	const [tooltip, setTooltip] = useState<{
 		data: PieChartData;
 		x: number;
 		y: number;
 	} | null>(null);
 	const [animationProgress, setAnimationProgress] = useState(0);
-
-	// Divider color: white in dark mode, black in light mode
-	const dividerColor = "#ffffff";
 
 	// Animate from 0 to 1 over 500ms
 	useEffect(() => {
@@ -65,7 +68,7 @@ const PieChartInner = ({
 
 	const colorScale = scaleOrdinal({
 		domain: data.map((d) => d.name),
-		range: data.map((d) => colors[d.name] || defaultColor),
+		range: data.map((d) => colors[d.name] || resolvedDefaultColor),
 	});
 
 	// Calculate the current end angle based on animation progress
@@ -75,7 +78,6 @@ const PieChartInner = ({
 	return (
 		<div style={{ position: "relative", width, height }}>
 			<svg width={width} height={height} aria-label="Pie chart">
-				<title>Pie chart</title>
 				<Group
 					top={centerY}
 					left={centerX}
@@ -85,66 +87,33 @@ const PieChartInner = ({
 						data={data}
 						pieValue={(d) => d.value}
 						outerRadius={radius * 0.8}
-						innerRadius={0}
+						innerRadius={radius * 0.01}
 						startAngle={-Math.PI}
 						endAngle={currentEndAngle}
-						padAngle={0}
+						padAngle={0.03}
+						cornerRadius={3}
 					>
-						{(pie) => (
-							<>
-								{pie.arcs.map((arc) => (
-									<Fragment key={`arc-${arc.data.name}`}>
-										{/* biome-ignore lint/a11y/noStaticElementInteractions: SVG path needs mouse events for tooltip */}
-										<path
-											aria-label={`${arc.data.name}: ${arc.data.value}`}
-											d={pie.path(arc) || ""}
-											fill={colorScale(arc.data.name)}
-											opacity={opacity}
-											style={{ cursor: "pointer" }}
-											onMouseMove={(event) => {
-												setTooltip({
-													data: arc.data,
-													x: event.clientX,
-													y: event.clientY,
-												});
-											}}
-											onMouseLeave={() => setTooltip(null)}
-										/>
-										<path
-											d={pie.path(arc) || ""}
-											fill="none"
-											stroke={dividerColor}
-											strokeWidth={2}
-											pointerEvents="none"
-											shapeRendering="auto"
-										/>
-									</Fragment>
-								))}
-								{/* Draw divider lines from center to edge at each arc boundary */}
-								{data.length > 1 &&
-									pie.arcs.map((arc) => {
-										const outerRadius = radius * 0.8;
-										// Line from center to outer edge at start angle
-										const x =
-											Math.cos(arc.startAngle - Math.PI / 2) * outerRadius;
-										const y =
-											Math.sin(arc.startAngle - Math.PI / 2) * outerRadius;
-										return (
-											<line
-												key={`divider-${arc.data.name}`}
-												x1={0}
-												y1={0}
-												x2={x}
-												y2={y}
-												stroke={dividerColor}
-												strokeWidth={2}
-												pointerEvents="none"
-												shapeRendering="auto"
-											/>
-										);
-									})}
-							</>
-						)}
+						{(pie) =>
+						pie.arcs.map((arc) => (
+							/* biome-ignore lint/a11y/noStaticElementInteractions: SVG path needs mouse events for tooltip */
+							<path
+								key={`arc-${arc.data.name}`}
+								aria-label={`${arc.data.name}: ${arc.data.value}`}
+								d={pie.path(arc) || ""}
+								fill={colorScale(arc.data.name)}
+								opacity={opacity}
+								style={{ cursor: "pointer" }}
+								onMouseMove={(event) => {
+									setTooltip({
+										data: arc.data,
+										x: event.clientX,
+										y: event.clientY,
+									});
+								}}
+								onMouseLeave={() => setTooltip(null)}
+							/>
+						))
+					}
 					</Pie>
 				</Group>
 			</svg>

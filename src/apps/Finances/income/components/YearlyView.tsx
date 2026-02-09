@@ -12,19 +12,17 @@ const YearlyView = () => {
 	const { incomeCurrency } = useSettingsStore();
 	const currencySymbol = getCurrencySymbol(incomeCurrency);
 	const { resolvedTheme, palette } = useThemeStore();
-	const isDark = resolvedTheme === "dark";
 
-	// Get theme-aware bar color from CSS variable
-	const barColor = useMemo(() => {
-		return getComputedStyle(document.documentElement)
-			.getPropertyValue("--primary")
-			.trim();
+	// Get theme-aware colors from CSS variables
+	const { barColor, textColor, mutedTextColor, gridColor } = useMemo(() => {
+		const style = getComputedStyle(document.documentElement);
+		return {
+			barColor: style.getPropertyValue("--primary").trim(),
+			textColor: style.getPropertyValue("--foreground").trim(),
+			mutedTextColor: style.getPropertyValue("--muted-foreground").trim(),
+			gridColor: style.getPropertyValue("--border").trim(),
+		};
 	}, [resolvedTheme, palette]);
-
-	// Theme-aware colors
-	const textColor = isDark ? "#e2e8f0" : "#374151";
-	const mutedTextColor = isDark ? "#94a3b8" : "#6B7280";
-	const gridColor = isDark ? "#334155" : "#E5E7EB";
 
 	const yearlyData = getYearlyData(incomeEntries);
 
@@ -127,15 +125,15 @@ const YearlyView = () => {
 												</div>
 												<div className="text-xs text-emerald-500/80">Hours</div>
 											</div>
-											<div className="bg-purple-500/10 rounded-md p-2 text-center">
-												<div className="text-sm font-bold text-purple-500">
+											<div className="bg-sky-500/10 rounded-md p-2 text-center">
+												<div className="text-sm font-bold text-sky-500">
 													{currencySymbol}
 													{year.hours > 0
 														? (year.amount / year.hours).toFixed(0)
 														: "0"}
 													/h
 												</div>
-												<div className="text-xs text-purple-500/80">Rate</div>
+												<div className="text-xs text-sky-500/80">Rate</div>
 											</div>
 											<div className="bg-amber-500/10 rounded-md p-2 text-center">
 												<div className="text-sm font-bold text-amber-500">

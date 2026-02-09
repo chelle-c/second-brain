@@ -37,7 +37,7 @@ const CustomTrigger = ({
 		>
 			<ChevronRight
 				strokeWidth={3}
-				size={24}
+				size={36}
 				className={`transition duration-400 ${open ? "rotate-180" : ""}`}
 			/>
 			<span className="sr-only">Toggle Sidebar</span>
