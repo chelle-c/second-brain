@@ -107,48 +107,57 @@ export class IncomeStorage {
 			const viewTypeChanged =
 				oldIncome && oldIncome.viewType !== income.viewType;
 
-			await this.context.getDb().execute("DELETE FROM income_entries");
-			await this.context.getDb().execute("DELETE FROM income_weekly_targets");
+			const db = this.context.getDb();
+			await db.execute("BEGIN TRANSACTION");
+			try {
+				await db.execute("DELETE FROM income_entries");
+				await db.execute("DELETE FROM income_weekly_targets");
 
-			const seenEntryIds = new Set<string>();
-			const seenTargetIds = new Set<string>();
+				const seenEntryIds = new Set<string>();
+				const seenTargetIds = new Set<string>();
 
-			for (const entry of income.entries) {
-				if (seenEntryIds.has(entry.id)) {
-					continue;
+				for (const entry of income.entries) {
+					if (seenEntryIds.has(entry.id)) {
+						continue;
+					}
+					seenEntryIds.add(entry.id);
+
+					await db.execute(
+						`INSERT INTO income_entries (id, date, amount, hours, minutes)
+						VALUES (?, ?, ?, ?, ?)`,
+						[
+							entry.id,
+							entry.date,
+							entry.amount,
+							entry.hours || null,
+							entry.minutes || null,
+						],
+					);
 				}
-				seenEntryIds.add(entry.id);
 
-				await this.context.getDb().execute(
-					`INSERT INTO income_entries (id, date, amount, hours, minutes)
-					VALUES (?, ?, ?, ?, ?)`,
-					[
-						entry.id,
-						entry.date,
-						entry.amount,
-						entry.hours || null,
-						entry.minutes || null,
-					],
-				);
-			}
+				for (const target of income.weeklyTargets) {
+					if (seenTargetIds.has(target.id)) {
+						continue;
+					}
+					seenTargetIds.add(target.id);
 
-			for (const target of income.weeklyTargets) {
-				if (seenTargetIds.has(target.id)) {
-					continue;
+					await db.execute(
+						`INSERT INTO income_weekly_targets (id, amount)
+						VALUES (?, ?)`,
+						[target.id, target.amount],
+					);
 				}
-				seenTargetIds.add(target.id);
 
-				await this.context.getDb().execute(
-					`INSERT INTO income_weekly_targets (id, amount)
-					VALUES (?, ?)`,
-					[target.id, target.amount],
+				await db.execute(
+					`INSERT OR REPLACE INTO settings (key, value) VALUES ('income_viewType', ?)`,
+					[income.viewType],
 				);
-			}
 
-			await this.context.getDb().execute(
-				`INSERT OR REPLACE INTO settings (key, value) VALUES ('income_viewType', ?)`,
-				[income.viewType],
-			);
+				await db.execute("COMMIT");
+			} catch (error) {
+				await db.execute("ROLLBACK");
+				throw error;
+			}
 
 			this.context.cache.income = income;
 

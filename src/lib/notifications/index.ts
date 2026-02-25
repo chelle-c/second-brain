@@ -18,3 +18,7 @@ export function bootstrapNotifications(): void {
 	notificationService.register("notes", noteProvider);
 	notificationService.start();
 }
+
+export function shutdownNotifications(): void {
+	notificationService.stop();
+}

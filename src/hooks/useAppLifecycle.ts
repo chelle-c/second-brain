@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useRef } from "react";
-import { bootstrapNotifications, checkExpenseNotificationsOnStartup } from "@/lib/notifications";
+import { bootstrapNotifications, checkExpenseNotificationsOnStartup, shutdownNotifications } from "@/lib/notifications";
 import { sqlStorage } from "@/lib/storage";
 import useAppStore from "@/stores/useAppStore";
 import { useBackupStore } from "@/stores/useBackupStore";
@@ -45,17 +45,22 @@ export function useAppLifecycle() {
 			isSavingRef.current = true;
 			console.log("Tray quit requested – saving data…");
 			try {
+				// Stop background services first to prevent interference
+				shutdownNotifications();
+
 				await useAppStore.getState().saveToFile(AppToSave.All);
 				console.log("Data saved successfully");
 				await sqlStorage.close();
 				console.log("Database closed");
-				if (sqlStorage.isOpen()) {
-					console.warn("Database connection still open, waiting…");
-					await new Promise((resolve) => setTimeout(resolve, 100));
-				}
 				await invoke("quit_app");
 			} catch (error) {
 				console.error("Error handling tray quit:", error);
+				// Still try to close the database before quitting
+				try {
+					await sqlStorage.close();
+				} catch {
+					// Ignore close errors during error recovery
+				}
 				await invoke("quit_app");
 			} finally {
 				isSavingRef.current = false;
@@ -76,12 +81,13 @@ export function useAppLifecycle() {
 			if (minimizeToTray) {
 				await appWindow.hide();
 				console.log("Window hidden to tray");
-				useAppStore
-					.getState()
-					.saveToFile(AppToSave.All)
-					.catch((error) => {
-						console.error("Background save failed:", error);
-					});
+				// Await the save so it completes before we return.
+				// This prevents a race if the user quits from the tray shortly after.
+				try {
+					await useAppStore.getState().saveToFile(AppToSave.All);
+				} catch (error) {
+					console.error("Background save failed:", error);
+				}
 				return;
 			}
 
@@ -89,17 +95,22 @@ export function useAppLifecycle() {
 			isSavingRef.current = true;
 			console.log("Window close requested – saving data…");
 			try {
+				// Stop background services first to prevent interference
+				shutdownNotifications();
+
 				await useAppStore.getState().saveToFile(AppToSave.All);
 				console.log("Data saved successfully");
 				await sqlStorage.close();
 				console.log("Database closed, destroying window");
-				if (sqlStorage.isOpen()) {
-					console.warn("Database connection still open, waiting…");
-					await new Promise((resolve) => setTimeout(resolve, 100));
-				}
 				await appWindow.destroy();
 			} catch (error) {
 				console.error("Error handling close:", error);
+				// Still try to close the database before destroying
+				try {
+					await sqlStorage.close();
+				} catch {
+					// Ignore close errors during error recovery
+				}
 				await appWindow.destroy();
 			} finally {
 				isSavingRef.current = false;

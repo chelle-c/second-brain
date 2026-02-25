@@ -390,28 +390,37 @@ export class NotesStorage {
 				return !deepEqual(this.normalizeNotes([old]), this.normalizeNotes([n]));
 			});
 
-			await this.context.getDb().execute("DELETE FROM notes");
+			const db = this.context.getDb();
+			await db.execute("BEGIN TRANSACTION");
+			try {
+				await db.execute("DELETE FROM notes");
 
-			for (const note of notes) {
-				await this.context.getDb().execute(
-					`INSERT INTO notes (id, title, content, tags, folder, reminder, createdAt, updatedAt, archived)
-					 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-					[
-						note.id,
-						note.title,
-						note.content,
-						JSON.stringify(note.tags || []),
-						note.folder || "inbox",
-						serializeReminder(note.reminder),
-						note.createdAt instanceof Date ?
-							note.createdAt.toISOString()
-						:	note.createdAt,
-						note.updatedAt instanceof Date ?
-							note.updatedAt.toISOString()
-						:	note.updatedAt,
-						note.archived ? 1 : 0,
-					],
-				);
+				for (const note of notes) {
+					await db.execute(
+						`INSERT INTO notes (id, title, content, tags, folder, reminder, createdAt, updatedAt, archived)
+						 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+						[
+							note.id,
+							note.title,
+							note.content,
+							JSON.stringify(note.tags || []),
+							note.folder || "inbox",
+							serializeReminder(note.reminder),
+							note.createdAt instanceof Date ?
+								note.createdAt.toISOString()
+							:	note.createdAt,
+							note.updatedAt instanceof Date ?
+								note.updatedAt.toISOString()
+							:	note.updatedAt,
+							note.archived ? 1 : 0,
+						],
+					);
+				}
+
+				await db.execute("COMMIT");
+			} catch (error) {
+				await db.execute("ROLLBACK");
+				throw error;
 			}
 
 			this.context.cache.notes = notes;
@@ -521,31 +530,39 @@ export class NotesStorage {
 		if (!this.hasFoldersChanged(folders)) return;
 
 		return this.context.queueOperation(async () => {
-			await this.context.getDb().execute("DELETE FROM folders_new");
-			const sortedFolders = this.sortFoldersForInsert(folders);
-			for (const folder of sortedFolders) {
-				await this.context.getDb().execute(
-					`INSERT INTO folders_new (id, name, parentId, icon, archived, \`order\`, createdAt, updatedAt)
-					 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-					[
-						folder.id,
-						folder.name,
-						folder.parentId,
-						getIconName(folder.icon),
-						folder.archived ? 1 : 0,
-						folder.order || 0,
-						folder.createdAt ?
-							folder.createdAt instanceof Date ?
-								folder.createdAt.toISOString()
-							:	folder.createdAt
-						:	new Date().toISOString(),
-						folder.updatedAt ?
-							folder.updatedAt instanceof Date ?
-								folder.updatedAt.toISOString()
-							:	folder.updatedAt
-						:	new Date().toISOString(),
-					],
-				);
+			const db = this.context.getDb();
+			await db.execute("BEGIN TRANSACTION");
+			try {
+				await db.execute("DELETE FROM folders_new");
+				const sortedFolders = this.sortFoldersForInsert(folders);
+				for (const folder of sortedFolders) {
+					await db.execute(
+						`INSERT INTO folders_new (id, name, parentId, icon, archived, \`order\`, createdAt, updatedAt)
+						 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+						[
+							folder.id,
+							folder.name,
+							folder.parentId,
+							getIconName(folder.icon),
+							folder.archived ? 1 : 0,
+							folder.order || 0,
+							folder.createdAt ?
+								folder.createdAt instanceof Date ?
+									folder.createdAt.toISOString()
+								:	folder.createdAt
+							:	new Date().toISOString(),
+							folder.updatedAt ?
+								folder.updatedAt instanceof Date ?
+									folder.updatedAt.toISOString()
+								:	folder.updatedAt
+							:	new Date().toISOString(),
+						],
+					);
+				}
+				await db.execute("COMMIT");
+			} catch (error) {
+				await db.execute("ROLLBACK");
+				throw error;
 			}
 			this.context.cache.folders = folders;
 		});
@@ -586,17 +603,21 @@ export class NotesStorage {
 	async saveTags(tags: Record<string, Tag>): Promise<void> {
 		if (!this.hasTagsChanged(tags)) return;
 		return this.context.queueOperation(async () => {
-			await this.context.getDb().execute("DELETE FROM tags");
-			for (const [, tag] of Object.entries(tags)) {
-				const iconName = getIconName(tag.icon) || "Tag";
-				await this.context
-					.getDb()
-					.execute(`INSERT INTO tags (id, name, color, icon) VALUES (?, ?, ?, ?)`, [
-						tag.id,
-						tag.name,
-						tag.color,
-						iconName,
-					]);
+			const db = this.context.getDb();
+			await db.execute("BEGIN TRANSACTION");
+			try {
+				await db.execute("DELETE FROM tags");
+				for (const [, tag] of Object.entries(tags)) {
+					const iconName = getIconName(tag.icon) || "Tag";
+					await db.execute(
+						`INSERT INTO tags (id, name, color, icon) VALUES (?, ?, ?, ?)`,
+						[tag.id, tag.name, tag.color, iconName],
+					);
+				}
+				await db.execute("COMMIT");
+			} catch (error) {
+				await db.execute("ROLLBACK");
+				throw error;
 			}
 			this.context.cache.tags = tags;
 		});

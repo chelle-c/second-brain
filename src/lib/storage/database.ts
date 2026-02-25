@@ -46,6 +46,7 @@ class SqlStorage {
 	private connectionRefCount = 0;
 	private closeTimeout: ReturnType<typeof setTimeout> | null = null;
 	private connectionPromise: Promise<void> | null = null;
+	private isClosing = false;
 	private static readonly CLOSE_DELAY_MS = 2000; // Close after 2 seconds of inactivity
 
 	private notesStorage!: NotesStorage;
@@ -184,6 +185,10 @@ class SqlStorage {
 	// Execute a function with an open database connection
 	// Connection stays open and closes after a period of inactivity
 	private async withConnection<T>(fn: () => Promise<T>): Promise<T> {
+		if (this.isClosing) {
+			throw new Error("Database is closing, cannot start new operations");
+		}
+
 		// Cancel any pending close
 		if (this.closeTimeout) {
 			clearTimeout(this.closeTimeout);
@@ -197,29 +202,34 @@ class SqlStorage {
 			return await fn();
 		} finally {
 			this.connectionRefCount--;
-			// Schedule delayed close
-			this.scheduleClose();
+			// Schedule delayed close (but not if we're in the process of closing)
+			if (!this.isClosing) {
+				this.scheduleClose();
+			}
 		}
 	}
 
 	private queueOperation = async <T>(operation: () => Promise<T>): Promise<T> => {
+		// Chain the operation on the queue so operations run sequentially
+		const operationPromise = this.operationQueue.then(operation);
+
+		// The queue must always wait for the actual operation to finish,
+		// regardless of whether the caller times out. This prevents
+		// concurrent writes if a timeout fires while the operation is still running.
+		this.operationQueue = operationPromise.then(() => {}).catch(() => {});
+
+		// The caller gets a timeout so they don't wait forever
 		const timeoutPromise = new Promise<T>((_, reject) => {
 			setTimeout(
-				() => reject(new Error("Database operation timeout after 10 seconds")),
-				10000,
+				() => reject(new Error("Database operation timeout after 30 seconds")),
+				30000,
 			);
 		});
 
-		const operationPromise = this.operationQueue.then(operation).catch((error) => {
+		return Promise.race([operationPromise, timeoutPromise]).catch((error) => {
 			console.error("Database operation failed:", error);
 			throw error;
 		});
-
-		const result = Promise.race([operationPromise, timeoutPromise]);
-
-		this.operationQueue = result.then(() => {}).catch(() => {});
-
-		return result;
 	};
 
 	private getContext(): DatabaseContext {
@@ -775,127 +785,131 @@ class SqlStorage {
 		});
 	}
 
+	// Attempt a single data load within a connection
+	private async loadDataOnce(): Promise<AppData> {
+		return this.withConnection(async () => {
+			const notes = await this.notesStorage.loadNotes();
+			const folders = await this.notesStorage.loadFolders();
+			const tags = await this.notesStorage.loadTags();
+			const expenses = await this.expensesStorage.loadExpenses();
+			const income = await this.incomeStorage.loadIncome();
+
+			// Load settings inline
+			const settingsResults = await this.getDb().select<
+				Array<{ key: string; value: string }>
+			>("SELECT key, value FROM settings");
+			const settingsObj: Record<string, unknown> = {};
+			for (const row of settingsResults) {
+				try {
+					settingsObj[row.key] = JSON.parse(row.value);
+				} catch {
+					settingsObj[row.key] = row.value;
+				}
+			}
+			const settings = { ...DEFAULT_SETTINGS, ...(settingsObj as Partial<AppSettings>) };
+			this.cache.settings = settings;
+
+			// Load theme inline
+			const themeResults = await this.getDb().select<
+				Array<{ key: string; value: string }>
+			>("SELECT key, value FROM settings WHERE key LIKE 'theme_%'");
+			const themeObj: Record<string, unknown> = {};
+			for (const row of themeResults) {
+				const key = row.key.replace("theme_", "");
+				try {
+					themeObj[key] = JSON.parse(row.value);
+				} catch {
+					themeObj[key] = row.value;
+				}
+			}
+			const theme = {
+				...DEFAULT_THEME_SETTINGS,
+				...(themeObj as Partial<ThemeSettings>),
+			};
+			this.cache.theme = theme;
+
+			// Load metadata inline
+			const metadataResults = await this.getDb().select<
+				Array<{ lastSaved: string; version: string }>
+			>("SELECT * FROM metadata WHERE id = 1");
+			const metadata =
+				metadataResults.length > 0 ?
+					{
+						lastSaved: new Date(metadataResults[0].lastSaved),
+						version: metadataResults[0].version,
+					}
+				:	{ lastSaved: new Date(), version: DATA_VERSION };
+
+			return {
+				notes,
+				folders,
+				tags,
+				expenses,
+				income,
+				settings,
+				theme,
+				isLoading: false,
+				lastSaved: metadata.lastSaved,
+				autoSaveEnabled: settings.autoSaveEnabled,
+			};
+		});
+	}
+
 	// Load all data with retry logic
+	// Retries happen outside withConnection to avoid corrupting ref counting
 	async loadData(retryCount = 0): Promise<AppData> {
 		const MAX_RETRIES = 2;
 		const RETRY_DELAY_MS = 500;
 
-		return this.withConnection(async () => {
-			try {
-				const notes = await this.notesStorage.loadNotes();
-				const folders = await this.notesStorage.loadFolders();
-				const tags = await this.notesStorage.loadTags();
-				const expenses = await this.expensesStorage.loadExpenses();
-				const income = await this.incomeStorage.loadIncome();
+		try {
+			const data = await this.loadDataOnce();
 
-				// Load settings inline
-				const settingsResults = await this.getDb().select<
-					Array<{ key: string; value: string }>
-				>("SELECT key, value FROM settings");
-				const settingsObj: Record<string, unknown> = {};
-				for (const row of settingsResults) {
-					try {
-						settingsObj[row.key] = JSON.parse(row.value);
-					} catch {
-						settingsObj[row.key] = row.value;
-					}
-				}
-				const settings = { ...DEFAULT_SETTINGS, ...(settingsObj as Partial<AppSettings>) };
-				this.cache.settings = settings;
-
-				// Load theme inline
-				const themeResults = await this.getDb().select<
-					Array<{ key: string; value: string }>
-				>("SELECT key, value FROM settings WHERE key LIKE 'theme_%'");
-				const themeObj: Record<string, unknown> = {};
-				for (const row of themeResults) {
-					const key = row.key.replace("theme_", "");
-					try {
-						themeObj[key] = JSON.parse(row.value);
-					} catch {
-						themeObj[key] = row.value;
-					}
-				}
-				const theme = {
-					...DEFAULT_THEME_SETTINGS,
-					...(themeObj as Partial<ThemeSettings>),
-				};
-				this.cache.theme = theme;
-
-				// Load metadata inline
-				const metadataResults = await this.getDb().select<
-					Array<{ lastSaved: string; version: string }>
-				>("SELECT * FROM metadata WHERE id = 1");
-				const metadata =
-					metadataResults.length > 0 ?
-						{
-							lastSaved: new Date(metadataResults[0].lastSaved),
-							version: metadataResults[0].version,
-						}
-					:	{ lastSaved: new Date(), version: DATA_VERSION };
-
-				// Check if folders loaded correctly (should always have at least initial folders)
-				if (folders.length === 0 && retryCount < MAX_RETRIES) {
-					console.warn(
-						`Data load returned empty folders (attempt ${retryCount + 1}/${MAX_RETRIES + 1}), retrying...`,
-					);
-					// Close connection before retry
-					await this.closeConnectionNow();
-					await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
-					return this.loadData(retryCount + 1);
-				}
-
-				return {
-					notes,
-					folders,
-					tags,
-					expenses,
-					income,
-					settings,
-					theme,
-					isLoading: false,
-					lastSaved: metadata.lastSaved,
-					autoSaveEnabled: settings.autoSaveEnabled,
-				};
-			} catch (error) {
-				console.error("Failed to load data:", error);
-
-				// Retry on failure
-				if (retryCount < MAX_RETRIES) {
-					console.warn(
-						`Data load failed (attempt ${retryCount + 1}/${MAX_RETRIES + 1}), retrying...`,
-					);
-					// Close connection before retry
-					await this.closeConnectionNow();
-					await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
-					return this.loadData(retryCount + 1);
-				}
-
-				return {
-					notes: [],
-					folders: [],
-					tags: {},
-					expenses: {
-						expenses: [],
-						selectedMonth: new Date(),
-						overviewMode: "remaining",
-						categories: DEFAULT_EXPENSE_CATEGORIES,
-						categoryColors: DEFAULT_CATEGORY_COLORS,
-						paymentMethods: DEFAULT_PAYMENT_METHODS,
-					},
-					income: {
-						entries: [],
-						weeklyTargets: [],
-						viewType: "weekly",
-					},
-					settings: DEFAULT_SETTINGS,
-					theme: DEFAULT_THEME_SETTINGS,
-					isLoading: false,
-					lastSaved: new Date(),
-					autoSaveEnabled: DEFAULT_SETTINGS.autoSaveEnabled,
-				};
+			// Check if folders loaded correctly (should always have at least initial folders)
+			if (data.folders.length === 0 && retryCount < MAX_RETRIES) {
+				console.warn(
+					`Data load returned empty folders (attempt ${retryCount + 1}/${MAX_RETRIES + 1}), retrying...`,
+				);
+				await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+				return this.loadData(retryCount + 1);
 			}
-		});
+
+			return data;
+		} catch (error) {
+			console.error("Failed to load data:", error);
+
+			// Retry on failure
+			if (retryCount < MAX_RETRIES) {
+				console.warn(
+					`Data load failed (attempt ${retryCount + 1}/${MAX_RETRIES + 1}), retrying...`,
+				);
+				await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+				return this.loadData(retryCount + 1);
+			}
+
+			return {
+				notes: [],
+				folders: [],
+				tags: {},
+				expenses: {
+					expenses: [],
+					selectedMonth: new Date(),
+					overviewMode: "remaining",
+					categories: DEFAULT_EXPENSE_CATEGORIES,
+					categoryColors: DEFAULT_CATEGORY_COLORS,
+					paymentMethods: DEFAULT_PAYMENT_METHODS,
+				},
+				income: {
+					entries: [],
+					weeklyTargets: [],
+					viewType: "weekly",
+				},
+				settings: DEFAULT_SETTINGS,
+				theme: DEFAULT_THEME_SETTINGS,
+				isLoading: false,
+				lastSaved: new Date(),
+				autoSaveEnabled: DEFAULT_SETTINGS.autoSaveEnabled,
+			};
+		}
 	}
 
 	// Save data with change detection
@@ -949,25 +963,33 @@ class SqlStorage {
 						if (tagsChanged) await this.notesStorage.saveTags(data.tags || {});
 						if (expensesChanged) await this.expensesStorage.saveExpenses(data.expenses);
 						if (incomeChanged) await this.incomeStorage.saveIncome(data.income);
-						if (settingsChanged) {
+						if (settingsChanged || themeChanged) {
 							const db = this.getDb();
-							for (const [key, value] of Object.entries(data.settings)) {
-								await db.execute(
-									`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`,
-									[key, JSON.stringify(value)],
-								);
+							await db.execute("BEGIN TRANSACTION");
+							try {
+								if (settingsChanged) {
+									for (const [key, value] of Object.entries(data.settings)) {
+										await db.execute(
+											`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`,
+											[key, JSON.stringify(value)],
+										);
+									}
+								}
+								if (themeChanged) {
+									for (const [key, value] of Object.entries(data.theme)) {
+										await db.execute(
+											`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`,
+											[`theme_${key}`, JSON.stringify(value)],
+										);
+									}
+								}
+								await db.execute("COMMIT");
+							} catch (error) {
+								await db.execute("ROLLBACK");
+								throw error;
 							}
-							this.cache.settings = data.settings;
-						}
-						if (themeChanged) {
-							const db = this.getDb();
-							for (const [key, value] of Object.entries(data.theme)) {
-								await db.execute(
-									`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`,
-									[`theme_${key}`, JSON.stringify(value)],
-								);
-							}
-							this.cache.theme = data.theme;
+							if (settingsChanged) this.cache.settings = data.settings;
+							if (themeChanged) this.cache.theme = data.theme;
 						}
 					}
 				}
@@ -1030,17 +1052,13 @@ class SqlStorage {
 
 	// Close method - ensures connection is closed
 	async close(): Promise<void> {
+		// Prevent new operations from starting
+		this.isClosing = true;
+
 		// Cancel any pending close timer
 		if (this.closeTimeout) {
 			clearTimeout(this.closeTimeout);
 			this.closeTimeout = null;
-		}
-
-		// Wait for any pending operations to complete
-		try {
-			await this.operationQueue;
-		} catch {
-			// Ignore errors from pending operations
 		}
 
 		// Wait for any pending connection to complete
@@ -1052,9 +1070,20 @@ class SqlStorage {
 			}
 		}
 
+		// Wait for any pending operations to complete
+		try {
+			await this.operationQueue;
+		} catch {
+			// Ignore errors from pending operations
+		}
+
+		// Now that all operations are done, close the connection
+		await this.closeConnectionNow();
+
+		// Reset state AFTER the connection is fully closed
 		this.operationQueue = Promise.resolve();
 		this.connectionRefCount = 0;
-		await this.closeConnectionNow();
+		this.isClosing = false;
 	}
 
 	async switchEnvironment(environment: DatabaseEnvironment): Promise<void> {

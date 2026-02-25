@@ -277,76 +277,85 @@ export class ExpensesStorage {
 						[...(expenses.paymentMethods || [])].sort(),
 					));
 
-			// Delete all expenses and reinsert (simpler than tracking updates)
-			await this.context.getDb().execute("DELETE FROM expenses");
+			const db = this.context.getDb();
+			await db.execute("BEGIN TRANSACTION");
+			try {
+				// Delete all expenses and reinsert (simpler than tracking updates)
+				await db.execute("DELETE FROM expenses");
 
-			const seenIds = new Set<string>();
+				const seenIds = new Set<string>();
 
-			for (const expense of expenses.expenses) {
-				if (seenIds.has(expense.id)) {
-					continue;
+				for (const expense of expenses.expenses) {
+					if (seenIds.has(expense.id)) {
+						continue;
+					}
+					seenIds.add(expense.id);
+
+					// Ensure initialState has paymentMethod
+					let initialState = expense.initialState;
+					if (initialState && !initialState.paymentMethod) {
+						initialState = { ...initialState, paymentMethod: "None" };
+					}
+
+					await db.execute(
+						`INSERT INTO expenses (
+							id, name, amount, category, paymentMethod, dueDate, isRecurring, recurrence,
+							isArchived, isPaid, paymentDate, type, importance, notify, createdAt,
+							updatedAt, parentExpenseId, monthlyOverrides, isModified, initialState
+						) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+						[
+							expense.id,
+							expense.name,
+							expense.amount,
+							expense.category,
+							expense.paymentMethod || "None",
+							expense.dueDate ? expense.dueDate.toISOString() : null,
+							expense.isRecurring ? 1 : 0,
+							expense.recurrence ? JSON.stringify(expense.recurrence) : null,
+							expense.isArchived ? 1 : 0,
+							expense.isPaid ? 1 : 0,
+							expense.paymentDate ? expense.paymentDate.toISOString() : null,
+							expense.type,
+							expense.importance,
+							expense.notify ? 1 : 0,
+							expense.createdAt.toISOString(),
+							expense.updatedAt.toISOString(),
+							expense.parentExpenseId || null,
+							expense.monthlyOverrides
+								? JSON.stringify(expense.monthlyOverrides)
+								: null,
+							expense.isModified ? 1 : 0,
+							initialState ? JSON.stringify(initialState) : null,
+						],
+					);
 				}
-				seenIds.add(expense.id);
 
-				// Ensure initialState has paymentMethod
-				let initialState = expense.initialState;
-				if (initialState && !initialState.paymentMethod) {
-					initialState = { ...initialState, paymentMethod: "None" };
-				}
-
-				await this.context.getDb().execute(
-					`INSERT INTO expenses (
-						id, name, amount, category, paymentMethod, dueDate, isRecurring, recurrence,
-						isArchived, isPaid, paymentDate, type, importance, notify, createdAt,
-						updatedAt, parentExpenseId, monthlyOverrides, isModified, initialState
-					) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-					[
-						expense.id,
-						expense.name,
-						expense.amount,
-						expense.category,
-						expense.paymentMethod || "None",
-						expense.dueDate ? expense.dueDate.toISOString() : null,
-						expense.isRecurring ? 1 : 0,
-						expense.recurrence ? JSON.stringify(expense.recurrence) : null,
-						expense.isArchived ? 1 : 0,
-						expense.isPaid ? 1 : 0,
-						expense.paymentDate ? expense.paymentDate.toISOString() : null,
-						expense.type,
-						expense.importance,
-						expense.notify ? 1 : 0,
-						expense.createdAt.toISOString(),
-						expense.updatedAt.toISOString(),
-						expense.parentExpenseId || null,
-						expense.monthlyOverrides
-							? JSON.stringify(expense.monthlyOverrides)
-							: null,
-						expense.isModified ? 1 : 0,
-						initialState ? JSON.stringify(initialState) : null,
-					],
+				await db.execute(
+					`INSERT OR REPLACE INTO settings (key, value) VALUES ('expense_selectedMonth', ?)`,
+					[expenses.selectedMonth.toISOString()],
 				);
-			}
+				await db.execute(
+					`INSERT OR REPLACE INTO settings (key, value) VALUES ('expense_overviewMode', ?)`,
+					[expenses.overviewMode],
+				);
+				await db.execute(
+					`INSERT OR REPLACE INTO settings (key, value) VALUES ('expense_categories', ?)`,
+					[JSON.stringify(expenses.categories)],
+				);
+				await db.execute(
+					`INSERT OR REPLACE INTO settings (key, value) VALUES ('expense_categoryColors', ?)`,
+					[JSON.stringify(expenses.categoryColors)],
+				);
+				await db.execute(
+					`INSERT OR REPLACE INTO settings (key, value) VALUES ('expense_paymentMethods', ?)`,
+					[JSON.stringify(expenses.paymentMethods || DEFAULT_PAYMENT_METHODS)],
+				);
 
-			await this.context.getDb().execute(
-				`INSERT OR REPLACE INTO settings (key, value) VALUES ('expense_selectedMonth', ?)`,
-				[expenses.selectedMonth.toISOString()],
-			);
-			await this.context.getDb().execute(
-				`INSERT OR REPLACE INTO settings (key, value) VALUES ('expense_overviewMode', ?)`,
-				[expenses.overviewMode],
-			);
-			await this.context.getDb().execute(
-				`INSERT OR REPLACE INTO settings (key, value) VALUES ('expense_categories', ?)`,
-				[JSON.stringify(expenses.categories)],
-			);
-			await this.context.getDb().execute(
-				`INSERT OR REPLACE INTO settings (key, value) VALUES ('expense_categoryColors', ?)`,
-				[JSON.stringify(expenses.categoryColors)],
-			);
-			await this.context.getDb().execute(
-				`INSERT OR REPLACE INTO settings (key, value) VALUES ('expense_paymentMethods', ?)`,
-				[JSON.stringify(expenses.paymentMethods || DEFAULT_PAYMENT_METHODS)],
-			);
+				await db.execute("COMMIT");
+			} catch (error) {
+				await db.execute("ROLLBACK");
+				throw error;
+			}
 
 			this.context.cache.expenses = expenses;
 
