@@ -1,4 +1,6 @@
-import { Redo2, Undo2 } from "lucide-react";
+import { invoke } from "@tauri-apps/api/core";
+import { useRef } from "react";
+import { Plus, Redo2, Undo2 } from "lucide-react";
 import { AnimatedToggle } from "@/components/AnimatedToggle";
 
 interface LayoutProps {
@@ -20,6 +22,25 @@ export const Layout: React.FC<LayoutProps> = ({
 	onUndo,
 	onRedo,
 }) => {
+	const isOpening = useRef(false);
+
+	const handleAddExpense = () => {
+		if (isOpening.current) return;
+		isOpening.current = true;
+
+		invoke("open_expense_form_window", {
+			args: {
+				expense_id: null,
+				is_global_edit: false,
+			},
+		})
+			.catch((err: unknown) => {
+				console.error("Failed to open expense form window:", err);
+			})
+			.finally(() => {
+				isOpening.current = false;
+			});
+	};
 	const viewModeOptions = [
 		{
 			label: "Upcoming",
@@ -68,6 +89,15 @@ export const Layout: React.FC<LayoutProps> = ({
 							title="Redo (Ctrl+Y)"
 						>
 							<Redo2 size={18} />
+						</button>
+						<div className="w-px h-5 bg-border mx-1" />
+						<button
+							type="button"
+							onClick={handleAddExpense}
+							className="p-1.5 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg transition-colors cursor-pointer"
+							title="Add Expense"
+						>
+							<Plus size={18} />
 						</button>
 					</div>
 				</div>

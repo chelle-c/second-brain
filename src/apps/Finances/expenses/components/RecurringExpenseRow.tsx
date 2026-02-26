@@ -14,11 +14,9 @@ import {
 	Trash2,
 } from "lucide-react";
 import { useState } from "react";
-import { formatCurrency, formatDate } from "@/lib/date-utils/formatting";
-import {
-	DEFAULT_CATEGORY_COLORS,
-	getCategoryDisplayColor,
-} from "@/lib/expenseHelpers";
+import { formatDate } from "@/lib/date-utils/formatting";
+import { DEFAULT_CATEGORY_COLORS, getCategoryDisplayColor } from "@/lib/expenseHelpers";
+import { formatAmountDisplay, getAmountTooltip } from "@/lib/amountUtils";
 import { useExpenseStore } from "@/stores/useExpenseStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
 import { useThemeStore } from "@/stores/useThemeStore";
@@ -52,7 +50,6 @@ const ImportanceIcon: React.FC<{ level: ImportanceLevel }> = ({ level }) => {
 const getFrequencyText = (expense: Expense): string => {
 	if (!expense.recurrence) return "";
 	const { frequency, interval } = expense.recurrence;
-
 	switch (frequency) {
 		case "daily":
 			return "Daily";
@@ -105,11 +102,20 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 	const paidCount = sortedOccurrences.filter((e) => e.isPaid).length;
 	const totalCount = sortedOccurrences.length;
 
+	// Parent amount display
+	const parentAmountDisplay = formatAmountDisplay(
+		parentExpense.amountData,
+		parentExpense.amount,
+		expenseCurrency,
+	);
+	const parentAmountTooltip =
+		parentExpense.amountData ? getAmountTooltip(parentExpense.amountData.type) : "Exact total";
+
 	return (
 		<>
 			{/* Parent Row */}
-			<tr className={`border-b border-border cursor-pointer hover:bg-accent`}>
-				{/* Column 1: Paid checkbox (with expand button) */}
+			<tr className="border-b border-border cursor-pointer hover:bg-accent">
+				{/* Column 1: Paid + expand */}
 				<td className="py-3 px-2">
 					<div className="flex items-center gap-1">
 						<button
@@ -120,25 +126,21 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 							}}
 							className={`p-1.5 rounded-lg transition-all duration-200 hover:scale-110
 								${
-									paidCount === totalCount && paidCount > 0
-										? "text-green-500 bg-green-500/10 hover:bg-green-500/20"
-										: paidCount > 0
-											? "text-yellow-500 bg-yellow-500/10 hover:bg-yellow-500/20"
-											: "text-muted-foreground bg-muted hover:bg-accent"
+									paidCount === totalCount && paidCount > 0 ?
+										"text-green-500 bg-green-500/10 hover:bg-green-500/20"
+									: paidCount > 0 ?
+										"text-yellow-500 bg-yellow-500/10 hover:bg-yellow-500/20"
+									:	"text-muted-foreground bg-muted hover:bg-accent"
 								}`}
 							title={
-								paidCount === totalCount
-									? "Mark all as unpaid"
-									: "Mark all as paid"
+								paidCount === totalCount ? "Mark all as unpaid" : "Mark all as paid"
 							}
 						>
-							{paidCount === totalCount && paidCount > 0 ? (
+							{paidCount === totalCount && paidCount > 0 ?
 								<CheckCircle size={16} />
-							) : paidCount > 0 ? (
+							: paidCount > 0 ?
 								<CheckCircle size={16} className="opacity-50" />
-							) : (
-								<Check size={16} />
-							)}
+							:	<Check size={16} />}
 						</button>
 						<button
 							type="button"
@@ -149,18 +151,16 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 							className="p-1 hover:bg-accent rounded transition-all duration-200 text-muted-foreground hover:text-foreground"
 							title={isExpanded ? "Collapse" : "Expand"}
 						>
-							{isExpanded ? (
+							{isExpanded ?
 								<ChevronDown size={16} />
-							) : (
-								<ChevronRight size={16} />
-							)}
+							:	<ChevronRight size={16} />}
 						</button>
 					</div>
 				</td>
 
 				{/* Column 2: Notify */}
 				<td className="py-3 px-2">
-					{parentExpense.dueDate ? (
+					{parentExpense.dueDate ?
 						<button
 							type="button"
 							onClick={(e) => {
@@ -169,21 +169,21 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 							}}
 							className={`p-1.5 rounded-lg transition-all duration-200 hover:scale-110
 							${
-								parentExpense.notify
-									? "text-blue-500 bg-blue-500/10 hover:bg-blue-500/20"
-									: "text-muted-foreground bg-muted hover:bg-accent"
+								parentExpense.notify ?
+									"text-blue-500 bg-blue-500/10 hover:bg-blue-500/20"
+								:	"text-muted-foreground bg-muted hover:bg-accent"
 							}`}
-							title={parentExpense.notify ? "Disable notification" : "Enable notification"}
+							title={
+								parentExpense.notify ? "Disable notification" : (
+									"Enable notification"
+								)
+							}
 						>
-							{parentExpense.notify ? (
+							{parentExpense.notify ?
 								<Bell size={16} />
-							) : (
-								<BellOff size={16} />
-							)}
+							:	<BellOff size={16} />}
 						</button>
-					) : (
-						<span className="text-muted-foreground/30">—</span>
-					)}
+					:	<span className="text-muted-foreground/30">—</span>}
 				</td>
 
 				{/* Column 3: Name */}
@@ -242,9 +242,9 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 				<td className="py-3 px-3">
 					<span
 						className={`text-xs font-medium ${
-							parentExpense.type === "need"
-								? "text-purple-500"
-								: "text-muted-foreground"
+							parentExpense.type === "need" ?
+								"text-purple-500"
+							:	"text-muted-foreground"
 						}`}
 					>
 						{parentExpense.type === "need" ? "Need" : "Want"}
@@ -253,8 +253,11 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 
 				{/* Column 8: Amount */}
 				<td className="py-3 px-3">
-					<span className="font-semibold text-primary text-sm">
-						{formatCurrency(parentExpense.amount, expenseCurrency)}
+					<span
+						className="font-semibold text-primary text-sm cursor-help"
+						title={parentAmountTooltip}
+					>
+						{parentAmountDisplay}
 					</span>
 					<div className="text-xs text-muted-foreground">base amount</div>
 				</td>
@@ -262,11 +265,11 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 				{/* Column 9: Due Date */}
 				<td className="py-3 px-3">
 					<div className="text-sm text-foreground">
-						{sortedOccurrences.length > 0 && sortedOccurrences[0].dueDate
-							? formatDate(sortedOccurrences[0].dueDate)
-							: parentExpense.dueDate
-								? formatDate(parentExpense.dueDate)
-								: "No date"}
+						{sortedOccurrences.length > 0 && sortedOccurrences[0].dueDate ?
+							formatDate(sortedOccurrences[0].dueDate)
+						: parentExpense.dueDate ?
+							formatDate(parentExpense.dueDate)
+						:	"No date"}
 					</div>
 					<div className="text-xs text-muted-foreground">first occurrence</div>
 				</td>
@@ -305,7 +308,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 								<Copy size={14} />
 							</button>
 						)}
-						{parentExpense.isArchived ? (
+						{parentExpense.isArchived ?
 							<button
 								type="button"
 								onClick={(e) => {
@@ -318,8 +321,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 							>
 								<ArchiveRestore size={14} />
 							</button>
-						) : (
-							<button
+						:	<button
 								type="button"
 								onClick={(e) => {
 									e.stopPropagation();
@@ -331,7 +333,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 							>
 								<Archive size={14} />
 							</button>
-						)}
+						}
 						<button
 							type="button"
 							onClick={(e) => {
@@ -350,173 +352,183 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 
 			{/* Occurrence Rows */}
 			{isExpanded &&
-				sortedOccurrences.map((occurrence, index) => (
-					<tr
-						key={occurrence.id}
-						className={`border-b border-border/50 animate-fadeIn ${
-							occurrence.isPaid
-								? "expense-paid bg-green-500/15 dark:bg-green-500/20 hover:bg-green-500/25 dark:hover:bg-green-500/30"
-								: "hover:bg-accent"
-						}`}
-					>
-						{/* Column 1: Paid checkbox */}
-						<td className="py-2 px-2">
-							<button
-								type="button"
-								onClick={() => toggleExpensePaid(occurrence.id)}
-								className={`p-1.5 rounded-lg transition-all duration-200 hover:scale-110 ml-6
-								${
-									occurrence.isPaid
-										? "text-green-500 bg-green-500/10 hover:bg-green-500/20"
-										: "text-muted-foreground bg-muted hover:bg-accent"
-								}`}
-								title={occurrence.isPaid ? "Mark as unpaid" : "Mark as paid"}
-							>
-								{occurrence.isPaid ? (
-									<CheckCircle size={16} />
-								) : (
-									<Check size={16} />
-								)}
-							</button>
-						</td>
+				sortedOccurrences.map((occurrence, index) => {
+					const occAmountDisplay = formatAmountDisplay(
+						occurrence.amountData,
+						occurrence.amount,
+						expenseCurrency,
+					);
+					const occAmountTooltip =
+						occurrence.amountData ?
+							getAmountTooltip(occurrence.amountData.type)
+						:	"Exact total";
+					const isAmountDifferent =
+						occurrence.amount !== parentExpense.amount ||
+						JSON.stringify(occurrence.amountData) !==
+							JSON.stringify(parentExpense.amountData);
 
-						{/* Column 2: Notify (inherited from parent) */}
-						<td className="py-2 px-2">
-							<span className="text-muted-foreground/30 ml-6">—</span>
-						</td>
-
-						{/* Column 3: Instance info */}
-						<td className="py-2 px-3 pl-8">
-							<div className="flex items-center gap-2">
-								<span
-									className={`text-xs text-muted-foreground ${
-										occurrence.isPaid ? "line-through opacity-60" : ""
-									}`}
-								>
-									Occurrence #{index + 1}
-									{occurrence.isModified && (
-										<span
-											className="ml-1 text-primary"
-											title="This occurrence has been modified"
-										>
-											(edited)
-										</span>
-									)}
-								</span>
-								{occurrence.isPaid && (
-									<span className="px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-green-500/20 text-green-600 dark:text-green-400 rounded">
-										Paid
-									</span>
-								)}
-							</div>
-						</td>
-
-						{/* Column 4: Payment Method */}
-						<td className="py-2 px-2">
-							<span
-								className={`text-xs ${
-									occurrence.paymentMethod !== parentExpense.paymentMethod
-										? "text-orange-500"
-										: "text-muted-foreground"
-								}`}
-							>
-								{occurrence.paymentMethod || "None"}
-							</span>
-						</td>
-
-						{/* Column 5: Importance (inherited) */}
-						<td className="py-2 px-2 text-center">
-							<span className="text-muted-foreground text-xs">—</span>
-						</td>
-
-						{/* Column 6: Category (empty) */}
-						<td className="py-2 px-3">
-							<span className="text-muted-foreground text-xs">—</span>
-						</td>
-
-						{/* Column 7: Type (empty) */}
-						<td className="py-2 px-3">
-							<span className="text-muted-foreground text-xs">—</span>
-						</td>
-
-						{/* Column 8: Amount */}
-						<td className="py-2 px-3">
-							<span
-								className={`font-medium text-sm ${
-									occurrence.isPaid
-										? "line-through text-muted-foreground opacity-60"
-										: occurrence.amount !== parentExpense.amount
-											? "text-orange-500"
-											: "text-primary"
-								}`}
-							>
-								{formatCurrency(occurrence.amount, expenseCurrency)}
-							</span>
-						</td>
-
-						{/* Column 9: Due Date */}
-						<td className="py-2 px-3">
-							<span className="text-sm text-muted-foreground">
-								{occurrence.dueDate
-									? formatDate(occurrence.dueDate)
-									: "No date"}
-							</span>
-						</td>
-
-						{/* Column 10: Payment Date */}
-						<td className="py-2 px-3">
-							{occurrence.isPaid && occurrence.paymentDate ? (
-								<span className="text-xs text-muted-foreground">
-									{formatDate(occurrence.paymentDate)}
-								</span>
-							) : (
-								<span className="text-xs text-muted-foreground/70">
-									Not paid
-								</span>
-							)}
-						</td>
-
-						{/* Column 11: Actions */}
-						<td className="py-2 px-3">
-							<div className="flex items-center justify-center gap-1">
+					return (
+						<tr
+							key={occurrence.id}
+							className={`border-b border-border/50 animate-fadeIn ${
+								occurrence.isPaid ?
+									"expense-paid bg-green-500/15 dark:bg-green-500/20 hover:bg-green-500/25 dark:hover:bg-green-500/30"
+								:	"hover:bg-accent"
+							}`}
+						>
+							{/* Column 1: Paid */}
+							<td className="py-2 px-2">
 								<button
 									type="button"
-									onClick={() => onEditOccurrence(occurrence)}
-									className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10
-										rounded-lg transition-all duration-200 hover:scale-110"
-									title="Edit this occurrence only"
+									onClick={() => toggleExpensePaid(occurrence.id)}
+									className={`p-1.5 rounded-lg transition-all duration-200 hover:scale-110 ml-6
+									${
+										occurrence.isPaid ?
+											"text-green-500 bg-green-500/10 hover:bg-green-500/20"
+										:	"text-muted-foreground bg-muted hover:bg-accent"
+									}`}
+									title={occurrence.isPaid ? "Mark as unpaid" : "Mark as paid"}
 								>
-									<Edit2 size={14} />
+									{occurrence.isPaid ?
+										<CheckCircle size={16} />
+									:	<Check size={16} />}
 								</button>
-								{onDuplicate && (
+							</td>
+
+							{/* Column 2: Notify (inherited) */}
+							<td className="py-2 px-2">
+								<span className="text-muted-foreground/30 ml-6">—</span>
+							</td>
+
+							{/* Column 3: Instance info */}
+							<td className="py-2 px-3 pl-8">
+								<div className="flex items-center gap-2">
+									<span
+										className={`text-xs text-muted-foreground ${
+											occurrence.isPaid ? "line-through opacity-60" : ""
+										}`}
+									>
+										Occurrence #{index + 1}
+										{occurrence.isModified && (
+											<span
+												className="ml-1 text-primary"
+												title="This occurrence has been modified"
+											>
+												(edited)
+											</span>
+										)}
+									</span>
+									{occurrence.isPaid && (
+										<span className="px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-green-500/20 text-green-600 dark:text-green-400 rounded">
+											Paid
+										</span>
+									)}
+								</div>
+							</td>
+
+							{/* Column 4: Payment Method */}
+							<td className="py-2 px-2">
+								<span
+									className={`text-xs ${
+										occurrence.paymentMethod !== parentExpense.paymentMethod ?
+											"text-orange-500"
+										:	"text-muted-foreground"
+									}`}
+								>
+									{occurrence.paymentMethod || "None"}
+								</span>
+							</td>
+
+							{/* Column 5: Importance (inherited) */}
+							<td className="py-2 px-2 text-center">
+								<span className="text-muted-foreground text-xs">—</span>
+							</td>
+
+							{/* Column 6: Category (empty) */}
+							<td className="py-2 px-3">
+								<span className="text-muted-foreground text-xs">—</span>
+							</td>
+
+							{/* Column 7: Type (empty) */}
+							<td className="py-2 px-3">
+								<span className="text-muted-foreground text-xs">—</span>
+							</td>
+
+							{/* Column 8: Amount */}
+							<td className="py-2 px-3">
+								<span
+									className={`font-medium text-sm cursor-help ${
+										occurrence.isPaid ?
+											"line-through text-muted-foreground opacity-60"
+										: isAmountDifferent ? "text-orange-500"
+										: "text-primary"
+									}`}
+									title={occAmountTooltip}
+								>
+									{occAmountDisplay}
+								</span>
+							</td>
+
+							{/* Column 9: Due Date */}
+							<td className="py-2 px-3">
+								<span className="text-sm text-muted-foreground">
+									{occurrence.dueDate ?
+										formatDate(occurrence.dueDate)
+									:	"No date"}
+								</span>
+							</td>
+
+							{/* Column 10: Payment Date */}
+							<td className="py-2 px-3">
+								{occurrence.isPaid && occurrence.paymentDate ?
+									<span className="text-xs text-muted-foreground">
+										{formatDate(occurrence.paymentDate)}
+									</span>
+								:	<span className="text-xs text-muted-foreground/70">Not paid</span>}
+							</td>
+
+							{/* Column 11: Actions */}
+							<td className="py-2 px-3">
+								<div className="flex items-center justify-center gap-1">
 									<button
 										type="button"
-										onClick={() => onDuplicate(occurrence.id)}
-										className="p-1.5 text-muted-foreground hover:text-purple-500 hover:bg-purple-500/10
+										onClick={() => onEditOccurrence(occurrence)}
+										className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10
 											rounded-lg transition-all duration-200 hover:scale-110"
-										title="Duplicate this occurrence"
+										title="Edit this occurrence only"
 									>
-										<Copy size={14} />
+										<Edit2 size={14} />
 									</button>
-								)}
-								{occurrence.isModified && (
-									<button
-										type="button"
-										onClick={(e) => {
-											e.stopPropagation();
-											resetOccurrence(occurrence.id);
-										}}
-										className="p-1.5 text-muted-foreground hover:text-orange-500 hover:bg-orange-500/10
-											rounded-lg transition-all duration-200 hover:scale-110"
-										title="Reset to original values"
-									>
-										<RotateCcw size={14} />
-									</button>
-								)}
-							</div>
-						</td>
-					</tr>
-				))}
+									{onDuplicate && (
+										<button
+											type="button"
+											onClick={() => onDuplicate(occurrence.id)}
+											className="p-1.5 text-muted-foreground hover:text-purple-500 hover:bg-purple-500/10
+												rounded-lg transition-all duration-200 hover:scale-110"
+											title="Duplicate this occurrence"
+										>
+											<Copy size={14} />
+										</button>
+									)}
+									{occurrence.isModified && (
+										<button
+											type="button"
+											onClick={(e) => {
+												e.stopPropagation();
+												resetOccurrence(occurrence.id);
+											}}
+											className="p-1.5 text-muted-foreground hover:text-orange-500 hover:bg-orange-500/10
+												rounded-lg transition-all duration-200 hover:scale-110"
+											title="Reset to original values"
+										>
+											<RotateCcw size={14} />
+										</button>
+									)}
+								</div>
+							</td>
+						</tr>
+					);
+				})}
 		</>
 	);
 };

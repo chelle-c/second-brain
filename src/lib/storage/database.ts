@@ -309,6 +309,7 @@ class SqlStorage {
 				id TEXT PRIMARY KEY,
 				name TEXT NOT NULL,
 				amount REAL NOT NULL,
+				amountData TEXT,
 				category TEXT NOT NULL,
 				paymentMethod TEXT DEFAULT 'None',
 				dueDate TEXT,
@@ -499,6 +500,7 @@ class SqlStorage {
 			}> = [
 				{ name: "paymentMethod", type: "TEXT", defaultValue: "'None'" },
 				{ name: "notify", type: "INTEGER", defaultValue: "0" },
+				{ name: "amountData", type: "TEXT", defaultValue: "NULL" },
 			];
 
 			for (const column of requiredColumns) {

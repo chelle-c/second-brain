@@ -27,16 +27,9 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import {
-	formatCurrency,
-	formatDate,
-	getDueDateColor,
-	getRelativeDateText,
-} from "@/lib/date-utils/formatting";
-import {
-	DEFAULT_CATEGORY_COLORS,
-	getCategoryDisplayColor,
-} from "@/lib/expenseHelpers";
+import { formatDate, getDueDateColor, getRelativeDateText } from "@/lib/date-utils/formatting";
+import { DEFAULT_CATEGORY_COLORS, getCategoryDisplayColor } from "@/lib/expenseHelpers";
+import { formatAmountDisplay, getAmountTooltip } from "@/lib/amountUtils";
 import { useExpenseStore } from "@/stores/useExpenseStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
 import { useThemeStore } from "@/stores/useThemeStore";
@@ -127,19 +120,14 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 		if (sortKey !== column) {
 			return <ChevronUp className="opacity-20" size={12} />;
 		}
-		return sortDirection === "asc" ? (
-			<ChevronUp className="text-primary" size={12} />
-		) : (
-			<ChevronDown className="text-primary" size={12} />
-		);
+		return sortDirection === "asc" ?
+				<ChevronUp className="text-primary" size={12} />
+			:	<ChevronDown className="text-primary" size={12} />;
 	};
 
-	// Group recurring expenses in All Expenses view
 	const processedExpenses = useMemo(() => {
 		if (!isAllExpensesView) {
-			return expensesToDisplay.map(
-				(e) => ({ type: "single", expense: e }) as const,
-			);
+			return expensesToDisplay.map((e) => ({ type: "single", expense: e }) as const);
 		}
 
 		const parentExpenses = new Map<string, Expense>();
@@ -150,8 +138,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 				parentExpenses.set(expense.id, expense);
 				occurrencesByParent.set(expense.id, []);
 			} else if (expense.parentExpenseId) {
-				const occurrences =
-					occurrencesByParent.get(expense.parentExpenseId) || [];
+				const occurrences = occurrencesByParent.get(expense.parentExpenseId) || [];
 				occurrences.push(expense);
 				occurrencesByParent.set(expense.parentExpenseId, occurrences);
 			}
@@ -195,9 +182,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 			filtered = filtered.filter(
 				(item) =>
 					item.expense.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-					item.expense.category
-						.toLowerCase()
-						.includes(searchQuery.toLowerCase()) ||
+					item.expense.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
 					(item.expense.paymentMethod || "")
 						.toLowerCase()
 						.includes(searchQuery.toLowerCase()),
@@ -205,9 +190,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 		}
 
 		if (categoryFilter !== "all") {
-			filtered = filtered.filter(
-				(item) => item.expense.category === categoryFilter,
-			);
+			filtered = filtered.filter((item) => item.expense.category === categoryFilter);
 		}
 
 		filtered.sort((a, b) => {
@@ -250,8 +233,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 					if (!expA.paymentDate && !expB.paymentDate) return 0;
 					if (!expA.paymentDate) return 1;
 					if (!expB.paymentDate) return -1;
-					compareValue =
-						expA.paymentDate.getTime() - expB.paymentDate.getTime();
+					compareValue = expA.paymentDate.getTime() - expB.paymentDate.getTime();
 					break;
 				case "isPaid":
 					compareValue = (expA.isPaid ? 1 : 0) - (expB.isPaid ? 1 : 0);
@@ -262,14 +244,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 		});
 
 		return filtered;
-	}, [
-		processedExpenses,
-		sortKey,
-		sortDirection,
-		searchQuery,
-		categoryFilter,
-		showPaidExpenses,
-	]);
+	}, [processedExpenses, sortKey, sortDirection, searchQuery, categoryFilter, showPaidExpenses]);
 
 	const handleEditOccurrence = (expense: Expense) => {
 		setEditingExpense(expense);
@@ -299,10 +274,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 			{/* Search and Filter Controls */}
 			<div className="flex flex-col sm:flex-row gap-4 mb-4 items-center">
 				<div className="relative flex-1">
-					<Search
-						className="absolute left-3 top-3 text-muted-foreground"
-						size={18}
-					/>
+					<Search className="absolute left-3 top-3 text-muted-foreground" size={18} />
 					<input
 						type="text"
 						placeholder="Search expenses..."
@@ -362,19 +334,17 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 						type="button"
 						onClick={() => setShowPaidExpenses(!showPaidExpenses)}
 						className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-							showPaidExpenses
-								? "bg-primary/10 text-primary hover:bg-primary/20"
-								: "bg-muted text-muted-foreground hover:bg-accent"
+							showPaidExpenses ?
+								"bg-primary/10 text-primary hover:bg-primary/20"
+							:	"bg-muted text-muted-foreground hover:bg-accent"
 						}`}
-						title={
-							showPaidExpenses ? "Hide paid expenses" : "Show paid expenses"
-						}
+						title={showPaidExpenses ? "Hide paid expenses" : "Show paid expenses"}
 						aria-pressed={showPaidExpenses}
-						aria-label={
-							showPaidExpenses ? "Hide paid expenses" : "Show paid expenses"
-						}
+						aria-label={showPaidExpenses ? "Hide paid expenses" : "Show paid expenses"}
 					>
-						{showPaidExpenses ? <Eye size={18} /> : <EyeOff size={18} />}
+						{showPaidExpenses ?
+							<Eye size={18} />
+						:	<EyeOff size={18} />}
 						<span className="hidden sm:inline">
 							{showPaidExpenses ? "Showing" : "Hiding"} Paid
 						</span>
@@ -401,7 +371,10 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 								</button>
 							</th>
 							<th className="text-center py-3 px-2 font-medium text-muted-foreground">
-								<span className="flex items-center gap-1 justify-center" title="Notification reminders">
+								<span
+									className="flex items-center gap-1 justify-center"
+									title="Notification reminders"
+								>
 									<Bell size={14} />
 								</span>
 							</th>
@@ -516,18 +489,26 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 								categoryColors[expense.category] ||
 								DEFAULT_CATEGORY_COLORS[expense.category] ||
 								"#6b7280";
-							const displayColor = getCategoryDisplayColor(
-								categoryColor,
-								isDarkMode,
+							const displayColor = getCategoryDisplayColor(categoryColor, isDarkMode);
+
+							// Amount display
+							const amountDisplay = formatAmountDisplay(
+								expense.amountData,
+								expense.amount,
+								expenseCurrency,
 							);
+							const amountTooltip =
+								expense.amountData ?
+									getAmountTooltip(expense.amountData.type)
+								:	"Exact total";
 
 							return (
 								<tr
 									key={expense.id}
 									className={`border-b border-border ${
-										expense.isPaid
-											? "expense-paid bg-green-500/15 dark:bg-green-500/20 hover:bg-green-500/25 dark:hover:bg-green-500/30"
-											: "hover:bg-accent"
+										expense.isPaid ?
+											"expense-paid bg-green-500/15 dark:bg-green-500/20 hover:bg-green-500/25 dark:hover:bg-green-500/30"
+										:	"hover:bg-accent"
 									}`}
 								>
 									<td className="py-3 px-2">
@@ -536,41 +517,41 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 											onClick={() => onTogglePaid(expense.id)}
 											className={`p-1.5 rounded-lg transition-all duration-200 hover:scale-110
 											${
-												expense.isPaid
-													? "text-green-500 bg-green-500/10 hover:bg-green-500/20"
-													: "text-muted-foreground bg-muted hover:bg-accent"
+												expense.isPaid ?
+													"text-green-500 bg-green-500/10 hover:bg-green-500/20"
+												:	"text-muted-foreground bg-muted hover:bg-accent"
 											}`}
-											title={expense.isPaid ? "Mark as unpaid" : "Mark as paid"}
+											title={
+												expense.isPaid ? "Mark as unpaid" : "Mark as paid"
+											}
 										>
-											{expense.isPaid ? (
+											{expense.isPaid ?
 												<CheckCircle size={18} />
-											) : (
-												<Check size={18} />
-											)}
+											:	<Check size={18} />}
 										</button>
 									</td>
 									<td className="py-3 px-2">
-										{expense.dueDate ? (
+										{expense.dueDate ?
 											<button
 												type="button"
 												onClick={() => toggleExpenseNotify(expense.id)}
 												className={`p-1.5 rounded-lg transition-all duration-200 hover:scale-110
 												${
-													expense.notify
-														? "text-blue-500 bg-blue-500/10 hover:bg-blue-500/20"
-														: "text-muted-foreground bg-muted hover:bg-accent"
+													expense.notify ?
+														"text-blue-500 bg-blue-500/10 hover:bg-blue-500/20"
+													:	"text-muted-foreground bg-muted hover:bg-accent"
 												}`}
-												title={expense.notify ? "Disable notification" : "Enable notification"}
+												title={
+													expense.notify ? "Disable notification" : (
+														"Enable notification"
+													)
+												}
 											>
-												{expense.notify ? (
+												{expense.notify ?
 													<Bell size={16} />
-												) : (
-													<BellOff size={16} />
-												)}
+												:	<BellOff size={16} />}
 											</button>
-										) : (
-											<span className="text-muted-foreground/30">—</span>
-										)}
+										:	<span className="text-muted-foreground/30">—</span>}
 									</td>
 									<td className="py-3 px-3">
 										<div className="flex items-center gap-2">
@@ -616,29 +597,31 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 									<td className="py-3 px-3">
 										<span
 											className={`text-xs font-medium ${
-												expense.type === "need"
-													? "text-purple-500"
-													: "text-muted-foreground"
+												expense.type === "need" ?
+													"text-purple-500"
+												:	"text-muted-foreground"
 											}`}
 										>
 											{expense.type === "need" ? "Need" : "Want"}
 										</span>
 									</td>
+									{/* Amount cell with tooltip */}
 									<td className="py-3 px-3">
 										<span
-											className={`font-semibold text-primary text-sm ${
+											className={`font-semibold text-primary text-sm cursor-help ${
 												expense.isPaid ? "line-through opacity-60" : ""
 											}`}
+											title={amountTooltip}
 										>
-											{formatCurrency(expense.amount, expenseCurrency)}
+											{amountDisplay}
 										</span>
 									</td>
 									<td className="py-3 px-3">
-										{!expense.dueDate ? (
+										{!expense.dueDate ?
 											<span className="text-muted-foreground text-sm">
 												No due date
 											</span>
-										) : expense.isPaid ? (
+										: expense.isPaid ?
 											<span
 												className="text-muted-foreground cursor-help flex items-center gap-1 text-sm"
 												title={`Due date: ${formatDate(expense.dueDate)}`}
@@ -646,32 +629,40 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 												{showRelativeDates && !isCurrentMonth && (
 													<Calendar size={12} />
 												)}
-												{showRelativeDates
-													? getRelativeDateText(expense.dueDate, selectedMonth)
-													: formatDate(expense.dueDate)}
+												{showRelativeDates ?
+													getRelativeDateText(
+														expense.dueDate,
+														selectedMonth,
+													)
+												:	formatDate(expense.dueDate)}
 											</span>
-										) : (
-											<span
+										:	<span
 												className={`${
-													!showRelativeDates
-														? "text-foreground"
-														: getDueDateColor(expense.dueDate, selectedMonth)
+													!showRelativeDates ? "text-foreground" : (
+														getDueDateColor(
+															expense.dueDate,
+															selectedMonth,
+														)
+													)
 												} flex items-center gap-1 text-sm`}
 											>
 												{showRelativeDates && !isCurrentMonth && (
 													<Calendar size={12} />
 												)}
-												{showRelativeDates
-													? getRelativeDateText(expense.dueDate, selectedMonth)
-													: formatDate(expense.dueDate)}
+												{showRelativeDates ?
+													getRelativeDateText(
+														expense.dueDate,
+														selectedMonth,
+													)
+												:	formatDate(expense.dueDate)}
 											</span>
-										)}
+										}
 									</td>
 									<td className="py-3 px-3">
 										<span className="text-sm text-muted-foreground">
-											{expense.isPaid && expense.paymentDate
-												? formatDate(expense.paymentDate)
-												: "Not paid"}
+											{expense.isPaid && expense.paymentDate ?
+												formatDate(expense.paymentDate)
+											:	"Not paid"}
 										</span>
 									</td>
 									<td className="py-3 px-3">
@@ -697,7 +688,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 												</button>
 											)}
 											{showArchiveActions &&
-												(expense.isArchived ? (
+												(expense.isArchived ?
 													<button
 														type="button"
 														onClick={() => onUnarchive(expense.id)}
@@ -707,8 +698,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 													>
 														<ArchiveRestore size={14} />
 													</button>
-												) : (
-													<button
+												:	<button
 														type="button"
 														onClick={() => onArchive(expense.id)}
 														className="p-1.5 text-muted-foreground hover:text-yellow-500 hover:bg-yellow-500/10
@@ -716,8 +706,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 														title="Archive"
 													>
 														<Archive size={14} />
-													</button>
-												))}
+													</button>)}
 											<button
 												type="button"
 												onClick={() => onDelete(expense.id, expense.name)}

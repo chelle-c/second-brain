@@ -21,21 +21,24 @@ pub fn run() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
         ))
+        .manage(commands::ExpenseFormState(std::sync::Mutex::new(None)))
         .setup(|app| {
             if commands::is_dev() {
                 app.handle().plugin(
                     tauri_plugin_log::Builder::default()
                         .level(log::LevelFilter::Info)
                         .filter(|metadata| {
-                            metadata.target() != "tao::platform_impl::platform::event_loop::runner"
+                            metadata.target()
+                                != "tao::platform_impl::platform::event_loop::runner"
                         })
                         .build(),
                 )?;
             }
 
-            // Setup system tray
-            let show = MenuItem::with_id(app, "show", "Show Window", true, None::<&str>)?;
-            let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+            let show =
+                MenuItem::with_id(app, "show", "Show Window", true, None::<&str>)?;
+            let quit =
+                MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show, &quit])?;
 
             let _tray = TrayIconBuilder::new()
@@ -45,11 +48,9 @@ pub fn run() {
                 .tooltip("Second Brain")
                 .on_menu_event(|app, event| match event.id().as_ref() {
                     "quit" => {
-                        // Emit event to frontend so it can save data before quitting
                         if let Some(window) = app.get_webview_window("main") {
                             let _ = window.emit("tray-quit-requested", ());
                         } else {
-                            // If no window, just exit
                             app.exit(0);
                         }
                     }
@@ -82,13 +83,25 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
-            if let tauri::WindowEvent::CloseRequested { .. } = event {
-                // Log the close request - frontend handles the actual behavior
-                // based on the minimize_to_tray setting
-                log::info!("Window close requested for: {}", window.label());
+            // When the expense-form window is closed via the OS X button,
+            // we need to clear the editing state in the main window.
+            if window.label() == "expense-form" {
+                if let tauri::WindowEvent::Destroyed = event {
+                    // Emit to the main window so it can clear editingExpense
+                    if let Some(main_win) = window.app_handle().get_webview_window("main") {
+                        let _ = main_win.emit("expense-form-closed", ());
+                    }
+                }
             }
         })
-        .invoke_handler(tauri::generate_handler![commands::is_dev, commands::fetch_link_metadata, commands::quit_app])
+        .invoke_handler(tauri::generate_handler![
+            commands::is_dev,
+            commands::fetch_link_metadata,
+            commands::quit_app,
+            commands::open_expense_form_window,
+            commands::get_expense_form_args,
+            commands::close_expense_form_window,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

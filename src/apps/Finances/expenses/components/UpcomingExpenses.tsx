@@ -3,6 +3,7 @@ import {
 	addMonths,
 	addWeeks,
 	addYears,
+	isBefore,
 	isWithinInterval,
 	startOfDay,
 } from "date-fns";
@@ -39,63 +40,82 @@ export const UpcomingExpenses = () => {
 	const { expenseCurrency } = useSettingsStore();
 	const currencySymbol = getCurrencySymbol(expenseCurrency);
 
-	// Calculate the end date based on time selection
+	const today = useMemo(() => startOfDay(new Date()), []);
+
+	// End of the user-selected lookahead window
 	const endDate = useMemo(() => {
-		const now = startOfDay(new Date());
 		switch (upcomingTimeUnit) {
 			case "days":
-				return addDays(now, upcomingTimeAmount);
+				return addDays(today, upcomingTimeAmount);
 			case "weeks":
-				return addWeeks(now, upcomingTimeAmount);
+				return addWeeks(today, upcomingTimeAmount);
 			case "months":
-				return addMonths(now, upcomingTimeAmount);
+				return addMonths(today, upcomingTimeAmount);
 			case "years":
-				return addYears(now, upcomingTimeAmount);
+				return addYears(today, upcomingTimeAmount);
 		}
-	}, [upcomingTimeAmount, upcomingTimeUnit]);
+	}, [upcomingTimeAmount, upcomingTimeUnit, today]);
 
-	// Filter expenses that are due within the selected timeframe
-	// Show individual occurrences, not parent recurring expenses
-	const upcomingExpenses = useMemo(() => {
-		const now = startOfDay(new Date());
-		return expenses.filter((expense) => {
-			// Skip archived expenses
-			if (expense.isArchived) return false;
+	/**
+	 * Combined list: overdue unpaid + upcoming (due within the window).
+	 * Parent recurring expenses are excluded; only their occurrences appear.
+	 * Overdue entries that are already paid are excluded.
+	 * Duplicates are prevented via a Set.
+	 */
+	const tableExpenses = useMemo(() => {
+		const seen = new Set<string>();
+		const result: typeof expenses = [];
 
-			// Skip parent recurring expenses (show only occurrences)
-			if (expense.isRecurring && !expense.parentExpenseId) return false;
-
-			// Must have a due date
-			if (!expense.dueDate) return false;
+		for (const expense of expenses) {
+			if (expense.isArchived) continue;
+			if (expense.isRecurring && !expense.parentExpenseId) continue;
+			if (!expense.dueDate) continue;
 
 			const dueDate = startOfDay(expense.dueDate);
-			return isWithinInterval(dueDate, { start: now, end: endDate });
-		});
-	}, [expenses, endDate]);
+			const isOverdue = isBefore(dueDate, today) && !expense.isPaid;
+			const isUpcoming = isWithinInterval(dueDate, {
+				start: today,
+				end: endDate,
+			});
 
-	// Calculate totals by category
+			if ((isOverdue || isUpcoming) && !seen.has(expense.id)) {
+				seen.add(expense.id);
+				result.push(expense);
+			}
+		}
+
+		return result;
+	}, [expenses, today, endDate]);
+
+	// Chart / totals use only unpaid expenses from the combined list
 	const categoryTotals = useMemo(() => {
 		const totals: Record<string, number> = {};
-		upcomingExpenses.forEach((expense) => {
+		tableExpenses.forEach((expense) => {
 			if (!expense.isPaid) {
-				totals[expense.category] =
-					(totals[expense.category] || 0) + expense.amount;
+				totals[expense.category] = (totals[expense.category] || 0) + expense.amount;
 			}
 		});
 		return totals;
-	}, [upcomingExpenses]);
+	}, [tableExpenses]);
 
 	const total = useMemo(
 		() => Object.values(categoryTotals).reduce((sum, val) => sum + val, 0),
 		[categoryTotals],
 	);
 
-	const chartData: PieChartData[] = Object.entries(categoryTotals).map(
-		([category, amount]) => ({
-			name: category,
-			value: amount,
-		}),
+	const overdueCount = useMemo(
+		() =>
+			tableExpenses.filter((e) => {
+				if (e.isPaid || !e.dueDate) return false;
+				return isBefore(startOfDay(e.dueDate), today);
+			}).length,
+		[tableExpenses, today],
 	);
+
+	const chartData: PieChartData[] = Object.entries(categoryTotals).map(([category, amount]) => ({
+		name: category,
+		value: amount,
+	}));
 
 	const placeholderData: PieChartData[] = [
 		{ name: "Housing", value: 1200 },
@@ -160,9 +180,7 @@ export const UpcomingExpenses = () => {
 
 	const getTimeRangeText = () => {
 		const unitText =
-			upcomingTimeAmount === 1
-				? upcomingTimeUnit.slice(0, -1)
-				: upcomingTimeUnit;
+			upcomingTimeAmount === 1 ? upcomingTimeUnit.slice(0, -1) : upcomingTimeUnit;
 		return `${upcomingTimeAmount} ${unitText}`;
 	};
 
@@ -186,7 +204,6 @@ export const UpcomingExpenses = () => {
 								Show expenses due within:
 							</label>
 							<div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-								{/* Number Input */}
 								<div className="w-full sm:w-24">
 									<label htmlFor="time-amount" className="sr-only">
 										Time amount
@@ -207,8 +224,6 @@ export const UpcomingExpenses = () => {
 										aria-label="Number of time units"
 									/>
 								</div>
-
-								{/* Unit Selector */}
 								<AnimatedToggle
 									options={timeUnitOptions}
 									value={upcomingTimeUnit}
@@ -222,11 +237,10 @@ export const UpcomingExpenses = () => {
 				</div>
 
 				<div>
-					{/* Overview Section */}
+					{/* Overview */}
 					<div className="flex flex-col lg:flex-row gap-6 mb-8">
-						{/* Left side - Total and Stats */}
+						{/* Left — totals */}
 						<div className="lg:w-80 flex flex-col gap-4">
-							{/* Total Display */}
 							<div className="bg-linear-to-br from-secondary to-accent rounded-lg p-6 flex-1 flex flex-col justify-center">
 								<div className="text-center">
 									<p className="text-sm text-muted-foreground mb-2">
@@ -244,13 +258,17 @@ export const UpcomingExpenses = () => {
 										</p>
 									</div>
 									<p className="text-xs text-muted-foreground mt-2">
-										{upcomingExpenses.filter((e) => !e.isPaid).length} unpaid
+										{tableExpenses.filter((e) => !e.isPaid).length} unpaid
 										expenses
+										{overdueCount > 0 && (
+											<span className="text-red-500 ml-1">
+												({overdueCount} overdue)
+											</span>
+										)}
 									</p>
 								</div>
 							</div>
 
-							{/* Category breakdown stats */}
 							{chartData.length > 0 && (
 								<div className="bg-muted rounded-lg p-4">
 									<p className="text-xs font-bold text-foreground mb-2">
@@ -276,7 +294,7 @@ export const UpcomingExpenses = () => {
 							)}
 						</div>
 
-						{/* Right side - Chart and Legend */}
+						{/* Right — chart */}
 						<div className="flex-1 min-w-0">
 							{isPlaceholder && (
 								<p className="text-center text-muted-foreground text-sm mb-4">
@@ -298,7 +316,6 @@ export const UpcomingExpenses = () => {
 									/>
 								</div>
 
-								{/* Custom Legend */}
 								<div className="flex gap-x-6 gap-y-2 justify-center mt-4 flex-wrap">
 									{displayData.map((entry) => (
 										<div
@@ -328,7 +345,7 @@ export const UpcomingExpenses = () => {
 						</div>
 					</div>
 
-					{/* Expense Table */}
+					{/* Expense Table — overdue + upcoming combined */}
 					<div className="mt-8 pt-6 border-t border-border">
 						<div className="flex items-center justify-between mx-2 mb-4">
 							<div className="flex flex-col items-baseline gap-2">
@@ -336,10 +353,11 @@ export const UpcomingExpenses = () => {
 									<TrendingUp size={20} className="text-primary" />
 									Expense Details
 								</h4>
-								{/* Summary Text */}
 								<div className="flex items-center gap-2 text-sm text-muted-foreground">
 									<Calendar size={16} />
-									<span className="font-medium">Next {getTimeRangeText()}</span>
+									<span className="font-medium">
+										Overdue + next {getTimeRangeText()}
+									</span>
 								</div>
 							</div>
 							<Button
@@ -349,26 +367,25 @@ export const UpcomingExpenses = () => {
 									setShowUpcomingRelativeDates(!showUpcomingRelativeDates)
 								}
 								title={
-									showUpcomingRelativeDates
-										? "Show actual dates"
-										: "Show relative dates"
+									showUpcomingRelativeDates ? "Show actual dates" : (
+										"Show relative dates"
+									)
 								}
 							>
-								{showUpcomingRelativeDates ? (
+								{showUpcomingRelativeDates ?
 									<>
 										<Calendar size={14} className="mr-2" />
 										<span>Show Dates</span>
 									</>
-								) : (
-									<>
+								:	<>
 										<Clock size={14} className="mr-2" />
 										<span>Show Relative</span>
 									</>
-								)}
+								}
 							</Button>
 						</div>
 						<ExpenseTable
-							expensesToDisplay={upcomingExpenses}
+							expensesToDisplay={tableExpenses}
 							isCurrentMonth={false}
 							selectedMonth={new Date()}
 							onDelete={handleDeleteClick}

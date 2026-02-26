@@ -15,7 +15,6 @@ import { type HistoryAction, useHistoryStore } from "./useHistoryStore";
 type TimeUnit = "days" | "weeks" | "months" | "years";
 
 interface ExpenseStore {
-	// State
 	expenses: Expense[];
 	selectedMonth: Date | null;
 	overviewMode: OverviewMode;
@@ -23,7 +22,6 @@ interface ExpenseStore {
 	categoryColors: Record<string, string>;
 	paymentMethods: string[];
 
-	// Shared UI State
 	editingExpense: Expense | null;
 	deleteModal: { isOpen: boolean; id: string; name: string };
 	showPaidExpenses: boolean;
@@ -32,18 +30,13 @@ interface ExpenseStore {
 	showMonthlyRelativeDates: boolean;
 	showUpcomingRelativeDates: boolean;
 
-	// Set state (with optional skipSave for loading)
 	setExpenses: (expenses: Expense[]) => void;
 	setSelectedMonth: (date: Date, skipSave?: boolean) => void;
 	setOverviewMode: (mode: OverviewMode, skipSave?: boolean) => void;
 	setCategories: (categories: string[], skipSave?: boolean) => void;
-	setCategoryColors: (
-		categoryColors: Record<string, string>,
-		skipSave?: boolean,
-	) => void;
+	setCategoryColors: (categoryColors: Record<string, string>, skipSave?: boolean) => void;
 	setPaymentMethods: (paymentMethods: string[], skipSave?: boolean) => void;
 
-	// Bulk setter for loading (never triggers save)
 	setExpenseData: (data: {
 		expenses: Expense[];
 		selectedMonth: Date;
@@ -53,51 +46,31 @@ interface ExpenseStore {
 		paymentMethods: string[];
 	}) => void;
 
-	// Shared UI State setters
 	setEditingExpense: (expense: Expense | null) => void;
-	setDeleteModal: (modal: {
-		isOpen: boolean;
-		id: string;
-		name: string;
-	}) => void;
+	setDeleteModal: (modal: { isOpen: boolean; id: string; name: string }) => void;
 	setShowPaidExpenses: (show: boolean) => void;
 	setUpcomingTimeAmount: (amount: number) => void;
 	setUpcomingTimeUnit: (unit: TimeUnit) => void;
 	setShowMonthlyRelativeDates: (show: boolean) => void;
 	setShowUpcomingRelativeDates: (show: boolean) => void;
 
-	// Actions
 	addExpense: (expense: ExpenseFormData) => void;
-	updateExpense: (
-		id: string,
-		expense: Partial<ExpenseFormData>,
-		isGlobalEdit?: boolean,
-	) => void;
-	updateExpenseGlobally: (
-		id: string,
-		expense: Partial<ExpenseFormData>,
-	) => void;
+	updateExpense: (id: string, expense: Partial<ExpenseFormData>, isGlobalEdit?: boolean) => void;
+	updateExpenseGlobally: (id: string, expense: Partial<ExpenseFormData>) => void;
 	deleteExpense: (id: string) => void;
 	archiveExpense: (id: string) => void;
 	unarchiveExpense: (id: string) => void;
 	duplicateExpense: (id: string) => void;
 	toggleExpensePaid: (id: string, paymentDate?: Date) => void;
 	getMonthlyExpenses: (date: Date) => Expense[];
-	getTotalByCategory: (
-		date: Date,
-		mode: OverviewMode,
-	) => Record<string, number>;
+	getTotalByCategory: (date: Date, mode: OverviewMode) => Record<string, number>;
 	getMonthlyTotal: (date: Date, mode: OverviewMode) => number;
 	getTotalByCategoryFiltered: (
 		date: Date,
 		mode: OverviewMode,
 		showPaid: boolean,
 	) => Record<string, number>;
-	getMonthlyTotalFiltered: (
-		date: Date,
-		mode: OverviewMode,
-		showPaid: boolean,
-	) => number;
+	getMonthlyTotalFiltered: (date: Date, mode: OverviewMode, showPaid: boolean) => number;
 	resetOccurrence: (id: string) => void;
 	addCategory: (name: string, color: string) => void;
 	updateCategory: (oldName: string, newName: string, newColor: string) => void;
@@ -107,14 +80,11 @@ interface ExpenseStore {
 	deletePaymentMethod: (name: string) => void;
 	toggleExpenseNotify: (id: string) => void;
 
-	// Undo/Redo
 	undo: () => void;
 	redo: () => void;
 }
 
-const getMonthKey = (date: Date): string => {
-	return format(date, "yyyy-MM");
-};
+const getMonthKey = (date: Date): string => format(date, "yyyy-MM");
 
 export const useExpenseStore = create<ExpenseStore>()(
 	subscribeWithSelector((set, get) => ({
@@ -125,7 +95,6 @@ export const useExpenseStore = create<ExpenseStore>()(
 		categoryColors: DEFAULT_CATEGORY_COLORS,
 		paymentMethods: DEFAULT_PAYMENT_METHODS,
 
-		// Shared UI State defaults
 		editingExpense: null,
 		deleteModal: { isOpen: false, id: "", name: "" },
 		showPaidExpenses: true,
@@ -138,7 +107,6 @@ export const useExpenseStore = create<ExpenseStore>()(
 
 		setSelectedMonth: (date, skipSave = false) => {
 			set({ selectedMonth: date });
-
 			if (!skipSave && useAppStore.getState().autoSaveEnabled) {
 				useAppStore.getState().saveToFile(AppToSave.Expenses);
 			}
@@ -146,7 +114,6 @@ export const useExpenseStore = create<ExpenseStore>()(
 
 		setOverviewMode: (mode, skipSave = false) => {
 			set({ overviewMode: mode });
-
 			if (!skipSave && useAppStore.getState().autoSaveEnabled) {
 				useAppStore.getState().saveToFile(AppToSave.Expenses);
 			}
@@ -154,7 +121,6 @@ export const useExpenseStore = create<ExpenseStore>()(
 
 		setCategories: (categories, skipSave = false) => {
 			set({ categories });
-
 			if (!skipSave && useAppStore.getState().autoSaveEnabled) {
 				useAppStore.getState().saveToFile(AppToSave.Expenses);
 			}
@@ -162,7 +128,6 @@ export const useExpenseStore = create<ExpenseStore>()(
 
 		setCategoryColors: (categoryColors, skipSave = false) => {
 			set({ categoryColors });
-
 			if (!skipSave && useAppStore.getState().autoSaveEnabled) {
 				useAppStore.getState().saveToFile(AppToSave.Expenses);
 			}
@@ -170,13 +135,11 @@ export const useExpenseStore = create<ExpenseStore>()(
 
 		setPaymentMethods: (paymentMethods, skipSave = false) => {
 			set({ paymentMethods });
-
 			if (!skipSave && useAppStore.getState().autoSaveEnabled) {
 				useAppStore.getState().saveToFile(AppToSave.Expenses);
 			}
 		},
 
-		// Bulk setter that never triggers save - used during loading
 		setExpenseData: (data) => {
 			set({
 				expenses: data.expenses,
@@ -188,16 +151,13 @@ export const useExpenseStore = create<ExpenseStore>()(
 			});
 		},
 
-		// Shared UI State setters
 		setEditingExpense: (expense) => set({ editingExpense: expense }),
 		setDeleteModal: (modal) => set({ deleteModal: modal }),
 		setShowPaidExpenses: (show) => set({ showPaidExpenses: show }),
 		setUpcomingTimeAmount: (amount) => set({ upcomingTimeAmount: amount }),
 		setUpcomingTimeUnit: (unit) => set({ upcomingTimeUnit: unit }),
-		setShowMonthlyRelativeDates: (show) =>
-			set({ showMonthlyRelativeDates: show }),
-		setShowUpcomingRelativeDates: (show) =>
-			set({ showUpcomingRelativeDates: show }),
+		setShowMonthlyRelativeDates: (show) => set({ showMonthlyRelativeDates: show }),
+		setShowUpcomingRelativeDates: (show) => set({ showUpcomingRelativeDates: show }),
 
 		addExpense: (expenseData) => {
 			const parentId = crypto.randomUUID();
@@ -219,11 +179,7 @@ export const useExpenseStore = create<ExpenseStore>()(
 
 			const newExpenses: Expense[] = [];
 
-			if (
-				expenseData.isRecurring &&
-				expenseData.recurrence &&
-				expenseData.dueDate
-			) {
+			if (expenseData.isRecurring && expenseData.recurrence && expenseData.dueDate) {
 				const allOccurrences = generateRecurringExpenses(parentExpense, true);
 				newExpenses.push(parentExpense, ...allOccurrences);
 			} else {
@@ -239,8 +195,7 @@ export const useExpenseStore = create<ExpenseStore>()(
 				data: {
 					id: parentId,
 					after: parentExpense,
-					relatedExpenses:
-						newExpenses.length > 1 ? newExpenses.slice(1) : undefined,
+					relatedExpenses: newExpenses.length > 1 ? newExpenses.slice(1) : undefined,
 				},
 			});
 
@@ -279,51 +234,43 @@ export const useExpenseStore = create<ExpenseStore>()(
 
 			const beforeExpense = { ...existingExpense };
 
-			// Handle instance-specific edits
+			// ── Instance-specific edit ────────────────────────────────────────
 			if (existingExpense.parentExpenseId && !isGlobalEdit) {
 				const updatedExpenses = expenses.map((expense) => {
-					if (expense.id === id) {
-						const newAmount =
-							expenseData.amount !== undefined
-								? expenseData.amount
-								: expense.amount;
-						const newDueDate =
-							expenseData.dueDate !== undefined
-								? expenseData.dueDate
-								: expense.dueDate;
-						const newPaymentMethod =
-							expenseData.paymentMethod !== undefined
-								? expenseData.paymentMethod
-								: expense.paymentMethod;
+					if (expense.id !== id) return expense;
 
-						const initialPaymentMethod =
-							expense.initialState?.paymentMethod ?? "None";
+					const newAmount =
+						expenseData.amount !== undefined ? expenseData.amount : expense.amount;
+					const newDueDate =
+						expenseData.dueDate !== undefined ? expenseData.dueDate : expense.dueDate;
+					const newPaymentMethod =
+						expenseData.paymentMethod !== undefined ?
+							expenseData.paymentMethod
+						:	expense.paymentMethod;
 
-						const isModified = expense.initialState
-							? newAmount !== expense.initialState.amount ||
-								newDueDate?.getTime() !==
-									expense.initialState.dueDate?.getTime() ||
-								newPaymentMethod !== initialPaymentMethod
-							: expense.isModified || false;
+					const initialPaymentMethod = expense.initialState?.paymentMethod ?? "None";
 
-						return {
-							...expense,
-							amount: newAmount,
-							dueDate: newDueDate,
-							paymentMethod: newPaymentMethod,
-							isPaid:
-								expenseData.isPaid !== undefined
-									? expenseData.isPaid
-									: expense.isPaid,
-							paymentDate:
-								expenseData.paymentDate !== undefined
-									? expenseData.paymentDate
-									: expense.paymentDate,
-							isModified,
-							updatedAt: new Date(),
-						};
-					}
-					return expense;
+					const isModified =
+						expense.initialState ?
+							newAmount !== expense.initialState.amount ||
+							newDueDate?.getTime() !== expense.initialState.dueDate?.getTime() ||
+							newPaymentMethod !== initialPaymentMethod
+						:	expense.isModified || false;
+
+					return {
+						...expense,
+						amount: newAmount,
+						dueDate: newDueDate,
+						paymentMethod: newPaymentMethod,
+						isPaid:
+							expenseData.isPaid !== undefined ? expenseData.isPaid : expense.isPaid,
+						paymentDate:
+							expenseData.paymentDate !== undefined ?
+								expenseData.paymentDate
+							:	expense.paymentDate,
+						isModified,
+						updatedAt: new Date(),
+					};
 				});
 
 				set({ expenses: updatedExpenses });
@@ -340,12 +287,98 @@ export const useExpenseStore = create<ExpenseStore>()(
 				return;
 			}
 
-			// Handle parent recurring expense edits
-			if (
-				existingExpense.isRecurring &&
-				!existingExpense.parentExpenseId &&
-				isGlobalEdit
-			) {
+			// ── Conversion: one-time → recurring ─────────────────────────────
+			const wasRecurring = existingExpense.isRecurring;
+			const willBeRecurring =
+				expenseData.isRecurring !== undefined ? expenseData.isRecurring : wasRecurring;
+
+			if (!wasRecurring && willBeRecurring && !existingExpense.parentExpenseId) {
+				// Becoming recurring for the first time
+				const updatedParent: Expense = {
+					...existingExpense,
+					...expenseData,
+					isRecurring: true,
+					recurrence: expenseData.recurrence ?? {
+						frequency: "monthly",
+						interval: 1,
+						occurrences: 12,
+					},
+					updatedAt: new Date(),
+				};
+
+				// Ensure occurrences is set (not zero)
+				if (
+					!updatedParent.recurrence!.occurrences ||
+					updatedParent.recurrence!.occurrences <= 0
+				) {
+					updatedParent.recurrence = {
+						...updatedParent.recurrence!,
+						occurrences: 12,
+					};
+				}
+
+				const newOccurrences =
+					updatedParent.dueDate ? generateRecurringExpenses(updatedParent, true) : [];
+
+				const updatedExpenses = expenses
+					.filter((e) => e.id !== id)
+					.concat([updatedParent, ...newOccurrences]);
+
+				set({ expenses: updatedExpenses });
+
+				useHistoryStore.getState().pushAction({
+					type: "UPDATE_EXPENSE",
+					data: {
+						id,
+						before: beforeExpense,
+						after: updatedParent,
+						relatedExpenses: newOccurrences,
+					},
+				});
+
+				if (useAppStore.getState().autoSaveEnabled) {
+					useAppStore.getState().saveToFile(AppToSave.Expenses);
+				}
+				return;
+			}
+
+			// ── Conversion: recurring → one-time ─────────────────────────────
+			if (wasRecurring && !willBeRecurring && !existingExpense.parentExpenseId) {
+				const existingOccurrences = expenses.filter((e) => e.parentExpenseId === id);
+
+				const updatedParent: Expense = {
+					...existingExpense,
+					...expenseData,
+					isRecurring: false,
+					recurrence: undefined,
+					updatedAt: new Date(),
+				};
+
+				// Remove all occurrences
+				const updatedExpenses = expenses
+					.filter((e) => e.id !== id && e.parentExpenseId !== id)
+					.concat([updatedParent]);
+
+				set({ expenses: updatedExpenses });
+
+				useHistoryStore.getState().pushAction({
+					type: "UPDATE_EXPENSE",
+					data: {
+						id,
+						before: beforeExpense,
+						after: updatedParent,
+						relatedExpenses: existingOccurrences,
+					},
+				});
+
+				if (useAppStore.getState().autoSaveEnabled) {
+					useAppStore.getState().saveToFile(AppToSave.Expenses);
+				}
+				return;
+			}
+
+			// ── Parent recurring expense edit (stays recurring) ───────────────
+			if (wasRecurring && willBeRecurring && !existingExpense.parentExpenseId) {
 				const needsRegeneration =
 					(expenseData.dueDate !== undefined &&
 						expenseData.dueDate !== null &&
@@ -358,8 +391,7 @@ export const useExpenseStore = create<ExpenseStore>()(
 						expenseData.recurrence.frequency !==
 							existingExpense.recurrence?.frequency) ||
 					(expenseData.recurrence?.interval !== undefined &&
-						expenseData.recurrence.interval !==
-							existingExpense.recurrence?.interval);
+						expenseData.recurrence.interval !== existingExpense.recurrence?.interval);
 
 				if (needsRegeneration) {
 					const updatedParent: Expense = {
@@ -368,9 +400,7 @@ export const useExpenseStore = create<ExpenseStore>()(
 						updatedAt: new Date(),
 					};
 
-					const existingOccurrences = expenses.filter(
-						(e) => e.parentExpenseId === id,
-					);
+					const existingOccurrences = expenses.filter((e) => e.parentExpenseId === id);
 					const modificationMap = new Map(
 						existingOccurrences
 							.filter((e) => e.isModified || e.isPaid)
@@ -419,107 +449,82 @@ export const useExpenseStore = create<ExpenseStore>()(
 					return;
 				}
 
-				const relatedOccurrences = expenses.filter(
-					(e) => e.parentExpenseId === id,
-				);
+				// No regeneration needed — update parent + propagate to unmodified/unpaid
+				const relatedOccurrences = expenses.filter((e) => e.parentExpenseId === id);
 
 				const updatedExpenses = expenses.map((expense) => {
 					if (expense.id === id) {
-						return {
-							...expense,
-							...expenseData,
-							updatedAt: new Date(),
-						};
+						return { ...expense, ...expenseData, updatedAt: new Date() };
 					}
 
-					// Update unmodified AND unpaid instances
-					if (
-						expense.parentExpenseId === id &&
-						!expense.isModified &&
-						!expense.isPaid
-					) {
+					if (expense.parentExpenseId === id && !expense.isModified && !expense.isPaid) {
 						return {
 							...expense,
-							name:
-								expenseData.name !== undefined
-									? expenseData.name
-									: expense.name,
+							name: expenseData.name !== undefined ? expenseData.name : expense.name,
 							category:
-								expenseData.category !== undefined
-									? expenseData.category
-									: expense.category,
+								expenseData.category !== undefined ?
+									expenseData.category
+								:	expense.category,
 							paymentMethod:
-								expenseData.paymentMethod !== undefined
-									? expenseData.paymentMethod
-									: expense.paymentMethod,
-							type:
-								expenseData.type !== undefined
-									? expenseData.type
-									: expense.type,
+								expenseData.paymentMethod !== undefined ?
+									expenseData.paymentMethod
+								:	expense.paymentMethod,
+							type: expenseData.type !== undefined ? expenseData.type : expense.type,
 							importance:
-								expenseData.importance !== undefined
-									? expenseData.importance
-									: expense.importance,
+								expenseData.importance !== undefined ?
+									expenseData.importance
+								:	expense.importance,
 							amount:
-								expenseData.amount !== undefined
-									? expenseData.amount
-									: expense.amount,
+								expenseData.amount !== undefined ?
+									expenseData.amount
+								:	expense.amount,
 							isRecurring:
-								expenseData.isRecurring !== undefined
-									? expenseData.isRecurring
-									: expense.isRecurring,
+								expenseData.isRecurring !== undefined ?
+									expenseData.isRecurring
+								:	expense.isRecurring,
 							recurrence:
-								expenseData.recurrence !== undefined
-									? expenseData.recurrence
-									: expense.recurrence,
-							initialState: expense.initialState
-								? {
+								expenseData.recurrence !== undefined ?
+									expenseData.recurrence
+								:	expense.recurrence,
+							initialState:
+								expense.initialState ?
+									{
 										...expense.initialState,
 										amount:
-											expenseData.amount !== undefined
-												? expenseData.amount
-												: expense.initialState.amount,
+											expenseData.amount !== undefined ?
+												expenseData.amount
+											:	expense.initialState.amount,
 										paymentMethod:
-											expenseData.paymentMethod !== undefined
-												? expenseData.paymentMethod
-												: (expense.initialState.paymentMethod ?? "None"),
+											expenseData.paymentMethod !== undefined ?
+												expenseData.paymentMethod
+											:	(expense.initialState.paymentMethod ?? "None"),
 									}
-								: undefined,
+								:	undefined,
 							updatedAt: new Date(),
 						};
 					}
 
-					// Modified or paid - only update non-instance-specific fields
-					if (
-						expense.parentExpenseId === id &&
-						(expense.isModified || expense.isPaid)
-					) {
+					if (expense.parentExpenseId === id && (expense.isModified || expense.isPaid)) {
 						return {
 							...expense,
-							name:
-								expenseData.name !== undefined
-									? expenseData.name
-									: expense.name,
+							name: expenseData.name !== undefined ? expenseData.name : expense.name,
 							category:
-								expenseData.category !== undefined
-									? expenseData.category
-									: expense.category,
-							type:
-								expenseData.type !== undefined
-									? expenseData.type
-									: expense.type,
+								expenseData.category !== undefined ?
+									expenseData.category
+								:	expense.category,
+							type: expenseData.type !== undefined ? expenseData.type : expense.type,
 							importance:
-								expenseData.importance !== undefined
-									? expenseData.importance
-									: expense.importance,
+								expenseData.importance !== undefined ?
+									expenseData.importance
+								:	expense.importance,
 							isRecurring:
-								expenseData.isRecurring !== undefined
-									? expenseData.isRecurring
-									: expense.isRecurring,
+								expenseData.isRecurring !== undefined ?
+									expenseData.isRecurring
+								:	expense.isRecurring,
 							recurrence:
-								expenseData.recurrence !== undefined
-									? expenseData.recurrence
-									: expense.recurrence,
+								expenseData.recurrence !== undefined ?
+									expenseData.recurrence
+								:	expense.recurrence,
 							updatedAt: new Date(),
 						};
 					}
@@ -546,20 +551,20 @@ export const useExpenseStore = create<ExpenseStore>()(
 				return;
 			}
 
-			// Handle non-recurring expense updates
+			// ── Non-recurring expense update ──────────────────────────────────
 			const updatedExpenses = expenses.map((expense) =>
-				expense.id === id
-					? {
-							...expense,
-							...expenseData,
-							paymentDate: expenseData.isPaid
-								? expenseData.paymentDate || expense.paymentDate || new Date()
-								: expense.isPaid
-									? expense.paymentDate
-									: null,
-							updatedAt: new Date(),
-						}
-					: expense,
+				expense.id === id ?
+					{
+						...expense,
+						...expenseData,
+						paymentDate:
+							expenseData.isPaid ?
+								expenseData.paymentDate || expense.paymentDate || new Date()
+							: expense.isPaid ? expense.paymentDate
+							: null,
+						updatedAt: new Date(),
+					}
+				:	expense,
 			);
 
 			set({ expenses: updatedExpenses });
@@ -590,24 +595,16 @@ export const useExpenseStore = create<ExpenseStore>()(
 			if (!expense) return;
 
 			if (expense.isRecurring && !expense.parentExpenseId) {
-				const relatedExpenses = expenses.filter(
-					(e) => e.parentExpenseId === id,
-				);
+				const relatedExpenses = expenses.filter((e) => e.parentExpenseId === id);
 				set({
-					expenses: expenses.filter(
-						(e) => e.id !== id && e.parentExpenseId !== id,
-					),
+					expenses: expenses.filter((e) => e.id !== id && e.parentExpenseId !== id),
 				});
-
 				useHistoryStore.getState().pushAction({
 					type: "DELETE_EXPENSE",
 					data: { id, before: expense, relatedExpenses },
 				});
 			} else {
-				set({
-					expenses: expenses.filter((e) => e.id !== id),
-				});
-
+				set({ expenses: expenses.filter((e) => e.id !== id) });
 				useHistoryStore.getState().pushAction({
 					type: "DELETE_EXPENSE",
 					data: { id, before: expense },
@@ -626,17 +623,14 @@ export const useExpenseStore = create<ExpenseStore>()(
 			if (!expense) return;
 
 			if (expense.isRecurring && !expense.parentExpenseId) {
-				const relatedExpenses = expenses.filter(
-					(e) => e.parentExpenseId === id,
-				);
+				const relatedExpenses = expenses.filter((e) => e.parentExpenseId === id);
 				set({
 					expenses: expenses.map((e) =>
-						e.id === id || e.parentExpenseId === id
-							? { ...e, isArchived: true, updatedAt: new Date() }
-							: e,
+						e.id === id || e.parentExpenseId === id ?
+							{ ...e, isArchived: true, updatedAt: new Date() }
+						:	e,
 					),
 				});
-
 				useHistoryStore.getState().pushAction({
 					type: "ARCHIVE_EXPENSE",
 					data: { id, before: expense, relatedExpenses },
@@ -647,7 +641,6 @@ export const useExpenseStore = create<ExpenseStore>()(
 						e.id === id ? { ...e, isArchived: true, updatedAt: new Date() } : e,
 					),
 				});
-
 				useHistoryStore.getState().pushAction({
 					type: "ARCHIVE_EXPENSE",
 					data: { id, before: expense },
@@ -666,17 +659,14 @@ export const useExpenseStore = create<ExpenseStore>()(
 			if (!expense) return;
 
 			if (expense.isRecurring && !expense.parentExpenseId) {
-				const relatedExpenses = expenses.filter(
-					(e) => e.parentExpenseId === id,
-				);
+				const relatedExpenses = expenses.filter((e) => e.parentExpenseId === id);
 				set({
 					expenses: expenses.map((e) =>
-						e.id === id || e.parentExpenseId === id
-							? { ...e, isArchived: false, updatedAt: new Date() }
-							: e,
+						e.id === id || e.parentExpenseId === id ?
+							{ ...e, isArchived: false, updatedAt: new Date() }
+						:	e,
 					),
 				});
-
 				useHistoryStore.getState().pushAction({
 					type: "UNARCHIVE_EXPENSE",
 					data: { id, before: expense, relatedExpenses },
@@ -684,12 +674,9 @@ export const useExpenseStore = create<ExpenseStore>()(
 			} else {
 				set({
 					expenses: expenses.map((e) =>
-						e.id === id
-							? { ...e, isArchived: false, updatedAt: new Date() }
-							: e,
+						e.id === id ? { ...e, isArchived: false, updatedAt: new Date() } : e,
 					),
 				});
-
 				useHistoryStore.getState().pushAction({
 					type: "UNARCHIVE_EXPENSE",
 					data: { id, before: expense },
@@ -735,14 +722,14 @@ export const useExpenseStore = create<ExpenseStore>()(
 						isModified: false,
 						createdAt: now,
 						updatedAt: now,
-						initialState: occurrence.initialState
-							? {
+						initialState:
+							occurrence.initialState ?
+								{
 									amount: occurrence.initialState.amount,
 									dueDate: occurrence.initialState.dueDate,
-									paymentMethod:
-										occurrence.initialState.paymentMethod || "None",
+									paymentMethod: occurrence.initialState.paymentMethod || "None",
 								}
-							: undefined,
+							:	undefined,
 					};
 					newExpenses.push(duplicatedOccurrence);
 				});
@@ -779,9 +766,7 @@ export const useExpenseStore = create<ExpenseStore>()(
 			if (!expense) return;
 
 			if (expense.isRecurring && !expense.parentExpenseId) {
-				const relatedExpenses = expenses.filter(
-					(e) => e.parentExpenseId === id,
-				);
+				const relatedExpenses = expenses.filter((e) => e.parentExpenseId === id);
 				const newIsPaid = !expense.isPaid;
 				set({
 					expenses: expenses.map((e) => {
@@ -796,7 +781,6 @@ export const useExpenseStore = create<ExpenseStore>()(
 						return e;
 					}),
 				});
-
 				useHistoryStore.getState().pushAction({
 					type: "TOGGLE_EXPENSE_PAID",
 					data: { id, before: expense, relatedExpenses },
@@ -816,7 +800,6 @@ export const useExpenseStore = create<ExpenseStore>()(
 						return e;
 					}),
 				});
-
 				useHistoryStore.getState().pushAction({
 					type: "TOGGLE_EXPENSE_PAID",
 					data: { id, before: expense },
@@ -840,9 +823,7 @@ export const useExpenseStore = create<ExpenseStore>()(
 				if (expense.isRecurring && !expense.parentExpenseId) return false;
 
 				if (expense.parentExpenseId) {
-					const parentExpense = expenses.find(
-						(e) => e.id === expense.parentExpenseId,
-					);
+					const parentExpense = expenses.find((e) => e.id === expense.parentExpenseId);
 					if (parentExpense?.monthlyOverrides?.[monthKey]) {
 						Object.assign(expense, parentExpense.monthlyOverrides[monthKey]);
 					}
@@ -883,8 +864,7 @@ export const useExpenseStore = create<ExpenseStore>()(
 					(targetYear === currentYear && targetMonth >= currentMonth);
 
 				const isBeforeOrEqualDue =
-					targetYear < dueYear ||
-					(targetYear === dueYear && targetMonth <= dueMonth);
+					targetYear < dueYear || (targetYear === dueYear && targetMonth <= dueMonth);
 
 				return isAfterOrEqualCurrent && isBeforeOrEqualDue;
 			});
@@ -900,12 +880,12 @@ export const useExpenseStore = create<ExpenseStore>()(
 					switch (mode) {
 						case "remaining":
 							includeExpense =
-								!expense.isPaid && expense.type === "need"
-									? isSameMonth(
-											expense.dueDate || new Date(),
-											get().selectedMonth || new Date(),
-										)
-									: false;
+								!expense.isPaid && expense.type === "need" ?
+									isSameMonth(
+										expense.dueDate || new Date(),
+										get().selectedMonth || new Date(),
+									)
+								:	false;
 							break;
 						case "required":
 							includeExpense = expense.type === "need";
@@ -916,8 +896,7 @@ export const useExpenseStore = create<ExpenseStore>()(
 					}
 
 					if (includeExpense) {
-						acc[expense.category] =
-							(acc[expense.category] || 0) + expense.amount;
+						acc[expense.category] = (acc[expense.category] || 0) + expense.amount;
 					}
 
 					return acc;
@@ -928,10 +907,7 @@ export const useExpenseStore = create<ExpenseStore>()(
 
 		getMonthlyTotal: (date, mode) => {
 			const categoryTotals = get().getTotalByCategory(date, mode);
-			return Object.values(categoryTotals).reduce(
-				(sum, amount) => sum + amount,
-				0,
-			);
+			return Object.values(categoryTotals).reduce((sum, amount) => sum + amount, 0);
 		},
 
 		getTotalByCategoryFiltered: (date, mode, showPaid) => {
@@ -952,12 +928,12 @@ export const useExpenseStore = create<ExpenseStore>()(
 							break;
 						case "required":
 							includeExpense =
-								!expense.isPaid && expense.type === "need"
-									? isSameMonth(
-											expense.dueDate || new Date(),
-											get().selectedMonth || new Date(),
-										)
-									: false;
+								!expense.isPaid && expense.type === "need" ?
+									isSameMonth(
+										expense.dueDate || new Date(),
+										get().selectedMonth || new Date(),
+									)
+								:	false;
 							break;
 						case "all":
 							includeExpense = true;
@@ -971,8 +947,7 @@ export const useExpenseStore = create<ExpenseStore>()(
 					}
 
 					if (includeExpense) {
-						acc[expense.category] =
-							(acc[expense.category] || 0) + expense.amount;
+						acc[expense.category] = (acc[expense.category] || 0) + expense.amount;
 					}
 
 					return acc;
@@ -982,15 +957,8 @@ export const useExpenseStore = create<ExpenseStore>()(
 		},
 
 		getMonthlyTotalFiltered: (date, mode, showPaid) => {
-			const categoryTotals = get().getTotalByCategoryFiltered(
-				date,
-				mode,
-				showPaid,
-			);
-			return Object.values(categoryTotals).reduce(
-				(sum, amount) => sum + amount,
-				0,
-			);
+			const categoryTotals = get().getTotalByCategoryFiltered(date, mode, showPaid);
+			return Object.values(categoryTotals).reduce((sum, amount) => sum + amount, 0);
 		},
 
 		addCategory: (name, color) => {
@@ -1017,15 +985,13 @@ export const useExpenseStore = create<ExpenseStore>()(
 				.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
 
 			const updatedColors = { ...categoryColors };
-			if (oldName !== newName) {
-				delete updatedColors[oldName];
-			}
+			if (oldName !== newName) delete updatedColors[oldName];
 			updatedColors[newName] = newColor;
 
 			const updatedExpenses = expenses.map((expense) =>
-				expense.category === oldName
-					? { ...expense, category: newName, updatedAt: new Date() }
-					: expense,
+				expense.category === oldName ?
+					{ ...expense, category: newName, updatedAt: new Date() }
+				:	expense,
 			);
 
 			set({
@@ -1043,14 +1009,13 @@ export const useExpenseStore = create<ExpenseStore>()(
 			const { categories, categoryColors, expenses } = get();
 
 			const updatedCategories = categories.filter((cat) => cat !== name);
-
 			const updatedColors = { ...categoryColors };
 			delete updatedColors[name];
 
 			const updatedExpenses = expenses.map((expense) =>
-				expense.category === name
-					? { ...expense, category: "Other", updatedAt: new Date() }
-					: expense,
+				expense.category === name ?
+					{ ...expense, category: "Other", updatedAt: new Date() }
+				:	expense,
 			);
 
 			set({
@@ -1087,15 +1052,12 @@ export const useExpenseStore = create<ExpenseStore>()(
 				.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
 
 			const updatedExpenses = expenses.map((expense) =>
-				expense.paymentMethod === oldName
-					? { ...expense, paymentMethod: newName, updatedAt: new Date() }
-					: expense,
+				expense.paymentMethod === oldName ?
+					{ ...expense, paymentMethod: newName, updatedAt: new Date() }
+				:	expense,
 			);
 
-			set({
-				paymentMethods: updatedMethods,
-				expenses: updatedExpenses,
-			});
+			set({ paymentMethods: updatedMethods, expenses: updatedExpenses });
 
 			if (useAppStore.getState().autoSaveEnabled) {
 				useAppStore.getState().saveToFile(AppToSave.Expenses);
@@ -1108,15 +1070,12 @@ export const useExpenseStore = create<ExpenseStore>()(
 			const updatedMethods = paymentMethods.filter((method) => method !== name);
 
 			const updatedExpenses = expenses.map((expense) =>
-				expense.paymentMethod === name
-					? { ...expense, paymentMethod: "None", updatedAt: new Date() }
-					: expense,
+				expense.paymentMethod === name ?
+					{ ...expense, paymentMethod: "None", updatedAt: new Date() }
+				:	expense,
 			);
 
-			set({
-				paymentMethods: updatedMethods,
-				expenses: updatedExpenses,
-			});
+			set({ paymentMethods: updatedMethods, expenses: updatedExpenses });
 
 			if (useAppStore.getState().autoSaveEnabled) {
 				useAppStore.getState().saveToFile(AppToSave.Expenses);
@@ -1129,21 +1088,18 @@ export const useExpenseStore = create<ExpenseStore>()(
 
 			if (!expense) return;
 
-			// For recurring parent expenses, toggle notify on all occurrences too
 			if (expense.isRecurring && !expense.parentExpenseId) {
 				set({
 					expenses: expenses.map((e) =>
-						e.id === id || e.parentExpenseId === id
-							? { ...e, notify: !expense.notify, updatedAt: new Date() }
-							: e,
+						e.id === id || e.parentExpenseId === id ?
+							{ ...e, notify: !expense.notify, updatedAt: new Date() }
+						:	e,
 					),
 				});
 			} else {
 				set({
 					expenses: expenses.map((e) =>
-						e.id === id
-							? { ...e, notify: !e.notify, updatedAt: new Date() }
-							: e,
+						e.id === id ? { ...e, notify: !e.notify, updatedAt: new Date() } : e,
 					),
 				});
 			}
@@ -1153,7 +1109,6 @@ export const useExpenseStore = create<ExpenseStore>()(
 			}
 		},
 
-		// Undo/Redo - keeping these the same as before
 		undo: () => {
 			const action = useHistoryStore.getState().undo();
 			if (!action) return;
@@ -1215,24 +1170,21 @@ export const useExpenseStore = create<ExpenseStore>()(
 						const beforeExpense = data.before as Expense;
 						set((state) => {
 							let updatedExpenses = state.expenses.map((e) =>
-								e.id === data.id
-									? { ...e, isArchived: beforeExpense.isArchived }
-									: e,
+								e.id === data.id ?
+									{ ...e, isArchived: beforeExpense.isArchived }
+								:	e,
 							);
 
 							if (data.relatedExpenses && Array.isArray(data.relatedExpenses)) {
 								const relatedExpenses = data.relatedExpenses as Expense[];
 								const relatedMap = new Map(
-									relatedExpenses.map((re) => [
-										re.id,
-										re.isArchived,
-									]),
+									relatedExpenses.map((re) => [re.id, re.isArchived]),
 								);
 								updatedExpenses = updatedExpenses.map((e) => {
 									const wasArchived = relatedMap.get(e.id);
-									return wasArchived !== undefined
-										? { ...e, isArchived: wasArchived }
-										: e;
+									return wasArchived !== undefined ?
+											{ ...e, isArchived: wasArchived }
+										:	e;
 								});
 							}
 
@@ -1246,13 +1198,13 @@ export const useExpenseStore = create<ExpenseStore>()(
 						const beforeExpense = data.before as Expense;
 						set((state) => {
 							let updatedExpenses = state.expenses.map((e) =>
-								e.id === data.id
-									? {
-											...e,
-											isPaid: beforeExpense.isPaid,
-											paymentDate: beforeExpense.paymentDate,
-										}
-									: e,
+								e.id === data.id ?
+									{
+										...e,
+										isPaid: beforeExpense.isPaid,
+										paymentDate: beforeExpense.paymentDate,
+									}
+								:	e,
 							);
 
 							if (data.relatedExpenses && Array.isArray(data.relatedExpenses)) {
@@ -1265,13 +1217,13 @@ export const useExpenseStore = create<ExpenseStore>()(
 								);
 								updatedExpenses = updatedExpenses.map((e) => {
 									const paidState = relatedMap.get(e.id);
-									return paidState
-										? {
+									return paidState ?
+											{
 												...e,
 												isPaid: paidState.isPaid,
 												paymentDate: paidState.paymentDate,
 											}
-										: e;
+										:	e;
 								});
 							}
 
@@ -1336,9 +1288,7 @@ export const useExpenseStore = create<ExpenseStore>()(
 
 						if (data.relatedExpenses && Array.isArray(data.relatedExpenses)) {
 							const relatedExpenses = data.relatedExpenses as Expense[];
-							const relatedIds = new Set(
-								relatedExpenses.map((re) => re.id),
-							);
+							const relatedIds = new Set(relatedExpenses.map((re) => re.id));
 							updatedExpenses = updatedExpenses.map((e) =>
 								relatedIds.has(e.id) ? { ...e, isArchived: true } : e,
 							);
@@ -1356,9 +1306,7 @@ export const useExpenseStore = create<ExpenseStore>()(
 
 						if (data.relatedExpenses && Array.isArray(data.relatedExpenses)) {
 							const relatedExpenses = data.relatedExpenses as Expense[];
-							const relatedIds = new Set(
-								relatedExpenses.map((re) => re.id),
-							);
+							const relatedIds = new Set(relatedExpenses.map((re) => re.id));
 							updatedExpenses = updatedExpenses.map((e) =>
 								relatedIds.has(e.id) ? { ...e, isArchived: false } : e,
 							);
@@ -1376,28 +1324,26 @@ export const useExpenseStore = create<ExpenseStore>()(
 						const beforeExpense = data.before as Expense;
 						const newIsPaid = !beforeExpense.isPaid;
 						let updatedExpenses = state.expenses.map((e) =>
-							e.id === data.id
-								? {
-										...e,
-										isPaid: newIsPaid,
-										paymentDate: newIsPaid ? new Date() : null,
-									}
-								: e,
+							e.id === data.id ?
+								{
+									...e,
+									isPaid: newIsPaid,
+									paymentDate: newIsPaid ? new Date() : null,
+								}
+							:	e,
 						);
 
 						if (data.relatedExpenses && Array.isArray(data.relatedExpenses)) {
 							const relatedExpenses = data.relatedExpenses as Expense[];
-							const relatedIds = new Set(
-								relatedExpenses.map((re) => re.id),
-							);
+							const relatedIds = new Set(relatedExpenses.map((re) => re.id));
 							updatedExpenses = updatedExpenses.map((e) =>
-								relatedIds.has(e.id)
-									? {
-											...e,
-											isPaid: newIsPaid,
-											paymentDate: newIsPaid ? new Date() : null,
-										}
-									: e,
+								relatedIds.has(e.id) ?
+									{
+										...e,
+										isPaid: newIsPaid,
+										paymentDate: newIsPaid ? new Date() : null,
+									}
+								:	e,
 							);
 						}
 

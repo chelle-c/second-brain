@@ -4,6 +4,7 @@ import {
 } from "@/lib/expenseHelpers";
 import type { AppData } from "@/types/";
 import type {
+	AmountRange,
 	Expense,
 	OccurrenceInitialState,
 	OverviewMode,
@@ -20,6 +21,7 @@ interface NormalizedExpense {
 	id: string;
 	name: string;
 	amount: number;
+	amountData: AmountRange | null;
 	category: string;
 	paymentMethod: string;
 	dueDate: string | null;
@@ -61,6 +63,7 @@ export class ExpensesStorage {
 				id: expense.id,
 				name: expense.name,
 				amount: expense.amount,
+				amountData: expense.amountData || null,
 				category: expense.category,
 				paymentMethod: expense.paymentMethod || "None",
 				dueDate:
@@ -143,6 +146,7 @@ export class ExpensesStorage {
 						id: string;
 						name: string;
 						amount: number;
+						amountData: string | null;
 						category: string;
 						paymentMethod: string | null;
 						dueDate: string | null;
@@ -188,10 +192,16 @@ export class ExpensesStorage {
 						initialState.paymentMethod = "None";
 					}
 
+					// Parse amountData; older rows without it default to undefined (treated as "exact")
+					const amountData: AmountRange | undefined = row.amountData
+						? JSON.parse(row.amountData)
+						: undefined;
+
 					return {
 						id: row.id,
 						name: row.name,
 						amount: row.amount,
+						amountData,
 						category: row.category,
 						paymentMethod: row.paymentMethod || "None",
 						dueDate: row.dueDate ? new Date(row.dueDate) : null,
@@ -299,14 +309,15 @@ export class ExpensesStorage {
 
 					await db.execute(
 						`INSERT INTO expenses (
-							id, name, amount, category, paymentMethod, dueDate, isRecurring, recurrence,
+							id, name, amount, amountData, category, paymentMethod, dueDate, isRecurring, recurrence,
 							isArchived, isPaid, paymentDate, type, importance, notify, createdAt,
 							updatedAt, parentExpenseId, monthlyOverrides, isModified, initialState
-						) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+						) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 						[
 							expense.id,
 							expense.name,
 							expense.amount,
+							expense.amountData ? JSON.stringify(expense.amountData) : null,
 							expense.category,
 							expense.paymentMethod || "None",
 							expense.dueDate ? expense.dueDate.toISOString() : null,

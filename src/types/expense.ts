@@ -10,10 +10,21 @@ export interface ExpensesData {
 	version: string;
 }
 
+export type AmountType = "exact" | "range" | "estimate";
+
+export interface AmountRange {
+	type: AmountType;
+	exact?: number;
+	rangeMin?: number;
+	rangeMax?: number;
+	estimate?: number;
+}
+
 export interface Expense {
 	id: string;
 	name: string;
 	amount: number;
+	amountData?: AmountRange;
 	category: string;
 	paymentMethod: string;
 	dueDate: Date | null;
@@ -36,6 +47,7 @@ export interface Expense {
 export interface ExpenseFormData {
 	name: string;
 	amount: number;
+	amountData?: AmountRange;
 	category: string;
 	paymentMethod: string;
 	dueDate: Date | null;
