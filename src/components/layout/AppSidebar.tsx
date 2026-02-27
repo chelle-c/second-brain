@@ -34,7 +34,7 @@ export function AppSidebar() {
 	const items = [
 		{
 			title: "Notes",
-			url: "brain",
+			url: "notes",
 			icon: StickyNote,
 		},
 		{

@@ -30,9 +30,9 @@ function App() {
 			:	<BrowserRouter>
 					<Routes>
 						<Route path="/" element={<AppLayout />}>
-							<Route index element={<Navigate to="/brain" replace />} />
+							<Route index element={<Navigate to="/notes" replace />} />
 							<Route
-								path="brain"
+								path="notes"
 								element={
 									<Suspense fallback={<PageLoading />}>
 										<NotesApp />
