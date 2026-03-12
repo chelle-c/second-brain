@@ -16,6 +16,7 @@ interface BarChartProps {
 	barColor?: string;
 	showLabels?: boolean;
 	labelFormatter?: (value: number) => string;
+	labelFontSize?: number;
 	yAxisFormatter?: (value: number) => string;
 	renderTooltip?: (datum: BarChartData) => React.ReactNode;
 	theme?: {
@@ -27,27 +28,32 @@ interface BarChartProps {
 	margin?: { top: number; right: number; bottom: number; left: number };
 }
 
+const DEFAULT_MARGIN = { top: 25, right: 20, bottom: 30, left: 50 };
+
 const getDefaultTheme = () => {
 	const style = getComputedStyle(document.documentElement);
 	return {
 		barColor: style.getPropertyValue("--primary").trim() || "#0EA5E9",
 		textColor: style.getPropertyValue("--foreground").trim() || "#374151",
-		mutedTextColor:
-			style.getPropertyValue("--muted-foreground").trim() || "#6B7280",
+		mutedTextColor: style.getPropertyValue("--muted-foreground").trim() || "#6B7280",
 		gridColor: style.getPropertyValue("--border").trim() || "#E5E7EB",
 	};
 };
+
+/** Clamp to non-negative. Guard against float-math drift AND bad inputs. */
+const nn = (v: number): number => (Number.isFinite(v) && v > 0 ? v : 0);
 
 const BarChartInner = ({
 	data,
 	barColor,
 	showLabels = true,
 	labelFormatter = (v) => v.toString(),
+	labelFontSize = 13,
 	yAxisFormatter = (v) => v.toString(),
 	renderTooltip,
 	theme,
 	barSize,
-	margin = { top: 25, right: 20, bottom: 30, left: 50 },
+	margin = DEFAULT_MARGIN,
 	width,
 	height,
 }: BarChartProps & { width: number; height: number }) => {
@@ -65,7 +71,6 @@ const BarChartInner = ({
 	} | null>(null);
 	const [animationProgress, setAnimationProgress] = useState(0);
 
-	// Animate from 0 to 1 over 400ms
 	useEffect(() => {
 		setAnimationProgress(0);
 		const startTime = performance.now();
@@ -73,21 +78,17 @@ const BarChartInner = ({
 
 		const animate = (currentTime: number) => {
 			const elapsed = currentTime - startTime;
-			const progress = Math.min(elapsed / duration, 1);
-			// Ease-out cubic for smooth deceleration
+			const progress = Math.max(0, Math.min(elapsed / duration, 1));
 			const eased = 1 - (1 - progress) ** 3;
 			setAnimationProgress(eased);
-
-			if (progress < 1) {
-				requestAnimationFrame(animate);
-			}
+			if (progress < 1) requestAnimationFrame(animate);
 		};
 
 		requestAnimationFrame(animate);
 	}, [data]);
 
-	const innerWidth = width - margin.left - margin.right;
-	const innerHeight = height - margin.top - margin.bottom;
+	const innerWidth = nn(width - margin.left - margin.right);
+	const innerHeight = nn(height - margin.top - margin.bottom);
 
 	const xScale = useMemo(
 		() =>
@@ -100,7 +101,7 @@ const BarChartInner = ({
 	);
 
 	const yScale = useMemo(() => {
-		const maxValue = Math.max(...data.map((d) => d.value), 0);
+		const maxValue = Math.max(0, ...data.map((d) => d.value));
 		return scaleLinear<number>({
 			domain: [0, maxValue * 1.1 || 1],
 			range: [innerHeight, 0],
@@ -109,24 +110,22 @@ const BarChartInner = ({
 	}, [data, innerHeight]);
 
 	const yTicks = yScale.ticks(5);
-	const calculatedBarWidth = Math.min(
-		barSize || xScale.bandwidth(),
-		xScale.bandwidth(),
-	);
+	const calculatedBarWidth = Math.min(barSize || xScale.bandwidth(), xScale.bandwidth());
 
 	return (
 		<div style={{ position: "relative", width, height }}>
 			<svg width={width} height={height} aria-label="Bar chart">
 				<title>Bar chart</title>
 				<Group left={margin.left} top={margin.top}>
-					<GridRows
-						scale={yScale}
-						width={innerWidth}
-						stroke={resolvedTheme.gridColor}
-						strokeDasharray="3 3"
-					/>
+					{innerWidth > 0 && innerHeight > 0 && (
+						<GridRows
+							scale={yScale}
+							width={innerWidth}
+							stroke={resolvedTheme.gridColor}
+							strokeDasharray="3 3"
+						/>
+					)}
 
-					{/* Y-axis labels */}
 					{yTicks.map((tick) => (
 						<Text
 							key={`y-tick-${tick}`}
@@ -141,14 +140,15 @@ const BarChartInner = ({
 						</Text>
 					))}
 
-					{/* Bars */}
 					{data.map((d) => {
-						const fullBarHeight = Math.max(0, innerHeight - yScale(d.value));
-						const animatedBarHeight = fullBarHeight * animationProgress;
+						const safeValue = Math.max(0, d.value);
+						// .nice() can push yScale(0) fractionally past innerHeight;
+						// clamp BOTH ends of the scaled output.
+						const scaledY = Math.max(0, Math.min(innerHeight, yScale(safeValue)));
+						const fullBarHeight = nn(innerHeight - scaledY);
+						const animatedBarHeight = nn(fullBarHeight * animationProgress);
 						const barX =
-							(xScale(d.label) || 0) +
-							(xScale.bandwidth() - calculatedBarWidth) / 2;
-						// Bar rises from bottom, so y starts at innerHeight and moves up
+							(xScale(d.label) || 0) + (xScale.bandwidth() - calculatedBarWidth) / 2;
 						const barY = innerHeight - animatedBarHeight;
 
 						return (
@@ -158,7 +158,7 @@ const BarChartInner = ({
 									aria-label={`${d.label}: ${d.value}`}
 									x={barX}
 									y={barY}
-									width={calculatedBarWidth}
+									width={nn(calculatedBarWidth)}
 									height={animatedBarHeight}
 									fill={resolvedBarColor}
 									rx={4}
@@ -179,7 +179,7 @@ const BarChartInner = ({
 										y={barY - 8}
 										textAnchor="middle"
 										fill={resolvedTheme.textColor}
-										fontSize={13}
+										fontSize={labelFontSize}
 										fontWeight={600}
 									>
 										{labelFormatter(d.value)}
@@ -189,7 +189,6 @@ const BarChartInner = ({
 						);
 					})}
 
-					{/* X-axis labels */}
 					{data.map((d) => {
 						const x = (xScale(d.label) || 0) + xScale.bandwidth() / 2;
 						return (
@@ -246,11 +245,18 @@ const BarChartInner = ({
 };
 
 export const BarChart = (props: BarChartProps) => {
+	const m = props.margin ?? DEFAULT_MARGIN;
+	// Guard must exceed margin sums so inner dimensions are meaningfully positive
+	const minW = m.left + m.right + 20;
+	const minH = m.top + m.bottom + 20;
+
 	return (
 		<ParentSize>
-			{({ width, height }) => (
-				<BarChartInner {...props} width={width} height={height} />
-			)}
+			{({ width, height }) =>
+				width > minW && height > minH ?
+					<BarChartInner {...props} width={width} height={height} />
+				:	null
+			}
 		</ParentSize>
 	);
 };

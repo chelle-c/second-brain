@@ -52,10 +52,15 @@ export function AppSidebar() {
 					url: "income",
 					icon: TrendingUp,
 				},
+				{
+					title: "Overview",
+					url: "overview",
+					icon: ChevronRight,
+				}
 			],
 		},
 		{
-			title: "Calendar",
+			title: "Reminders",
 			url: "calendar",
 			icon: CalendarDays,
 		},

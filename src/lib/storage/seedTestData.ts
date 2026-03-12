@@ -5,28 +5,28 @@ import type { Folder, Note, NoteReminder, Tag } from "@/types/notes";
 import { DEFAULT_SETTINGS } from "@/types/settings";
 import type { LucideIcon } from "lucide-react";
 import {
-	Star,
-	Heart,
-	Sparkles,
-	Diamond,
-	CheckCircle,
-	Lightbulb,
 	BookOpen,
-	Flag,
-	Target,
-	Code,
 	Calendar,
+	CheckCircle,
+	Code,
+	Diamond,
+	Flag,
+	Heart,
+	Lightbulb,
+	Sparkles,
+	Star,
+	Target,
 	User,
 } from "lucide-react";
 import { DEFAULT_PAYMENT_METHODS } from "@/types/storage";
 import { sqlStorage } from "./database";
 
-// Generate a simple UUID
-const generateId = (): string => {
-	return crypto.randomUUID();
-};
+// ============================================================================
+// Utilities
+// ============================================================================
 
-// Get dates relative to today
+const generateId = (): string => crypto.randomUUID();
+
 const daysAgo = (days: number): Date => {
 	const date = new Date();
 	date.setDate(date.getDate() - days);
@@ -39,7 +39,31 @@ const daysFromNow = (days: number): Date => {
 	return date;
 };
 
-// Helper to create a reminder
+/** First day of the month N months before the current month (N=0 → this month). */
+const monthStart = (monthsAgo: number): Date => {
+	const now = new Date();
+	return new Date(now.getFullYear(), now.getMonth() - monthsAgo, 1);
+};
+
+/** Specific day of a month N months ago (clamped to last day of month). */
+const dayInMonth = (monthsAgo: number, day: number): Date => {
+	const now = new Date();
+	const y = now.getFullYear();
+	const m = now.getMonth() - monthsAgo;
+	const daysInTarget = new Date(y, m + 1, 0).getDate();
+	return new Date(y, m, Math.min(day, daysInTarget));
+};
+
+/**
+ * Deterministic variation around a base value. Same (seed, salt) always
+ * returns the same result so re-seeding produces identical test data.
+ */
+const vary = (base: number, pct: number, seed: number, salt: number): number => {
+	const hash = Math.sin(seed * 12.9898 + salt * 78.233) * 43758.5453;
+	const factor = (hash - Math.floor(hash)) * 2 - 1; // -1..1
+	return Math.round(base * (1 + factor * pct) * 100) / 100;
+};
+
 const createReminder = (
 	daysFromNowVal: number,
 	hour: number = 10,
@@ -50,13 +74,13 @@ const createReminder = (
 ): NoteReminder => {
 	const dt = daysFromNow(daysFromNowVal);
 	dt.setHours(hour, minute, 0, 0);
-	return {
-		dateTime: dt.toISOString(),
-		notifications,
-	};
+	return { dateTime: dt.toISOString(), notifications };
 };
 
-// Sample folders structure with new flat format
+// ============================================================================
+// Folders / Tags / Notes — unchanged from previous seed
+// ============================================================================
+
 const createSampleFolders = (): Folder[] => {
 	const now = new Date();
 	return [
@@ -247,61 +271,22 @@ const createSampleFolders = (): Folder[] => {
 	];
 };
 
-// Sample tags
-const createSampleTags = (): Record<string, Tag> => {
-	return {
-		actions: {
-			id: "actions",
-			name: "Actions",
-			icon: CheckCircle as LucideIcon,
-			color: "#3b82f6",
-		},
-		ideas: {
-			id: "ideas",
-			name: "Ideas",
-			icon: Lightbulb as LucideIcon,
-			color: "#eab308",
-		},
-		reference: {
-			id: "reference",
-			name: "Reference",
-			icon: BookOpen as LucideIcon,
-			color: "#10b981",
-		},
-		urgent: {
-			id: "urgent",
-			name: "Urgent",
-			icon: Flag as LucideIcon,
-			color: "#ef4444",
-		},
-		goal: {
-			id: "goal",
-			name: "Goal",
-			icon: Target as LucideIcon,
-			color: "#8b5cf6",
-		},
-		code: {
-			id: "code",
-			name: "Code",
-			icon: Code as LucideIcon,
-			color: "#64748b",
-		},
-		meeting: {
-			id: "meeting",
-			name: "Meeting",
-			icon: Calendar as LucideIcon,
-			color: "#0ea5e9",
-		},
-		personal: {
-			id: "personal",
-			name: "Personal",
-			icon: User as LucideIcon,
-			color: "#f97316",
-		},
-	};
-};
+const createSampleTags = (): Record<string, Tag> => ({
+	actions: { id: "actions", name: "Actions", icon: CheckCircle as LucideIcon, color: "#3b82f6" },
+	ideas: { id: "ideas", name: "Ideas", icon: Lightbulb as LucideIcon, color: "#eab308" },
+	reference: {
+		id: "reference",
+		name: "Reference",
+		icon: BookOpen as LucideIcon,
+		color: "#10b981",
+	},
+	urgent: { id: "urgent", name: "Urgent", icon: Flag as LucideIcon, color: "#ef4444" },
+	goal: { id: "goal", name: "Goal", icon: Target as LucideIcon, color: "#8b5cf6" },
+	code: { id: "code", name: "Code", icon: Code as LucideIcon, color: "#64748b" },
+	meeting: { id: "meeting", name: "Meeting", icon: Calendar as LucideIcon, color: "#0ea5e9" },
+	personal: { id: "personal", name: "Personal", icon: User as LucideIcon, color: "#f97316" },
+});
 
-// Helper to create Tiptap document JSON
 const tiptapDoc = (content: object[]) => JSON.stringify({ type: "doc", content });
 const tiptapParagraph = (text: string, marks?: { type: string; attrs?: object }[]) => ({
 	type: "paragraph",
@@ -314,17 +299,11 @@ const tiptapHeading = (level: number, text: string) => ({
 });
 const tiptapBulletList = (items: string[]) => ({
 	type: "bulletList",
-	content: items.map((text) => ({
-		type: "listItem",
-		content: [tiptapParagraph(text)],
-	})),
+	content: items.map((text) => ({ type: "listItem", content: [tiptapParagraph(text)] })),
 });
 const tiptapOrderedList = (items: string[]) => ({
 	type: "orderedList",
-	content: items.map((text) => ({
-		type: "listItem",
-		content: [tiptapParagraph(text)],
-	})),
+	content: items.map((text) => ({ type: "listItem", content: [tiptapParagraph(text)] })),
 });
 const tiptapTaskList = (items: { text: string; checked: boolean }[]) => ({
 	type: "taskList",
@@ -335,11 +314,8 @@ const tiptapTaskList = (items: { text: string; checked: boolean }[]) => ({
 	})),
 });
 
-// Sample notes with folders and subfolders - using `folder` instead of `folderId`
-// Notes now use Tiptap JSON format and some have reminders
 const createSampleNotes = (): Note[] => {
 	return [
-		// Inbox notes - more variety
 		{
 			id: generateId(),
 			title: "Welcome to Second Brain",
@@ -379,7 +355,6 @@ const createSampleNotes = (): Note[] => {
 			createdAt: daysAgo(0),
 			updatedAt: daysAgo(0),
 			archived: false,
-			// Reminder: tomorrow at 9am, notify 1 hour and 15 min before
 			reminder: createReminder(1, 9, 0, [
 				{ unit: "hours", value: 1 },
 				{ unit: "minutes", value: 15 },
@@ -396,7 +371,6 @@ const createSampleNotes = (): Note[] => {
 			createdAt: daysAgo(2),
 			updatedAt: daysAgo(1),
 			archived: false,
-			// Reminder: in 3 days at 10am
 			reminder: createReminder(3, 10, 0, [{ unit: "days", value: 1 }]),
 		},
 		{
@@ -409,8 +383,6 @@ const createSampleNotes = (): Note[] => {
 			updatedAt: daysAgo(3),
 			archived: false,
 		},
-
-		// Work folder notes
 		{
 			id: generateId(),
 			title: "Q1 Planning Overview",
@@ -433,14 +405,11 @@ const createSampleNotes = (): Note[] => {
 			createdAt: daysAgo(14),
 			updatedAt: daysAgo(7),
 			archived: false,
-			// Reminder: in 7 days at 2pm
 			reminder: createReminder(7, 14, 0, [
 				{ unit: "days", value: 1 },
 				{ unit: "hours", value: 2 },
 			]),
 		},
-
-		// Work subfolder notes
 		{
 			id: generateId(),
 			title: "Team Sync - Weekly Standup",
@@ -470,7 +439,6 @@ const createSampleNotes = (): Note[] => {
 			createdAt: daysAgo(5),
 			updatedAt: daysAgo(5),
 			archived: false,
-			// Reminder: in 2 days at 11am
 			reminder: createReminder(2, 11, 0, [{ unit: "minutes", value: 30 }]),
 		},
 		{
@@ -551,20 +519,15 @@ const createSampleNotes = (): Note[] => {
 			createdAt: daysAgo(1),
 			updatedAt: daysAgo(0),
 			archived: false,
-			// Reminder fires 6 minutes from now; notification set to 5 minutes before
-			// (i.e. the notification will fire ~1 minute from now, well within the
-			// 30-second polling grace window on either side).
 			reminder: (() => {
 				const target = new Date();
-				target.setMinutes(target.getMinutes() + 6, 0, 0); // 6 min from now, zero seconds
+				target.setMinutes(target.getMinutes() + 6, 0, 0);
 				return {
 					dateTime: target.toISOString(),
 					notifications: [{ unit: "minutes" as const, value: 5 }],
 				};
 			})(),
 		},
-
-		// Personal folder and subfolder notes
 		{
 			id: generateId(),
 			title: "Book Recommendations",
@@ -631,7 +594,6 @@ const createSampleNotes = (): Note[] => {
 			createdAt: daysAgo(8),
 			updatedAt: daysAgo(2),
 			archived: false,
-			// Reminder: end of month
 			reminder: createReminder(14, 18, 0, [{ unit: "days", value: 2 }]),
 		},
 		{
@@ -647,8 +609,6 @@ const createSampleNotes = (): Note[] => {
 			updatedAt: daysAgo(6),
 			archived: false,
 		},
-
-		// Ideas folder and subfolder notes
 		{
 			id: generateId(),
 			title: "Brainstorming Session",
@@ -689,8 +649,6 @@ const createSampleNotes = (): Note[] => {
 			updatedAt: daysAgo(5),
 			archived: false,
 		},
-
-		// Learning folder notes
 		{
 			id: generateId(),
 			title: "TypeScript Best Practices",
@@ -720,11 +678,8 @@ const createSampleNotes = (): Note[] => {
 			createdAt: daysAgo(11),
 			updatedAt: daysAgo(3),
 			archived: false,
-			// Reminder: daily study reminder
 			reminder: createReminder(1, 8, 0, [{ unit: "minutes", value: 15 }]),
 		},
-
-		// Note with many tags to show "+n" indicator
 		{
 			id: generateId(),
 			title: "Major Project Kickoff - All Hands",
@@ -747,8 +702,6 @@ const createSampleNotes = (): Note[] => {
 			updatedAt: daysAgo(2),
 			archived: false,
 		},
-
-		// Note with no tags
 		{
 			id: generateId(),
 			title: "Random thought",
@@ -759,8 +712,6 @@ const createSampleNotes = (): Note[] => {
 			updatedAt: daysAgo(6),
 			archived: false,
 		},
-
-		// Archived notes
 		{
 			id: generateId(),
 			title: "Old Project Notes",
@@ -794,324 +745,366 @@ const createSampleNotes = (): Note[] => {
 	];
 };
 
-// Helper to generate recurring expense occurrences
-const generateRecurringOccurrences = (
-	parentId: string,
-	baseExpense: Omit<
-		Expense,
-		"id" | "dueDate" | "isPaid" | "paymentDate" | "parentExpenseId" | "initialState"
-	>,
-	dayOfMonth: number,
-	months: number = 12,
-	paidCount: number = 0,
-): Expense[] => {
+// ============================================================================
+// Expenses — 6 months of history + 6 months of future occurrences
+// ============================================================================
+
+/** Months of historical data to generate (including current month). */
+const HISTORY_MONTHS = 6;
+/** Months of future occurrences for recurring expenses (planning horizon). */
+const FUTURE_MONTHS = 6;
+
+interface RecurringSpec {
+	name: string;
+	baseAmount: number;
+	variancePct: number; // ± fraction, e.g. 0.25 → ±25%
+	category: string;
+	dayOfMonth: number;
+	type: "need" | "want";
+	importance: "critical" | "high" | "medium" | "none";
+	salt: number; // Deterministic variance seed (unique per expense)
+}
+
+/**
+ * Creates a recurring-parent expense plus one occurrence per month from
+ * (HISTORY_MONTHS - 1) months ago through FUTURE_MONTHS months ahead.
+ * Historical occurrences are marked paid; current/future are unpaid.
+ * Each occurrence's amount is deterministically varied to simulate
+ * real-world fluctuation (utilities, groceries, etc.).
+ */
+const createRecurringSeries = (spec: RecurringSpec): Expense[] => {
+	const parentId = generateId();
 	const now = new Date();
-	return Array.from({ length: months }, (_, i) => i).map((month) => {
-		const dueDate = new Date(now.getFullYear(), now.getMonth() + month, dayOfMonth);
-		const isPaid = month < paidCount;
-		return {
-			...baseExpense,
+	const createdAt = monthStart(HISTORY_MONTHS - 1);
+
+	const parent: Expense = {
+		id: parentId,
+		name: spec.name,
+		amount: spec.baseAmount,
+		category: spec.category,
+		paymentMethod: "Default",
+		dueDate: dayInMonth(0, spec.dayOfMonth),
+		isRecurring: true,
+		recurrence: { frequency: "monthly", interval: 1 },
+		isArchived: false,
+		isPaid: false,
+		paymentDate: null,
+		type: spec.type,
+		importance: spec.importance,
+		notify: false,
+		createdAt,
+		updatedAt: now,
+		monthlyOverrides: {},
+	};
+
+	const occurrences: Expense[] = [];
+
+	// Historical + current + future: from (HISTORY_MONTHS - 1) ago to -FUTURE_MONTHS
+	for (let offset = HISTORY_MONTHS - 1; offset >= -FUTURE_MONTHS; offset--) {
+		const dueDate = dayInMonth(offset, spec.dayOfMonth);
+		const amount = vary(spec.baseAmount, spec.variancePct, offset, spec.salt);
+		const isPast = offset > 0;
+
+		occurrences.push({
 			id: generateId(),
+			name: spec.name,
+			amount,
+			category: spec.category,
+			paymentMethod: "Default",
 			dueDate,
-			isPaid,
-			paymentDate: isPaid ? dueDate : undefined,
+			isRecurring: true,
+			recurrence: { frequency: "monthly", interval: 1 },
+			isArchived: false,
+			isPaid: isPast,
+			paymentDate: isPast ? dueDate : null,
+			type: spec.type,
+			importance: spec.importance,
+			notify: false,
+			createdAt,
+			updatedAt: isPast ? dueDate : now,
 			parentExpenseId: parentId,
-			notify: baseExpense.notify || false,
+			monthlyOverrides: {},
+			isModified: false,
 			initialState: {
-				amount: baseExpense.amount,
+				amount: spec.baseAmount,
 				dueDate,
-				paymentMethod: baseExpense.paymentMethod || "None",
+				paymentMethod: "Default",
 			},
-		};
-	}) satisfies Expense[];
+		});
+	}
+
+	return [parent, ...occurrences];
 };
 
-// Sample expenses
+/**
+ * Financial profile shaped so the Overview module has interesting data:
+ *
+ *   Needs/month  ≈ $2,555  (rent + utilities + phone + internet + groceries + transport)
+ *   Wants/month  ≈ $350    (streaming + gym + dining)
+ *   Total/month  ≈ $2,905
+ *   Income/month ≈ $3,100  (5 weekdays × ~4 weeks × ~$155/day)
+ *
+ * Result:
+ *   - Needs coverage ≈ 121%  (comfortably covered)
+ *   - Full coverage  ≈ 107%  (thin margin over wants)
+ *   - Surplus        ≈ $200/mo → Savings view has a realistic timeline
+ *
+ * Month 3-ago includes a large one-off car repair to create one deficit
+ * month for visual contrast in the Cash Flow chart.
+ */
 const createSampleExpenses = (): Expense[] => {
-	const now = new Date();
-
-	// Parent expense IDs
-	const rentId = generateId();
-	const electricityId = generateId();
-	const internetId = generateId();
-	const phonePlanId = generateId();
-	const streamingId = generateId();
-	const gymId = generateId();
-
-	// Base expense configurations
-	const rentBase = {
-		name: "Rent",
-		amount: 1500,
-		category: "Housing",
-		paymentMethod: "Default",
-		isRecurring: true,
-		recurrence: { frequency: "monthly" as const },
-		isArchived: false,
-		type: "need" as const,
-		importance: "critical" as const,
-		createdAt: daysAgo(90),
-		updatedAt: daysAgo(5),
-		notify: false,
-		monthlyOverrides: {},
-	};
-
-	const electricityBase = {
-		name: "Electricity",
-		amount: 120,
-		category: "Utilities",
-		paymentMethod: "Default",
-		isRecurring: true,
-		recurrence: { frequency: "monthly" as const },
-		isArchived: false,
-		type: "need" as const,
-		importance: "critical" as const,
-		createdAt: daysAgo(90),
-		updatedAt: daysAgo(10),
-		notify: false,
-		monthlyOverrides: {},
-	};
-
-	const internetBase = {
-		name: "Internet",
-		amount: 79.99,
-		category: "Utilities",
-		paymentMethod: "Default",
-		isRecurring: true,
-		recurrence: { frequency: "monthly" as const },
-		isArchived: false,
-		type: "need" as const,
-		importance: "high" as const,
-		createdAt: daysAgo(60),
-		updatedAt: daysAgo(15),
-		notify: false,
-		monthlyOverrides: {},
-	};
-
-	const phonePlanBase = {
-		name: "Phone Plan",
-		amount: 55,
-		category: "Utilities",
-		paymentMethod: "Default",
-		isRecurring: true,
-		recurrence: { frequency: "monthly" as const },
-		isArchived: false,
-		type: "need" as const,
-		importance: "high" as const,
-		createdAt: daysAgo(120),
-		updatedAt: daysAgo(20),
-		notify: false,
-		monthlyOverrides: {},
-	};
-
-	const streamingBase = {
-		name: "Streaming Services",
-		amount: 45.97,
-		category: "Entertainment",
-		paymentMethod: "Default",
-		isRecurring: true,
-		recurrence: { frequency: "monthly" as const },
-		isArchived: false,
-		type: "want" as const,
-		importance: "none" as const,
-		createdAt: daysAgo(180),
-		updatedAt: daysAgo(5),
-		notify: false,
-		monthlyOverrides: {},
-	};
-
-	const gymBase = {
-		name: "Gym Membership",
-		amount: 49.99,
-		category: "Health",
-		paymentMethod: "Default",
-		isRecurring: true,
-		recurrence: { frequency: "monthly" as const },
-		isArchived: false,
-		type: "want" as const,
-		importance: "medium" as const,
-		createdAt: daysAgo(200),
-		updatedAt: daysAgo(10),
-		notify: false,
-		monthlyOverrides: {},
-	};
-
-	// Generate 12 months of occurrences for each recurring expense (with first 1-2 marked as paid)
-	const rentOccurrences = generateRecurringOccurrences(rentId, rentBase, 1, 12, 2);
-	const electricityOccurrences = generateRecurringOccurrences(
-		electricityId,
-		electricityBase,
-		15,
-		12,
-		1,
-	);
-	const internetOccurrences = generateRecurringOccurrences(internetId, internetBase, 20, 12, 2);
-	const phonePlanOccurrences = generateRecurringOccurrences(
-		phonePlanId,
-		phonePlanBase,
-		25,
-		12,
-		1,
-	);
-	const streamingOccurrences = generateRecurringOccurrences(
-		streamingId,
-		streamingBase,
-		10,
-		12,
-		2,
-	);
-	const gymOccurrences = generateRecurringOccurrences(gymId, gymBase, 5, 12, 1);
-
-	return [
-		// Parent recurring expenses (current month)
+	const recurring: RecurringSpec[] = [
 		{
-			id: rentId,
-			...rentBase,
-			dueDate: new Date(now.getFullYear(), now.getMonth(), 1),
-			isPaid: true,
-			paymentDate: new Date(now.getFullYear(), now.getMonth(), 1),
-			notify: false,
-		},
-		...rentOccurrences,
-
-		{
-			id: electricityId,
-			...electricityBase,
-			dueDate: new Date(now.getFullYear(), now.getMonth(), 15),
-			isPaid: false,
-			notify: false,
-		},
-		...electricityOccurrences,
-
-		{
-			id: internetId,
-			...internetBase,
-			dueDate: new Date(now.getFullYear(), now.getMonth(), 20),
-			isPaid: false,
-			notify: false,
-		},
-		...internetOccurrences,
-
-		{
-			id: phonePlanId,
-			...phonePlanBase,
-			dueDate: new Date(now.getFullYear(), now.getMonth(), 25),
-			isPaid: false,
-			notify: false,
-		},
-		...phonePlanOccurrences,
-
-		{
-			id: streamingId,
-			...streamingBase,
-			dueDate: new Date(now.getFullYear(), now.getMonth(), 10),
-			isPaid: true,
-			paymentDate: daysAgo(5),
-			notify: false,
-		},
-		...streamingOccurrences,
-
-		{
-			id: gymId,
-			...gymBase,
-			dueDate: new Date(now.getFullYear(), now.getMonth(), 5),
-			isPaid: true,
-			paymentDate: daysAgo(10),
-			notify: false,
-		},
-		...gymOccurrences,
-
-		// One-time expenses
-		{
-			id: generateId(),
-			name: "New Headphones",
-			amount: 199.99,
-			category: "Shopping",
-			paymentMethod: "None",
-			dueDate: daysFromNow(3),
-			isRecurring: false,
-			isArchived: false,
-			isPaid: false,
-			type: "want",
-			importance: "none",
-			notify: true,
-			createdAt: daysAgo(3),
-			updatedAt: daysAgo(3),
-			monthlyOverrides: {},
-		},
-		{
-			id: generateId(),
-			name: "Car Insurance",
-			amount: 450,
-			category: "Transportation",
-			paymentMethod: "None",
-			dueDate: daysFromNow(3),
-			isRecurring: false,
-			isArchived: false,
-			isPaid: false,
+			name: "Rent",
+			baseAmount: 1500,
+			variancePct: 0,
+			category: "Housing",
+			dayOfMonth: 1,
 			type: "need",
 			importance: "critical",
-			notify: true,
-			createdAt: daysAgo(10),
-			updatedAt: daysAgo(10),
-			monthlyOverrides: {},
+			salt: 1,
 		},
 		{
-			id: generateId(),
-			name: "Birthday Gift",
-			amount: 75,
-			category: "Shopping",
-			paymentMethod: "None",
-			dueDate: daysFromNow(5),
-			isRecurring: false,
-			isArchived: false,
-			isPaid: false,
-			type: "want",
-			importance: "medium",
-			notify: false,
-			createdAt: daysAgo(2),
-			updatedAt: daysAgo(2),
-			monthlyOverrides: {},
+			name: "Electricity",
+			baseAmount: 120,
+			variancePct: 0.25,
+			category: "Utilities",
+			dayOfMonth: 15,
+			type: "need",
+			importance: "critical",
+			salt: 2,
 		},
 		{
-			id: generateId(),
-			name: "Groceries",
-			amount: 150,
-			category: "Food",
-			paymentMethod: "None",
-			dueDate: null,
-			isRecurring: false,
-			isArchived: false,
-			isPaid: true,
-			paymentDate: daysAgo(2),
+			name: "Internet",
+			baseAmount: 79.99,
+			variancePct: 0,
+			category: "Utilities",
+			dayOfMonth: 20,
 			type: "need",
 			importance: "high",
-			notify: false,
-			createdAt: daysAgo(2),
-			updatedAt: daysAgo(2),
-			monthlyOverrides: {},
+			salt: 3,
+		},
+		{
+			name: "Phone Plan",
+			baseAmount: 55,
+			variancePct: 0,
+			category: "Utilities",
+			dayOfMonth: 25,
+			type: "need",
+			importance: "high",
+			salt: 4,
+		},
+		{
+			name: "Groceries",
+			baseAmount: 550,
+			variancePct: 0.15,
+			category: "Food",
+			dayOfMonth: 8,
+			type: "need",
+			importance: "high",
+			salt: 5,
+		},
+		{
+			name: "Transportation",
+			baseAmount: 250,
+			variancePct: 0.2,
+			category: "Transportation",
+			dayOfMonth: 12,
+			type: "need",
+			importance: "high",
+			salt: 6,
+		},
+		{
+			name: "Streaming Services",
+			baseAmount: 45.97,
+			variancePct: 0,
+			category: "Entertainment",
+			dayOfMonth: 10,
+			type: "want",
+			importance: "none",
+			salt: 7,
+		},
+		{
+			name: "Gym Membership",
+			baseAmount: 49.99,
+			variancePct: 0,
+			category: "Health",
+			dayOfMonth: 5,
+			type: "want",
+			importance: "medium",
+			salt: 8,
+		},
+		{
+			name: "Dining Out",
+			baseAmount: 180,
+			variancePct: 0.4,
+			category: "Food",
+			dayOfMonth: 18,
+			type: "want",
+			importance: "none",
+			salt: 9,
+		},
+		{
+			name: "Coffee & Snacks",
+			baseAmount: 75,
+			variancePct: 0.3,
+			category: "Food",
+			dayOfMonth: 22,
+			type: "want",
+			importance: "none",
+			salt: 10,
 		},
 	];
+
+	const expenses: Expense[] = [];
+	for (const spec of recurring) {
+		expenses.push(...createRecurringSeries(spec));
+	}
+
+	// One-off historical expense — creates a visible dip in net cash flow 3 months back
+	expenses.push({
+		id: generateId(),
+		name: "Car Repair",
+		amount: 680,
+		category: "Transportation",
+		paymentMethod: "Default",
+		dueDate: dayInMonth(3, 14),
+		isRecurring: false,
+		isArchived: false,
+		isPaid: true,
+		paymentDate: dayInMonth(3, 14),
+		type: "need",
+		importance: "critical",
+		notify: false,
+		createdAt: dayInMonth(3, 10),
+		updatedAt: dayInMonth(3, 14),
+		monthlyOverrides: {},
+	});
+
+	// Unpaid "Want" items → populate the Savings planner with a realistic wishlist
+	const wishlistBase = {
+		paymentMethod: "None" as const,
+		isRecurring: false as const,
+		isArchived: false as const,
+		isPaid: false as const,
+		paymentDate: null,
+		type: "want" as const,
+		notify: false as const,
+		monthlyOverrides: {} as Record<string, never>,
+	};
+
+	expenses.push(
+		{
+			id: generateId(),
+			name: "Noise-Cancelling Headphones",
+			amount: 299.99,
+			category: "Shopping",
+			dueDate: daysFromNow(30),
+			importance: "none",
+			createdAt: daysAgo(5),
+			updatedAt: daysAgo(5),
+			...wishlistBase,
+		},
+		{
+			id: generateId(),
+			name: "Standing Desk",
+			amount: 450,
+			category: "Shopping",
+			dueDate: daysFromNow(60),
+			importance: "medium",
+			createdAt: daysAgo(10),
+			updatedAt: daysAgo(10),
+			...wishlistBase,
+		},
+		{
+			id: generateId(),
+			name: "Weekend Trip",
+			amount: 800,
+			category: "Entertainment",
+			dueDate: daysFromNow(90),
+			importance: "none",
+			createdAt: daysAgo(15),
+			updatedAt: daysAgo(15),
+			...wishlistBase,
+		},
+		{
+			id: generateId(),
+			name: "New Monitor",
+			amount: 550,
+			category: "Shopping",
+			dueDate: null, // No fixed due date → sorted last in savings plan
+			importance: "none",
+			createdAt: daysAgo(8),
+			updatedAt: daysAgo(8),
+			...wishlistBase,
+		},
+	);
+
+	// Upcoming one-off need (tests notification + upcoming-expenses view)
+	expenses.push({
+		id: generateId(),
+		name: "Car Insurance Renewal",
+		amount: 450,
+		category: "Transportation",
+		paymentMethod: "None",
+		dueDate: daysFromNow(10),
+		isRecurring: false,
+		isArchived: false,
+		isPaid: false,
+		type: "need",
+		importance: "critical",
+		notify: true,
+		createdAt: daysAgo(20),
+		updatedAt: daysAgo(20),
+		monthlyOverrides: {},
+	});
+
+	return expenses;
 };
 
-// Sample income entries for the past few weeks
+// ============================================================================
+// Income — 6 months of history matching the expense timeline
+// ============================================================================
+
+/**
+ * Generates deterministic income entries across the same HISTORY_MONTHS window
+ * as the expenses above, targeting ~$3,100/month. Uses a Mon–Fri pattern with
+ * small daily variance so weekly/monthly/yearly income views all render properly.
+ *
+ * Current month only gets entries up through today's date.
+ */
 const createSampleIncomeEntries = (): IncomeEntry[] => {
 	const entries: IncomeEntry[] = [];
+	const now = new Date();
+	const today = now.getDate();
 
-	for (let week = 0; week < 4; week++) {
-		for (let day = 1; day <= 5; day++) {
-			const date = new Date();
-			date.setDate(date.getDate() - week * 7 - (7 - day));
+	const DAILY_TARGET = 155; // ≈ $3,100/month across ~20 workdays
+	const HOURLY_RATE = 22;
 
-			if (Math.random() > 0.85) continue;
+	for (let m = HISTORY_MONTHS - 1; m >= 0; m--) {
+		const isCurrentMonth = m === 0;
+		const targetMonth = monthStart(m);
+		const year = targetMonth.getFullYear();
+		const month = targetMonth.getMonth();
+		const daysInMonth = new Date(year, month + 1, 0).getDate();
+		const lastDay = isCurrentMonth ? Math.min(today, daysInMonth) : daysInMonth;
 
-			const hours = 6 + Math.floor(Math.random() * 4);
-			const minutes = Math.floor(Math.random() * 4) * 15;
-			const hourlyRate = 25 + Math.random() * 10;
-			const amount = Math.round((hours + minutes / 60) * hourlyRate * 100) / 100;
+		for (let d = 1; d <= lastDay; d++) {
+			const date = new Date(year, month, d);
+			const weekday = date.getDay();
+
+			// Weekdays only
+			if (weekday === 0 || weekday === 6) continue;
+
+			// ±20% deterministic variance per day
+			const amount = vary(DAILY_TARGET, 0.2, m * 100 + d, 42);
+			const totalMinutes = Math.round((amount / HOURLY_RATE) * 60);
+			const hours = Math.floor(totalMinutes / 60);
+			const minutes = totalMinutes % 60;
 
 			entries.push({
 				id: generateId(),
-				date: date.toISOString().split("T")[0],
+				date: `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`,
 				amount,
 				hours,
 				minutes,
@@ -1122,10 +1115,14 @@ const createSampleIncomeEntries = (): IncomeEntry[] => {
 	return entries;
 };
 
-// Sample weekly targets
-const createSampleWeeklyTargets = (): IncomeWeeklyTargets[] => [{ id: generateId(), amount: 800 }];
+const createSampleWeeklyTargets = (): IncomeWeeklyTargets[] => [
+	{ id: generateId(), amount: 775 }, // ≈ $3,100 / 4 weeks
+];
 
-// Main seed function
+// ============================================================================
+// Main seed entry point
+// ============================================================================
+
 export const seedTestDatabase = async (): Promise<void> => {
 	console.log("Seeding test database with sample data...");
 
@@ -1154,7 +1151,11 @@ export const seedTestDatabase = async (): Promise<void> => {
 			categoryColors: DEFAULT_CATEGORY_COLORS,
 			paymentMethods: DEFAULT_PAYMENT_METHODS,
 		});
-		console.log(`✓ ${expenses.length} expenses created`);
+		const recurringParents = expenses.filter((e) => e.isRecurring && !e.parentExpenseId).length;
+		const occurrences = expenses.filter((e) => e.parentExpenseId).length;
+		console.log(
+			`✓ ${expenses.length} expenses created (${recurringParents} recurring series × ${HISTORY_MONTHS + FUTURE_MONTHS}mo = ${occurrences} occurrences)`,
+		);
 
 		const incomeEntries = createSampleIncomeEntries();
 		const weeklyTargets = createSampleWeeklyTargets();
@@ -1163,12 +1164,11 @@ export const seedTestDatabase = async (): Promise<void> => {
 			weeklyTargets,
 			viewType: "weekly",
 		});
-		console.log(`✓ ${incomeEntries.length} income entries created`);
+		console.log(
+			`✓ ${incomeEntries.length} income entries created (${HISTORY_MONTHS} months of history)`,
+		);
 
-		await sqlStorage.saveMetadata({
-			lastSaved: new Date(),
-			version: "0.0.5",
-		});
+		await sqlStorage.saveMetadata({ lastSaved: new Date(), version: "0.0.5" });
 
 		await sqlStorage.saveSettings({
 			...DEFAULT_SETTINGS,
@@ -1177,6 +1177,12 @@ export const seedTestDatabase = async (): Promise<void> => {
 		console.log("✓ Settings configured (notification lead time: 3 days)");
 
 		console.log("Test database seeded successfully!");
+		console.log("");
+		console.log("  Financial profile:");
+		console.log("    Needs/mo  ≈ $2,555  |  Income/mo ≈ $3,100");
+		console.log("    Wants/mo  ≈ $350    |  Surplus    ≈ $200-550/mo");
+		console.log("    Wishlist  = $2,100 across 4 items");
+		console.log("    Month -3 has a $680 car repair (deficit month)");
 	} catch (error) {
 		console.error("Failed to seed test database:", error);
 		throw error;

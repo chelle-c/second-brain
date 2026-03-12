@@ -39,7 +39,6 @@ const PieChartInner = ({
 	} | null>(null);
 	const [animationProgress, setAnimationProgress] = useState(0);
 
-	// Animate from 0 to 1 over 500ms
 	useEffect(() => {
 		setAnimationProgress(0);
 		const startTime = performance.now();
@@ -47,14 +46,10 @@ const PieChartInner = ({
 
 		const animate = (currentTime: number) => {
 			const elapsed = currentTime - startTime;
-			const progress = Math.min(elapsed / duration, 1);
-			// Ease-out cubic for smooth deceleration
+			const progress = Math.max(0, Math.min(elapsed / duration, 1));
 			const eased = 1 - (1 - progress) ** 3;
 			setAnimationProgress(eased);
-
-			if (progress < 1) {
-				requestAnimationFrame(animate);
-			}
+			if (progress < 1) requestAnimationFrame(animate);
 		};
 
 		requestAnimationFrame(animate);
@@ -71,7 +66,6 @@ const PieChartInner = ({
 		range: data.map((d) => colors[d.name] || resolvedDefaultColor),
 	});
 
-	// Calculate the current end angle based on animation progress
 	const fullCircle = Math.PI * 2;
 	const currentEndAngle = -Math.PI + fullCircle * animationProgress;
 
@@ -94,26 +88,26 @@ const PieChartInner = ({
 						cornerRadius={3}
 					>
 						{(pie) =>
-						pie.arcs.map((arc) => (
-							/* biome-ignore lint/a11y/noStaticElementInteractions: SVG path needs mouse events for tooltip */
-							<path
-								key={`arc-${arc.data.name}`}
-								aria-label={`${arc.data.name}: ${arc.data.value}`}
-								d={pie.path(arc) || ""}
-								fill={colorScale(arc.data.name)}
-								opacity={opacity}
-								style={{ cursor: "pointer" }}
-								onMouseMove={(event) => {
-									setTooltip({
-										data: arc.data,
-										x: event.clientX,
-										y: event.clientY,
-									});
-								}}
-								onMouseLeave={() => setTooltip(null)}
-							/>
-						))
-					}
+							pie.arcs.map((arc) => (
+								/* biome-ignore lint/a11y/noStaticElementInteractions: SVG path needs mouse events for tooltip */
+								<path
+									key={`arc-${arc.data.name}`}
+									aria-label={`${arc.data.name}: ${arc.data.value}`}
+									d={pie.path(arc) || ""}
+									fill={colorScale(arc.data.name)}
+									opacity={opacity}
+									style={{ cursor: "pointer" }}
+									onMouseMove={(event) => {
+										setTooltip({
+											data: arc.data,
+											x: event.clientX,
+											y: event.clientY,
+										});
+									}}
+									onMouseLeave={() => setTooltip(null)}
+								/>
+							))
+						}
 					</Pie>
 				</Group>
 			</svg>
@@ -144,9 +138,12 @@ const PieChartInner = ({
 export const PieChart = (props: PieChartProps) => {
 	return (
 		<ParentSize>
-			{({ width, height }) => (
-				<PieChartInner {...props} width={width} height={height} />
-			)}
+			{({ width, height }) =>
+				// Minimum size guard — below this radius becomes meaningless
+				width > 40 && height > 40 ?
+					<PieChartInner {...props} width={width} height={height} />
+				:	null
+			}
 		</ParentSize>
 	);
 };

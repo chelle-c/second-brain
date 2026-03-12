@@ -15,6 +15,11 @@ const ExpensesTracker = lazy(() =>
 const IncomeTracker = lazy(() =>
 	import("@/apps/Finances/income").then((m) => ({ default: m.IncomeTracker })),
 );
+const FinancialOverview = lazy(() =>
+	import("@/apps/Finances/overview").then((m) => ({
+		default: m.FinancialOverview,
+	})),
+);
 const MindMapApp = lazy(() => import("@/apps/MindMap").then((m) => ({ default: m.MindMapApp })));
 const Calendar = lazy(() => import("@/apps/Calendar").then((m) => ({ default: m.Calendar })));
 const Settings = lazy(() => import("@/apps/Settings").then((m) => ({ default: m.Settings })));
@@ -52,6 +57,14 @@ function App() {
 								element={
 									<Suspense fallback={<PageLoading />}>
 										<ExpensesTracker />
+									</Suspense>
+								}
+							/>
+							<Route
+								path="overview"
+								element={
+									<Suspense fallback={<PageLoading />}>
+										<FinancialOverview />
 									</Suspense>
 								}
 							/>
