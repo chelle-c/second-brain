@@ -10,7 +10,8 @@
 		"tauri": "tauri",
 		"test": "vitest",
 		"test:ui": "vitest --ui",
-		"test:run": "vitest run"
+		"test:run": "vitest run",
+		"test:e2e": "tauri build --debug && vitest run --config vitest.e2e.config.ts"
 	},
 	"dependencies": {
 		"@hookform/resolvers": "^5.2.2",

@@ -5,8 +5,9 @@ export default defineConfig({
 	test: {
 		globals: true,
 		environment: "happy-dom",
-		setupFiles: ["./tests/setup.ts"],
+		setupFiles: ["./tests/setup.ts", "./tests/setup/tauri.mock.ts"],
 		include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
+		exclude: ["tests/e2e/**/*"],
 	},
 	resolve: {
 		alias: {
