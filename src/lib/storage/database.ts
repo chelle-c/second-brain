@@ -13,6 +13,7 @@ import {
 	type StorageCache,
 } from "@/types/storage";
 import { DEFAULT_THEME_SETTINGS, type ThemeSettings } from "@/types/theme";
+import { localStorageCache } from "./localStorageCache";
 import { ExpensesStorage } from "./expensesStorage";
 import { IncomeStorage } from "./incomeStorage";
 import { NotesStorage } from "./notesStorage";
@@ -20,9 +21,7 @@ import { NotesStorage } from "./notesStorage";
 const DB_NAME_PRODUCTION = "appdata.db";
 const DB_NAME_TEST = "appdata-test.db";
 
-const joinPath = (...parts: string[]): string => {
-	return parts.join(sep());
-};
+const joinPath = (...parts: string[]): string => parts.join(sep());
 
 const checkIsDevMode = async (): Promise<boolean> => {
 	try {
@@ -32,31 +31,63 @@ const checkIsDevMode = async (): Promise<boolean> => {
 	}
 };
 
+/**
+ * Exponential back-off retry for transient SQLite errors.
+ */
+async function withRetry<T>(fn: () => Promise<T>, maxAttempts = 4, baseDelayMs = 150): Promise<T> {
+	let lastError: unknown;
+	for (let attempt = 0; attempt < maxAttempts; attempt++) {
+		try {
+			return await fn();
+		} catch (err) {
+			lastError = err;
+			const msg = String(err).toLowerCase();
+			if (!msg.includes("locked") && !msg.includes("busy")) throw err;
+			const delay = baseDelayMs * 2 ** attempt + Math.random() * 50;
+			console.warn(
+				`DB locked (attempt ${attempt + 1}/${maxAttempts}), retrying in ${Math.round(delay)}ms…`,
+			);
+			await new Promise((r) => setTimeout(r, delay));
+		}
+	}
+	throw lastError;
+}
+
 class SqlStorage {
 	private db: Database | null = null;
 	private appDataPath: string | null = null;
-	private operationQueue: Promise<void> = Promise.resolve();
 	private cache: StorageCache = {};
 	private currentEnvironment: DatabaseEnvironment = "production";
 	private environmentInitialized = false;
 	private tablesCreated = false;
-	private storageInitialized = false;
-
-	// Connection management
-	private connectionRefCount = 0;
-	private closeTimeout: ReturnType<typeof setTimeout> | null = null;
-	private connectionPromise: Promise<void> | null = null;
-	private isClosing = false;
-	private static readonly CLOSE_DELAY_MS = 2000; // Close after 2 seconds of inactivity
 
 	private notesStorage!: NotesStorage;
 	private expensesStorage!: ExpensesStorage;
 	private incomeStorage!: IncomeStorage;
 
+	/**
+	 * Global connection-level gate.
+	 *
+	 * Every call that needs the database is chained onto this promise.
+	 * This means:
+	 *   - Operations are strictly serialised – no two calls can hold the
+	 *     connection at the same time.
+	 *   - A "close" that is in-flight will block the next caller until it
+	 *     finishes, so the caller always finds a clean, closed connection
+	 *     that it can safely open.
+	 *   - No separate "isClosing" flag or ref-counting is needed; the queue
+	 *     itself acts as the mutex.
+	 */
+	private gate: Promise<void> = Promise.resolve();
+
+	// Idle-close timer
+	private closeTimeout: ReturnType<typeof setTimeout> | null = null;
+	private static readonly CLOSE_DELAY_MS = 5000;
+
+	// ── Helpers ──────────────────────────────────────────────────────────────
+
 	private getDb(): Database {
-		if (!this.db) {
-			throw new Error("Database connection not open");
-		}
+		if (!this.db) throw new Error("Database connection not open");
 		return this.db;
 	}
 
@@ -69,64 +100,40 @@ class SqlStorage {
 	}
 
 	async getDataPath(): Promise<string> {
-		if (!this.appDataPath) {
-			this.appDataPath = await appDataDir();
-		}
+		if (!this.appDataPath) this.appDataPath = await appDataDir();
 		return this.appDataPath;
 	}
 
-	// Check if connection is currently open
 	isOpen(): boolean {
 		return this.db !== null;
 	}
 
-	// Ensure environment is determined (only needs to happen once)
+	// ── Environment ──────────────────────────────────────────────────────────
+
 	private async ensureEnvironment(): Promise<void> {
 		if (this.environmentInitialized) return;
-
 		const isDev = await checkIsDevMode();
 		this.currentEnvironment = isDev ? "test" : "production";
 		this.environmentInitialized = true;
 	}
 
-	// Open the database connection
+	// ── Connection management ────────────────────────────────────────────────
+
 	private async openConnection(): Promise<void> {
-		// If already connecting, wait for that to complete
-		if (this.connectionPromise) {
-			await this.connectionPromise;
-			return;
-		}
+		// Already open – nothing to do
+		if (this.db) return;
 
-		if (this.db) {
-			// Connection already open
-			return;
-		}
-
-		// Create a promise to track the connection process
-		this.connectionPromise = this.doOpenConnection();
-		try {
-			await this.connectionPromise;
-		} finally {
-			this.connectionPromise = null;
-		}
-	}
-
-	private async doOpenConnection(): Promise<void> {
 		await this.ensureEnvironment();
-
 		const dataPath = await this.getDataPath();
-		const dbFileName = this.getDatabaseFileName();
-		const dbPath = joinPath(dataPath, dbFileName);
+		const dbPath = joinPath(dataPath, this.getDatabaseFileName());
 
-		console.log(`Opening database connection: ${dbPath}`);
+		console.log(`Opening database: ${dbPath}`);
 		this.db = await Database.load(`sqlite:${dbPath}`);
 
-		// Use DELETE journal mode instead of WAL for better compatibility with open/close pattern
-		await this.db.execute("PRAGMA journal_mode=DELETE");
-		await this.db.execute("PRAGMA synchronous=FULL");
-		await this.db.execute("PRAGMA busy_timeout=5000");
+		await this.db.execute("PRAGMA journal_mode=WAL");
+		await this.db.execute("PRAGMA synchronous=NORMAL");
+		await this.db.execute("PRAGMA busy_timeout=30000");
 
-		// Create tables if needed (only on first connection)
 		if (!this.tablesCreated) {
 			await this.createTables();
 			await this.runMigrations();
@@ -134,103 +141,92 @@ class SqlStorage {
 			this.tablesCreated = true;
 		}
 
-		// Initialize storage classes once
-		if (!this.storageInitialized) {
-			const context = this.getContext();
-			this.notesStorage = new NotesStorage(context);
-			this.expensesStorage = new ExpensesStorage(context);
-			this.incomeStorage = new IncomeStorage(context);
-			this.storageInitialized = true;
-		}
-
-		console.log(`Database connection opened (${this.currentEnvironment} environment)`);
+		this.rebuildStorageHelpers();
+		console.log(`DB open (${this.currentEnvironment})`);
 	}
 
-	// Close the database connection immediately
 	private async closeConnectionNow(): Promise<void> {
-		if (!this.db) {
-			// Connection already closed
-			return;
-		}
-
+		if (!this.db) return;
 		try {
+			try {
+				await this.db.execute("PRAGMA wal_checkpoint(TRUNCATE)");
+			} catch {
+				// Ignore checkpoint errors
+			}
 			await this.db.close();
 			console.log("Database connection closed");
 		} catch (error) {
-			console.error("Error closing database connection:", error);
+			console.error("Error closing database:", error);
 		}
-
 		this.db = null;
 	}
 
-	// Schedule the connection to close after a delay
-	private scheduleClose(): void {
-		// Cancel any existing close timer
+	/**
+	 * Cancel any pending idle-close and schedule a fresh one.
+	 * Called after every operation completes.
+	 */
+	private rescheduleClose(): void {
 		if (this.closeTimeout) {
 			clearTimeout(this.closeTimeout);
 			this.closeTimeout = null;
 		}
+		this.closeTimeout = setTimeout(() => {
+			this.closeTimeout = null;
+			// Chain the close onto the gate so it cannot race with any queued work
+			this.gate = this.gate.then(() => this.closeConnectionNow());
+		}, SqlStorage.CLOSE_DELAY_MS);
+	}
 
-		// Only schedule close if no pending operations
-		if (this.connectionRefCount === 0) {
-			this.closeTimeout = setTimeout(() => {
+	/**
+	 * Run `fn` inside an open connection, serialised through the global gate.
+	 *
+	 * The gate ensures:
+	 *   1. Any in-flight close finishes before we open again.
+	 *   2. Concurrent callers are queued and run one at a time.
+	 */
+	private withConnection<T>(fn: () => Promise<T>): Promise<T> {
+		// Chain onto the gate; each call waits for the previous to complete
+		const result = this.gate.then(async () => {
+			// Cancel idle-close because we are about to use the connection
+			if (this.closeTimeout) {
+				clearTimeout(this.closeTimeout);
 				this.closeTimeout = null;
-				if (this.connectionRefCount === 0) {
-					this.closeConnectionNow();
-				}
-			}, SqlStorage.CLOSE_DELAY_MS);
-		}
-	}
-
-	// Execute a function with an open database connection
-	// Connection stays open and closes after a period of inactivity
-	private async withConnection<T>(fn: () => Promise<T>): Promise<T> {
-		if (this.isClosing) {
-			throw new Error("Database is closing, cannot start new operations");
-		}
-
-		// Cancel any pending close
-		if (this.closeTimeout) {
-			clearTimeout(this.closeTimeout);
-			this.closeTimeout = null;
-		}
-
-		this.connectionRefCount++;
-
-		try {
-			await this.openConnection();
-			return await fn();
-		} finally {
-			this.connectionRefCount--;
-			// Schedule delayed close (but not if we're in the process of closing)
-			if (!this.isClosing) {
-				this.scheduleClose();
 			}
-		}
+
+			await this.openConnection();
+
+			try {
+				return await fn();
+			} finally {
+				// Reschedule idle-close after each operation
+				this.rescheduleClose();
+			}
+		});
+
+		// Advance the gate, swallowing errors so a failing call doesn't
+		// permanently break the queue for subsequent callers
+		this.gate = result.then(
+			() => {},
+			() => {},
+		);
+
+		return result;
 	}
 
-	private queueOperation = async <T>(operation: () => Promise<T>): Promise<T> => {
-		// Chain the operation on the queue so operations run sequentially
-		const operationPromise = this.operationQueue.then(operation);
-
-		// The queue must always wait for the actual operation to finish,
-		// regardless of whether the caller times out. This prevents
-		// concurrent writes if a timeout fires while the operation is still running.
-		this.operationQueue = operationPromise.then(() => {}).catch(() => {});
-
-		// The caller gets a timeout so they don't wait forever
-		const timeoutPromise = new Promise<T>((_, reject) => {
-			setTimeout(
-				() => reject(new Error("Database operation timeout after 30 seconds")),
-				30000,
-			);
-		});
-
-		return Promise.race([operationPromise, timeoutPromise]).catch((error) => {
-			console.error("Database operation failed:", error);
-			throw error;
-		});
+	/**
+	 * Serialise individual DB statements within a connection.
+	 * Wrapped with retry logic for transient lock errors.
+	 */
+	private queueOperation = <T>(operation: () => Promise<T>): Promise<T> => {
+		return withRetry(operation);
 	};
+
+	private rebuildStorageHelpers(): void {
+		const context = this.getContext();
+		this.notesStorage = new NotesStorage(context);
+		this.expensesStorage = new ExpensesStorage(context);
+		this.incomeStorage = new IncomeStorage(context);
+	}
 
 	private getContext(): DatabaseContext {
 		return {
@@ -240,20 +236,21 @@ class SqlStorage {
 		};
 	}
 
-	// Legacy initialize method for backward compatibility
+	// ── Public initialise ────────────────────────────────────────────────────
+
 	async initialize(environment?: DatabaseEnvironment): Promise<void> {
 		if (environment) {
 			this.currentEnvironment = environment;
 			this.environmentInitialized = true;
 		}
-		// Just ensure environment is set, actual connection happens on-demand
 		await this.ensureEnvironment();
 	}
+
+	// ── Schema ───────────────────────────────────────────────────────────────
 
 	private async createTables(): Promise<void> {
 		const db = this.getDb();
 
-		// Create notes table with folder field
 		await db.execute(`
 			CREATE TABLE IF NOT EXISTS notes (
 				id TEXT PRIMARY KEY,
@@ -268,7 +265,6 @@ class SqlStorage {
 			)
 		`);
 
-		// Legacy folders table (single row JSON)
 		await db.execute(`
 			CREATE TABLE IF NOT EXISTS folders (
 				id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -276,7 +272,6 @@ class SqlStorage {
 			)
 		`);
 
-		// New normalized folders table
 		await db.execute(`
 			CREATE TABLE IF NOT EXISTS folders_new (
 				id TEXT PRIMARY KEY,
@@ -365,9 +360,7 @@ class SqlStorage {
 
 	private async runMigrations(): Promise<void> {
 		const db = this.getDb();
-
 		let currentVersion = "0.0.0";
-
 		try {
 			const versionResult = await db.select<Array<{ version: string }>>(
 				"SELECT version FROM metadata WHERE id = 1",
@@ -375,8 +368,8 @@ class SqlStorage {
 			if (versionResult.length > 0 && versionResult[0].version) {
 				currentVersion = versionResult[0].version;
 			}
-		} catch (_) {
-			// No metadata found, assuming version 0.0.0
+		} catch {
+			// No metadata row yet
 		}
 
 		await this.ensureExpensesColumns();
@@ -398,12 +391,10 @@ class SqlStorage {
 
 	private async migrateFoldersTable(): Promise<void> {
 		const db = this.getDb();
-
 		try {
 			const tables = await db.select<Array<{ name: string }>>(
 				"SELECT name FROM sqlite_master WHERE type='table' AND name='folders_new'",
 			);
-
 			if (tables.length === 0) {
 				await db.execute(`
 					CREATE TABLE folders_new (
@@ -418,7 +409,6 @@ class SqlStorage {
 						FOREIGN KEY (parentId) REFERENCES folders_new(id) ON DELETE CASCADE
 					)
 				`);
-
 				await db.execute(`
 					CREATE INDEX idx_folders_parent ON folders_new(parentId)
 				`);
@@ -431,51 +421,31 @@ class SqlStorage {
 
 	private async migrateNotesTable(): Promise<void> {
 		const db = this.getDb();
-
 		try {
 			const tableInfo = await db.select<Array<{ name: string }>>("PRAGMA table_info(notes)");
-
 			const columnNames = tableInfo.map((col) => col.name);
-
-			const hasOldColumn = columnNames.includes("folderId");
-			const hasNewColumn = columnNames.includes("folder");
-
-			if (hasOldColumn && !hasNewColumn) {
-				await db.execute(`
-					ALTER TABLE notes ADD COLUMN folder TEXT DEFAULT 'inbox'
-				`);
-
-				await db.execute(`
-					UPDATE notes SET folder = COALESCE(folderId, 'inbox')
-				`);
-			} else if (!hasNewColumn) {
-				await db.execute(`
-					ALTER TABLE notes ADD COLUMN folder TEXT DEFAULT 'inbox'
-				`);
+			if (columnNames.includes("folderId") && !columnNames.includes("folder")) {
+				await db.execute(`ALTER TABLE notes ADD COLUMN folder TEXT DEFAULT 'inbox'`);
+				await db.execute(`UPDATE notes SET folder = COALESCE(folderId, 'inbox')`);
+			} else if (!columnNames.includes("folder")) {
+				await db.execute(`ALTER TABLE notes ADD COLUMN folder TEXT DEFAULT 'inbox'`);
 			}
-
-			await db.execute(`
-				UPDATE notes SET folder = 'inbox'
-				WHERE folder IS NULL OR folder = '' OR TRIM(folder) = ''
-			`);
+			await db.execute(
+				`UPDATE notes SET folder = 'inbox' WHERE folder IS NULL OR TRIM(folder) = ''`,
+			);
 		} catch (error) {
 			console.error("Error migrating notes table:", error);
 			throw error;
 		}
 	}
 
-	/**
-	 * Ensure the `reminder` column exists on the notes table.
-	 * Existing rows that lack it get NULL (no reminder) automatically.
-	 */
 	private async migrateNotesReminders(): Promise<void> {
 		const db = this.getDb();
 		try {
 			const tableInfo = await db.select<Array<{ name: string }>>("PRAGMA table_info(notes)");
-			const hasReminder = tableInfo.some((col) => col.name === "reminder");
-			if (!hasReminder) {
+			if (!tableInfo.some((col) => col.name === "reminder")) {
 				await db.execute(`ALTER TABLE notes ADD COLUMN reminder TEXT DEFAULT NULL`);
-				console.log("Migration: added 'reminder' column to notes table");
+				console.log("Migration: added 'reminder' column to notes");
 			}
 		} catch (error) {
 			console.error("Error migrating notes reminder column:", error);
@@ -485,19 +455,13 @@ class SqlStorage {
 
 	private async ensureExpensesColumns(): Promise<void> {
 		const db = this.getDb();
-
 		try {
 			const tableInfo = await db.select<Array<{ name: string; type: string }>>(
 				"PRAGMA table_info(expenses)",
 			);
-
 			const existingColumns = new Set(tableInfo.map((col) => col.name));
 
-			const requiredColumns: Array<{
-				name: string;
-				type: string;
-				defaultValue: string;
-			}> = [
+			const requiredColumns = [
 				{ name: "paymentMethod", type: "TEXT", defaultValue: "'None'" },
 				{ name: "notify", type: "INTEGER", defaultValue: "0" },
 				{ name: "amountData", type: "TEXT", defaultValue: "NULL" },
@@ -505,22 +469,16 @@ class SqlStorage {
 
 			for (const column of requiredColumns) {
 				if (!existingColumns.has(column.name)) {
-					try {
-						await db.execute(
-							`ALTER TABLE expenses ADD COLUMN ${column.name} ${column.type} DEFAULT ${column.defaultValue}`,
-						);
-					} catch (alterError) {
-						console.error(`Failed to add column ${column.name}:`, alterError);
-						throw alterError;
-					}
+					await db.execute(
+						`ALTER TABLE expenses ADD COLUMN ${column.name} ${column.type} DEFAULT ${column.defaultValue}`,
+					);
 				}
 			}
 
-			const paymentMethodsResult = await db.select<Array<{ value: string }>>(
+			const pmResult = await db.select<Array<{ value: string }>>(
 				"SELECT value FROM settings WHERE key = 'expense_paymentMethods'",
 			);
-
-			if (paymentMethodsResult.length === 0) {
+			if (pmResult.length === 0) {
 				await db.execute(
 					`INSERT OR REPLACE INTO settings (key, value) VALUES ('expense_paymentMethods', ?)`,
 					[JSON.stringify(DEFAULT_PAYMENT_METHODS)],
@@ -534,126 +492,84 @@ class SqlStorage {
 
 	private async verifySchema(): Promise<void> {
 		const db = this.getDb();
-
-		try {
-			const tableInfo = await db.select<Array<{ name: string }>>(
-				"PRAGMA table_info(expenses)",
-			);
-
-			const columns = new Set(tableInfo.map((col) => col.name));
-			const requiredColumns = [
-				"id",
-				"name",
-				"amount",
-				"category",
-				"dueDate",
-				"isRecurring",
-				"recurrence",
-				"isArchived",
-				"isPaid",
-				"paymentDate",
-				"type",
-				"importance",
-				"createdAt",
-				"updatedAt",
-				"parentExpenseId",
-				"monthlyOverrides",
-				"isModified",
-				"initialState",
-				"paymentMethod",
-			];
-
-			const missingColumns = requiredColumns.filter((col) => !columns.has(col));
-
-			if (missingColumns.length > 0) {
-				throw new Error(
-					`Schema verification failed. Missing columns in expenses table: ${missingColumns.join(
-						", ",
-					)}`,
-				);
-			}
-		} catch (error) {
-			console.error("Schema verification failed:", error);
-			throw error;
+		const tableInfo = await db.select<Array<{ name: string }>>("PRAGMA table_info(expenses)");
+		const columns = new Set(tableInfo.map((col) => col.name));
+		const required = [
+			"id",
+			"name",
+			"amount",
+			"category",
+			"dueDate",
+			"isRecurring",
+			"recurrence",
+			"isArchived",
+			"isPaid",
+			"paymentDate",
+			"type",
+			"importance",
+			"createdAt",
+			"updatedAt",
+			"parentExpenseId",
+			"monthlyOverrides",
+			"isModified",
+			"initialState",
+			"paymentMethod",
+		];
+		const missing = required.filter((c) => !columns.has(c));
+		if (missing.length > 0) {
+			throw new Error(`Schema verification failed. Missing columns: ${missing.join(", ")}`);
 		}
 	}
 
-	// Public API - Notes
+	// ── Public API — Notes ───────────────────────────────────────────────────
+
 	async loadNotes() {
-		return this.withConnection(async () => {
-			return this.notesStorage.loadNotes();
-		});
+		return this.withConnection(() => this.notesStorage.loadNotes());
 	}
-
 	async saveNotes(notes: Note[]) {
-		return this.withConnection(async () => {
-			return this.notesStorage.saveNotes(notes);
-		});
+		return this.withConnection(() => this.notesStorage.saveNotes(notes));
 	}
-
 	async loadFolders() {
-		return this.withConnection(async () => {
-			return this.notesStorage.loadFolders();
-		});
+		return this.withConnection(() => this.notesStorage.loadFolders());
 	}
-
 	async saveFolders(folders: Folder[]) {
-		return this.withConnection(async () => {
-			return this.notesStorage.saveFolders(folders);
-		});
+		return this.withConnection(() => this.notesStorage.saveFolders(folders));
 	}
-
 	async loadTags() {
-		return this.withConnection(async () => {
-			return this.notesStorage.loadTags();
-		});
+		return this.withConnection(() => this.notesStorage.loadTags());
 	}
-
 	async saveTags(tags: Record<string, Tag>) {
-		return this.withConnection(async () => {
-			return this.notesStorage.saveTags(tags);
-		});
+		return this.withConnection(() => this.notesStorage.saveTags(tags));
 	}
 
-	// Public API - Expenses
+	// ── Public API — Expenses ────────────────────────────────────────────────
+
 	async loadExpenses() {
-		return this.withConnection(async () => {
-			return this.expensesStorage.loadExpenses();
-		});
+		return this.withConnection(() => this.expensesStorage.loadExpenses());
 	}
-
 	async saveExpenses(expenses: AppData["expenses"]) {
-		return this.withConnection(async () => {
-			return this.expensesStorage.saveExpenses(expenses);
-		});
+		return this.withConnection(() => this.expensesStorage.saveExpenses(expenses));
 	}
 
-	// Public API - Income
+	// ── Public API — Income ──────────────────────────────────────────────────
+
 	async loadIncome() {
-		return this.withConnection(async () => {
-			return this.incomeStorage.loadIncome();
-		});
+		return this.withConnection(() => this.incomeStorage.loadIncome());
 	}
-
 	async saveIncome(income: AppData["income"]) {
-		return this.withConnection(async () => {
-			return this.incomeStorage.saveIncome(income);
-		});
+		return this.withConnection(() => this.incomeStorage.saveIncome(income));
 	}
 
-	// Public API - Settings
+	// ── Public API — Settings ────────────────────────────────────────────────
+
 	async loadSettings(): Promise<AppSettings> {
-		return this.withConnection(async () => {
-			return this.queueOperation(async () => {
+		return this.withConnection(() =>
+			this.queueOperation(async () => {
 				const db = this.getDb();
 				const results = await db.select<Array<{ key: string; value: string }>>(
 					"SELECT key, value FROM settings",
 				);
-
-				if (results.length === 0) {
-					return DEFAULT_SETTINGS;
-				}
-
+				if (results.length === 0) return DEFAULT_SETTINGS;
 				const settings: Record<string, unknown> = {};
 				for (const row of results) {
 					try {
@@ -662,19 +578,19 @@ class SqlStorage {
 						settings[row.key] = row.value;
 					}
 				}
-
-				this.cache.settings = {
+				const merged = {
 					...DEFAULT_SETTINGS,
 					...(settings as Partial<AppSettings>),
 				};
-				return this.cache.settings;
-			});
-		});
+				this.cache.settings = merged;
+				return merged;
+			}),
+		);
 	}
 
 	async saveSettings(settings: AppSettings): Promise<void> {
-		return this.withConnection(async () => {
-			return this.queueOperation(async () => {
+		return this.withConnection(() =>
+			this.queueOperation(async () => {
 				const db = this.getDb();
 				for (const [key, value] of Object.entries(settings)) {
 					await db.execute(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`, [
@@ -683,8 +599,8 @@ class SqlStorage {
 					]);
 				}
 				this.cache.settings = settings;
-			});
-		});
+			}),
+		);
 	}
 
 	hasSettingsChanged(settings: AppSettings): boolean {
@@ -692,20 +608,19 @@ class SqlStorage {
 		return JSON.stringify(this.cache.settings) !== JSON.stringify(settings);
 	}
 
-	// Public API - Theme
+	// ── Public API — Theme ───────────────────────────────────────────────────
+
 	async loadTheme(): Promise<ThemeSettings> {
-		return this.withConnection(async () => {
-			return this.queueOperation(async () => {
+		return this.withConnection(() =>
+			this.queueOperation(async () => {
 				const db = this.getDb();
 				const results = await db.select<Array<{ key: string; value: string }>>(
 					"SELECT key, value FROM settings WHERE key LIKE 'theme_%'",
 				);
-
 				if (results.length === 0) {
 					this.cache.theme = DEFAULT_THEME_SETTINGS;
 					return DEFAULT_THEME_SETTINGS;
 				}
-
 				const theme: Record<string, unknown> = {};
 				for (const row of results) {
 					const key = row.key.replace("theme_", "");
@@ -715,20 +630,19 @@ class SqlStorage {
 						theme[key] = row.value;
 					}
 				}
-
 				const fullTheme = {
 					...DEFAULT_THEME_SETTINGS,
 					...(theme as Partial<ThemeSettings>),
 				};
 				this.cache.theme = fullTheme;
 				return fullTheme;
-			});
-		});
+			}),
+		);
 	}
 
 	async saveTheme(theme: ThemeSettings): Promise<void> {
-		return this.withConnection(async () => {
-			return this.queueOperation(async () => {
+		return this.withConnection(() =>
+			this.queueOperation(async () => {
 				const db = this.getDb();
 				for (const [key, value] of Object.entries(theme)) {
 					await db.execute(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`, [
@@ -737,8 +651,8 @@ class SqlStorage {
 					]);
 				}
 				this.cache.theme = theme;
-			});
-		});
+			}),
+		);
 	}
 
 	hasThemeChanged(theme: ThemeSettings): boolean {
@@ -746,15 +660,15 @@ class SqlStorage {
 		return JSON.stringify(this.cache.theme) !== JSON.stringify(theme);
 	}
 
-	// Metadata
+	// ── Public API — Metadata ────────────────────────────────────────────────
+
 	async loadMetadata(): Promise<AppMetadata> {
-		return this.withConnection(async () => {
-			return this.queueOperation(async () => {
+		return this.withConnection(() =>
+			this.queueOperation(async () => {
 				const db = this.getDb();
 				const results = await db.select<Array<{ lastSaved: string; version: string }>>(
 					"SELECT * FROM metadata WHERE id = 1",
 				);
-
 				if (results.length === 0) {
 					const defaultMetadata: AppMetadata = {
 						lastSaved: new Date(),
@@ -766,29 +680,73 @@ class SqlStorage {
 					);
 					return defaultMetadata;
 				}
-
 				return {
 					lastSaved: new Date(results[0].lastSaved),
 					version: results[0].version,
 				};
-			});
-		});
+			}),
+		);
 	}
 
 	async saveMetadata(metadata: AppMetadata): Promise<void> {
-		return this.withConnection(async () => {
-			return this.queueOperation(async () => {
+		return this.withConnection(() =>
+			this.queueOperation(async () => {
 				const db = this.getDb();
 				await db.execute(
 					`INSERT OR REPLACE INTO metadata (id, lastSaved, version) VALUES (1, ?, ?)`,
 					[metadata.lastSaved.toISOString(), metadata.version],
 				);
-			});
-		});
+			}),
+		);
 	}
 
-	// Attempt a single data load within a connection
-	private async loadDataOnce(): Promise<AppData> {
+	// ── Load all data ────────────────────────────────────────────────────────
+
+	async loadData(): Promise<AppData> {
+		// Try to load from database first
+		let dbData: AppData | null = null;
+		try {
+			dbData = await this.loadDataFromDatabase();
+
+			const hasData =
+				dbData.notes.length > 0 ||
+				dbData.folders.length > 0 ||
+				dbData.expenses.expenses.length > 0 ||
+				dbData.income.entries.length > 0;
+
+			if (hasData) {
+				localStorageCache.save(dbData);
+				return dbData;
+			}
+		} catch (error) {
+			console.warn("Failed to load from database:", error);
+		}
+
+		// Database empty or failed - check localStorage
+		const cachedData = localStorageCache.load();
+		if (cachedData) {
+			const hasCache =
+				cachedData.notes.length > 0 ||
+				cachedData.folders.length > 0 ||
+				cachedData.expenses.expenses.length > 0 ||
+				cachedData.income.entries.length > 0;
+
+			if (hasCache) {
+				console.log("Using localStorage cache (database empty or unavailable)");
+				return cachedData;
+			}
+		}
+
+		if (dbData) {
+			localStorageCache.save(dbData);
+			return dbData;
+		}
+
+		console.log("No existing data found, returning defaults");
+		return this.emptyAppData();
+	}
+
+	private async loadDataFromDatabase(): Promise<AppData> {
 		return this.withConnection(async () => {
 			const notes = await this.notesStorage.loadNotes();
 			const folders = await this.notesStorage.loadFolders();
@@ -796,10 +754,11 @@ class SqlStorage {
 			const expenses = await this.expensesStorage.loadExpenses();
 			const income = await this.incomeStorage.loadIncome();
 
-			// Load settings inline
-			const settingsResults = await this.getDb().select<
-				Array<{ key: string; value: string }>
-			>("SELECT key, value FROM settings");
+			const db = this.getDb();
+
+			const settingsResults = await db.select<Array<{ key: string; value: string }>>(
+				"SELECT key, value FROM settings",
+			);
 			const settingsObj: Record<string, unknown> = {};
 			for (const row of settingsResults) {
 				try {
@@ -808,13 +767,15 @@ class SqlStorage {
 					settingsObj[row.key] = row.value;
 				}
 			}
-			const settings = { ...DEFAULT_SETTINGS, ...(settingsObj as Partial<AppSettings>) };
+			const settings = {
+				...DEFAULT_SETTINGS,
+				...(settingsObj as Partial<AppSettings>),
+			};
 			this.cache.settings = settings;
 
-			// Load theme inline
-			const themeResults = await this.getDb().select<
-				Array<{ key: string; value: string }>
-			>("SELECT key, value FROM settings WHERE key LIKE 'theme_%'");
+			const themeResults = await db.select<Array<{ key: string; value: string }>>(
+				"SELECT key, value FROM settings WHERE key LIKE 'theme_%'",
+			);
 			const themeObj: Record<string, unknown> = {};
 			for (const row of themeResults) {
 				const key = row.key.replace("theme_", "");
@@ -830,10 +791,9 @@ class SqlStorage {
 			};
 			this.cache.theme = theme;
 
-			// Load metadata inline
-			const metadataResults = await this.getDb().select<
-				Array<{ lastSaved: string; version: string }>
-			>("SELECT * FROM metadata WHERE id = 1");
+			const metadataResults = await db.select<Array<{ lastSaved: string; version: string }>>(
+				"SELECT * FROM metadata WHERE id = 1",
+			);
 			const metadata =
 				metadataResults.length > 0 ?
 					{
@@ -857,65 +817,42 @@ class SqlStorage {
 		});
 	}
 
-	// Load all data with retry logic
-	// Retries happen outside withConnection to avoid corrupting ref counting
-	async loadData(retryCount = 0): Promise<AppData> {
-		const MAX_RETRIES = 2;
-		const RETRY_DELAY_MS = 500;
+	private emptyAppData(): AppData {
+		return {
+			notes: [],
+			folders: [],
+			tags: {},
+			expenses: {
+				expenses: [],
+				selectedMonth: new Date(),
+				overviewMode: "remaining",
+				categories: DEFAULT_EXPENSE_CATEGORIES,
+				categoryColors: DEFAULT_CATEGORY_COLORS,
+				paymentMethods: DEFAULT_PAYMENT_METHODS,
+			},
+			income: { entries: [], weeklyTargets: [], viewType: "weekly" },
+			settings: DEFAULT_SETTINGS,
+			theme: DEFAULT_THEME_SETTINGS,
+			isLoading: false,
+			lastSaved: new Date(),
+			autoSaveEnabled: DEFAULT_SETTINGS.autoSaveEnabled,
+		};
+	}
+
+	// ── Save all data ────────────────────────────────────────────────────────
+
+	async saveData(data: AppData, appToSave: AppToSave): Promise<void> {
+		// Always save to localStorage first
+		localStorageCache.save(data);
 
 		try {
-			const data = await this.loadDataOnce();
-
-			// Check if folders loaded correctly (should always have at least initial folders)
-			if (data.folders.length === 0 && retryCount < MAX_RETRIES) {
-				console.warn(
-					`Data load returned empty folders (attempt ${retryCount + 1}/${MAX_RETRIES + 1}), retrying...`,
-				);
-				await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
-				return this.loadData(retryCount + 1);
-			}
-
-			return data;
+			await this.saveDataToDatabase(data, appToSave);
 		} catch (error) {
-			console.error("Failed to load data:", error);
-
-			// Retry on failure
-			if (retryCount < MAX_RETRIES) {
-				console.warn(
-					`Data load failed (attempt ${retryCount + 1}/${MAX_RETRIES + 1}), retrying...`,
-				);
-				await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
-				return this.loadData(retryCount + 1);
-			}
-
-			return {
-				notes: [],
-				folders: [],
-				tags: {},
-				expenses: {
-					expenses: [],
-					selectedMonth: new Date(),
-					overviewMode: "remaining",
-					categories: DEFAULT_EXPENSE_CATEGORIES,
-					categoryColors: DEFAULT_CATEGORY_COLORS,
-					paymentMethods: DEFAULT_PAYMENT_METHODS,
-				},
-				income: {
-					entries: [],
-					weeklyTargets: [],
-					viewType: "weekly",
-				},
-				settings: DEFAULT_SETTINGS,
-				theme: DEFAULT_THEME_SETTINGS,
-				isLoading: false,
-				lastSaved: new Date(),
-				autoSaveEnabled: DEFAULT_SETTINGS.autoSaveEnabled,
-			};
+			console.error("Failed to save to database (localStorage saved):", error);
 		}
 	}
 
-	// Save data with change detection
-	async saveData(data: AppData, appToSave: AppToSave): Promise<void> {
+	private async saveDataToDatabase(data: AppData, appToSave: AppToSave): Promise<void> {
 		return this.withConnection(async () => {
 			try {
 				let hasChanges = false;
@@ -923,13 +860,12 @@ class SqlStorage {
 				if (appToSave === AppToSave.NotesApp) {
 					const notesChanged = this.notesStorage.hasNotesChanged(data.notes);
 					const foldersChanged = this.notesStorage.hasFoldersChanged(data.folders);
-					const tagsChanged = this.notesStorage.hasTagsChanged(data.tags || {});
-
+					const tagsChanged = this.notesStorage.hasTagsChanged(data.tags ?? {});
 					if (notesChanged || foldersChanged || tagsChanged) {
 						hasChanges = true;
 						if (notesChanged) await this.notesStorage.saveNotes(data.notes);
 						if (foldersChanged) await this.notesStorage.saveFolders(data.folders);
-						if (tagsChanged) await this.notesStorage.saveTags(data.tags || {});
+						if (tagsChanged) await this.notesStorage.saveTags(data.tags ?? {});
 					}
 				} else if (appToSave === AppToSave.Expenses) {
 					if (this.expensesStorage.hasExpensesChanged(data.expenses)) {
@@ -944,7 +880,7 @@ class SqlStorage {
 				} else if (appToSave === AppToSave.All) {
 					const notesChanged = this.notesStorage.hasNotesChanged(data.notes);
 					const foldersChanged = this.notesStorage.hasFoldersChanged(data.folders);
-					const tagsChanged = this.notesStorage.hasTagsChanged(data.tags || {});
+					const tagsChanged = this.notesStorage.hasTagsChanged(data.tags ?? {});
 					const expensesChanged = this.expensesStorage.hasExpensesChanged(data.expenses);
 					const incomeChanged = this.incomeStorage.hasIncomeChanged(data.income);
 					const settingsChanged = this.hasSettingsChanged(data.settings);
@@ -962,9 +898,10 @@ class SqlStorage {
 						hasChanges = true;
 						if (notesChanged) await this.notesStorage.saveNotes(data.notes);
 						if (foldersChanged) await this.notesStorage.saveFolders(data.folders);
-						if (tagsChanged) await this.notesStorage.saveTags(data.tags || {});
+						if (tagsChanged) await this.notesStorage.saveTags(data.tags ?? {});
 						if (expensesChanged) await this.expensesStorage.saveExpenses(data.expenses);
 						if (incomeChanged) await this.incomeStorage.saveIncome(data.income);
+
 						if (settingsChanged || themeChanged) {
 							const db = this.getDb();
 							await db.execute("BEGIN TRANSACTION");
@@ -976,6 +913,7 @@ class SqlStorage {
 											[key, JSON.stringify(value)],
 										);
 									}
+									this.cache.settings = data.settings;
 								}
 								if (themeChanged) {
 									for (const [key, value] of Object.entries(data.theme)) {
@@ -984,27 +922,22 @@ class SqlStorage {
 											[`theme_${key}`, JSON.stringify(value)],
 										);
 									}
+									this.cache.theme = data.theme;
 								}
 								await db.execute("COMMIT");
 							} catch (error) {
 								await db.execute("ROLLBACK");
 								throw error;
 							}
-							if (settingsChanged) this.cache.settings = data.settings;
-							if (themeChanged) this.cache.theme = data.theme;
 						}
 					}
 				}
 
 				if (hasChanges) {
-					const metadata: AppMetadata = {
-						lastSaved: new Date(),
-						version: DATA_VERSION,
-					};
 					const db = this.getDb();
 					await db.execute(
 						`INSERT OR REPLACE INTO metadata (id, lastSaved, version) VALUES (1, ?, ?)`,
-						[metadata.lastSaved.toISOString(), metadata.version],
+						[new Date().toISOString(), DATA_VERSION],
 					);
 				}
 			} catch (error) {
@@ -1014,101 +947,103 @@ class SqlStorage {
 		});
 	}
 
-	// Utility methods
+	// ── Utility ──────────────────────────────────────────────────────────────
+
 	async openDataFolder(): Promise<void> {
 		try {
 			const { openPath } = await import("@tauri-apps/plugin-opener");
-			const path = await this.getDataPath();
-			await openPath(path);
+			await openPath(await this.getDataPath());
 		} catch (error) {
 			console.error("Failed to open data folder:", error);
 		}
 	}
 
 	async clearAllData(): Promise<void> {
-		return this.withConnection(async () => {
-			return this.queueOperation(async () => {
+		localStorageCache.clear();
+
+		return this.withConnection(() =>
+			this.queueOperation(async () => {
 				const db = this.getDb();
-				await db.execute("DELETE FROM notes");
-				await db.execute("DELETE FROM folders");
-				await db.execute("DELETE FROM folders_new");
-				await db.execute("DELETE FROM tags");
-				await db.execute("DELETE FROM expenses");
-				await db.execute("DELETE FROM income_entries");
-				await db.execute("DELETE FROM income_weekly_targets");
-				await db.execute("DELETE FROM settings");
-				await db.execute("DELETE FROM metadata");
-
-				// Clear cache
+				for (const table of [
+					"notes",
+					"folders",
+					"folders_new",
+					"tags",
+					"expenses",
+					"income_entries",
+					"income_weekly_targets",
+					"settings",
+					"metadata",
+				]) {
+					await db.execute(`DELETE FROM ${table}`);
+				}
 				this.cache = {};
-			});
-		});
+				this.rebuildStorageHelpers();
+			}),
+		);
 	}
 
-	// Checkpoint method - no longer needed with DELETE journal mode
-	// Kept for backward compatibility, does nothing
+	/**
+	 * Check whether the current environment's database file exists on disk.
+	 */
+	async databaseExists(): Promise<boolean> {
+		try {
+			const { exists } = await import("@tauri-apps/plugin-fs");
+			const dataPath = await this.getDataPath();
+			const dbPath = joinPath(dataPath, this.getDatabaseFileName());
+			return exists(dbPath);
+		} catch {
+			return false;
+		}
+	}
+
+	clearLocalStorageCache(): void {
+		localStorageCache.clear();
+	}
+
 	async checkpoint(): Promise<void> {
-		// No-op - DELETE journal mode doesn't use WAL files
-		console.log("Checkpoint called (no-op with DELETE journal mode)");
+		if (!this.db) return;
+		try {
+			await this.db.execute("PRAGMA wal_checkpoint(PASSIVE)");
+		} catch (error) {
+			console.warn("Checkpoint warning:", error);
+		}
 	}
 
-	// Close method - ensures connection is closed
+	/**
+	 * Explicitly close the connection and wait for any in-flight operations
+	 * to finish first. Callers that need the connection closed before
+	 * replacing the database file should await this.
+	 */
 	async close(): Promise<void> {
-		// Prevent new operations from starting
-		this.isClosing = true;
-
-		// Cancel any pending close timer
+		// Cancel idle-close timer
 		if (this.closeTimeout) {
 			clearTimeout(this.closeTimeout);
 			this.closeTimeout = null;
 		}
 
-		// Wait for any pending connection to complete
-		if (this.connectionPromise) {
-			try {
-				await this.connectionPromise;
-			} catch {
-				// Ignore connection errors
-			}
-		}
-
-		// Wait for any pending operations to complete
-		try {
-			await this.operationQueue;
-		} catch {
-			// Ignore errors from pending operations
-		}
-
-		// Now that all operations are done, close the connection
-		await this.closeConnectionNow();
-
-		// Reset state AFTER the connection is fully closed
-		this.operationQueue = Promise.resolve();
-		this.connectionRefCount = 0;
-		this.isClosing = false;
+		// Chain an explicit close onto the gate so we wait for every
+		// in-flight operation to complete before closing
+		await (this.gate = this.gate.then(() => this.closeConnectionNow()));
 	}
 
 	async switchEnvironment(environment: DatabaseEnvironment): Promise<void> {
 		await this.close();
 		this.currentEnvironment = environment;
 		this.environmentInitialized = true;
-		this.tablesCreated = false; // Force table check on next connection
-		this.storageInitialized = false; // Force storage class re-initialization
+		this.tablesCreated = false;
 	}
 
 	async reinitialize(): Promise<void> {
 		await this.close();
-		this.tablesCreated = false; // Force table check on next connection
-		this.storageInitialized = false; // Force storage class re-initialization
+		this.tablesCreated = false;
 	}
 
 	async getDatabaseFilePath(): Promise<string> {
 		await this.ensureEnvironment();
-		const dataPath = await this.getDataPath();
-		return joinPath(dataPath, this.getDatabaseFileName());
+		return joinPath(await this.getDataPath(), this.getDatabaseFileName());
 	}
 
-	// Check if database is currently initialized (connection could be open)
 	isInitialized(): boolean {
 		return this.environmentInitialized;
 	}

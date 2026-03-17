@@ -10,10 +10,7 @@ import {
 	writeTextFile,
 } from "@tauri-apps/plugin-fs";
 import Database from "@tauri-apps/plugin-sql";
-import {
-	DEFAULT_CATEGORY_COLORS,
-	DEFAULT_EXPENSE_CATEGORIES,
-} from "@/lib/expenseHelpers";
+import { DEFAULT_CATEGORY_COLORS, DEFAULT_EXPENSE_CATEGORIES } from "@/lib/expenseHelpers";
 import {
 	type BackupInfo,
 	type BackupMetadata,
@@ -25,53 +22,124 @@ import {
 	type MigrationStep,
 	type RestoreResult,
 } from "@/types/backup";
-import type {
-	Expense,
-	ExpenseType,
-	ImportanceLevel,
-	RecurrenceSettings,
-} from "@/types/expense";
+import type { Expense, OverviewMode } from "@/types/expense";
+import type { Folder, Note, Tag } from "@/types/notes";
+import type { AppData } from "@/types";
+import { APP_VERSION, DATA_VERSION, DEFAULT_PAYMENT_METHODS } from "@/types/storage";
 import {
-	APP_VERSION,
-	DATA_VERSION,
-	DEFAULT_PAYMENT_METHODS,
-} from "@/types/storage";
+	Bookmark,
+	Circle,
+	Club,
+	Code,
+	Diamond,
+	Folder as FolderIcon,
+	Heart,
+	Spade,
+	Sparkles,
+	Square,
+	Star,
+	Tag as TagIcon,
+	Triangle,
+	X,
+	Flag,
+	CheckCircle,
+	AlertCircle,
+	Lightbulb,
+	Zap,
+	Flame,
+	Target,
+	BookOpen,
+	FileText,
+	Edit3,
+	Link,
+	Paperclip,
+	List,
+	Calendar,
+	Clock,
+	User,
+	Users,
+	Home,
+	MapPin,
+	Globe,
+	Truck,
+	Mail,
+	Phone,
+	MessageCircle,
+	Music,
+	Play,
+	Coffee,
+	Gift,
+	Palette,
+	Settings,
+	Moon,
+	Sun,
+	Paintbrush,
+	Coins,
+	Banknote,
+	Glasses,
+	Landmark,
+	Key,
+	WalletCards,
+	type LucideIcon,
+} from "lucide-react";
 
-const BACKUP_DIR_NAME = "backups";
-const BACKUP_SETTINGS_FILE = "backup-settings.json";
-const DB_NAME_PRODUCTION = "appdata.db";
-const DB_NAME_TEST = "appdata-test.db";
-
-// Helper to join paths with proper separator
-const joinPath = (...parts: string[]): string => {
-	return parts.join(sep());
+// Icon mapping for folders and tags (same as in NotesStorage)
+const ICON_MAP: Record<string, LucideIcon> = {
+	Folder: FolderIcon,
+	Star: Star,
+	Heart: Heart,
+	Square: Square,
+	Triangle: Triangle,
+	Circle: Circle,
+	X: X,
+	Club: Club,
+	Spade: Spade,
+	Diamond: Diamond,
+	Sparkles: Sparkles,
+	Tag: TagIcon,
+	Bookmark: Bookmark,
+	Flag: Flag,
+	CheckCircle: CheckCircle,
+	AlertCircle: AlertCircle,
+	Lightbulb: Lightbulb,
+	Zap: Zap,
+	Flame: Flame,
+	Target: Target,
+	BookOpen: BookOpen,
+	FileText: FileText,
+	Edit3: Edit3,
+	Code: Code,
+	Link: Link,
+	Paperclip: Paperclip,
+	List: List,
+	Calendar: Calendar,
+	Clock: Clock,
+	User: User,
+	Users: Users,
+	Home: Home,
+	MapPin: MapPin,
+	Globe: Globe,
+	Truck: Truck,
+	Mail: Mail,
+	Phone: Phone,
+	MessageCircle: MessageCircle,
+	Music: Music,
+	Play: Play,
+	Coffee: Coffee,
+	Gift: Gift,
+	Palette: Palette,
+	Settings: Settings,
+	Moon: Moon,
+	Sun: Sun,
+	Paintbrush: Paintbrush,
+	Coins: Coins,
+	Banknote: Banknote,
+	Glasses: Glasses,
+	Landmark: Landmark,
+	Key: Key,
+	WalletCards: WalletCards,
 };
 
-// Format date for short filename: YYYYMMDD-HHmmss
-const formatDateForFilename = (date: Date): string => {
-	const year = date.getFullYear();
-	const month = String(date.getMonth() + 1).padStart(2, "0");
-	const day = String(date.getDate()).padStart(2, "0");
-	const hours = String(date.getHours()).padStart(2, "0");
-	const minutes = String(date.getMinutes()).padStart(2, "0");
-	const seconds = String(date.getSeconds()).padStart(2, "0");
-	return `${year}${month}${day}-${hours}${minutes}${seconds}`;
-};
-
-// Migration data shape for type safety
-interface MigrationData {
-	expenses?: {
-		paymentMethods?: string[];
-		expenses?: Array<{
-			paymentMethod?: string;
-			initialState?: {
-				paymentMethod?: string;
-			};
-		}>;
-	};
-}
-
-// Raw expense data from database or import (with string dates)
 interface RawExpenseData {
 	id: string;
 	name: string;
@@ -94,28 +162,55 @@ interface RawExpenseData {
 	paymentMethod?: string | null;
 }
 
-// Migration steps
+const BACKUP_DIR_NAME = "backups";
+const BACKUP_SETTINGS_FILE = "backup-settings.json";
+const DB_NAME_PRODUCTION = "appdata.db";
+const DB_NAME_TEST = "appdata-test.db";
+
+const MAX_PRE_RESTORE_BACKUPS = 5;
+
+const joinPath = (...parts: string[]): string => parts.join(sep());
+
+const formatDateForFilename = (date: Date): string => {
+	const pad = (n: number) => String(n).padStart(2, "0");
+	return (
+		`${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}` +
+		`-${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`
+	);
+};
+
+interface MigrationData {
+	expenses?: {
+		paymentMethods?: string[];
+		expenses?: Array<{
+			paymentMethod?: string;
+			initialState?: { paymentMethod?: string };
+		}>;
+	};
+}
+
 const MIGRATIONS: MigrationStep[] = [
 	{
 		fromVersion: "0.0.4",
 		toVersion: "0.0.5",
 		description: "Added paymentMethod to expenses",
 		migrate: (data: unknown) => {
-			const typedData = data as MigrationData;
+			const d = data as MigrationData;
 			return {
-				...typedData,
+				...d,
 				expenses: {
-					...typedData.expenses,
-					paymentMethods: typedData.expenses?.paymentMethods || ["Default"],
-					expenses: (typedData.expenses?.expenses || []).map((e) => ({
+					...d.expenses,
+					paymentMethods: d.expenses?.paymentMethods || ["Default"],
+					expenses: (d.expenses?.expenses || []).map((e) => ({
 						...e,
 						paymentMethod: e.paymentMethod || "None",
-						initialState: e.initialState
-							? {
+						initialState:
+							e.initialState ?
+								{
 									...e.initialState,
 									paymentMethod: e.initialState.paymentMethod || "None",
 								}
-							: undefined,
+							:	undefined,
 					})),
 				},
 			};
@@ -133,11 +228,9 @@ class BackupService {
 		await this.loadSettings();
 
 		const isDev = await this.isDevMode();
-		const expectedEnvironment: DatabaseEnvironment = isDev
-			? "test"
-			: "production";
-		if (this.settings.databaseEnvironment !== expectedEnvironment) {
-			this.settings.databaseEnvironment = expectedEnvironment;
+		const expected: DatabaseEnvironment = isDev ? "test" : "production";
+		if (this.settings.databaseEnvironment !== expected) {
+			this.settings.databaseEnvironment = expected;
 			await this.saveSettings(this.settings);
 		}
 
@@ -146,27 +239,19 @@ class BackupService {
 	}
 
 	private async getAppDataPath(): Promise<string> {
-		if (!this.appDataPath) {
-			this.appDataPath = await appDataDir();
-		}
+		if (!this.appDataPath) this.appDataPath = await appDataDir();
 		return this.appDataPath;
 	}
 
 	private async getBackupPath(): Promise<string> {
-		if (this.settings.customBackupPath) {
-			return this.settings.customBackupPath;
-		}
-		const appData = await this.getAppDataPath();
-		return joinPath(appData, BACKUP_DIR_NAME);
+		if (this.settings.customBackupPath) return this.settings.customBackupPath;
+		return joinPath(await this.getAppDataPath(), BACKUP_DIR_NAME);
 	}
 
 	private async ensureBackupDirectory(): Promise<void> {
-		const backupPath = await this.getBackupPath();
+		const p = await this.getBackupPath();
 		try {
-			const dirExists = await exists(backupPath);
-			if (!dirExists) {
-				await mkdir(backupPath, { recursive: true });
-			}
+			if (!(await exists(p))) await mkdir(p, { recursive: true });
 		} catch (error) {
 			console.error("Failed to create backup directory:", error);
 		}
@@ -176,14 +261,11 @@ class BackupService {
 		try {
 			const appData = await this.getAppDataPath();
 			const settingsPath = joinPath(appData, BACKUP_SETTINGS_FILE);
-
-			const settingsExists = await exists(settingsPath);
-			if (!settingsExists) {
+			if (!(await exists(settingsPath))) {
 				this.settings = DEFAULT_BACKUP_SETTINGS;
 				await this.saveSettings(this.settings);
 				return this.settings;
 			}
-
 			const content = await readTextFile(settingsPath);
 			this.settings = { ...DEFAULT_BACKUP_SETTINGS, ...JSON.parse(content) };
 			return this.settings;
@@ -198,14 +280,12 @@ class BackupService {
 		try {
 			this.settings = settings;
 			const appData = await this.getAppDataPath();
-			const settingsPath = joinPath(appData, BACKUP_SETTINGS_FILE);
-			await writeTextFile(settingsPath, JSON.stringify(settings, null, 2));
-
+			await writeTextFile(
+				joinPath(appData, BACKUP_SETTINGS_FILE),
+				JSON.stringify(settings, null, 2),
+			);
 			this.startAutoBackupScheduler();
-
-			if (settings.customBackupPath) {
-				await this.ensureBackupDirectory();
-			}
+			if (settings.customBackupPath) await this.ensureBackupDirectory();
 		} catch (error) {
 			console.error("Failed to save backup settings:", error);
 		}
@@ -225,50 +305,29 @@ class BackupService {
 		await this.saveSettings(this.settings);
 	}
 
+	// ── Auto-backup scheduler ────────────────────────────────────────────────
+
 	private startAutoBackupScheduler(): void {
 		if (this.autoBackupInterval) {
 			clearInterval(this.autoBackupInterval);
 			this.autoBackupInterval = null;
 		}
-
-		if (
-			!this.settings.autoBackupEnabled ||
-			this.settings.autoBackupIntervalHours <= 0
-		) {
-			return;
-		}
+		if (!this.settings.autoBackupEnabled || this.settings.autoBackupIntervalHours <= 0) return;
 
 		const intervalMs = this.settings.autoBackupIntervalHours * 60 * 60 * 1000;
-
-		this.autoBackupInterval = setInterval(async () => {
-			await this.performAutoBackup();
-		}, intervalMs);
-
+		this.autoBackupInterval = setInterval(() => this.performAutoBackup(), intervalMs);
 		this.checkInitialAutoBackup();
 	}
 
 	private async checkInitialAutoBackup(): Promise<void> {
-		const backups = await this.listBackups();
-		const autoBackups = backups.filter((b) =>
-			b.metadata.description?.startsWith("Auto-backup"),
-		);
-
+		const autoBackups = await this.listBackupsByType("auto");
 		if (autoBackups.length === 0) {
 			await this.performAutoBackup();
 			return;
 		}
-
-		const mostRecent = autoBackups.sort(
-			(a, b) =>
-				new Date(b.metadata.createdAt).getTime() -
-				new Date(a.metadata.createdAt).getTime(),
-		)[0];
-
-		const lastBackupTime = new Date(mostRecent.metadata.createdAt).getTime();
-		const intervalMs = this.settings.autoBackupIntervalHours * 60 * 60 * 1000;
-		const now = Date.now();
-
-		if (now - lastBackupTime > intervalMs) {
+		const mostRecent = autoBackups[0];
+		const elapsed = Date.now() - new Date(mostRecent.metadata.createdAt).getTime();
+		if (elapsed > this.settings.autoBackupIntervalHours * 60 * 60 * 1000) {
 			await this.performAutoBackup();
 		}
 	}
@@ -276,520 +335,105 @@ class BackupService {
 	private async performAutoBackup(): Promise<void> {
 		try {
 			const result = await this.createBackup("Auto-backup");
-			if (result.success) {
-				await this.cleanupOldAutoBackups();
-			}
+			if (result.success) await this.cleanupOldBackups();
 		} catch (error) {
 			console.error("Auto-backup failed:", error);
 		}
 	}
 
-	private async cleanupOldAutoBackups(): Promise<void> {
+	private async cleanupOldBackups(): Promise<void> {
 		const backups = await this.listBackups();
-		const autoBackups = backups
-			.filter((b) => b.metadata.description?.startsWith("Auto-backup"))
-			.sort(
-				(a, b) =>
-					new Date(b.metadata.createdAt).getTime() -
-					new Date(a.metadata.createdAt).getTime(),
-			);
 
-		const toRemove = autoBackups.slice(this.settings.maxAutoBackups);
-		for (const backup of toRemove) {
-			await this.deleteBackup(backup.filename);
+		// Auto-backups: keep newest maxAutoBackups
+		const autoBackups = backups.filter((b) =>
+			b.metadata.description?.startsWith("Auto-backup"),
+		);
+		for (const b of autoBackups.slice(this.settings.maxAutoBackups)) {
+			await this.deleteBackup(b.filename);
+		}
+
+		// Pre-restore backups: keep newest MAX_PRE_RESTORE_BACKUPS
+		const preRestoreBackups = backups.filter((b) =>
+			b.metadata.description?.startsWith("Pre-restore"),
+		);
+		for (const b of preRestoreBackups.slice(MAX_PRE_RESTORE_BACKUPS)) {
+			await this.deleteBackup(b.filename);
 		}
 	}
 
-	private async flushWAL(dbPath: string): Promise<void> {
-		let tempDb: Database | null = null;
+	// ── WAL flush ────────────────────────────────────────────────────────────
+
+	private async flushWAL(): Promise<void> {
 		try {
-			console.log("Flushing WAL before backup...");
-			tempDb = await Database.load(`sqlite:${dbPath}`);
-			await tempDb.execute("PRAGMA wal_checkpoint(TRUNCATE)");
-			console.log("WAL flushed successfully");
-		} catch (error) {
-			console.warn("Could not flush WAL:", error);
-		} finally {
-			if (tempDb) {
-				try {
-					await tempDb.close();
-				} catch {
-					// Ignore close errors
-				}
+			const { sqlStorage } = await import("./database");
+			if (sqlStorage.isOpen()) {
+				await sqlStorage.checkpoint();
 			}
+			console.log("WAL checkpoint complete");
+		} catch (error) {
+			console.warn("WAL checkpoint warning:", error);
 		}
 	}
 
-	private generateBackupFilename(
-		timestamp: string,
-		isPreRestore: boolean = false,
-	): string {
-		const prefix = isPreRestore ? "pre-restore" : "backup";
-		const envSuffix =
-			this.settings.databaseEnvironment === "test" ? "-test" : "";
+	// ── Backup filename helpers ──────────────────────────────────────────────
+
+	/**
+	 * Generate backup filename.
+	 * Pre-restore backups use shorter "pr-" prefix instead of "pre-restore-"
+	 */
+	private generateBackupFilename(timestamp: string, isPreRestore = false): string {
+		const prefix = isPreRestore ? "pr" : "backup";
+		const envSuffix = this.settings.databaseEnvironment === "test" ? "-test" : "";
 		return `${prefix}${envSuffix}-${timestamp}.db`;
 	}
 
-	/**
-	 * Create export data object from expenses
-	 */
-	createExpenseExportData(
-		expenses: Expense[],
-		categories: string[],
-		categoryColors: Record<string, string>,
-		paymentMethods: string[],
-		selectedMonth: Date,
-		overviewMode: string,
-	): ExpenseExportData {
-		return {
-			version: APP_VERSION,
-			exportedAt: new Date().toISOString(),
-			data: {
-				expenses: expenses.map((e) => ({
-					...e,
-					dueDate: e.dueDate?.toISOString() || null,
-					paymentDate: e.paymentDate?.toISOString() || null,
-					createdAt: e.createdAt.toISOString(),
-					updatedAt: e.updatedAt.toISOString(),
-					initialState: e.initialState
-						? {
-								amount: e.initialState.amount,
-								dueDate: e.initialState.dueDate?.toISOString() || null,
-								paymentMethod: e.initialState.paymentMethod || "None",
-							}
-						: undefined,
-				})),
-				categories,
-				categoryColors,
-				paymentMethods,
-				selectedMonth: selectedMonth.toISOString(),
-				overviewMode,
-			},
-		};
-	}
-
-	/**
-	 * Export expenses to JSON file
-	 */
-	async exportExpensesToJson(
-		exportData: ExpenseExportData,
-		outputPath: string,
-	): Promise<boolean> {
-		try {
-			const jsonContent = JSON.stringify(exportData, null, 2);
-			await writeTextFile(outputPath, jsonContent);
-			console.log(
-				`Exported ${exportData.data.expenses.length} expenses to ${outputPath}`,
-			);
-			return true;
-		} catch (error) {
-			console.error("Failed to export expenses:", error);
-			return false;
-		}
-	}
-
-	/**
-	 * Import expenses from JSON file
-	 */
-	async importExpensesFromJson(filePath: string): Promise<{
-		success: boolean;
-		data?: ExpenseExportData;
-		error?: string;
-	}> {
-		try {
-			const fileExists = await exists(filePath);
-			if (!fileExists) {
-				return { success: false, error: "File not found" };
-			}
-
-			const content = await readTextFile(filePath);
-			const data = JSON.parse(content) as ExpenseExportData;
-
-			// Validate structure
-			if (!data.version || !data.data || !Array.isArray(data.data.expenses)) {
-				return { success: false, error: "Invalid export file format" };
-			}
-
-			// Convert date strings back to Date objects
-			const convertedExpenses = data.data.expenses.map((e) => ({
-				...e,
-				dueDate: e.dueDate ? new Date(e.dueDate) : null,
-				paymentDate: e.paymentDate ? new Date(e.paymentDate) : null,
-				createdAt: new Date(e.createdAt),
-				updatedAt: new Date(e.updatedAt),
-				paymentMethod: e.paymentMethod || "None",
-				initialState: e.initialState
-					? {
-							amount: e.initialState.amount,
-							dueDate: e.initialState.dueDate
-								? new Date(e.initialState.dueDate)
-								: null,
-							paymentMethod: e.initialState.paymentMethod || "None",
-						}
-					: undefined,
-			}));
-			// Type assertion needed because we're converting string dates to Date objects
-			data.data.expenses =
-				convertedExpenses as unknown as typeof data.data.expenses;
-
-			console.log(
-				`Parsed ${data.data.expenses.length} expenses from ${filePath}`,
-			);
-			return { success: true, data };
-		} catch (error) {
-			console.error("Failed to import expenses:", error);
-			return {
-				success: false,
-				error: error instanceof Error ? error.message : "Unknown error",
-			};
-		}
-	}
-
-	/**
-	 * Read expenses directly from database for export
-	 */
-	private async readExpensesFromDatabase(dbPath: string): Promise<{
-		expenses: Expense[];
-		categories: string[];
-		categoryColors: Record<string, string>;
-		paymentMethods: string[];
-		selectedMonth: Date;
-		overviewMode: string;
-	} | null> {
-		let tempDb: Database | null = null;
-		try {
-			tempDb = await Database.load(`sqlite:${dbPath}`);
-
-			// Check if paymentMethod column exists
-			const tableInfo = await tempDb.select<Array<{ name: string }>>(
-				"PRAGMA table_info(expenses)",
-			);
-			const hasPaymentMethod = tableInfo.some(
-				(col) => col.name === "paymentMethod",
-			);
-
-			// Read expenses
-			const selectQuery = hasPaymentMethod
-				? "SELECT * FROM expenses"
-				: `SELECT id, name, amount, category, 'None' as paymentMethod, dueDate, isRecurring, 
-				   recurrence, isArchived, isPaid, paymentDate, type, importance, createdAt, 
-				   updatedAt, parentExpenseId, monthlyOverrides, isModified, initialState 
-				   FROM expenses`;
-
-			const rawExpenses = await tempDb.select<RawExpenseData[]>(selectQuery);
-
-			// Convert raw rows to Expense objects
-			const expenses: Expense[] = rawExpenses.map((row) => ({
-				id: row.id,
-				name: row.name,
-				amount: row.amount,
-				category: row.category,
-				paymentMethod: row.paymentMethod || "None",
-				dueDate: row.dueDate ? new Date(row.dueDate) : null,
-				isRecurring: row.isRecurring === 1,
-				recurrence: row.recurrence
-					? (JSON.parse(row.recurrence) as RecurrenceSettings)
-					: undefined,
-				isArchived: row.isArchived === 1,
-				isPaid: row.isPaid === 1,
-				paymentDate: row.paymentDate ? new Date(row.paymentDate) : null,
-				type: (row.type || "need") as ExpenseType,
-				importance: (row.importance || "none") as ImportanceLevel,
-				notify: (row as any).notify === 1,
-				createdAt: new Date(row.createdAt),
-				updatedAt: new Date(row.updatedAt),
-				parentExpenseId: row.parentExpenseId || undefined,
-				monthlyOverrides: row.monthlyOverrides
-					? (JSON.parse(row.monthlyOverrides) as Record<
-							string,
-							Partial<Expense>
-						>)
-					: {},
-				isModified: row.isModified === 1,
-				initialState: row.initialState
-					? (() => {
-							const parsed = JSON.parse(row.initialState) as {
-								amount: number;
-								dueDate?: string | null;
-								paymentMethod?: string;
-							};
-							return {
-								amount: parsed.amount,
-								dueDate: parsed.dueDate ? new Date(parsed.dueDate) : null,
-								paymentMethod: parsed.paymentMethod || "None",
-							};
-						})()
-					: undefined,
-			}));
-
-			// Read settings
-			const settingsResults = await tempDb.select<
-				Array<{ key: string; value: string }>
-			>("SELECT key, value FROM settings WHERE key LIKE 'expense_%'");
-
-			const settingsMap: Record<string, unknown> = {};
-			for (const row of settingsResults) {
-				try {
-					settingsMap[row.key] = JSON.parse(row.value);
-				} catch {
-					settingsMap[row.key] = row.value;
-				}
-			}
-
-			console.log(`Read ${expenses.length} expenses from database`);
-
-			return {
-				expenses,
-				categories:
-					(settingsMap.expense_categories as string[] | undefined) ||
-					DEFAULT_EXPENSE_CATEGORIES,
-				categoryColors:
-					(settingsMap.expense_categoryColors as
-						| Record<string, string>
-						| undefined) || DEFAULT_CATEGORY_COLORS,
-				paymentMethods:
-					(settingsMap.expense_paymentMethods as string[] | undefined) ||
-					DEFAULT_PAYMENT_METHODS,
-				selectedMonth: settingsMap.expense_selectedMonth
-					? new Date(settingsMap.expense_selectedMonth as string)
-					: new Date(),
-				overviewMode:
-					(settingsMap.expense_overviewMode as string | undefined) ||
-					"remaining",
-			};
-		} catch (error) {
-			console.error("Failed to read expenses from database:", error);
-			return null;
-		} finally {
-			if (tempDb) {
-				try {
-					await tempDb.close();
-				} catch {
-					// Ignore close errors
-				}
-			}
-		}
-	}
-
-	async createBackup(description?: string): Promise<BackupResult> {
-		try {
-			const appData = await this.getAppDataPath();
-			const backupPath = await this.getBackupPath();
-			const dbFileName = this.getDatabaseFileName();
-			const sourcePath = joinPath(appData, dbFileName);
-
-			const sourceExists = await exists(sourcePath);
-			if (!sourceExists) {
-				return {
-					success: false,
-					error: "Source database does not exist",
-				};
-			}
-
-			// Flush WAL to ensure all data is in the main database file
-			await this.flushWAL(sourcePath);
-
-			const now = new Date();
-			const timestamp = formatDateForFilename(now);
-			const backupFilename = this.generateBackupFilename(timestamp);
-			const backupFilePath = joinPath(backupPath, backupFilename);
-
-			// Copy database file
-			await copyFile(sourcePath, backupFilePath);
-			console.log(`Database backed up to ${backupFilename}`);
-
-			// Export expenses to JSON alongside the backup
-			let hasExpenseExport = false;
-			const expenseExportFilename = backupFilename.replace(
-				".db",
-				"-expenses.json",
-			);
-			const expenseExportPath = joinPath(backupPath, expenseExportFilename);
-
-			const expenseData = await this.readExpensesFromDatabase(sourcePath);
-			if (expenseData && expenseData.expenses.length > 0) {
-				const exportData = this.createExpenseExportData(
-					expenseData.expenses,
-					expenseData.categories,
-					expenseData.categoryColors,
-					expenseData.paymentMethods,
-					expenseData.selectedMonth,
-					expenseData.overviewMode,
-				);
-
-				hasExpenseExport = await this.exportExpensesToJson(
-					exportData,
-					expenseExportPath,
-				);
-
-				if (hasExpenseExport) {
-					console.log(`Expense export created: ${expenseExportFilename}`);
-				}
-			} else {
-				console.log("No expenses to export or failed to read expenses");
-			}
-
-			// Create metadata
-			const metadata: BackupMetadata = {
-				id: crypto.randomUUID(),
-				createdAt: now,
-				version: DATA_VERSION,
-				environment: this.settings.databaseEnvironment,
-				description: description || "Manual backup",
-				hasExpenseExport,
-			};
-
-			const metadataPath = joinPath(backupPath, `${backupFilename}.meta.json`);
-			await writeTextFile(metadataPath, JSON.stringify(metadata, null, 2));
-
-			const backupInfo: BackupInfo = {
-				filename: backupFilename,
-				metadata,
-				path: backupFilePath,
-				expenseExportPath: hasExpenseExport ? expenseExportPath : undefined,
-			};
-
-			console.log(
-				`Backup created: ${backupFilename}${
-					hasExpenseExport ? " (with expense export)" : ""
-				}`,
-			);
-
-			return {
-				success: true,
-				backup: backupInfo,
-			};
-		} catch (error) {
-			console.error("Backup creation failed:", error);
-			return {
-				success: false,
-				error: error instanceof Error ? error.message : "Unknown error",
-			};
-		}
-	}
+	// ── listBackups ──────────────────────────────────────────────────────────
 
 	async listBackups(): Promise<BackupInfo[]> {
 		try {
 			const backupPath = await this.getBackupPath();
-
-			const dirExists = await exists(backupPath);
-			if (!dirExists) {
-				return [];
-			}
+			if (!(await exists(backupPath))) return [];
 
 			const entries = await readDir(backupPath);
 			const backups: BackupInfo[] = [];
 
 			for (const entry of entries) {
-				if (entry.name?.endsWith(".db") && !entry.name.endsWith(".meta.json")) {
-					const metadataPath = joinPath(backupPath, `${entry.name}.meta.json`);
-					const expenseExportPath = joinPath(
-						backupPath,
-						entry.name.replace(".db", "-expenses.json"),
-					);
+				if (!entry.name?.endsWith(".db") || entry.name.endsWith(".meta.json")) continue;
 
-					try {
-						const metadataExists = await exists(metadataPath);
-						const expenseExportExists = await exists(expenseExportPath);
+				const metadataPath = joinPath(backupPath, `${entry.name}.meta.json`);
+				const expenseExportPath = joinPath(
+					backupPath,
+					entry.name.replace(".db", "-expenses.json"),
+				);
 
-						if (metadataExists) {
-							const metadataContent = await readTextFile(metadataPath);
-							const metadata = JSON.parse(metadataContent) as BackupMetadata;
-							metadata.createdAt = new Date(metadata.createdAt);
-							metadata.hasExpenseExport = expenseExportExists;
+				try {
+					const expenseExportExists = await exists(expenseExportPath);
 
-							backups.push({
-								filename: entry.name,
-								metadata,
-								path: joinPath(backupPath, entry.name),
-								expenseExportPath: expenseExportExists
-									? expenseExportPath
-									: undefined,
-							});
-						} else {
-							// Parse from filename for legacy backups
-							let environment: DatabaseEnvironment = "production";
-							let createdAt = new Date();
+					if (await exists(metadataPath)) {
+						const metadata = JSON.parse(
+							await readTextFile(metadataPath),
+						) as BackupMetadata;
+						metadata.createdAt = new Date(metadata.createdAt);
+						metadata.hasExpenseExport = expenseExportExists;
 
-							const prodMatch = entry.name.match(
-								/^backup-(\d{8})-(\d{6})\.db$/,
-							);
-							const testMatch = entry.name.match(
-								/^backup-test-(\d{8})-(\d{6})\.db$/,
-							);
-							const oldMatch = entry.name.match(
-								/backup-(prod|production|test)-(\d{8})-(\d{6})\.db/,
-							);
-							const veryOldMatch = entry.name.match(
-								/backup-(production|test)-(.+)\.db/,
-							);
-
-							if (prodMatch) {
-								environment = "production";
-								const dateStr = prodMatch[1];
-								const timeStr = prodMatch[2];
-								createdAt = new Date(
-									parseInt(dateStr.slice(0, 4), 10),
-									parseInt(dateStr.slice(4, 6), 10) - 1,
-									parseInt(dateStr.slice(6, 8), 10),
-									parseInt(timeStr.slice(0, 2), 10),
-									parseInt(timeStr.slice(2, 4), 10),
-									parseInt(timeStr.slice(4, 6), 10),
-								);
-							} else if (testMatch) {
-								environment = "test";
-								const dateStr = testMatch[1];
-								const timeStr = testMatch[2];
-								createdAt = new Date(
-									parseInt(dateStr.slice(0, 4), 10),
-									parseInt(dateStr.slice(4, 6), 10) - 1,
-									parseInt(dateStr.slice(6, 8), 10),
-									parseInt(timeStr.slice(0, 2), 10),
-									parseInt(timeStr.slice(2, 4), 10),
-									parseInt(timeStr.slice(4, 6), 10),
-								);
-							} else if (oldMatch) {
-								environment = oldMatch[1] === "test" ? "test" : "production";
-								const dateStr = oldMatch[2];
-								const timeStr = oldMatch[3];
-								createdAt = new Date(
-									parseInt(dateStr.slice(0, 4), 10),
-									parseInt(dateStr.slice(4, 6), 10) - 1,
-									parseInt(dateStr.slice(6, 8), 10),
-									parseInt(timeStr.slice(0, 2), 10),
-									parseInt(timeStr.slice(2, 4), 10),
-									parseInt(timeStr.slice(4, 6), 10),
-								);
-							} else if (veryOldMatch) {
-								environment = veryOldMatch[1] as DatabaseEnvironment;
-								try {
-									createdAt = new Date(
-										veryOldMatch[2].replace(/-/g, ":").replace("T", " "),
-									);
-								} catch {
-									// Keep default date
-								}
-							}
-
-							backups.push({
-								filename: entry.name,
-								metadata: {
-									id: crypto.randomUUID(),
-									createdAt,
-									version: "unknown",
-									environment,
-									description: "Legacy backup (no metadata)",
-									hasExpenseExport: expenseExportExists,
-								},
-								path: joinPath(backupPath, entry.name),
-								expenseExportPath: expenseExportExists
-									? expenseExportPath
-									: undefined,
-							});
-						}
-					} catch {
-						// Skip files we can't read metadata for
+						backups.push({
+							filename: entry.name,
+							metadata,
+							path: joinPath(backupPath, entry.name),
+							expenseExportPath: expenseExportExists ? expenseExportPath : undefined,
+						});
+					} else {
+						backups.push(
+							this.buildLegacyBackupInfo(
+								entry.name,
+								backupPath,
+								expenseExportExists,
+								expenseExportExists ? expenseExportPath : undefined,
+							),
+						);
 					}
+				} catch {
+					// Skip unreadable entries
 				}
 			}
 
@@ -804,25 +448,247 @@ class BackupService {
 		}
 	}
 
+	private async listBackupsByType(
+		type: "auto" | "manual" | "pre-restore",
+	): Promise<BackupInfo[]> {
+		const all = await this.listBackups();
+		const prefixMap: Record<typeof type, string> = {
+			auto: "Auto-backup",
+			manual: "Manual",
+			"pre-restore": "Pre-restore",
+		};
+		return all.filter((b) => b.metadata.description?.startsWith(prefixMap[type]));
+	}
+
+	private buildLegacyBackupInfo(
+		filename: string,
+		backupPath: string,
+		expenseExportExists: boolean,
+		expenseExportPath?: string,
+	): BackupInfo {
+		let environment: DatabaseEnvironment = "production";
+		let createdAt = new Date();
+		let isPreRestore = false;
+
+		const parse = (dateStr: string, timeStr: string) =>
+			new Date(
+				parseInt(dateStr.slice(0, 4), 10),
+				parseInt(dateStr.slice(4, 6), 10) - 1,
+				parseInt(dateStr.slice(6, 8), 10),
+				parseInt(timeStr.slice(0, 2), 10),
+				parseInt(timeStr.slice(2, 4), 10),
+				parseInt(timeStr.slice(4, 6), 10),
+			);
+
+		// New short pre-restore format: pr-YYYYMMDD-HHMMSS.db or pr-test-YYYYMMDD-HHMMSS.db
+		const prProdMatch = filename.match(/^pr-(\d{8})-(\d{6})\.db$/);
+		const prTestMatch = filename.match(/^pr-test-(\d{8})-(\d{6})\.db$/);
+		// Old pre-restore format
+		const oldPreRestoreMatch = filename.match(/^pre-restore(-test)?-(\d{8})-(\d{6})\.db$/);
+		// Regular backup formats
+		const prodMatch = filename.match(/^backup-(\d{8})-(\d{6})\.db$/);
+		const testMatch = filename.match(/^backup-test-(\d{8})-(\d{6})\.db$/);
+
+		if (prProdMatch) {
+			environment = "production";
+			createdAt = parse(prProdMatch[1], prProdMatch[2]);
+			isPreRestore = true;
+		} else if (prTestMatch) {
+			environment = "test";
+			createdAt = parse(prTestMatch[1], prTestMatch[2]);
+			isPreRestore = true;
+		} else if (oldPreRestoreMatch) {
+			environment = oldPreRestoreMatch[1] ? "test" : "production";
+			createdAt = parse(oldPreRestoreMatch[2], oldPreRestoreMatch[3]);
+			isPreRestore = true;
+		} else if (prodMatch) {
+			environment = "production";
+			createdAt = parse(prodMatch[1], prodMatch[2]);
+		} else if (testMatch) {
+			environment = "test";
+			createdAt = parse(testMatch[1], testMatch[2]);
+		}
+
+		return {
+			filename,
+			metadata: {
+				id: crypto.randomUUID(),
+				createdAt,
+				version: "unknown",
+				environment,
+				description: isPreRestore ? "Pre-restore" : "Legacy backup",
+				hasExpenseExport: expenseExportExists,
+			},
+			path: joinPath(backupPath, filename),
+			expenseExportPath,
+		};
+	}
+
+	// ── createBackup ─────────────────────────────────────────────────────────
+
+	createExpenseExportData(
+		expenses: Expense[],
+		categories: string[],
+		categoryColors: Record<string, string>,
+		paymentMethods: string[],
+		selectedMonth: Date,
+		overviewMode: string,
+	): ExpenseExportData {
+		return {
+			version: APP_VERSION,
+			exportedAt: new Date().toISOString(),
+			data: {
+				expenses: expenses.map((e) => ({
+					...e,
+					dueDate: e.dueDate?.toISOString() ?? null,
+					paymentDate: e.paymentDate?.toISOString() ?? null,
+					createdAt: e.createdAt.toISOString(),
+					updatedAt: e.updatedAt.toISOString(),
+					initialState:
+						e.initialState ?
+							{
+								amount: e.initialState.amount,
+								dueDate: e.initialState.dueDate?.toISOString() ?? null,
+								paymentMethod: e.initialState.paymentMethod || "None",
+							}
+						:	undefined,
+				})),
+				categories,
+				categoryColors,
+				paymentMethods,
+				selectedMonth: selectedMonth.toISOString(),
+				overviewMode,
+			},
+		};
+	}
+
+	async exportExpensesToJson(
+		exportData: ExpenseExportData,
+		outputPath: string,
+	): Promise<boolean> {
+		try {
+			await writeTextFile(outputPath, JSON.stringify(exportData, null, 2));
+			return true;
+		} catch (error) {
+			console.error("Failed to export expenses:", error);
+			return false;
+		}
+	}
+
+	async importExpensesFromJson(
+		filePath: string,
+	): Promise<{ success: boolean; data?: ExpenseExportData; error?: string }> {
+		try {
+			if (!(await exists(filePath))) return { success: false, error: "File not found" };
+			const data = JSON.parse(await readTextFile(filePath)) as ExpenseExportData;
+			if (!data.version || !data.data || !Array.isArray(data.data.expenses))
+				return { success: false, error: "Invalid export file format" };
+
+			const convertedExpenses = data.data.expenses.map((e) => ({
+				...e,
+				dueDate: e.dueDate ? new Date(e.dueDate) : null,
+				paymentDate: e.paymentDate ? new Date(e.paymentDate) : null,
+				createdAt: new Date(e.createdAt),
+				updatedAt: new Date(e.updatedAt),
+				paymentMethod: e.paymentMethod || "None",
+				initialState:
+					e.initialState ?
+						{
+							amount: e.initialState.amount,
+							dueDate:
+								e.initialState.dueDate ? new Date(e.initialState.dueDate) : null,
+							paymentMethod: e.initialState.paymentMethod || "None",
+						}
+					:	undefined,
+			}));
+			data.data.expenses = convertedExpenses as unknown as typeof data.data.expenses;
+			return { success: true, data };
+		} catch (error) {
+			return {
+				success: false,
+				error: error instanceof Error ? error.message : "Unknown error",
+			};
+		}
+	}
+
+	async createBackup(description?: string): Promise<BackupResult> {
+		try {
+			const appData = await this.getAppDataPath();
+			const backupPath = await this.getBackupPath();
+			const dbFileName = this.getDatabaseFileName();
+			const sourcePath = joinPath(appData, dbFileName);
+
+			if (!(await exists(sourcePath))) {
+				return { success: false, error: "Source database does not exist" };
+			}
+
+			await this.flushWAL();
+
+			const timestamp = formatDateForFilename(new Date());
+			const backupFilename = this.generateBackupFilename(timestamp);
+			const backupFilePath = joinPath(backupPath, backupFilename);
+
+			await copyFile(sourcePath, backupFilePath);
+
+			// Copy WAL/SHM if they exist
+			for (const suffix of ["-wal", "-shm"]) {
+				const walSrc = `${sourcePath}${suffix}`;
+				if (await exists(walSrc)) {
+					try {
+						await copyFile(walSrc, `${backupFilePath}${suffix}`);
+					} catch {
+						// Non-fatal
+					}
+				}
+			}
+
+			const now = new Date();
+			const metadata: BackupMetadata = {
+				id: crypto.randomUUID(),
+				createdAt: now,
+				version: DATA_VERSION,
+				environment: this.settings.databaseEnvironment,
+				description: description || "Manual backup",
+			};
+
+			await writeTextFile(
+				joinPath(backupPath, `${backupFilename}.meta.json`),
+				JSON.stringify(metadata, null, 2),
+			);
+
+			console.log(`Backup created: ${backupFilename}`);
+			return {
+				success: true,
+				backup: {
+					filename: backupFilename,
+					metadata,
+					path: backupFilePath,
+				},
+			};
+		} catch (error) {
+			console.error("Backup creation failed:", error);
+			return {
+				success: false,
+				error: error instanceof Error ? error.message : "Unknown error",
+			};
+		}
+	}
+
+	// ── deleteBackup ─────────────────────────────────────────────────────────
+
 	async deleteBackup(filename: string): Promise<boolean> {
 		try {
 			const backupPath = await this.getBackupPath();
-			const filePath = joinPath(backupPath, filename);
-			const metadataPath = joinPath(backupPath, `${filename}.meta.json`);
-			const expenseExportPath = joinPath(
-				backupPath,
-				filename.replace(".db", "-expenses.json"),
-			);
 
-			await remove(filePath);
-
-			if (await exists(metadataPath)) {
-				await remove(metadataPath);
+			for (const suffix of ["", ".meta.json", "-expenses.json", "-wal", "-shm"]) {
+				const target = joinPath(
+					backupPath,
+					suffix === "" ? filename : `${filename}${suffix}`,
+				);
+				if (await exists(target)) await remove(target);
 			}
-
-			if (await exists(expenseExportPath)) {
-				await remove(expenseExportPath);
-			}
+			const expExport = joinPath(backupPath, filename.replace(".db", "-expenses.json"));
+			if (await exists(expExport)) await remove(expExport);
 
 			return true;
 		} catch (error) {
@@ -830,6 +696,8 @@ class BackupService {
 			return false;
 		}
 	}
+
+	// ── restoreFromBackup ────────────────────────────────────────────────────
 
 	validateRestoreEnvironment(
 		backupEnvironment: DatabaseEnvironment,
@@ -839,7 +707,8 @@ class BackupService {
 			return {
 				allowed: false,
 				reason:
-					"Cannot restore test environment backup to production database. This is a safety measure to prevent test data from overwriting production data.",
+					"Cannot restore a test backup to the production database. " +
+					"This prevents test data from overwriting production data.",
 			};
 		}
 		return { allowed: true };
@@ -850,6 +719,7 @@ class BackupService {
 		options?: {
 			targetEnvironment?: DatabaseEnvironment;
 			skipEnvironmentCheck?: boolean;
+			skipPreRestoreBackup?: boolean;
 		},
 	): Promise<RestoreResult> {
 		try {
@@ -858,37 +728,27 @@ class BackupService {
 			const backupFilePath = joinPath(backupPath, filename);
 			const metadataPath = joinPath(backupPath, `${filename}.meta.json`);
 
-			const backupExists = await exists(backupFilePath);
-			if (!backupExists) {
-				return {
-					success: false,
-					error: "Backup file not found",
-				};
+			if (!(await exists(backupFilePath))) {
+				return { success: false, error: "Backup file not found" };
 			}
 
 			let sourceVersion = "unknown";
 			let backupEnvironment: DatabaseEnvironment = "production";
 
 			try {
-				const metaExists = await exists(metadataPath);
-				if (metaExists) {
-					const metadataContent = await readTextFile(metadataPath);
-					const backupMetadata = JSON.parse(metadataContent) as BackupMetadata;
-					sourceVersion = backupMetadata.version;
-					backupEnvironment = backupMetadata.environment;
-				} else {
-					if (filename.includes("-test-")) {
-						backupEnvironment = "test";
-					}
+				if (await exists(metadataPath)) {
+					const meta = JSON.parse(await readTextFile(metadataPath)) as BackupMetadata;
+					sourceVersion = meta.version;
+					backupEnvironment = meta.environment;
+				} else if (filename.includes("-test-")) {
+					backupEnvironment = "test";
 				}
 			} catch {
-				console.warn(
-					"Could not read backup metadata, assuming production environment",
-				);
+				console.warn("Could not read backup metadata");
 			}
 
 			const targetEnvironment =
-				options?.targetEnvironment || this.settings.databaseEnvironment;
+				options?.targetEnvironment ?? this.settings.databaseEnvironment;
 
 			if (!options?.skipEnvironmentCheck) {
 				const validation = this.validateRestoreEnvironment(
@@ -896,10 +756,7 @@ class BackupService {
 					targetEnvironment,
 				);
 				if (!validation.allowed) {
-					return {
-						success: false,
-						error: validation.reason,
-					};
+					return { success: false, error: validation.reason };
 				}
 			}
 
@@ -908,7 +765,7 @@ class BackupService {
 				if (!canMigrate) {
 					return {
 						success: false,
-						error: `Cannot migrate from version ${sourceVersion} to ${DATA_VERSION}. The backup may be from a newer version of the application.`,
+						error: `Cannot migrate from v${sourceVersion} to v${DATA_VERSION}.`,
 						requiresMigration: true,
 						sourceVersion,
 						targetVersion: DATA_VERSION,
@@ -920,68 +777,60 @@ class BackupService {
 			const currentDbPath = joinPath(appData, currentDbFileName);
 			const currentDbExists = await exists(currentDbPath);
 
-			if (currentDbExists) {
-				await this.flushWAL(currentDbPath);
-
+			// Pre-restore safety backup (shorter name: pr-YYYYMMDD-HHMMSS.db)
+			if (currentDbExists && !options?.skipPreRestoreBackup) {
+				await this.flushWAL();
 				const timestamp = formatDateForFilename(new Date());
 				const savedEnv = this.settings.databaseEnvironment;
 				this.settings.databaseEnvironment = targetEnvironment;
-				const preRestoreBackupName = this.generateBackupFilename(
-					timestamp,
-					true,
-				);
+				const preRestoreName = this.generateBackupFilename(timestamp, true);
 				this.settings.databaseEnvironment = savedEnv;
-
-				const preRestoreBackupPath = joinPath(backupPath, preRestoreBackupName);
+				const preRestorePath = joinPath(backupPath, preRestoreName);
 
 				try {
-					await copyFile(currentDbPath, preRestoreBackupPath);
-
-					const preRestoreMetadata: BackupMetadata = {
+					await copyFile(currentDbPath, preRestorePath);
+					const preRestoreMeta: BackupMetadata = {
 						id: crypto.randomUUID(),
 						createdAt: new Date(),
 						version: DATA_VERSION,
 						environment: targetEnvironment,
-						description: `Pre-restore backup (before restoring ${filename})`,
+						description: "Pre-restore",
 					};
 					await writeTextFile(
-						joinPath(backupPath, `${preRestoreBackupName}.meta.json`),
-						JSON.stringify(preRestoreMetadata, null, 2),
+						joinPath(backupPath, `${preRestoreName}.meta.json`),
+						JSON.stringify(preRestoreMeta, null, 2),
 					);
-
-					console.log(`Created pre-restore backup: ${preRestoreBackupName}`);
+					console.log(`Pre-restore backup created: ${preRestoreName}`);
 				} catch (preRestoreError) {
 					console.warn("Could not create pre-restore backup:", preRestoreError);
 				}
 			}
 
-			const targetPath = joinPath(
-				appData,
-				this.getDatabaseFileName(targetEnvironment),
-			);
+			// Replace database
+			const targetPath = joinPath(appData, this.getDatabaseFileName(targetEnvironment));
 
 			if (currentDbExists) {
 				try {
 					await remove(targetPath);
-				} catch (removeError) {
-					console.warn("Could not remove existing database:", removeError);
-				}
-
-				try {
-					const walPath = `${targetPath}-wal`;
-					const shmPath = `${targetPath}-shm`;
-					if (await exists(walPath)) await remove(walPath);
-					if (await exists(shmPath)) await remove(shmPath);
 				} catch {
-					// Ignore errors removing WAL files
+					console.warn("Could not remove existing database");
+				}
+				for (const suffix of ["-wal", "-shm"]) {
+					const f = `${targetPath}${suffix}`;
+					if (await exists(f)) {
+						try {
+							await remove(f);
+						} catch {
+							// Ignore
+						}
+					}
 				}
 			}
 
 			await copyFile(backupFilePath, targetPath);
+			console.log(`Restored ${filename} → ${targetEnvironment}`);
 
-			console.log(
-				`Restored backup ${filename} (${backupEnvironment}) to ${targetEnvironment} environment`,
-			);
+			await this.cleanupOldBackups();
 
 			return {
 				success: true,
@@ -997,79 +846,53 @@ class BackupService {
 		}
 	}
 
-	async getExpenseExportPath(backupFilename: string): Promise<string | null> {
-		const backupPath = await this.getBackupPath();
-		const exportPath = joinPath(
-			backupPath,
-			backupFilename.replace(".db", "-expenses.json"),
-		);
-
-		if (await exists(exportPath)) {
-			return exportPath;
-		}
-		return null;
-	}
+	// ── Migration helpers ────────────────────────────────────────────────────
 
 	private canMigrate(fromVersion: string, toVersion: string): boolean {
 		if (fromVersion === toVersion) return true;
-
-		if (this.compareVersions(fromVersion, toVersion) > 0) {
-			return false;
-		}
-
-		let currentVersion = fromVersion;
-		while (currentVersion !== toVersion) {
-			const nextMigration = MIGRATIONS.find(
-				(m) => m.fromVersion === currentVersion,
-			);
-			if (!nextMigration) {
-				return this.compareVersions(fromVersion, toVersion) <= 0;
-			}
-			currentVersion = nextMigration.toVersion;
+		if (this.compareVersions(fromVersion, toVersion) > 0) return false;
+		let current = fromVersion;
+		while (current !== toVersion) {
+			const next = MIGRATIONS.find((m) => m.fromVersion === current);
+			if (!next) return this.compareVersions(fromVersion, toVersion) <= 0;
+			current = next.toVersion;
 		}
 		return true;
 	}
 
 	private compareVersions(v1: string, v2: string): number {
-		const parts1 = v1.split(".").map(Number);
-		const parts2 = v2.split(".").map(Number);
-
-		for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
-			const p1 = parts1[i] || 0;
-			const p2 = parts2[i] || 0;
-			if (p1 < p2) return -1;
-			if (p1 > p2) return 1;
+		const p1 = v1.split(".").map(Number);
+		const p2 = v2.split(".").map(Number);
+		for (let i = 0; i < Math.max(p1.length, p2.length); i++) {
+			const diff = (p1[i] || 0) - (p2[i] || 0);
+			if (diff !== 0) return diff;
 		}
 		return 0;
 	}
 
 	getMigrationPath(fromVersion: string, toVersion: string): MigrationStep[] {
 		const path: MigrationStep[] = [];
-		let currentVersion = fromVersion;
-
-		while (currentVersion !== toVersion) {
-			const nextMigration = MIGRATIONS.find(
-				(m) => m.fromVersion === currentVersion,
-			);
-			if (!nextMigration) {
-				break;
-			}
-			path.push(nextMigration);
-			currentVersion = nextMigration.toVersion;
+		let current = fromVersion;
+		while (current !== toVersion) {
+			const next = MIGRATIONS.find((m) => m.fromVersion === current);
+			if (!next) break;
+			path.push(next);
+			current = next.toVersion;
 		}
-
 		return path;
+	}
+
+	// ── Misc helpers ─────────────────────────────────────────────────────────
+
+	async getExpenseExportPath(backupFilename: string): Promise<string | null> {
+		const backupPath = await this.getBackupPath();
+		const exportPath = joinPath(backupPath, backupFilename.replace(".db", "-expenses.json"));
+		return (await exists(exportPath)) ? exportPath : null;
 	}
 
 	async setCustomBackupPath(path: string | null): Promise<boolean> {
 		try {
-			if (path) {
-				const pathExists = await exists(path);
-				if (!pathExists) {
-					await mkdir(path, { recursive: true });
-				}
-			}
-
+			if (path && !(await exists(path))) await mkdir(path, { recursive: true });
 			this.settings.customBackupPath = path;
 			await this.saveSettings(this.settings);
 			return true;
@@ -1080,8 +903,7 @@ class BackupService {
 	}
 
 	async getDefaultDocumentsPath(): Promise<string> {
-		const docs = await documentDir();
-		return joinPath(docs, "SecondBrain-Backups");
+		return joinPath(await documentDir(), "SecondBrain-Backups");
 	}
 
 	async isDevMode(): Promise<boolean> {
@@ -1095,10 +917,244 @@ class BackupService {
 	async openBackupFolder(): Promise<void> {
 		try {
 			const { openPath } = await import("@tauri-apps/plugin-opener");
-			const backupPath = await this.getBackupPath();
-			await openPath(backupPath);
+			await openPath(await this.getBackupPath());
 		} catch (error) {
 			console.error("Failed to open backup folder:", error);
+		}
+	}
+
+	/**
+	 * Read data from a backup file without modifying the current database.
+	 * Used for merge operations.
+	 */
+	async readBackupData(filename: string): Promise<{
+		success: boolean;
+		data?: {
+			notes: Note[];
+			folders: Folder[];
+			tags: Record<string, Tag>;
+			expenses: AppData["expenses"];
+			income: AppData["income"];
+		};
+		error?: string;
+	}> {
+		let tempDb: Database | null = null;
+		try {
+			const backupPath = await this.getBackupPath();
+			const backupFilePath = joinPath(backupPath, filename);
+
+			if (!(await exists(backupFilePath))) {
+				return { success: false, error: "Backup file not found" };
+			}
+
+			// Open the backup database directly (read-only)
+			tempDb = await Database.load(`sqlite:${backupFilePath}`);
+
+			// Read notes
+			const notesResults = await tempDb.select<
+				Array<{
+					id: string;
+					title: string;
+					content: string;
+					tags: string;
+					folder: string;
+					reminder: string | null;
+					createdAt: string;
+					updatedAt: string;
+					archived: number;
+				}>
+			>("SELECT * FROM notes");
+
+			const notes: Note[] = notesResults.map((row) => ({
+				id: row.id,
+				title: row.title,
+				content: row.content,
+				tags: row.tags ? JSON.parse(row.tags) : [],
+				folder: row.folder || "inbox",
+				reminder: row.reminder ? JSON.parse(row.reminder) : null,
+				createdAt: new Date(row.createdAt),
+				updatedAt: new Date(row.updatedAt),
+				archived: Boolean(row.archived),
+			}));
+
+			// Read folders
+			let folders: Folder[] = [];
+			try {
+				const foldersResults = await tempDb.select<
+					Array<{
+						id: string;
+						name: string;
+						parentId: string | null;
+						icon: string | null;
+						archived: number;
+						order: number;
+						createdAt: string;
+						updatedAt: string;
+					}>
+				>("SELECT * FROM folders_new ORDER BY `order`");
+
+				folders = foldersResults.map((row) => ({
+					id: row.id,
+					name: row.name,
+					parentId: row.parentId,
+					// Resolve icon name to component using ICON_MAP
+					icon: row.icon && ICON_MAP[row.icon] ? ICON_MAP[row.icon] : undefined,
+					archived: Boolean(row.archived),
+					order: row.order,
+					createdAt: new Date(row.createdAt),
+					updatedAt: new Date(row.updatedAt),
+				}));
+			} catch {
+				// Table might not exist in old backups
+			}
+
+			// Read tags
+			const tags: Record<string, Tag> = {};
+			try {
+				const tagsResults =
+					await tempDb.select<
+						Array<{ id: string; name: string; color: string; icon: string }>
+					>("SELECT * FROM tags");
+
+				for (const row of tagsResults) {
+					tags[row.id] = {
+						id: row.id,
+						name: row.name,
+						color: row.color,
+						// Resolve icon name to component using ICON_MAP
+						icon: row.icon && ICON_MAP[row.icon] ? ICON_MAP[row.icon] : ICON_MAP["Tag"],
+					};
+				}
+			} catch {
+				// Table might not exist
+			}
+
+			// Read expenses
+			const expensesResults = await tempDb.select<RawExpenseData[]>("SELECT * FROM expenses");
+
+			const expenses: Expense[] = expensesResults.map((row) => ({
+				id: row.id,
+				name: row.name,
+				amount: row.amount,
+				category: row.category,
+				paymentMethod: row.paymentMethod || "None",
+				dueDate: row.dueDate ? new Date(row.dueDate) : null,
+				isRecurring: row.isRecurring === 1 || row.isRecurring === true,
+				recurrence: row.recurrence ? JSON.parse(row.recurrence) : undefined,
+				isArchived: row.isArchived === 1 || row.isArchived === true,
+				isPaid: row.isPaid === 1 || row.isPaid === true,
+				paymentDate: row.paymentDate ? new Date(row.paymentDate) : null,
+				type: (row.type || "need") as Expense["type"],
+				importance: (row.importance || "none") as Expense["importance"],
+				notify: false,
+				createdAt: new Date(row.createdAt),
+				updatedAt: new Date(row.updatedAt),
+				parentExpenseId: row.parentExpenseId || undefined,
+				monthlyOverrides: row.monthlyOverrides ? JSON.parse(row.monthlyOverrides) : {},
+				isModified: row.isModified === 1 || row.isModified === true,
+				initialState:
+					row.initialState ?
+						(() => {
+							const parsed = JSON.parse(row.initialState);
+							return {
+								amount: parsed.amount,
+								dueDate: parsed.dueDate ? new Date(parsed.dueDate) : null,
+								paymentMethod: parsed.paymentMethod || "None",
+							};
+						})()
+					:	undefined,
+			}));
+
+			// Read expense settings
+			const settingsResults = await tempDb.select<Array<{ key: string; value: string }>>(
+				"SELECT key, value FROM settings WHERE key LIKE 'expense_%'",
+			);
+
+			const settingsMap: Record<string, unknown> = {};
+			for (const row of settingsResults) {
+				try {
+					settingsMap[row.key] = JSON.parse(row.value);
+				} catch {
+					settingsMap[row.key] = row.value;
+				}
+			}
+
+			// Read income entries
+			const incomeResults = await tempDb.select<
+				Array<{
+					id: string;
+					date: string;
+					amount: number;
+					hours: number | null;
+					minutes: number | null;
+				}>
+			>("SELECT * FROM income_entries");
+
+			const incomeEntries = incomeResults.map((row) => ({
+				id: row.id,
+				date: row.date,
+				amount: row.amount,
+				hours: row.hours || undefined,
+				minutes: row.minutes || undefined,
+			}));
+
+			// Read weekly targets
+			const targetsResults = await tempDb.select<Array<{ id: string; amount: number }>>(
+				"SELECT * FROM income_weekly_targets",
+			);
+
+			// Parse and validate overviewMode
+			const rawOverviewMode = settingsMap.expense_overviewMode as string | undefined;
+			const validOverviewModes: OverviewMode[] = ["required", "all", "remaining"];
+			const overviewMode: OverviewMode =
+				rawOverviewMode && validOverviewModes.includes(rawOverviewMode as OverviewMode) ?
+					(rawOverviewMode as OverviewMode)
+				:	"remaining";
+
+			return {
+				success: true,
+				data: {
+					notes,
+					folders,
+					tags,
+					expenses: {
+						expenses,
+						selectedMonth:
+							settingsMap.expense_selectedMonth ?
+								new Date(settingsMap.expense_selectedMonth as string)
+							:	new Date(),
+						overviewMode,
+						categories:
+							(settingsMap.expense_categories as string[]) ||
+							DEFAULT_EXPENSE_CATEGORIES,
+						categoryColors:
+							(settingsMap.expense_categoryColors as Record<string, string>) ||
+							DEFAULT_CATEGORY_COLORS,
+						paymentMethods:
+							(settingsMap.expense_paymentMethods as string[]) ||
+							DEFAULT_PAYMENT_METHODS,
+					},
+					income: {
+						entries: incomeEntries,
+						weeklyTargets: targetsResults,
+						viewType: "weekly",
+					},
+				},
+			};
+		} catch (error) {
+			console.error("Failed to read backup data:", error);
+			return {
+				success: false,
+				error: error instanceof Error ? error.message : "Unknown error",
+			};
+		} finally {
+			if (tempDb) {
+				try {
+					await tempDb.close();
+				} catch {
+					// Ignore close errors
+				}
+			}
 		}
 	}
 

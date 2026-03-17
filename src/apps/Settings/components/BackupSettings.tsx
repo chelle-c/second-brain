@@ -8,11 +8,13 @@ import {
 	FolderOpen,
 	HardDrive,
 	RefreshCw,
+	RotateCcw,
 	Trash2,
 	Upload,
 	Wand2,
 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -24,13 +26,8 @@ import {
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	Dialog,
 	DialogContent,
@@ -39,8 +36,16 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
 	Select,
@@ -51,9 +56,9 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import { seedTestDatabase } from "@/lib/storage";
+import { seedTestDatabase, sqlStorage } from "@/lib/storage";
 import useAppStore from "@/stores/useAppStore";
-import { useBackupStore } from "@/stores/useBackupStore";
+import { type RestoreMode, useBackupStore } from "@/stores/useBackupStore";
 import type { BackupInfo } from "@/types/backup";
 
 const AUTO_BACKUP_INTERVALS = [
@@ -80,8 +85,15 @@ export const BackupSettings = () => {
 		isLoading,
 		lastBackupResult,
 		lastRestoreResult,
+		selectedForDeletion,
 		createBackup,
 		deleteBackup,
+		deleteSelectedBackups,
+		toggleSelectForDeletion,
+		selectAllForDeletion,
+		selectByEnvironment,
+		selectPreRestoreBackups,
+		clearSelection,
 		restoreFromBackup,
 		setAutoBackupEnabled,
 		setAutoBackupInterval,
@@ -92,6 +104,8 @@ export const BackupSettings = () => {
 		getDefaultDocumentsPath,
 		loadBackups,
 		clearResults,
+		clearDatabase,
+		clearLocalStorage,
 	} = useBackupStore();
 
 	const { loadFromFile } = useAppStore();
@@ -99,10 +113,13 @@ export const BackupSettings = () => {
 	const [showBackupList, setShowBackupList] = useState(false);
 	const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+	const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+	const [showClearDatabaseConfirm, setShowClearDatabaseConfirm] = useState(false);
+	const [showClearLocalStorageConfirm, setShowClearLocalStorageConfirm] = useState(false);
 	const [selectedBackup, setSelectedBackup] = useState<BackupInfo | null>(null);
-	const [customPathInput, setCustomPathInput] = useState(
-		settings.customBackupPath || "",
-	);
+	const [createPreRestoreBackup, setCreatePreRestoreBackup] = useState(true);
+	const [restoreMode, setRestoreMode] = useState<RestoreMode>("replace");
+	const [customPathInput, setCustomPathInput] = useState(settings.customBackupPath || "");
 	const [backupDescription, setBackupDescription] = useState("");
 	const [showCreateBackup, setShowCreateBackup] = useState(false);
 	const [showSeedConfirm, setShowSeedConfirm] = useState(false);
@@ -115,28 +132,89 @@ export const BackupSettings = () => {
 		setBackupDescription("");
 		setShowCreateBackup(false);
 		if (result.success) {
+			toast.success("Backup created successfully");
 			await loadBackups();
+		} else {
+			toast.error(`Backup failed: ${result.error}`);
 		}
+	};
+
+	const handleRestoreClick = (backup: BackupInfo) => {
+		setSelectedBackup(backup);
+		setCreatePreRestoreBackup(true);
+		setRestoreMode("replace");
+		setShowRestoreConfirm(true);
 	};
 
 	const handleRestoreBackup = async () => {
 		if (!selectedBackup) return;
-		await restoreFromBackup(selectedBackup.filename);
+
+		// Close the dialog immediately
 		setShowRestoreConfirm(false);
+		setShowBackupList(false);
+
+		const result = await restoreFromBackup(selectedBackup.filename, {
+			skipPreRestoreBackup: !createPreRestoreBackup,
+			mode: restoreMode,
+		});
+
 		setSelectedBackup(null);
+
+		if (result.success) {
+			if (restoreMode === "merge") {
+				const count = result.mergedCount ?? 0;
+				toast.success(
+					count > 0 ?
+						`Merged ${count} item${count !== 1 ? "s" : ""} from backup`
+					:	"Merge complete (no new items to add)",
+				);
+			} else {
+				toast.success("Data restored successfully");
+			}
+		} else {
+			toast.error(`Restore failed: ${result.error}`);
+		}
 	};
 
 	const handleDeleteBackup = async () => {
 		if (!selectedBackup) return;
-		await deleteBackup(selectedBackup.filename);
+		const success = await deleteBackup(selectedBackup.filename);
 		setShowDeleteConfirm(false);
 		setSelectedBackup(null);
+		if (success) {
+			toast.success("Backup deleted");
+		} else {
+			toast.error("Failed to delete backup");
+		}
+	};
+
+	const handleBulkDelete = async () => {
+		const count = selectedForDeletion.size;
+		await deleteSelectedBackups();
+		setShowBulkDeleteConfirm(false);
+		toast.success(`Deleted ${count} backup${count !== 1 ? "s" : ""}`);
+	};
+
+	const handleClearDatabase = async () => {
+		const dbExists = await sqlStorage.databaseExists();
+		if (!dbExists) {
+			setShowClearDatabaseConfirm(false);
+			toast.info("No database file found — nothing to clear");
+			return;
+		}
+		await clearDatabase();
+		setShowClearDatabaseConfirm(false);
+		toast.success("Database cleared");
+	};
+
+	const handleClearLocalStorage = () => {
+		clearLocalStorage();
+		setShowClearLocalStorageConfirm(false);
+		toast.success("localStorage cache cleared");
 	};
 
 	const handleSetCustomPath = async () => {
-		if (customPathInput.trim()) {
-			await setCustomBackupPath(customPathInput.trim());
-		}
+		if (customPathInput.trim()) await setCustomBackupPath(customPathInput.trim());
 	};
 
 	const handleUseDocumentsFolder = async () => {
@@ -156,23 +234,32 @@ export const BackupSettings = () => {
 			await seedTestDatabase();
 			await loadFromFile();
 			setShowSeedConfirm(false);
+			toast.success("Test data seeded successfully");
 		} catch (error) {
 			console.error("Failed to seed test data:", error);
+			toast.error("Failed to seed test data");
 		} finally {
 			setSeedingData(false);
 		}
 	};
 
-	const formatDate = (date: Date) => {
-		return new Date(date).toLocaleString();
-	};
-
+	const formatDate = (date: Date) => new Date(date).toLocaleString();
 	const formatFileSize = (bytes?: number) => {
 		if (!bytes) return "Unknown";
 		if (bytes < 1024) return `${bytes} B`;
 		if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
 		return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 	};
+
+	const isPreRestore = (backup: BackupInfo) =>
+		backup.metadata.description?.startsWith("Pre-restore");
+
+	const allSelected = backups.length > 0 && selectedForDeletion.size === backups.length;
+	const someSelected = selectedForDeletion.size > 0 && !allSelected;
+
+	const prodBackupsCount = backups.filter((b) => b.metadata.environment === "production").length;
+	const testBackupsCount = backups.filter((b) => b.metadata.environment === "test").length;
+	const preRestoreCount = backups.filter((b) => isPreRestore(b)).length;
 
 	return (
 		<>
@@ -191,18 +278,14 @@ export const BackupSettings = () => {
 					<CardContent className="space-y-6">
 						<div className="flex items-center justify-between">
 							<div className="space-y-0.5">
-								<Label className="text-base font-medium">
-									Current Environment
-								</Label>
+								<Label className="text-base font-medium">Current Environment</Label>
 								<p className="text-sm text-muted-foreground">
 									Using test database (development mode)
 								</p>
 							</div>
 							<div className="flex items-center gap-2 px-4 py-2 rounded-md bg-muted">
 								<FlaskConical className="w-4 h-4" />
-								<span className="font-medium capitalize">
-									{currentEnvironment}
-								</span>
+								<span className="font-medium capitalize">{currentEnvironment}</span>
 							</div>
 						</div>
 
@@ -230,7 +313,44 @@ export const BackupSettings = () => {
 								disabled={seedingData}
 							>
 								<Wand2 className="w-4 h-4" />
-								{seedingData ? "Seeding..." : "Seed Data"}
+								{seedingData ? "Seeding…" : "Seed Data"}
+							</Button>
+						</div>
+
+						<Separator />
+
+						<div className="flex items-center justify-between">
+							<div className="space-y-0.5">
+								<Label className="text-base font-medium">Clear Database</Label>
+								<p className="text-sm text-muted-foreground">
+									Remove all data from the test database
+								</p>
+							</div>
+							<Button
+								onClick={() => setShowClearDatabaseConfirm(true)}
+								variant="outline"
+								className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+								disabled={isLoading}
+							>
+								<Trash2 className="w-4 h-4" />
+								Clear Database
+							</Button>
+						</div>
+
+						<div className="flex items-center justify-between">
+							<div className="space-y-0.5">
+								<Label className="text-base font-medium">Clear localStorage</Label>
+								<p className="text-sm text-muted-foreground">
+									Remove the cached data from localStorage
+								</p>
+							</div>
+							<Button
+								onClick={() => setShowClearLocalStorageConfirm(true)}
+								variant="outline"
+								className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+							>
+								<Trash2 className="w-4 h-4" />
+								Clear localStorage
 							</Button>
 						</div>
 					</CardContent>
@@ -249,7 +369,6 @@ export const BackupSettings = () => {
 					</CardDescription>
 				</CardHeader>
 				<CardContent className="space-y-6">
-					{/* Manual Backup */}
 					<div className="flex items-center justify-between">
 						<div className="space-y-0.5">
 							<Label className="text-base font-medium">Create Backup</Label>
@@ -270,13 +389,11 @@ export const BackupSettings = () => {
 
 					<Separator />
 
-					{/* View Backups */}
 					<div className="flex items-center justify-between">
 						<div className="space-y-0.5">
 							<Label className="text-base font-medium">Manage Backups</Label>
 							<p className="text-sm text-muted-foreground">
-								{backups.length} backup{backups.length !== 1 ? "s" : ""}{" "}
-								available
+								{backups.length} backup{backups.length !== 1 ? "s" : ""} available
 							</p>
 						</div>
 						<Button
@@ -294,7 +411,6 @@ export const BackupSettings = () => {
 
 					<Separator />
 
-					{/* Auto-backup Settings */}
 					<div className="flex items-center justify-between">
 						<div className="space-y-0.5">
 							<Label htmlFor="auto-backup" className="text-base font-medium">
@@ -315,18 +431,14 @@ export const BackupSettings = () => {
 						<>
 							<div className="flex items-center justify-between">
 								<div className="space-y-0.5">
-									<Label className="text-base font-medium">
-										Backup Interval
-									</Label>
+									<Label className="text-base font-medium">Backup Interval</Label>
 									<p className="text-sm text-muted-foreground">
 										How often to create automatic backups
 									</p>
 								</div>
 								<Select
 									value={settings.autoBackupIntervalHours.toString()}
-									onValueChange={(value) =>
-										setAutoBackupInterval(parseInt(value, 10))
-									}
+									onValueChange={(v) => setAutoBackupInterval(parseInt(v, 10))}
 								>
 									<SelectTrigger className="w-[200px]">
 										<div className="flex items-center gap-2">
@@ -335,9 +447,9 @@ export const BackupSettings = () => {
 										</div>
 									</SelectTrigger>
 									<SelectContent>
-										{AUTO_BACKUP_INTERVALS.map((option) => (
-											<SelectItem key={option.value} value={option.value}>
-												{option.label}
+										{AUTO_BACKUP_INTERVALS.map((o) => (
+											<SelectItem key={o.value} value={o.value}>
+												{o.label}
 											</SelectItem>
 										))}
 									</SelectContent>
@@ -346,26 +458,22 @@ export const BackupSettings = () => {
 
 							<div className="flex items-center justify-between">
 								<div className="space-y-0.5">
-									<Label className="text-base font-medium">
-										Maximum Backups
-									</Label>
+									<Label className="text-base font-medium">Maximum Backups</Label>
 									<p className="text-sm text-muted-foreground">
 										Older auto-backups will be removed
 									</p>
 								</div>
 								<Select
 									value={settings.maxAutoBackups.toString()}
-									onValueChange={(value) =>
-										setMaxAutoBackups(parseInt(value, 10))
-									}
+									onValueChange={(v) => setMaxAutoBackups(parseInt(v, 10))}
 								>
 									<SelectTrigger className="w-[200px]">
 										<SelectValue />
 									</SelectTrigger>
 									<SelectContent>
-										{MAX_BACKUPS_OPTIONS.map((option) => (
-											<SelectItem key={option.value} value={option.value}>
-												{option.label}
+										{MAX_BACKUPS_OPTIONS.map((o) => (
+											<SelectItem key={o.value} value={o.value}>
+												{o.label}
 											</SelectItem>
 										))}
 									</SelectContent>
@@ -374,30 +482,27 @@ export const BackupSettings = () => {
 						</>
 					)}
 
-					{/* Result notifications */}
 					{lastBackupResult && (
 						<div
 							className={`p-3 rounded-lg flex items-center gap-2 ${
-								lastBackupResult.success
-									? "bg-green-500/10 border border-green-500/20"
-									: "bg-red-500/10 border border-red-500/20"
+								lastBackupResult.success ?
+									"bg-green-500/10 border border-green-500/20"
+								:	"bg-red-500/10 border border-red-500/20"
 							}`}
 						>
-							{lastBackupResult.success ? (
+							{lastBackupResult.success ?
 								<CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400" />
-							) : (
-								<AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
-							)}
+							:	<AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />}
 							<span
 								className={`text-sm ${
-									lastBackupResult.success
-										? "text-green-600 dark:text-green-400"
-										: "text-red-600 dark:text-red-400"
+									lastBackupResult.success ?
+										"text-green-600 dark:text-green-400"
+									:	"text-red-600 dark:text-red-400"
 								}`}
 							>
-								{lastBackupResult.success
-									? "Backup created successfully"
-									: `Backup failed: ${lastBackupResult.error}`}
+								{lastBackupResult.success ?
+									"Backup created successfully"
+								:	`Backup failed: ${lastBackupResult.error}`}
 							</span>
 							<Button
 								variant="ghost"
@@ -413,26 +518,26 @@ export const BackupSettings = () => {
 					{lastRestoreResult && (
 						<div
 							className={`p-3 rounded-lg flex items-center gap-2 ${
-								lastRestoreResult.success
-									? "bg-green-500/10 border border-green-500/20"
-									: "bg-red-500/10 border border-red-500/20"
+								lastRestoreResult.success ?
+									"bg-green-500/10 border border-green-500/20"
+								:	"bg-red-500/10 border border-red-500/20"
 							}`}
 						>
-							{lastRestoreResult.success ? (
+							{lastRestoreResult.success ?
 								<CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400" />
-							) : (
-								<AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
-							)}
+							:	<AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />}
 							<span
 								className={`text-sm ${
-									lastRestoreResult.success
-										? "text-green-600 dark:text-green-400"
-										: "text-red-600 dark:text-red-400"
+									lastRestoreResult.success ?
+										"text-green-600 dark:text-green-400"
+									:	"text-red-600 dark:text-red-400"
 								}`}
 							>
-								{lastRestoreResult.success
-									? "Data restored successfully. Please restart the app."
-									: `Restore failed: ${lastRestoreResult.error}`}
+								{lastRestoreResult.success ?
+									lastRestoreResult.mergedCount !== undefined ?
+										`Merged ${lastRestoreResult.mergedCount} item${lastRestoreResult.mergedCount !== 1 ? "s" : ""} from backup`
+									:	"Data restored successfully"
+								:	`Restore failed: ${lastRestoreResult.error}`}
 							</span>
 							<Button
 								variant="ghost"
@@ -454,25 +559,17 @@ export const BackupSettings = () => {
 						<FolderOpen className="w-5 h-5" />
 						Backup Location
 					</CardTitle>
-					<CardDescription>
-						Choose where to store your backup files
-					</CardDescription>
+					<CardDescription>Choose where to store your backup files</CardDescription>
 				</CardHeader>
 				<CardContent className="space-y-6">
 					<div className="flex items-center justify-between">
 						<div className="space-y-0.5">
-							<Label className="text-base font-medium">
-								Open Backup Folder
-							</Label>
+							<Label className="text-base font-medium">Open Backup Folder</Label>
 							<p className="text-sm text-muted-foreground">
 								View your backup files in the file explorer
 							</p>
 						</div>
-						<Button
-							onClick={openBackupFolder}
-							variant="outline"
-							className="gap-2"
-						>
+						<Button onClick={openBackupFolder} variant="outline" className="gap-2">
 							<FolderOpen className="w-4 h-4" />
 							Open Folder
 						</Button>
@@ -482,20 +579,16 @@ export const BackupSettings = () => {
 
 					<div className="space-y-4">
 						<div className="space-y-0.5">
-							<Label className="text-base font-medium">
-								Custom Backup Path
-							</Label>
+							<Label className="text-base font-medium">Custom Backup Path</Label>
 							<p className="text-sm text-muted-foreground">
-								Set a custom location for storing backups (e.g., Documents
-								folder)
+								Set a custom location for storing backups
 							</p>
 						</div>
-
 						<div className="flex gap-2">
 							<Input
 								value={customPathInput}
 								onChange={(e) => setCustomPathInput(e.target.value)}
-								placeholder="Custom backup path..."
+								placeholder="Custom backup path…"
 								className="flex-1"
 							/>
 							<Button
@@ -506,7 +599,6 @@ export const BackupSettings = () => {
 								Apply
 							</Button>
 						</div>
-
 						<div className="flex gap-2">
 							<Button
 								onClick={handleUseDocumentsFolder}
@@ -515,15 +607,10 @@ export const BackupSettings = () => {
 							>
 								Use Documents Folder
 							</Button>
-							<Button
-								onClick={handleUseDefaultLocation}
-								variant="ghost"
-								size="sm"
-							>
+							<Button onClick={handleUseDefaultLocation} variant="ghost" size="sm">
 								Use Default Location
 							</Button>
 						</div>
-
 						{settings.customBackupPath && (
 							<p className="text-sm text-muted-foreground">
 								Current: {settings.customBackupPath}
@@ -533,7 +620,7 @@ export const BackupSettings = () => {
 				</CardContent>
 			</Card>
 
-			{/* Create Backup Dialog */}
+			{/* ── Create Backup Dialog ────────────────────────────────────── */}
 			<Dialog open={showCreateBackup} onOpenChange={setShowCreateBackup}>
 				<DialogContent>
 					<DialogHeader>
@@ -549,144 +636,354 @@ export const BackupSettings = () => {
 							id="description"
 							value={backupDescription}
 							onChange={(e) => setBackupDescription(e.target.value)}
-							placeholder="e.g., Before major changes..."
+							placeholder="e.g., Before major changes…"
 							className="mt-2"
 						/>
 					</div>
 					<DialogFooter>
-						<Button
-							variant="outline"
-							onClick={() => setShowCreateBackup(false)}
-						>
+						<Button variant="outline" onClick={() => setShowCreateBackup(false)}>
 							Cancel
 						</Button>
 						<Button onClick={handleCreateBackup} disabled={isLoading}>
-							{isLoading ? "Creating..." : "Create Backup"}
+							{isLoading ? "Creating…" : "Create Backup"}
 						</Button>
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
 
-			{/* Backup List Dialog */}
-			<Dialog open={showBackupList} onOpenChange={setShowBackupList}>
-				<DialogContent className="max-w-2xl">
-					<DialogHeader>
+			{/* ── Backup List Dialog ──────────────────────────────────────── */}
+			<Dialog
+				open={showBackupList}
+				onOpenChange={(open) => {
+					setShowBackupList(open);
+					if (!open) clearSelection();
+				}}
+			>
+				<DialogContent className="max-w-2xl h-[80vh] flex flex-col overflow-hidden">
+					<DialogHeader className="shrink-0">
 						<DialogTitle>Manage Backups</DialogTitle>
 						<DialogDescription>
-							View, restore, or delete your backups
+							View, restore, or delete your backups.
 						</DialogDescription>
 					</DialogHeader>
-					<ScrollArea className="max-h-[400px]">
-						{backups.length === 0 ? (
-							<div className="py-8 text-center text-muted-foreground">
-								No backups found. Create your first backup to get started.
-							</div>
-						) : (
-							<div className="space-y-2">
-								{backups.map((backup) => (
-									<div
-										key={backup.filename}
-										className="p-3 border rounded-lg flex items-center justify-between"
+
+					{/* Multi-select toolbar */}
+					{backups.length > 0 && (
+						<div className="flex items-center gap-3 pb-2 border-b shrink-0">
+							<Checkbox
+								id="select-all"
+								checked={allSelected}
+								data-state={
+									someSelected ? "indeterminate"
+									: allSelected ?
+										"checked"
+									:	"unchecked"
+								}
+								onCheckedChange={(checked) => {
+									if (checked) {
+										selectAllForDeletion();
+									} else {
+										clearSelection();
+									}
+								}}
+							/>
+							<Label htmlFor="select-all" className="text-sm cursor-pointer">
+								{selectedForDeletion.size === 0 ?
+									"Select all"
+								:	`${selectedForDeletion.size} selected`}
+							</Label>
+
+							{/* Batch selection dropdown */}
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<Button variant="ghost" size="sm">
+										Select…
+									</Button>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent align="start">
+									<DropdownMenuItem onClick={selectAllForDeletion}>
+										All ({backups.length})
+									</DropdownMenuItem>
+									<DropdownMenuSeparator />
+									{prodBackupsCount > 0 && (
+										<DropdownMenuItem
+											onClick={() => selectByEnvironment("production")}
+										>
+											Production ({prodBackupsCount})
+										</DropdownMenuItem>
+									)}
+									{testBackupsCount > 0 && (
+										<DropdownMenuItem
+											onClick={() => selectByEnvironment("test")}
+										>
+											Test ({testBackupsCount})
+										</DropdownMenuItem>
+									)}
+									{preRestoreCount > 0 && (
+										<>
+											<DropdownMenuSeparator />
+											<DropdownMenuItem onClick={selectPreRestoreBackups}>
+												Pre-restore ({preRestoreCount})
+											</DropdownMenuItem>
+										</>
+									)}
+									<DropdownMenuSeparator />
+									<DropdownMenuItem onClick={clearSelection}>
+										Clear selection
+									</DropdownMenuItem>
+								</DropdownMenuContent>
+							</DropdownMenu>
+
+							{selectedForDeletion.size > 0 && (
+								<>
+									<Button
+										variant="destructive"
+										size="sm"
+										className="ml-auto gap-1"
+										onClick={() => setShowBulkDeleteConfirm(true)}
+										disabled={isLoading}
 									>
-										<div className="space-y-1">
-											<div className="flex items-center gap-2">
-												<span className="font-medium">
-													{backup.metadata.description || "Backup"}
-												</span>
-												{currentEnvironment === "test" && (
-													<span
-														className={`text-xs px-2 py-0.5 rounded ${
-															backup.metadata.environment === "production"
-																? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
-																: "bg-amber-500/10 text-amber-600 dark:text-amber-400"
-														}`}
+										<Trash2 className="w-3.5 h-3.5" />
+										Delete {selectedForDeletion.size}
+									</Button>
+									<Button
+										variant="ghost"
+										size="sm"
+										onClick={clearSelection}
+										disabled={isLoading}
+									>
+										Cancel
+									</Button>
+								</>
+							)}
+						</div>
+					)}
+
+					<div className="flex-1 min-h-0 overflow-hidden">
+						<ScrollArea className="h-full">
+							{backups.length === 0 ?
+								<div className="py-8 text-center text-muted-foreground">
+									No backups found. Create your first backup to get started.
+								</div>
+							:	<div className="space-y-2 py-1 pr-4">
+									{backups.map((backup) => (
+										<div
+											key={backup.filename}
+											className={`p-3 border rounded-lg transition-colors ${
+												selectedForDeletion.has(backup.filename) ?
+													"bg-muted/60"
+												:	""
+											}`}
+										>
+											<div className="flex items-start gap-3">
+												{/* Row checkbox */}
+												<Checkbox
+													checked={selectedForDeletion.has(
+														backup.filename,
+													)}
+													onCheckedChange={() =>
+														toggleSelectForDeletion(backup.filename)
+													}
+													className="mt-1 shrink-0"
+												/>
+
+												<div className="flex-1 min-w-0 overflow-hidden">
+													<div className="flex items-center gap-2 flex-wrap">
+														<span
+															className="font-medium truncate max-w-[200px]"
+															title={
+																backup.metadata.description ||
+																"Backup"
+															}
+														>
+															{backup.metadata.description ||
+																"Backup"}
+														</span>
+														{/* Environment tag */}
+														<span
+															className={`text-xs px-2 py-0.5 rounded shrink-0 ${
+																(
+																	backup.metadata.environment ===
+																	"production"
+																) ?
+																	"bg-blue-500/10 text-blue-600 dark:text-blue-400"
+																:	"bg-amber-500/10 text-amber-600 dark:text-amber-400"
+															}`}
+														>
+															{backup.metadata.environment}
+														</span>
+														{/* Pre-restore tag */}
+														{isPreRestore(backup) && (
+															<span className="text-xs px-2 py-0.5 rounded shrink-0 bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center gap-1">
+																<RotateCcw className="w-3 h-3" />
+																pre-restore
+															</span>
+														)}
+													</div>
+													<div className="text-sm text-muted-foreground mt-1">
+														{formatDate(backup.metadata.createdAt)} · v
+														{backup.metadata.version}
+														{backup.metadata.fileSize &&
+															` · ${formatFileSize(backup.metadata.fileSize)}`}
+													</div>
+												</div>
+
+												<div className="flex gap-2 shrink-0">
+													<Button
+														variant="outline"
+														size="sm"
+														onClick={() => handleRestoreClick(backup)}
+														disabled={isLoading}
 													>
-														{backup.metadata.environment}
-													</span>
-												)}
-											</div>
-											<div className="text-sm text-muted-foreground">
-												{formatDate(backup.metadata.createdAt)} • v
-												{backup.metadata.version}
-												{backup.metadata.fileSize &&
-													` • ${formatFileSize(backup.metadata.fileSize)}`}
+														<Upload className="w-4 h-4 mr-1" />
+														Restore
+													</Button>
+													<Button
+														variant="ghost"
+														size="sm"
+														onClick={() => {
+															setSelectedBackup(backup);
+															setShowDeleteConfirm(true);
+														}}
+														disabled={isLoading}
+													>
+														<Trash2 className="w-4 h-4 text-red-500" />
+													</Button>
+												</div>
 											</div>
 										</div>
-										<div className="flex gap-2">
-											<Button
-												variant="outline"
-												size="sm"
-												onClick={() => {
-													setSelectedBackup(backup);
-													setShowRestoreConfirm(true);
-												}}
-											>
-												<Upload className="w-4 h-4 mr-1" />
-												Restore
-											</Button>
-											<Button
-												variant="ghost"
-												size="sm"
-												onClick={() => {
-													setSelectedBackup(backup);
-													setShowDeleteConfirm(true);
-												}}
-											>
-												<Trash2 className="w-4 h-4 text-red-500" />
-											</Button>
-										</div>
-									</div>
-								))}
-							</div>
-						)}
-					</ScrollArea>
-					<DialogFooter>
-						<Button variant="outline" onClick={() => setShowBackupList(false)}>
+									))}
+								</div>
+							}
+						</ScrollArea>
+					</div>
+
+					<DialogFooter className="shrink-0 mt-4">
+						<Button
+							variant="outline"
+							onClick={() => {
+								setShowBackupList(false);
+								clearSelection();
+							}}
+						>
 							Close
 						</Button>
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
 
-			{/* Restore Confirmation */}
-			<AlertDialog
-				open={showRestoreConfirm}
-				onOpenChange={setShowRestoreConfirm}
-			>
+			{/* ── Restore confirmation (with mode selection) ─────────────── */}
+			<AlertDialog open={showRestoreConfirm} onOpenChange={setShowRestoreConfirm}>
 				<AlertDialogContent>
 					<AlertDialogHeader>
 						<AlertDialogTitle>Restore from Backup</AlertDialogTitle>
-						<AlertDialogDescription>
-							This will replace your current data with the data from this
-							backup. A backup of your current data will be created first.
-							{selectedBackup &&
-								selectedBackup.metadata.version !== "unknown" && (
-									<span className="block mt-2">
-										Backup version: {selectedBackup.metadata.version}
+						<AlertDialogDescription asChild>
+							<div className="space-y-3">
+								<p>
+									Restoring from{" "}
+									<span className="font-medium">
+										{selectedBackup?.metadata.description || "this backup"}
 									</span>
+									.
+								</p>
+								{selectedBackup?.metadata.version !== "unknown" && (
+									<p className="text-xs text-muted-foreground">
+										Backup version: {selectedBackup?.metadata.version}
+									</p>
 								)}
+							</div>
 						</AlertDialogDescription>
 					</AlertDialogHeader>
+
+					<div className="space-y-4 py-2">
+						{/* Restore mode selection */}
+						<div className="space-y-3">
+							<Label className="text-sm font-medium">Restore mode</Label>
+							<RadioGroup
+								value={restoreMode}
+								onValueChange={(value) => setRestoreMode(value as RestoreMode)}
+								className="space-y-2"
+							>
+								<label
+									htmlFor="mode-replace"
+									className="flex items-start space-x-3 cursor-pointer rounded-md p-2 -mx-2 hover:bg-muted/50 transition-colors"
+								>
+									<RadioGroupItem
+										value="replace"
+										id="mode-replace"
+										className="mt-1"
+									/>
+									<div className="space-y-1">
+										<span className="font-medium">Replace all data</span>
+										<p className="text-sm text-muted-foreground">
+											Completely replace your current data with the backup.
+											This is the default behavior.
+										</p>
+									</div>
+								</label>
+								<label
+									htmlFor="mode-merge"
+									className="flex items-start space-x-3 cursor-pointer rounded-md p-2 -mx-2 hover:bg-muted/50 transition-colors"
+								>
+									<RadioGroupItem
+										value="merge"
+										id="mode-merge"
+										className="mt-1"
+									/>
+									<div className="space-y-1">
+										<span className="font-medium">
+											Merge with existing data
+										</span>
+										<p className="text-sm text-muted-foreground">
+											Add items from the backup that don't exist in your
+											current data. Existing items will not be modified.
+										</p>
+									</div>
+								</label>
+							</RadioGroup>
+						</div>
+
+						<Separator />
+
+						{/* Pre-restore backup option */}
+						<div className="flex items-center gap-2">
+							<Checkbox
+								id="create-pre-restore"
+								checked={createPreRestoreBackup}
+								onCheckedChange={(checked) =>
+									setCreatePreRestoreBackup(checked === true)
+								}
+							/>
+							<Label htmlFor="create-pre-restore" className="text-sm cursor-pointer">
+								Back up current data first (recommended)
+							</Label>
+						</div>
+					</div>
+
 					<AlertDialogFooter>
 						<AlertDialogCancel>Cancel</AlertDialogCancel>
-						<AlertDialogAction
-							onClick={handleRestoreBackup}
-							disabled={isLoading}
-						>
-							{isLoading ? "Restoring..." : "Restore"}
+						<AlertDialogAction onClick={handleRestoreBackup} disabled={isLoading}>
+							{isLoading ?
+								"Restoring…"
+							: restoreMode === "replace" ?
+								"Replace Data"
+							:	"Merge Data"}
 						</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
 
-			{/* Delete Confirmation */}
+			{/* ── Single-backup delete confirmation ──────────────────────── */}
 			<AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
 				<AlertDialogContent>
 					<AlertDialogHeader>
 						<AlertDialogTitle>Delete Backup</AlertDialogTitle>
 						<AlertDialogDescription>
-							Are you sure you want to delete this backup? This action cannot be
-							undone.
+							Are you sure you want to delete{" "}
+							<span className="font-medium">
+								{selectedBackup?.metadata.description || "this backup"}
+							</span>
+							? This action cannot be undone.
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
@@ -701,19 +998,99 @@ export const BackupSettings = () => {
 				</AlertDialogContent>
 			</AlertDialog>
 
-			{/* Seed Test Data Confirmation */}
+			{/* ── Bulk delete confirmation ────────────────────────────────── */}
+			<AlertDialog open={showBulkDeleteConfirm} onOpenChange={setShowBulkDeleteConfirm}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>
+							Delete {selectedForDeletion.size} Backup
+							{selectedForDeletion.size !== 1 ? "s" : ""}
+						</AlertDialogTitle>
+						<AlertDialogDescription>
+							Are you sure you want to permanently delete{" "}
+							{selectedForDeletion.size === 1 ?
+								"this backup"
+							:	`these ${selectedForDeletion.size} backups`}
+							? This action cannot be undone.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={handleBulkDelete}
+							className="bg-red-600 hover:bg-red-700"
+							disabled={isLoading}
+						>
+							{isLoading ?
+								"Deleting…"
+							:	`Delete ${selectedForDeletion.size} backup${selectedForDeletion.size !== 1 ? "s" : ""}`
+							}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+
+			{/* ── Clear Database Confirmation ─────────────────────────────── */}
+			<AlertDialog open={showClearDatabaseConfirm} onOpenChange={setShowClearDatabaseConfirm}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Clear Database</AlertDialogTitle>
+						<AlertDialogDescription>
+							This will permanently delete all data from the test database. This
+							action cannot be undone.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={handleClearDatabase}
+							className="bg-red-600 hover:bg-red-700"
+							disabled={isLoading}
+						>
+							{isLoading ? "Clearing…" : "Clear Database"}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+
+			{/* ── Clear localStorage Confirmation ─────────────────────────── */}
+			<AlertDialog
+				open={showClearLocalStorageConfirm}
+				onOpenChange={setShowClearLocalStorageConfirm}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Clear localStorage Cache</AlertDialogTitle>
+						<AlertDialogDescription>
+							This will clear the cached app data from localStorage. The data will be
+							reloaded from the database on next app start.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={handleClearLocalStorage}
+							className="bg-red-600 hover:bg-red-700"
+						>
+							Clear localStorage
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+
+			{/* ── Seed Test Data Confirmation ─────────────────────────────── */}
 			<AlertDialog open={showSeedConfirm} onOpenChange={setShowSeedConfirm}>
 				<AlertDialogContent>
 					<AlertDialogHeader>
 						<AlertDialogTitle>Seed Test Database</AlertDialogTitle>
 						<AlertDialogDescription asChild>
 							<div>
-								This will clear all existing data in the test database and
-								replace it with sample data including:
+								This will clear all existing data in the test database and replace
+								it with sample data including:
 								<ul className="list-disc list-inside mt-2 space-y-1">
-									<li>7 sample notes across different folders</li>
-									<li>10 sample expenses (recurring and one-time)</li>
-									<li>Income entries for the past 4 weeks</li>
+									<li>Sample notes across folders</li>
+									<li>Sample expenses (recurring and one-time)</li>
+									<li>Income entries for the past several weeks</li>
 								</ul>
 								<span className="block mt-2 font-medium">
 									This action cannot be undone.
@@ -723,11 +1100,8 @@ export const BackupSettings = () => {
 					</AlertDialogHeader>
 					<AlertDialogFooter>
 						<AlertDialogCancel disabled={seedingData}>Cancel</AlertDialogCancel>
-						<AlertDialogAction
-							onClick={handleSeedTestData}
-							disabled={seedingData}
-						>
-							{seedingData ? "Seeding..." : "Seed Data"}
+						<AlertDialogAction onClick={handleSeedTestData} disabled={seedingData}>
+							{seedingData ? "Seeding…" : "Seed Data"}
 						</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>

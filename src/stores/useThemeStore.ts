@@ -14,22 +14,20 @@ interface ThemeStore extends ThemeSettings {
 	resolvedTheme: "light" | "dark";
 
 	// Actions
-	setThemeSettings: (
-		settings: Partial<ThemeSettings>,
-		skipSave?: boolean,
-	) => void;
+	setThemeSettings: (settings: Partial<ThemeSettings>, skipSave?: boolean) => void;
 	setMode: (mode: ThemeMode) => void;
 	setPalette: (palette: ThemePalette) => void;
 	initializeTheme: () => void;
 	resetToDefaults: () => void;
 }
 
+// localStorage key for theme cache (same as used in localStorageCache)
+const THEME_CACHE_KEY = "sb_cache_theme";
+
 // Get the OS preferred color scheme
 const getSystemTheme = (): "light" | "dark" => {
 	if (typeof window !== "undefined" && window.matchMedia) {
-		return window.matchMedia("(prefers-color-scheme: dark)").matches
-			? "dark"
-			: "light";
+		return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 	}
 	return "light";
 };
@@ -53,17 +51,6 @@ const applyPalette = (palette: ThemePalette) => {
 	}
 };
 
-// Cache theme to localStorage for early application on next startup
-const cacheThemeToLocalStorage = (mode: ThemeMode, palette: ThemePalette) => {
-	if (typeof localStorage !== "undefined") {
-		try {
-			localStorage.setItem("theme-cache", JSON.stringify({ mode, palette }));
-		} catch {
-			// Ignore localStorage errors
-		}
-	}
-};
-
 // Resolve the actual theme from mode
 const resolveTheme = (mode: ThemeMode): "light" | "dark" => {
 	if (mode === "system") {
@@ -71,6 +58,62 @@ const resolveTheme = (mode: ThemeMode): "light" | "dark" => {
 	}
 	return mode;
 };
+
+/**
+ * Cache theme to localStorage for early application on next startup.
+ * This prevents the white flash when using dark mode.
+ * Uses the same key structure as localStorageCache for consistency.
+ */
+const cacheThemeToLocalStorage = (mode: ThemeMode, palette: ThemePalette) => {
+	if (typeof localStorage !== "undefined") {
+		try {
+			localStorage.setItem(THEME_CACHE_KEY, JSON.stringify({ mode, palette }));
+		} catch {
+			// Ignore localStorage errors
+		}
+	}
+};
+
+/**
+ * Read cached theme from localStorage.
+ * Called very early to prevent flash of wrong theme.
+ */
+const readCachedTheme = (): { mode: ThemeMode; palette: ThemePalette } | null => {
+	if (typeof localStorage !== "undefined") {
+		try {
+			const cached = localStorage.getItem(THEME_CACHE_KEY);
+			if (cached) {
+				const parsed = JSON.parse(cached);
+				if (
+					parsed &&
+					typeof parsed.mode === "string" &&
+					typeof parsed.palette === "string"
+				) {
+					return parsed as { mode: ThemeMode; palette: ThemePalette };
+				}
+			}
+		} catch {
+			// Ignore errors
+		}
+	}
+	return null;
+};
+
+/**
+ * Apply theme immediately on module load to prevent flash.
+ * This runs before React hydrates.
+ */
+const applyEarlyTheme = () => {
+	const cached = readCachedTheme();
+	if (cached) {
+		const resolved = resolveTheme(cached.mode);
+		applyTheme(resolved);
+		applyPalette(cached.palette);
+	}
+};
+
+// Apply theme immediately when this module loads
+applyEarlyTheme();
 
 export const useThemeStore = create<ThemeStore>()(
 	subscribeWithSelector((set, get) => ({
@@ -169,10 +212,7 @@ export const useThemeStore = create<ThemeStore>()(
 			applyPalette(DEFAULT_THEME_SETTINGS.palette);
 
 			// Cache for early application on next startup
-			cacheThemeToLocalStorage(
-				DEFAULT_THEME_SETTINGS.mode,
-				DEFAULT_THEME_SETTINGS.palette,
-			);
+			cacheThemeToLocalStorage(DEFAULT_THEME_SETTINGS.mode, DEFAULT_THEME_SETTINGS.palette);
 
 			if (useAppStore.getState().autoSaveEnabled) {
 				useAppStore.getState().saveToFile(AppToSave.All);

@@ -9,36 +9,35 @@ import {
 	type BackupSettings,
 	type DatabaseEnvironment,
 	DEFAULT_BACKUP_SETTINGS,
-	type ExpenseExportData,
 	type ImportResult,
 	type RestoreResult,
 	type SerializedExpense,
 } from "@/types/backup";
 import useAppStore from "./useAppStore";
 import { useExpenseStore } from "./useExpenseStore";
+import { useIncomeStore } from "./useIncomeStore";
+import { useNotesStore } from "./useNotesStore";
 
-// Helper to deserialize expenses from JSON (converts string dates to Date objects)
-const deserializeExpenses = (serialized: SerializedExpense[]): Expense[] => {
-	return serialized.map((e) => ({
+export type RestoreMode = "replace" | "merge";
+
+const deserializeExpenses = (serialized: SerializedExpense[]): Expense[] =>
+	serialized.map((e) => ({
 		...e,
 		dueDate: e.dueDate ? new Date(e.dueDate) : null,
 		paymentDate: e.paymentDate ? new Date(e.paymentDate) : null,
 		createdAt: new Date(e.createdAt),
 		updatedAt: new Date(e.updatedAt),
-		initialState: e.initialState
-			? {
+		initialState:
+			e.initialState ?
+				{
 					amount: e.initialState.amount,
-					dueDate: e.initialState.dueDate
-						? new Date(e.initialState.dueDate)
-						: null,
+					dueDate: e.initialState.dueDate ? new Date(e.initialState.dueDate) : null,
 					paymentMethod: e.initialState.paymentMethod,
 				}
-			: undefined,
+			:	undefined,
 	}));
-};
 
 interface BackupStore {
-	// State
 	settings: BackupSettings;
 	backups: BackupInfo[];
 	isLoading: boolean;
@@ -46,57 +45,64 @@ interface BackupStore {
 	lastRestoreResult: RestoreResult | null;
 	lastImportResult: ImportResult | null;
 
-	// Actions
+	selectedForDeletion: Set<string>;
+
 	initialize: () => Promise<void>;
 	loadBackups: () => Promise<void>;
 	createBackup: (description?: string) => Promise<BackupResult>;
 	deleteBackup: (filename: string) => Promise<boolean>;
+
+	deleteSelectedBackups: () => Promise<void>;
+	toggleSelectForDeletion: (filename: string) => void;
+	selectAllForDeletion: () => void;
+	selectByEnvironment: (environment: DatabaseEnvironment) => void;
+	selectPreRestoreBackups: () => void;
+	clearSelection: () => void;
+
 	restoreFromBackup: (
 		filename: string,
-		targetEnvironment?: DatabaseEnvironment,
+		options?: {
+			targetEnvironment?: DatabaseEnvironment;
+			skipPreRestoreBackup?: boolean;
+			mode?: RestoreMode;
+		},
 	) => Promise<RestoreResult>;
 
-	// Import/Export
-	exportExpensesToFile: (
-		filePath: string,
-	) => Promise<{ success: boolean; error?: string }>;
-	importExpensesFromFile: (
-		filePath: string,
-		mode: "replace" | "merge",
-	) => Promise<ImportResult>;
+	exportExpensesToFile: (filePath: string) => Promise<{ success: boolean; error?: string }>;
+	importExpensesFromFile: (filePath: string, mode: "replace" | "merge") => Promise<ImportResult>;
 	getExpenseExportPath: (backupFilename: string) => Promise<string | null>;
 
-	// Validation
 	canRestoreToEnvironment: (
 		backup: BackupInfo,
 		targetEnvironment: DatabaseEnvironment,
 	) => { allowed: boolean; reason?: string };
 
-	// Settings actions
 	setAutoBackupEnabled: (enabled: boolean) => Promise<void>;
 	setAutoBackupInterval: (hours: number) => Promise<void>;
 	setMaxAutoBackups: (count: number) => Promise<void>;
 	setCustomBackupPath: (path: string | null) => Promise<boolean>;
 
-	// Environment actions
 	switchEnvironment: (environment: DatabaseEnvironment) => Promise<void>;
 	getCurrentEnvironment: () => DatabaseEnvironment;
 
-	// Utility actions
 	openBackupFolder: () => Promise<void>;
 	getDefaultDocumentsPath: () => Promise<string>;
 	clearResults: () => void;
+
+	// Data clearing
+	clearDatabase: () => Promise<void>;
+	clearLocalStorage: () => void;
 }
 
 export const useBackupStore = create<BackupStore>()(
 	subscribeWithSelector((set, get) => ({
-		// Initial state
 		settings: DEFAULT_BACKUP_SETTINGS,
 		backups: [],
 		isLoading: false,
 		lastBackupResult: null,
 		lastRestoreResult: null,
 		lastImportResult: null,
+		selectedForDeletion: new Set<string>(),
 
 		initialize: async () => {
 			set({ isLoading: true });
@@ -125,11 +131,7 @@ export const useBackupStore = create<BackupStore>()(
 			try {
 				const result = await backupService.createBackup(description);
 				set({ lastBackupResult: result, isLoading: false });
-
-				if (result.success) {
-					await get().loadBackups();
-				}
-
+				if (result.success) await get().loadBackups();
 				return result;
 			} catch (error) {
 				const result: BackupResult = {
@@ -146,6 +148,9 @@ export const useBackupStore = create<BackupStore>()(
 				const success = await backupService.deleteBackup(filename);
 				if (success) {
 					await get().loadBackups();
+					const sel = new Set(get().selectedForDeletion);
+					sel.delete(filename);
+					set({ selectedForDeletion: sel });
 				}
 				return success;
 			} catch (error) {
@@ -154,27 +159,75 @@ export const useBackupStore = create<BackupStore>()(
 			}
 		},
 
-		canRestoreToEnvironment: (
-			backup: BackupInfo,
-			targetEnvironment: DatabaseEnvironment,
-		) => {
-			return backupService.validateRestoreEnvironment(
-				backup.metadata.environment,
-				targetEnvironment,
-			);
+		deleteSelectedBackups: async () => {
+			const { selectedForDeletion } = get();
+			if (selectedForDeletion.size === 0) return;
+
+			set({ isLoading: true });
+			try {
+				for (const filename of selectedForDeletion) {
+					await backupService.deleteBackup(filename);
+				}
+				set({ selectedForDeletion: new Set() });
+				await get().loadBackups();
+			} finally {
+				set({ isLoading: false });
+			}
 		},
 
-		restoreFromBackup: async (
-			filename: string,
-			targetEnvironment?: DatabaseEnvironment,
-		) => {
+		toggleSelectForDeletion: (filename: string) => {
+			const sel = new Set(get().selectedForDeletion);
+			if (sel.has(filename)) {
+				sel.delete(filename);
+			} else {
+				sel.add(filename);
+			}
+			set({ selectedForDeletion: sel });
+		},
+
+		selectAllForDeletion: () => {
+			const sel = new Set(get().backups.map((b) => b.filename));
+			set({ selectedForDeletion: sel });
+		},
+
+		selectByEnvironment: (environment: DatabaseEnvironment) => {
+			const sel = new Set(
+				get()
+					.backups.filter((b) => b.metadata.environment === environment)
+					.map((b) => b.filename),
+			);
+			set({ selectedForDeletion: sel });
+		},
+
+		selectPreRestoreBackups: () => {
+			const sel = new Set(
+				get()
+					.backups.filter((b) => b.metadata.description?.startsWith("Pre-restore"))
+					.map((b) => b.filename),
+			);
+			set({ selectedForDeletion: sel });
+		},
+
+		clearSelection: () => {
+			set({ selectedForDeletion: new Set() });
+		},
+
+		canRestoreToEnvironment: (backup, targetEnvironment) =>
+			backupService.validateRestoreEnvironment(
+				backup.metadata.environment,
+				targetEnvironment,
+			),
+
+		restoreFromBackup: async (filename, options = {}) => {
+			const { targetEnvironment, skipPreRestoreBackup = false, mode = "replace" } = options;
+
 			set({ isLoading: true });
 			const currentEnvironment = get().settings.databaseEnvironment;
 
 			try {
-				const actualTarget = targetEnvironment || currentEnvironment;
-
+				const actualTarget = targetEnvironment ?? currentEnvironment;
 				const backup = get().backups.find((b) => b.filename === filename);
+
 				if (backup) {
 					const validation = backupService.validateRestoreEnvironment(
 						backup.metadata.environment,
@@ -190,34 +243,178 @@ export const useBackupStore = create<BackupStore>()(
 					}
 				}
 
-				await sqlStorage.close();
+				if (mode === "replace") {
+					// Close the existing connection
+					await sqlStorage.close();
 
-				const result = await backupService.restoreFromBackup(filename, {
-					targetEnvironment: actualTarget,
-				});
+					// Clear localStorage cache so backup data takes priority
+					sqlStorage.clearLocalStorageCache();
 
-				if (result.success) {
-					await sqlStorage.initialize(actualTarget);
-					await useAppStore.getState().loadFromFile();
-					await get().loadBackups();
-				} else {
-					console.error("Restore failed:", result.error);
-					try {
-						await sqlStorage.initialize(currentEnvironment);
+					// Full replace: restore backup to database file
+					const result = await backupService.restoreFromBackup(filename, {
+						targetEnvironment: actualTarget,
+						skipPreRestoreBackup,
+					});
+
+					if (result.success) {
+						await sqlStorage.initialize(actualTarget);
 						await useAppStore.getState().loadFromFile();
-					} catch (reinitError) {
-						console.error(
-							"Failed to recover database after failed restore:",
-							reinitError,
-						);
+						await get().loadBackups();
+					} else {
+						console.error("Restore failed:", result.error);
+						try {
+							await sqlStorage.initialize(currentEnvironment);
+							await useAppStore.getState().loadFromFile();
+						} catch (reinitError) {
+							console.error("Failed to recover after failed restore:", reinitError);
+						}
 					}
+
+					set({ lastRestoreResult: result, isLoading: false });
+					return result;
+				} else {
+					// Merge mode: read backup data directly without replacing database
+
+					// Create pre-restore backup if requested
+					if (!skipPreRestoreBackup) {
+						await backupService.createBackup("Pre-restore");
+					}
+
+					// Read data directly from the backup file
+					const backupReadResult = await backupService.readBackupData(filename);
+
+					if (!backupReadResult.success || !backupReadResult.data) {
+						const result: RestoreResult = {
+							success: false,
+							error: backupReadResult.error || "Failed to read backup data",
+						};
+						set({ lastRestoreResult: result, isLoading: false });
+						return result;
+					}
+
+					const backupData = backupReadResult.data;
+
+					// Get current data from stores
+					const currentNotes = useNotesStore.getState().notes;
+					const currentFolders = useNotesStore.getState().folders;
+					const currentTags = useNotesStore.getState().tags;
+					const currentExpenses = useExpenseStore.getState().expenses;
+					const currentIncomeEntries = useIncomeStore.getState().incomeEntries;
+					const currentWeeklyTargets = useIncomeStore.getState().incomeWeeklyTargets;
+
+					// Merge notes
+					const mergedNotes = [...currentNotes];
+					const existingNoteIds = new Set(currentNotes.map((n) => n.id));
+					let addedNotes = 0;
+					for (const note of backupData.notes) {
+						if (!existingNoteIds.has(note.id)) {
+							mergedNotes.push(note);
+							addedNotes++;
+						}
+					}
+
+					// Merge folders
+					const mergedFolders = [...currentFolders];
+					const existingFolderIds = new Set(currentFolders.map((f) => f.id));
+					let addedFolders = 0;
+					for (const folder of backupData.folders) {
+						if (!existingFolderIds.has(folder.id)) {
+							mergedFolders.push(folder);
+							addedFolders++;
+						}
+					}
+
+					// Merge tags
+					const mergedTags = { ...currentTags };
+					let addedTags = 0;
+					for (const [id, tag] of Object.entries(backupData.tags)) {
+						if (!mergedTags[id]) {
+							mergedTags[id] = tag;
+							addedTags++;
+						}
+					}
+
+					// Merge expenses
+					const mergedExpenses = [...currentExpenses];
+					const existingExpenseIds = new Set(currentExpenses.map((e) => e.id));
+					let addedExpenses = 0;
+					for (const expense of backupData.expenses.expenses) {
+						if (!existingExpenseIds.has(expense.id)) {
+							mergedExpenses.push(expense);
+							addedExpenses++;
+						}
+					}
+
+					// Merge income entries
+					const mergedIncomeEntries = [...currentIncomeEntries];
+					const existingIncomeIds = new Set(currentIncomeEntries.map((e) => e.id));
+					let addedIncomeEntries = 0;
+					for (const entry of backupData.income.entries) {
+						if (!existingIncomeIds.has(entry.id)) {
+							mergedIncomeEntries.push(entry);
+							addedIncomeEntries++;
+						}
+					}
+
+					// Merge weekly targets
+					const mergedWeeklyTargets = [...currentWeeklyTargets];
+					const existingTargetIds = new Set(currentWeeklyTargets.map((t) => t.id));
+					for (const target of backupData.income.weeklyTargets) {
+						if (!existingTargetIds.has(target.id)) {
+							mergedWeeklyTargets.push(target);
+						}
+					}
+
+					// Merge categories and payment methods
+					const expenseStore = useExpenseStore.getState();
+					const mergedCategories = Array.from(
+						new Set([...expenseStore.categories, ...backupData.expenses.categories]),
+					).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+
+					const mergedCategoryColors = {
+						...backupData.expenses.categoryColors,
+						...expenseStore.categoryColors,
+					};
+
+					const mergedPaymentMethods = Array.from(
+						new Set([
+							...expenseStore.paymentMethods,
+							...backupData.expenses.paymentMethods,
+						]),
+					).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+
+					// Update stores with merged data
+					useNotesStore.getState().setNotes(mergedNotes, true);
+					useNotesStore.getState().setFolders(mergedFolders, true);
+					useNotesStore.getState().setTags(mergedTags);
+
+					useExpenseStore.getState().setExpenseData({
+						expenses: mergedExpenses,
+						selectedMonth: expenseStore.selectedMonth ?? new Date(),
+						overviewMode: expenseStore.overviewMode,
+						categories: mergedCategories,
+						categoryColors: mergedCategoryColors,
+						paymentMethods: mergedPaymentMethods,
+					});
+
+					useIncomeStore.getState().setIncomeEntries(mergedIncomeEntries);
+					useIncomeStore.getState().setIncomeWeeklyTargets(mergedWeeklyTargets);
+
+					// Save merged data to database and localStorage
+					await useAppStore.getState().saveToFile(AppToSave.All);
+					await get().loadBackups();
+
+					const totalAdded =
+						addedNotes + addedFolders + addedTags + addedExpenses + addedIncomeEntries;
+
+					const result: RestoreResult = {
+						success: true,
+						mergedCount: totalAdded,
+					};
+					set({ lastRestoreResult: result, isLoading: false });
+					return result;
 				}
-
-				set({ lastRestoreResult: result, isLoading: false });
-				return result;
 			} catch (error) {
-				console.error("Restore error:", error);
-
 				const result: RestoreResult = {
 					success: false,
 					error: error instanceof Error ? error.message : "Unknown error",
@@ -227,44 +424,31 @@ export const useBackupStore = create<BackupStore>()(
 				try {
 					await sqlStorage.initialize(currentEnvironment);
 					await useAppStore.getState().loadFromFile();
-				} catch (reinitError) {
-					console.error("Failed to recover database after error:", reinitError);
+				} catch {
+					// Best effort
 				}
-
 				return result;
 			}
 		},
 
-		// Export current expenses to a file
 		exportExpensesToFile: async (filePath: string) => {
 			set({ isLoading: true });
 			try {
-				const expenseStore = useExpenseStore.getState();
-
-				const exportData: ExpenseExportData =
-					backupService.createExpenseExportData(
-						expenseStore.expenses,
-						expenseStore.categories,
-						expenseStore.categoryColors,
-						expenseStore.paymentMethods,
-						expenseStore.selectedMonth || new Date(),
-						expenseStore.overviewMode,
-					);
-
-				const success = await backupService.exportExpensesToJson(
-					exportData,
-					filePath,
+				const s = useExpenseStore.getState();
+				const exportData = backupService.createExpenseExportData(
+					s.expenses,
+					s.categories,
+					s.categoryColors,
+					s.paymentMethods,
+					s.selectedMonth ?? new Date(),
+					s.overviewMode,
 				);
-
+				const success = await backupService.exportExpensesToJson(exportData, filePath);
 				set({ isLoading: false });
-
-				if (success) {
-					return { success: true };
-				} else {
-					return { success: false, error: "Failed to write export file" };
-				}
+				return success ?
+						{ success: true }
+					:	{ success: false, error: "Failed to write export file" };
 			} catch (error) {
-				console.error("Export error:", error);
 				set({ isLoading: false });
 				return {
 					success: false,
@@ -273,48 +457,33 @@ export const useBackupStore = create<BackupStore>()(
 			}
 		},
 
-		// Import expenses from a file
-		importExpensesFromFile: async (
-			filePath: string,
-			mode: "replace" | "merge",
-		) => {
+		importExpensesFromFile: async (filePath: string, mode: "replace" | "merge") => {
 			set({ isLoading: true });
-
 			try {
-				const importResult =
-					await backupService.importExpensesFromJson(filePath);
-
+				const importResult = await backupService.importExpensesFromJson(filePath);
 				if (!importResult.success || !importResult.data) {
 					const result: ImportResult = {
 						success: false,
-						error: importResult.error || "Failed to read export file",
+						error: importResult.error ?? "Failed to read export file",
 					};
 					set({ lastImportResult: result, isLoading: false });
 					return result;
 				}
 
-				const exportData: ExpenseExportData = importResult.data;
+				const exportData = importResult.data;
 				const expenseStore = useExpenseStore.getState();
-
-				// Deserialize expenses (convert string dates to Date objects)
-				const deserializedExpenses = deserializeExpenses(
-					exportData.data.expenses,
-				);
+				const deserialized = deserializeExpenses(exportData.data.expenses);
 
 				if (mode === "replace") {
-					// Replace all expense data with imported data
 					expenseStore.setExpenseData({
-						expenses: deserializedExpenses,
+						expenses: deserialized,
 						selectedMonth: new Date(exportData.data.selectedMonth),
 						overviewMode: exportData.data.overviewMode as OverviewMode,
 						categories: exportData.data.categories,
 						categoryColors: exportData.data.categoryColors,
 						paymentMethods: exportData.data.paymentMethods,
 					});
-
-					// Save to database
 					await useAppStore.getState().saveToFile(AppToSave.Expenses);
-
 					const result: ImportResult = {
 						success: true,
 						importedCount: exportData.data.expenses.length,
@@ -323,25 +492,15 @@ export const useBackupStore = create<BackupStore>()(
 					set({ lastImportResult: result, isLoading: false });
 					return result;
 				} else {
-					// Merge mode - add new expenses, skip duplicates by ID
 					const existingIds = new Set(expenseStore.expenses.map((e) => e.id));
-					const newExpenses = deserializedExpenses.filter(
-						(e) => !existingIds.has(e.id),
-					);
-
-					// Merge categories and colors
+					const newExpenses = deserialized.filter((e) => !existingIds.has(e.id));
 					const mergedCategories = Array.from(
-						new Set([
-							...expenseStore.categories,
-							...exportData.data.categories,
-						]),
+						new Set([...expenseStore.categories, ...exportData.data.categories]),
 					).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
-
 					const mergedColors = {
 						...expenseStore.categoryColors,
 						...exportData.data.categoryColors,
 					};
-
 					const mergedPaymentMethods = Array.from(
 						new Set([
 							...expenseStore.paymentMethods,
@@ -351,16 +510,13 @@ export const useBackupStore = create<BackupStore>()(
 
 					expenseStore.setExpenseData({
 						expenses: [...expenseStore.expenses, ...newExpenses],
-						selectedMonth: expenseStore.selectedMonth || new Date(),
+						selectedMonth: expenseStore.selectedMonth ?? new Date(),
 						overviewMode: expenseStore.overviewMode,
 						categories: mergedCategories,
 						categoryColors: mergedColors,
 						paymentMethods: mergedPaymentMethods,
 					});
-
-					// Save to database
 					await useAppStore.getState().saveToFile(AppToSave.Expenses);
-
 					const result: ImportResult = {
 						success: true,
 						importedCount: newExpenses.length,
@@ -370,7 +526,6 @@ export const useBackupStore = create<BackupStore>()(
 					return result;
 				}
 			} catch (error) {
-				console.error("Import error:", error);
 				const result: ImportResult = {
 					success: false,
 					error: error instanceof Error ? error.message : "Unknown error",
@@ -380,29 +535,28 @@ export const useBackupStore = create<BackupStore>()(
 			}
 		},
 
-		getExpenseExportPath: async (backupFilename: string) => {
-			return backupService.getExpenseExportPath(backupFilename);
-		},
+		getExpenseExportPath: (backupFilename) =>
+			backupService.getExpenseExportPath(backupFilename),
 
-		setAutoBackupEnabled: async (enabled: boolean) => {
+		setAutoBackupEnabled: async (enabled) => {
 			const settings = { ...get().settings, autoBackupEnabled: enabled };
 			await backupService.saveSettings(settings);
 			set({ settings });
 		},
 
-		setAutoBackupInterval: async (hours: number) => {
+		setAutoBackupInterval: async (hours) => {
 			const settings = { ...get().settings, autoBackupIntervalHours: hours };
 			await backupService.saveSettings(settings);
 			set({ settings });
 		},
 
-		setMaxAutoBackups: async (count: number) => {
+		setMaxAutoBackups: async (count) => {
 			const settings = { ...get().settings, maxAutoBackups: count };
 			await backupService.saveSettings(settings);
 			set({ settings });
 		},
 
-		setCustomBackupPath: async (path: string | null) => {
+		setCustomBackupPath: async (path) => {
 			const success = await backupService.setCustomBackupPath(path);
 			if (success) {
 				const settings = { ...get().settings, customBackupPath: path };
@@ -412,39 +566,39 @@ export const useBackupStore = create<BackupStore>()(
 			return success;
 		},
 
-		switchEnvironment: async (environment: DatabaseEnvironment) => {
+		switchEnvironment: async (environment) => {
 			set({ isLoading: true });
 			try {
 				await backupService.switchEnvironment(environment);
 				await sqlStorage.switchEnvironment(environment);
 				await useAppStore.getState().loadFromFile();
-
-				const settings = backupService.getSettings();
-				set({ settings, isLoading: false });
+				set({ settings: backupService.getSettings(), isLoading: false });
 			} catch (error) {
 				console.error("Failed to switch environment:", error);
 				set({ isLoading: false });
 			}
 		},
 
-		getCurrentEnvironment: () => {
-			return get().settings.databaseEnvironment;
+		getCurrentEnvironment: () => get().settings.databaseEnvironment,
+
+		openBackupFolder: () => backupService.openBackupFolder(),
+		getDefaultDocumentsPath: () => backupService.getDefaultDocumentsPath(),
+
+		clearResults: () =>
+			set({ lastBackupResult: null, lastRestoreResult: null, lastImportResult: null }),
+
+		clearDatabase: async () => {
+			set({ isLoading: true });
+			try {
+				await sqlStorage.clearAllData();
+				await useAppStore.getState().loadFromFile();
+			} finally {
+				set({ isLoading: false });
+			}
 		},
 
-		openBackupFolder: async () => {
-			await backupService.openBackupFolder();
-		},
-
-		getDefaultDocumentsPath: async () => {
-			return backupService.getDefaultDocumentsPath();
-		},
-
-		clearResults: () => {
-			set({
-				lastBackupResult: null,
-				lastRestoreResult: null,
-				lastImportResult: null,
-			});
+		clearLocalStorage: () => {
+			sqlStorage.clearLocalStorageCache();
 		},
 	})),
 );

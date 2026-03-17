@@ -67,6 +67,7 @@ export interface RestoreResult {
 	requiresMigration?: boolean;
 	sourceVersion?: string;
 	targetVersion?: string;
+	mergedCount?: number; // Number of items merged (for merge mode)
 }
 
 // Expense export types
