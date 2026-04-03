@@ -1,15 +1,13 @@
 import { ChevronRight, Folder as FolderIcon, Inbox } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type React from "react";
-import { useRef, useState } from "react";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
+import { useEffect, useRef, useState } from "react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { IconPicker } from "@/components/IconPicker";
 import type { Folder, Note } from "@/types/notes";
 import { useDropZone, useDragState, type DragItem } from "@/hooks/useDragAndDrop";
+
+type DropPosition = "above" | "inside" | "below";
 
 interface FolderItemProps {
 	folder: Folder;
@@ -44,6 +42,9 @@ interface FolderItemProps {
 	canDropNote?: (item: DragItem<Note>) => boolean;
 	// Icon change
 	onChangeIcon?: (icon: LucideIcon) => void;
+	// Folder reorder
+	draggedFolderParentId?: string | null;
+	onFolderReorder?: (targetFolderId: string, position: "above" | "below") => void;
 }
 
 export const FolderItem: React.FC<FolderItemProps> = ({
@@ -76,10 +77,13 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 	onNoteDrop,
 	canDropNote,
 	onChangeIcon,
+	draggedFolderParentId,
+	onFolderReorder,
 }) => {
 	const inputRef = useRef<HTMLInputElement>(null);
 	const { isDragging: isGlobalDragging, draggedItem } = useDragState();
 	const [showIconPicker, setShowIconPicker] = useState(false);
+	const [dropPosition, setDropPosition] = useState<DropPosition | null>(null);
 
 	// Note drop zone handling
 	const {
@@ -92,21 +96,30 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 		canDrop: (item) => canDropNote?.(item) ?? true,
 	});
 
-	// Check if we're dragging a note (for visual feedback)
 	const isDraggingNote = isGlobalDragging && draggedItem?.type === "note";
+
+	// Can this item be a reorder target for the currently dragged folder?
+	const isSibling =
+		!isInbox &&
+		!isDragging &&
+		draggedFolderParentId !== undefined &&
+		draggedFolderParentId === folder.parentId;
+
+	// Clear drop position when the drag leaves this folder
+	useEffect(() => {
+		if (!isDragOver) setDropPosition(null);
+	}, [isDragOver]);
 
 	// Get icon
 	let IconComponent = isInbox ? Inbox : FolderIcon;
-	if (!isInbox && folder.icon) {
-		IconComponent = folder.icon;
-	}
+	if (!isInbox && folder.icon) IconComponent = folder.icon;
+
+	// ── Editing state ────────────────────────────────────────────────────────
 
 	if (isEditing) {
 		return (
 			<div
-				className={`flex items-center rounded-lg px-2 py-1.5 ${
-					isActive ? "bg-primary/10" : ""
-				}`}
+				className={`flex items-center rounded-lg px-2 py-1.5 ${isActive ? "bg-primary/10" : ""}`}
 				data-folder-id={dataFolderId}
 				style={{ paddingLeft: `${depth * 12 + 8}px` }}
 			>
@@ -134,49 +147,71 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 		);
 	}
 
-	// Apply grab cursor when ready to drag, pointer otherwise
-	const cursorStyle = isDragReady && !isDragging ? "grab" : "pointer";
+	// ── Combined drag handlers ───────────────────────────────────────────────
 
-	// Combined drag over handler for both folders and notes
 	const handleDragOver = (e: React.DragEvent) => {
-		// Handle note drag over
 		if (isDraggingNote) {
 			noteDropHandlers.onDragOver(e);
+			setDropPosition(null);
+			return;
+		}
+
+		// Folder drag
+		onDragOver(e);
+
+		// Calculate reorder position
+		if (isSibling) {
+			const rect = e.currentTarget.getBoundingClientRect();
+			const y = e.clientY - rect.top;
+			const h = rect.height;
+
+			if (y < h * 0.3) setDropPosition("above");
+			else if (y > h * 0.7) setDropPosition("below");
+			else setDropPosition("inside");
 		} else {
-			// Handle folder drag over
-			onDragOver(e);
+			setDropPosition(null);
 		}
 	};
 
-	// Combined drag enter handler
 	const handleDragEnter = (e: React.DragEvent) => {
-		if (isDraggingNote) {
-			noteDropHandlers.onDragEnter(e);
-		}
+		if (isDraggingNote) noteDropHandlers.onDragEnter(e);
 	};
 
-	// Combined drag leave handler
 	const handleDragLeave = (e: React.DragEvent) => {
-		if (isDraggingNote) {
-			noteDropHandlers.onDragLeave(e);
-		} else {
-			onDragLeave(e);
-		}
+		if (isDraggingNote) noteDropHandlers.onDragLeave(e);
+		else onDragLeave(e);
 	};
 
-	// Combined drop handler
 	const handleDrop = (e: React.DragEvent) => {
+		const pos = dropPosition;
+		setDropPosition(null);
+
 		if (isDraggingNote) {
 			noteDropHandlers.onDrop(e);
+		} else if ((pos === "above" || pos === "below") && onFolderReorder) {
+			e.preventDefault();
+			e.stopPropagation();
+			onFolderReorder(folder.id, pos);
 		} else {
 			onDrop(e);
 		}
 	};
 
-	// Visual states
+	// ── Visual states ────────────────────────────────────────────────────────
+
 	const isNoteDropTarget = isDraggingNote && isNoteOver;
 	const canAcceptNote = isDraggingNote && canDropNoteHere;
 	const showNotAllowed = isDraggingNote && isNoteOver && !canDropNoteHere;
+
+	// Only show "inside" highlight when dropPosition is null or "inside"
+	const showInsideHighlight =
+		(isDragOver && !isDragging && (!dropPosition || dropPosition === "inside")) ||
+		(isNoteDropTarget && canAcceptNote);
+
+	const cursorStyle =
+		showNotAllowed ? "not-allowed"
+		: isDragReady && !isDragging ? "grab"
+		: "pointer";
 
 	const handleKeyDown = (e: React.KeyboardEvent) => {
 		if (e.key === "Enter" || e.key === " ") {
@@ -193,9 +228,7 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 				isInbox ? "mb-2" : ""
 			} ${isActive ? "bg-primary/10 text-primary" : "hover:bg-accent"} ${
 				isDragging ? "opacity-30 cursor-grabbing" : ""
-			} ${isDragOver && !isDragging ? "bg-accent" : ""} ${
-				isNoteDropTarget && canAcceptNote ? "bg-accent" : ""
-			}`}
+			} ${showInsideHighlight ? "bg-accent" : ""}`}
 			data-folder-id={dataFolderId}
 			draggable={draggable}
 			onMouseDown={() => !isInbox && onMouseDown()}
@@ -214,26 +247,30 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 				paddingLeft: isInbox ? "8px" : `${depth * 12 + 8}px`,
 				userSelect: "none",
 				WebkitUserSelect: "none",
-				cursor: showNotAllowed ? "not-allowed" : cursorStyle,
+				cursor: cursorStyle,
 			}}
 		>
-			{/* Chevron - decorative only */}
+			{/* Drop-position indicators */}
+			{dropPosition === "above" && (
+				<div className="absolute top-0 left-4 right-4 h-0.5 bg-primary rounded-full z-10 pointer-events-none" />
+			)}
+			{dropPosition === "below" && (
+				<div className="absolute bottom-0 left-4 right-4 h-0.5 bg-primary rounded-full z-10 pointer-events-none" />
+			)}
+
+			{/* Chevron */}
 			<span className={`shrink-0 transition-transform mr-1 ${!hasChildren && "invisible"}`}>
 				<ChevronRight
 					size={12}
-					className={`text-muted-foreground transition-transform ${
-						isExpanded ? "rotate-90" : ""
-					}`}
+					className={`text-muted-foreground transition-transform ${isExpanded ? "rotate-90" : ""}`}
 				/>
 			</span>
 
 			{/* Icon and Name */}
 			<div
-				className={`flex-1 flex items-center gap-2 min-w-0 ${
-					isInbox ? "py-2 px-1" : "py-1.5 px-1"
-				}`}
+				className={`flex-1 flex items-center gap-2 min-w-0 ${isInbox ? "py-2 px-1" : "py-1.5 px-1"}`}
 			>
-				{!isInbox && onChangeIcon ? (
+				{!isInbox && onChangeIcon ?
 					<Popover open={showIconPicker} onOpenChange={setShowIconPicker}>
 						<PopoverTrigger asChild>
 							<button
@@ -264,13 +301,12 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 							/>
 						</PopoverContent>
 					</Popover>
-				) : (
-					<IconComponent
+				:	<IconComponent
 						size={isInbox ? 20 : 16}
 						className="shrink-0"
 						key={`icon-${folder.id}-${folder.icon?.name || "default"}`}
 					/>
-				)}
+				}
 				<span className={`font-medium truncate ${isInbox ? "text-base" : "text-sm"}`}>
 					{folder.name}
 				</span>

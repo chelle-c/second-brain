@@ -85,4 +85,4 @@ export interface DraggedFolder {
 	folder: Folder;
 }
 
-export type FolderSortOption = "name-asc" | "name-desc" | "created-asc" | "created-desc";
+export type FolderSortOption = "custom" | "name-asc" | "name-desc" | "created-asc" | "created-desc";

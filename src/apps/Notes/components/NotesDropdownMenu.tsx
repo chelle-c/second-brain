@@ -14,12 +14,15 @@ import {
 import {
 	Archive,
 	ArchiveRestore,
+	ChevronRight,
+	Copy,
 	Folder,
 	FolderInput,
 	Inbox,
 	MoreVertical,
 	Trash2,
 } from "lucide-react";
+import { useMemo } from "react";
 import { toast } from "sonner";
 import { AVAILABLE_ICONS } from "@/components/IconPicker";
 
@@ -30,26 +33,27 @@ interface NotesDropdownMenuProps {
 	tags: Record<string, Tag>;
 }
 
-// Helper to get folder icon component
+// ── helpers ──────────────────────────────────────────────────────────────────
+
 const getFolderIconComponent = (folder: FolderType) => {
 	if (folder.id === "inbox") return Inbox;
 	if (folder.icon) {
-		const matchingIcon = AVAILABLE_ICONS.find((i) => i.icon === folder.icon);
-		if (matchingIcon) return matchingIcon.icon;
+		const match = AVAILABLE_ICONS.find((i) => i.icon === folder.icon);
+		if (match) return match.icon;
 	}
 	return Folder;
 };
 
-// Build a flat list of all folders with depth info for display
 interface FolderWithDepth {
 	folder: FolderType;
 	depth: number;
+	hasChildren: boolean;
 }
 
 const buildFlatFolderList = (
 	folders: FolderType[],
 	parentId: string | null = null,
-	depth: number = 0
+	depth: number = 0,
 ): FolderWithDepth[] => {
 	const result: FolderWithDepth[] = [];
 
@@ -62,15 +66,23 @@ const buildFlatFolderList = (
 		});
 
 	for (const folder of children) {
-		result.push({ folder, depth });
+		const hasChildren = folders.some((f) => f.parentId === folder.id && !f.archived);
+		result.push({ folder, depth, hasChildren });
 		result.push(...buildFlatFolderList(folders, folder.id, depth + 1));
 	}
 
 	return result;
 };
 
+// ── component ────────────────────────────────────────────────────────────────
+
 export const NotesDropdownMenu: React.FC<NotesDropdownMenuProps> = ({ note, folders }) => {
-	const { deleteNote, updateNote, archiveNote, unarchiveNote, restoreNote } = useNotesStore();
+	const { addNote, deleteNote, updateNote, archiveNote, unarchiveNote, restoreNote } =
+		useNotesStore();
+
+	const allFolders = useMemo(() => buildFlatFolderList(folders, null, 0), [folders]);
+
+	// ── actions ──────────────────────────────────────────────────────────────
 
 	const moveNote = (noteId: string, newFolderId: string) => {
 		const targetFolder = folders.find((f) => f.id === newFolderId);
@@ -87,6 +99,17 @@ export const NotesDropdownMenu: React.FC<NotesDropdownMenuProps> = ({ note, fold
 				},
 			},
 		});
+	};
+
+	const handleDuplicate = () => {
+		const noteTitle = note.title || "Untitled";
+		addNote({
+			title: `${noteTitle} (Copy)`,
+			content: note.content,
+			tags: [...(note.tags || [])],
+			folder: note.folder,
+		});
+		toast.success(`Duplicated "${noteTitle}"`);
 	};
 
 	const handleArchiveToggle = () => {
@@ -133,39 +156,7 @@ export const NotesDropdownMenu: React.FC<NotesDropdownMenuProps> = ({ note, fold
 		});
 	};
 
-	// Build flat list of all folders with depth
-	const allFolders = buildFlatFolderList(folders, null, 0);
-
-	// Nested folder indicator component
-	const NestedIndicator = ({ depth }: { depth: number }) => {
-		if (depth === 0) return null;
-		return (
-			<span className="flex items-center" style={{ width: `${depth * 16}px` }}>
-				{Array.from({ length: depth }).map((_, i) => (
-					<svg
-						key={i}
-						width="16"
-						height="20"
-						viewBox="0 0 16 20"
-						className="text-border shrink-0"
-					>
-						{i === depth - 1 ? (
-							// Last indicator shows the bend
-							<path
-								d="M8 0 L8 10 Q8 14, 12 14 L16 14"
-								fill="none"
-								stroke="currentColor"
-								strokeWidth="1.5"
-							/>
-						) : (
-							// Previous indicators show vertical line
-							<line x1="8" y1="0" x2="8" y2="20" stroke="currentColor" strokeWidth="1.5" />
-						)}
-					</svg>
-				))}
-			</span>
-		);
-	};
+	// ── render ───────────────────────────────────────────────────────────────
 
 	return (
 		<DropdownMenu>
@@ -178,8 +169,9 @@ export const NotesDropdownMenu: React.FC<NotesDropdownMenuProps> = ({ note, fold
 					<MoreVertical size={16} className="text-muted-foreground" />
 				</button>
 			</DropdownMenuTrigger>
+
 			<DropdownMenuContent align="end">
-				{/* Move to folder submenu */}
+				{/* Move to folder */}
 				<DropdownMenuSub>
 					<DropdownMenuSubTrigger className="cursor-pointer">
 						<FolderInput size={14} className="mr-2" />
@@ -187,10 +179,10 @@ export const NotesDropdownMenu: React.FC<NotesDropdownMenuProps> = ({ note, fold
 					</DropdownMenuSubTrigger>
 					<DropdownMenuPortal>
 						<DropdownMenuSubContent className="py-1">
-							<div className="max-h-[300px] overflow-y-auto p-2">
-								{allFolders.map(({ folder, depth }) => {
+							<div className="max-h-[300px] overflow-y-auto">
+								{allFolders.map(({ folder, depth, hasChildren }) => {
 									const isCurrentFolder = folder.id === note.folder;
-									const IconComponent = getFolderIconComponent(folder);
+									const Icon = getFolderIconComponent(folder);
 
 									return (
 										<DropdownMenuItem
@@ -198,18 +190,28 @@ export const NotesDropdownMenu: React.FC<NotesDropdownMenuProps> = ({ note, fold
 											onClick={() =>
 												!isCurrentFolder && moveNote(note.id, folder.id)
 											}
-											className={`cursor-pointer ${
-												isCurrentFolder
-													? "opacity-50 cursor-not-allowed"
-													: ""
-											}`}
 											disabled={isCurrentFolder}
+											className={`cursor-pointer ${
+												isCurrentFolder ?
+													"opacity-50 cursor-not-allowed"
+												:	""
+											}`}
+											style={{ paddingLeft: `${depth * 12 + 8}px` }}
 										>
-											<NestedIndicator depth={depth} />
-											<IconComponent size={14} className="mr-2 shrink-0" />
+											<span
+												className={`shrink-0 mr-1 ${
+													!hasChildren ? "invisible" : ""
+												}`}
+											>
+												<ChevronRight
+													size={12}
+													className="text-muted-foreground rotate-90"
+												/>
+											</span>
+											<Icon size={14} className="mr-2 shrink-0" />
 											<span className="truncate">{folder.name}</span>
 											{isCurrentFolder && (
-												<span className="ml-auto text-xs text-muted-foreground">
+												<span className="ml-auto text-xs text-muted-foreground pl-2 shrink-0">
 													(current)
 												</span>
 											)}
@@ -221,22 +223,29 @@ export const NotesDropdownMenu: React.FC<NotesDropdownMenuProps> = ({ note, fold
 					</DropdownMenuPortal>
 				</DropdownMenuSub>
 
+				{/* Duplicate */}
+				<DropdownMenuItem onClick={handleDuplicate} className="cursor-pointer">
+					<Copy size={14} className="mr-2" />
+					Duplicate
+				</DropdownMenuItem>
+
 				<DropdownMenuSeparator />
 
+				{/* Archive / Unarchive */}
 				<DropdownMenuItem onClick={handleArchiveToggle} className="cursor-pointer">
-					{note.archived ? (
+					{note.archived ?
 						<>
 							<ArchiveRestore size={14} className="mr-2" />
 							Unarchive
 						</>
-					) : (
-						<>
+					:	<>
 							<Archive size={14} className="mr-2" />
 							Archive
 						</>
-					)}
+					}
 				</DropdownMenuItem>
 
+				{/* Delete */}
 				<DropdownMenuItem
 					onClick={handleDelete}
 					className="cursor-pointer text-red-600 focus:text-red-600"

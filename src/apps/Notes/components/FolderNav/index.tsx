@@ -20,11 +20,11 @@ import type { DragItem } from "@/hooks/useDragAndDrop";
 import {
 	Archive,
 	ArchiveX,
+	Check,
 	FolderPlus,
 	ListChevronsDownUp,
 	ListChevronsUpDown,
 	PanelLeftClose,
-	PanelLeftOpen,
 	Plus,
 	Search as SearchIcon,
 	SortAsc,
@@ -57,7 +57,6 @@ export const FolderNav = ({
 	viewMode,
 	setViewMode,
 	onSelectNote,
-	isCollapsed,
 	onToggleCollapse,
 	tags,
 }: FolderNavProps) => {
@@ -70,11 +69,12 @@ export const FolderNav = ({
 		unarchiveFolder,
 		moveFolder,
 		moveNote,
+		reorderSiblings,
 	} = useNotesStore();
 
 	// UI State
 	const [expandedFolders, setExpandedFolders] = useState(new Set<string>());
-	const [sortBy, setSortBy] = useState<FolderSortOption>("name-asc");
+	const [sortBy, setSortBy] = useState<FolderSortOption>("custom");
 	const [showSearchModal, setShowSearchModal] = useState(false);
 
 	// Edit State
@@ -115,7 +115,8 @@ export const FolderNav = ({
 	const isEditing = editingFolder !== null;
 	const isAnyEditMode = isCreating || isEditing;
 
-	// Handler for note drop on folder
+	// ── Note drop on folder ──────────────────────────────────────────────────
+
 	const handleNoteDrop = useCallback(
 		(folderId: string, item: DragItem<Note>) => {
 			const note = item.data;
@@ -126,15 +127,9 @@ export const FolderNav = ({
 				toast.error("Target folder not found");
 				return;
 			}
+			if (note.folder === folderId) return;
 
-			if (note.folder === folderId) {
-				return;
-			}
-
-			// Move the note
 			moveNote(note.id, folderId);
-
-			// Show success toast with undo
 			toast.success(`Moved "${note.title || "Untitled"}" to ${targetFolder.name}`, {
 				action: {
 					label: "Undo",
@@ -145,86 +140,74 @@ export const FolderNav = ({
 				},
 			});
 		},
-		[getFolderById, moveNote]
+		[getFolderById, moveNote],
 	);
 
-	// Check if note can be dropped on folder
-	const canDropNoteOnFolder = useCallback((folderId: string, item: DragItem<Note>): boolean => {
-		const note = item.data;
-		return note.folder !== folderId;
-	}, []);
+	const canDropNoteOnFolder = useCallback(
+		(folderId: string, item: DragItem<Note>): boolean => item.data.folder !== folderId,
+		[],
+	);
 
-	// Filter folders based on view mode
+	// ── Visible / sorted folders ─────────────────────────────────────────────
+
 	const visibleFolders = useMemo(() => {
 		if (viewMode === "archived") {
 			const foldersWithArchivedNotes = new Set(
-				notes.filter((n) => n.archived).map((n) => n.folder)
+				notes.filter((n) => n.archived).map((n) => n.folder),
 			);
-
-			return folders.filter((f) => {
-				if (f.archived) return true;
-				if (foldersWithArchivedNotes.has(f.id)) return true;
-				return false;
-			});
+			return folders.filter((f) => f.archived || foldersWithArchivedNotes.has(f.id));
 		}
 		return folders.filter((f) => !f.archived);
 	}, [folders, viewMode, notes]);
 
-	// Separate inbox from other folders
 	const inbox = useMemo(() => {
 		if (viewMode === "archived") {
-			const inboxHasArchivedNotes = notes.some((n) => n.folder === "inbox" && n.archived);
-			if (inboxHasArchivedNotes) {
-				return folders.find((f) => f.id === "inbox") || null;
-			}
-			return null;
+			return notes.some((n) => n.folder === "inbox" && n.archived) ?
+					folders.find((f) => f.id === "inbox") || null
+				:	null;
 		}
 		return folders.find((f) => f.id === "inbox" && !f.archived) || null;
 	}, [folders, viewMode, notes]);
 
-	const nonInboxFolders = useMemo(() => {
-		return visibleFolders.filter((f) => f.id !== "inbox");
-	}, [visibleFolders]);
+	const nonInboxFolders = useMemo(
+		() => visibleFolders.filter((f) => f.id !== "inbox"),
+		[visibleFolders],
+	);
 
-	// Build folder tree (excluding inbox)
-	const folderTree = useMemo(() => {
-		return buildFolderTree(nonInboxFolders, null);
-	}, [nonInboxFolders]);
+	const folderTree = useMemo(() => buildFolderTree(nonInboxFolders, null), [nonInboxFolders]);
 
-	// Sort folders
+	const sortFn = useCallback(
+		(a: { folder: Folder }, b: { folder: Folder }) => {
+			switch (sortBy) {
+				case "name-asc":
+					return a.folder.name.localeCompare(b.folder.name);
+				case "name-desc":
+					return b.folder.name.localeCompare(a.folder.name);
+				case "created-asc":
+					return (
+						(a.folder.createdAt?.getTime() || 0) - (b.folder.createdAt?.getTime() || 0)
+					);
+				case "created-desc":
+					return (
+						(b.folder.createdAt?.getTime() || 0) - (a.folder.createdAt?.getTime() || 0)
+					);
+				case "custom":
+				default:
+					return (a.folder.order || 0) - (b.folder.order || 0);
+			}
+		},
+		[sortBy],
+	);
+
 	const sortedFolderTree = useMemo(() => {
-		const sortTree = (tree: typeof folderTree): typeof folderTree => {
-			return tree
-				.sort((a, b) => {
-					switch (sortBy) {
-						case "name-asc":
-							return a.folder.name.localeCompare(b.folder.name);
-						case "name-desc":
-							return b.folder.name.localeCompare(a.folder.name);
-						case "created-asc":
-							return (
-								(a.folder.createdAt?.getTime() || 0) -
-								(b.folder.createdAt?.getTime() || 0)
-							);
-						case "created-desc":
-							return (
-								(b.folder.createdAt?.getTime() || 0) -
-								(a.folder.createdAt?.getTime() || 0)
-							);
-						default:
-							return (a.folder.order || 0) - (b.folder.order || 0);
-					}
-				})
-				.map((node) => ({
-					...node,
-					children: sortTree(node.children),
-				}));
-		};
-
+		const sortTree = (tree: typeof folderTree): typeof folderTree =>
+			tree
+				.sort((a, b) => sortFn(a, b))
+				.map((node) => ({ ...node, children: sortTree(node.children) }));
 		return sortTree(folderTree);
-	}, [folderTree, sortBy]);
+	}, [folderTree, sortFn]);
 
-	// Focus input when editing/creating
+	// Focus input when editing / creating
 	useEffect(() => {
 		if ((showNewFolder || editingFolder) && inputRef.current) {
 			inputRef.current.focus();
@@ -232,10 +215,10 @@ export const FolderNav = ({
 		}
 	}, [showNewFolder, editingFolder]);
 
-	// Keyboard shortcuts
+	// ── Keyboard shortcuts ───────────────────────────────────────────────────
+
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
-			// Skip if focus is in an input, textarea, or contenteditable element (like the Tiptap editor)
 			const target = e.target as HTMLElement;
 			if (
 				target instanceof HTMLInputElement ||
@@ -243,9 +226,8 @@ export const FolderNav = ({
 				target.isContentEditable ||
 				target.closest('[contenteditable="true"]') ||
 				target.closest(".tiptap-editor-wrapper")
-			) {
+			)
 				return;
-			}
 
 			const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
 			const modKey = isMac ? e.metaKey : e.ctrlKey;
@@ -279,11 +261,9 @@ export const FolderNav = ({
 				activeFolder.id !== "inbox"
 			) {
 				e.preventDefault();
-				const folderElement = document.querySelector(
-					`[data-folder-id="${activeFolder.id}"]`
-				);
-				if (folderElement) {
-					const rect = folderElement.getBoundingClientRect();
+				const el = document.querySelector(`[data-folder-id="${activeFolder.id}"]`);
+				if (el) {
+					const rect = el.getBoundingClientRect();
 					setContextMenu({
 						x: rect.left + rect.width / 2,
 						y: rect.top + rect.height / 2,
@@ -293,17 +273,16 @@ export const FolderNav = ({
 			}
 
 			if (e.key === "Escape") {
-				if (contextMenu) {
-					setContextMenu(null);
-				} else {
-					cancelAll();
-				}
+				if (contextMenu) setContextMenu(null);
+				else cancelAll();
 			}
 		};
 
 		document.addEventListener("keydown", handleKeyDown);
 		return () => document.removeEventListener("keydown", handleKeyDown);
 	}, [activeFolder, isAnyEditMode, contextMenu]);
+
+	// ── Edit / create helpers ────────────────────────────────────────────────
 
 	const cancelEditing = useCallback(() => {
 		setEditingFolder(null);
@@ -325,25 +304,17 @@ export const FolderNav = ({
 
 	const toggleFolder = useCallback((folderKey: string) => {
 		setExpandedFolders((prev) => {
-			const newSet = new Set(prev);
-			if (newSet.has(folderKey)) {
-				newSet.delete(folderKey);
-			} else {
-				newSet.add(folderKey);
-			}
-			return newSet;
+			const s = new Set(prev);
+			if (s.has(folderKey)) s.delete(folderKey);
+			else s.add(folderKey);
+			return s;
 		});
 	}, []);
 
 	const toggleAllFolders = useCallback(() => {
-		const allFolderIds = nonInboxFolders.map((f) => f.id);
-
-		if (expandedFolders.size === allFolderIds.length) {
-			setExpandedFolders(new Set());
-		} else {
-			setExpandedFolders(new Set(allFolderIds));
-		}
-	}, [nonInboxFolders, expandedFolders]);
+		const all = nonInboxFolders.map((f) => f.id);
+		setExpandedFolders((prev) => (prev.size === all.length ? new Set() : new Set(all)));
+	}, [nonInboxFolders]);
 
 	const startEditingFolder = useCallback(
 		(folderId: string, currentName: string) => {
@@ -351,7 +322,7 @@ export const FolderNav = ({
 			setEditingFolder(folderId);
 			setEditFolderName(currentName);
 		},
-		[isAnyEditMode]
+		[isAnyEditMode],
 	);
 
 	const saveEditedFolder = useCallback(
@@ -367,85 +338,77 @@ export const FolderNav = ({
 			setFolderError(null);
 			cancelEditing();
 		},
-		[editFolderName, cancelEditing, updateFolder]
+		[editFolderName, cancelEditing, updateFolder],
 	);
 
 	const handleDeleteFolder = useCallback((folderId: string, folderName: string) => {
 		if (folderId === "inbox") return;
-		setDeleteConfirmation({
-			type: "folder",
-			id: folderId,
-			name: folderName,
-		});
+		setDeleteConfirmation({ type: "folder", id: folderId, name: folderName });
 	}, []);
 
 	const confirmDelete = useCallback(() => {
 		if (!deleteConfirmation) return;
-
 		const folderToDelete = folders.find((f) => f.id === deleteConfirmation.id);
 		const folderName = deleteConfirmation.name;
 
 		deleteFolder(deleteConfirmation.id);
 
-		if (activeFolder?.id === deleteConfirmation.id) {
-			setActiveFolder(inbox);
-		}
+		if (activeFolder?.id === deleteConfirmation.id) setActiveFolder(inbox);
 
-		// Show toast with undo
 		toast.success(`Deleted folder "${folderName}"`, {
-			action: folderToDelete
-				? {
+			action:
+				folderToDelete ?
+					{
 						label: "Undo",
 						onClick: () => {
-							// Restore the folder using the store's restoreFolder method
-							const { restoreFolder } = useNotesStore.getState();
-							restoreFolder(folderToDelete);
+							useNotesStore.getState().restoreFolder(folderToDelete);
 							toast.success("Folder restored");
 						},
-				  }
-				: undefined,
+					}
+				:	undefined,
 		});
 
 		setDeleteConfirmation(null);
 	}, [deleteConfirmation, deleteFolder, activeFolder, setActiveFolder, inbox, folders]);
 
 	const addNewFolder = useCallback(() => {
-		if (newFolderName.trim()) {
-			const result = addFolder({
-				name: newFolderName.trim(),
-				parentId: newFolderParent,
-			});
+		if (!newFolderName.trim()) return;
 
-			if (result.error) {
-				setFolderError(result.error);
-				setTimeout(() => setFolderError(null), 3000);
-				return;
-			}
+		const result = addFolder({ name: newFolderName.trim(), parentId: newFolderParent });
 
-			setFolderError(null);
-
-			if (newFolderParent) {
-				setExpandedFolders((prev) => new Set([...prev, newFolderParent]));
-			}
-
-			cancelCreating();
+		if (result.error) {
+			setFolderError(result.error);
+			setTimeout(() => setFolderError(null), 3000);
+			return;
 		}
-	}, [newFolderName, newFolderParent, addFolder, cancelCreating]);
 
-	// Folder Drag and Drop Handlers
+		setFolderError(null);
+
+		if (newFolderParent) {
+			setExpandedFolders((prev) => new Set([...prev, newFolderParent]));
+		}
+
+		// Focus the newly created folder
+		if (result.id) {
+			const created = useNotesStore.getState().folders.find((f) => f.id === result.id);
+			if (created) {
+				setActiveFolder(created);
+				setActiveTags([]);
+			}
+		}
+
+		cancelCreating();
+	}, [newFolderName, newFolderParent, addFolder, cancelCreating, setActiveFolder, setActiveTags]);
+
+	// ── Folder drag & drop ───────────────────────────────────────────────────
+
 	const handleMouseDown = useCallback(
 		(folderId: string) => {
-			if (folderId === "inbox" || isAnyEditMode) {
-				return;
-			}
-
-			const timer = setTimeout(() => {
-				setDragReadyFolder(folderId);
-			}, 200);
-
+			if (folderId === "inbox" || isAnyEditMode) return;
+			const timer = setTimeout(() => setDragReadyFolder(folderId), 200);
 			setDragDelayTimer(timer);
 		},
-		[isAnyEditMode]
+		[isAnyEditMode],
 	);
 
 	const handleMouseUp = useCallback(() => {
@@ -458,16 +421,10 @@ export const FolderNav = ({
 
 	const handleDragStart = useCallback(
 		(e: React.DragEvent, folderId: string) => {
-			if (isAnyEditMode || folderId === "inbox") {
+			if (isAnyEditMode || folderId === "inbox" || dragReadyFolder !== folderId) {
 				e.preventDefault();
 				return;
 			}
-
-			if (dragReadyFolder !== folderId) {
-				e.preventDefault();
-				return;
-			}
-
 			const folder = folders.find((f) => f.id === folderId);
 			if (folder) {
 				setDraggedFolder({ folder });
@@ -475,14 +432,12 @@ export const FolderNav = ({
 				e.dataTransfer.setData("text/plain", folderId);
 			}
 		},
-		[folders, isAnyEditMode, dragReadyFolder]
+		[folders, isAnyEditMode, dragReadyFolder],
 	);
 
 	useEffect(() => {
 		return () => {
-			if (dragDelayTimer) {
-				clearTimeout(dragDelayTimer);
-			}
+			if (dragDelayTimer) clearTimeout(dragDelayTimer);
 		};
 	}, [dragDelayTimer]);
 
@@ -490,32 +445,26 @@ export const FolderNav = ({
 		(e: React.DragEvent, folderId: string) => {
 			e.preventDefault();
 			e.stopPropagation();
-
 			if (!draggedFolder) return;
-
 			if (folderId === "inbox") {
 				e.dataTransfer.dropEffect = "none";
 				return;
 			}
-
 			if (!canMoveFolder(folders, draggedFolder.folder.id, folderId)) {
 				e.dataTransfer.dropEffect = "none";
 				return;
 			}
-
 			e.dataTransfer.dropEffect = "move";
 			setDragOverFolder(folderId);
 		},
-		[draggedFolder, folders]
+		[draggedFolder, folders],
 	);
 
 	const handleRootDragOver = useCallback(
 		(e: React.DragEvent) => {
 			e.preventDefault();
 			e.stopPropagation();
-
 			if (!draggedFolder) return;
-
 			if (canMoveFolder(folders, draggedFolder.folder.id, null)) {
 				e.dataTransfer.dropEffect = "move";
 				setDragOverFolder("root");
@@ -523,19 +472,15 @@ export const FolderNav = ({
 				e.dataTransfer.dropEffect = "none";
 			}
 		},
-		[draggedFolder, folders]
+		[draggedFolder, folders],
 	);
 
 	const handleDragLeave = useCallback((e: React.DragEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
-
 		const relatedTarget = e.relatedTarget as HTMLElement;
 		const currentTarget = e.currentTarget as HTMLElement;
-
-		if (!currentTarget.contains(relatedTarget)) {
-			setDragOverFolder(null);
-		}
+		if (!currentTarget.contains(relatedTarget)) setDragOverFolder(null);
 	}, []);
 
 	const handleDrop = useCallback(
@@ -543,22 +488,14 @@ export const FolderNav = ({
 			e.preventDefault();
 			e.stopPropagation();
 			setDragOverFolder(null);
-
 			if (!draggedFolder) return;
 
 			const sourceFolderId = draggedFolder.folder.id;
-
-			if (sourceFolderId === targetFolderId) {
-				setDraggedFolder(null);
-				return;
-			}
-
-			if (targetFolderId === "inbox") {
-				setDraggedFolder(null);
-				return;
-			}
-
-			if (!canMoveFolder(folders, sourceFolderId, targetFolderId)) {
+			if (
+				sourceFolderId === targetFolderId ||
+				targetFolderId === "inbox" ||
+				!canMoveFolder(folders, sourceFolderId, targetFolderId)
+			) {
 				setDraggedFolder(null);
 				return;
 			}
@@ -571,7 +508,7 @@ export const FolderNav = ({
 
 			setDraggedFolder(null);
 		},
-		[draggedFolder, folders, moveFolder]
+		[draggedFolder, folders, moveFolder],
 	);
 
 	const handleDragEnd = useCallback(() => {
@@ -584,9 +521,49 @@ export const FolderNav = ({
 		}
 	}, [dragDelayTimer]);
 
+	// ── Folder reorder (drag above / below a sibling) ────────────────────────
+
+	const handleFolderReorder = useCallback(
+		(targetFolderId: string, position: "above" | "below") => {
+			if (!draggedFolder) return;
+
+			const sourceFolder = draggedFolder.folder;
+			const targetFolder = folders.find((f) => f.id === targetFolderId);
+			if (!targetFolder || sourceFolder.id === targetFolderId) return;
+
+			const parentId = targetFolder.parentId;
+
+			// Get siblings in their current *visual* order (minus the source)
+			const siblings = folders
+				.filter(
+					(f) =>
+						f.parentId === parentId &&
+						f.id !== sourceFolder.id &&
+						!f.archived &&
+						f.id !== "inbox",
+				)
+				.sort((a, b) => sortFn({ folder: a }, { folder: b }));
+
+			const targetIndex = siblings.findIndex((f) => f.id === targetFolderId);
+			if (targetIndex === -1) return;
+
+			const insertIndex = position === "above" ? targetIndex : targetIndex + 1;
+			siblings.splice(insertIndex, 0, sourceFolder);
+
+			reorderSiblings(siblings.map((f, i) => ({ id: f.id, order: i })));
+			setSortBy("custom");
+
+			setDraggedFolder(null);
+			setDragOverFolder(null);
+			setDragReadyFolder(null);
+		},
+		[draggedFolder, folders, sortFn, reorderSiblings],
+	);
+
+	// ── Archive toggle ───────────────────────────────────────────────────────
+
 	const handleToggleArchive = useCallback(() => {
 		if (!activeFolder || activeFolder.id === "inbox") return;
-
 		const folderName = activeFolder.name;
 		const wasArchived = activeFolder.archived;
 
@@ -615,9 +592,10 @@ export const FolderNav = ({
 		}
 	}, [activeFolder, archiveFolder, unarchiveFolder]);
 
-	// Render folder tree recursively
-	const renderFolderTree = (tree: typeof folderTree, depth: number = 0) => {
-		return tree.map((node) => {
+	// ── Render folder tree ───────────────────────────────────────────────────
+
+	const renderFolderTree = (tree: typeof folderTree, depth: number = 0) =>
+		tree.map((node) => {
 			const { folder, children } = node;
 			const hasChildren = children.length > 0;
 			const isExpanded = expandedFolders.has(folder.id);
@@ -637,20 +615,15 @@ export const FolderNav = ({
 						onToggle={hasChildren ? () => toggleFolder(folder.id) : undefined}
 						onSelect={() => {
 							if (!isAnyEditMode) {
-								if (activeFolder?.id === folder.id && hasChildren) {
+								if (activeFolder?.id === folder.id && hasChildren)
 									toggleFolder(folder.id);
-								}
 								setActiveFolder(folder);
 								setActiveTags([]);
 							}
 						}}
 						onContextMenu={(e) => {
 							e.preventDefault();
-							setContextMenu({
-								x: e.clientX,
-								y: e.clientY,
-								folderId: folder.id,
-							});
+							setContextMenu({ x: e.clientX, y: e.clientY, folderId: folder.id });
 						}}
 						isEditing={isEditingThis}
 						editValue={editFolderName}
@@ -673,6 +646,10 @@ export const FolderNav = ({
 						onNoteDrop={(item) => handleNoteDrop(folder.id, item)}
 						canDropNote={(item) => canDropNoteOnFolder(folder.id, item)}
 						onChangeIcon={(icon) => updateFolder(folder.id, { icon })}
+						draggedFolderParentId={
+							draggedFolder ? draggedFolder.folder.parentId : undefined
+						}
+						onFolderReorder={handleFolderReorder}
 					/>
 
 					{showNewFolder && newFolderParent === folder.id && (
@@ -710,23 +687,17 @@ export const FolderNav = ({
 				</li>
 			);
 		});
-	};
 
-	if (isCollapsed) {
-		return (
-			<div className="h-full w-12 flex flex-col items-center justify-start p-2 bg-muted border-r border-border">
-				<button
-					type="button"
-					onClick={() => onToggleCollapse(false)}
-					className="p-2 hover:bg-accent rounded-lg transition-colors"
-					title="Expand Sidebar"
-					aria-label="Expand sidebar"
-				>
-					<PanelLeftOpen size={20} />
-				</button>
-			</div>
-		);
-	}
+	// ── Sort menu helper ─────────────────────────────────────────────────────
+
+	const sortOption = (value: FolderSortOption, label: string) => (
+		<DropdownMenuItem onClick={() => setSortBy(value)}>
+			<Check size={14} className={`mr-2 ${sortBy === value ? "" : "invisible"}`} />
+			{label}
+		</DropdownMenuItem>
+	);
+
+	// ── Render ───────────────────────────────────────────────────────────────
 
 	return (
 		<>
@@ -755,7 +726,6 @@ export const FolderNav = ({
 				}}
 			/>
 
-
 			{contextMenu && (
 				<ContextMenu
 					x={contextMenu.x}
@@ -764,8 +734,7 @@ export const FolderNav = ({
 					folderName={getFolderById(contextMenu.folderId)?.name || ""}
 					onClose={() => setContextMenu(null)}
 					onCreateNote={() => {
-						const folder = getFolderById(contextMenu.folderId);
-						onCreateNote(folder);
+						onCreateNote(getFolderById(contextMenu.folderId));
 						setContextMenu(null);
 					}}
 					onRename={(id, name) => {
@@ -800,7 +769,7 @@ export const FolderNav = ({
 						<button
 							type="button"
 							onClick={() => onToggleCollapse(true)}
-							className="p-1.5 hover:bg-accent rounded transition-colors"
+							className="p-1.5 hover:bg-accent rounded transition-colors cursor-pointer"
 							title="Collapse Sidebar"
 							aria-label="Collapse sidebar"
 						>
@@ -844,14 +813,14 @@ export const FolderNav = ({
 								}
 								variant={viewMode === "archived" ? "active" : "default"}
 								title={
-									viewMode === "active"
-										? "View Archived Notes"
-										: "View Active Notes"
+									viewMode === "active" ? "View Archived Notes" : (
+										"View Active Notes"
+									)
 								}
 								ariaLabel={
-									viewMode === "active"
-										? "Switch to archived notes"
-										: "Switch to active notes"
+									viewMode === "active" ?
+										"Switch to archived notes"
+									:	"Switch to active notes"
 								}
 								className="rounded-none border-r-0"
 							/>
@@ -868,32 +837,26 @@ export const FolderNav = ({
 									</div>
 								</DropdownMenuTrigger>
 								<DropdownMenuContent align="end">
-									<DropdownMenuItem onClick={() => setSortBy("name-asc")}>
-										Name (A-Z)
-									</DropdownMenuItem>
-									<DropdownMenuItem onClick={() => setSortBy("name-desc")}>
-										Name (Z-A)
-									</DropdownMenuItem>
+									{sortOption("custom", "Custom")}
 									<DropdownMenuSeparator />
-									<DropdownMenuItem onClick={() => setSortBy("created-asc")}>
-										Oldest First
-									</DropdownMenuItem>
-									<DropdownMenuItem onClick={() => setSortBy("created-desc")}>
-										Newest First
-									</DropdownMenuItem>
+									{sortOption("name-asc", "Name (A-Z)")}
+									{sortOption("name-desc", "Name (Z-A)")}
+									<DropdownMenuSeparator />
+									{sortOption("created-asc", "Oldest First")}
+									{sortOption("created-desc", "Newest First")}
 								</DropdownMenuContent>
 							</DropdownMenu>
 							<ActionButton
 								icon={
-									expandedFolders.size === nonInboxFolders.length
-										? ListChevronsUpDown
-										: ListChevronsDownUp
+									expandedFolders.size === nonInboxFolders.length ?
+										ListChevronsUpDown
+									:	ListChevronsDownUp
 								}
 								onClick={toggleAllFolders}
 								title={
-									expandedFolders.size === nonInboxFolders.length
-										? "Collapse All Folders"
-										: "Expand All Folders"
+									expandedFolders.size === nonInboxFolders.length ?
+										"Collapse All Folders"
+									:	"Expand All Folders"
 								}
 								ariaLabel="Toggle all folders"
 								className="rounded-l-none"
@@ -901,7 +864,6 @@ export const FolderNav = ({
 						</div>
 					</div>
 
-					{/* Error message */}
 					{folderError && (
 						<div className="mt-2 p-2 bg-destructive/10 border border-destructive/20 rounded-lg">
 							<p className="text-xs text-destructive">{folderError}</p>
@@ -934,14 +896,13 @@ export const FolderNav = ({
 					</div>
 				)}
 
-				{/* Folder Tree Drop Zone */}
+				{/* Folder tree */}
 				<div
 					className="flex-1 overflow-y-auto overflow-x-hidden p-2"
 					onDragOver={handleRootDragOver}
 					onDrop={(e) => handleDrop(e, null)}
 					onDragLeave={handleDragLeave}
 				>
-					{/* Inbox */}
 					{inbox && (
 						<>
 							<FolderItem
@@ -972,21 +933,18 @@ export const FolderNav = ({
 								onMouseDown={() => {}}
 								onMouseUp={() => {}}
 								dataFolderId="inbox"
-								isInbox={true}
+								isInbox
 								depth={0}
 								draggable={false}
 								onNoteDrop={(item) => handleNoteDrop("inbox", item)}
 								canDropNote={(item) => canDropNoteOnFolder("inbox", item)}
 							/>
-
-							{/* Divider */}
 							{nonInboxFolders.length > 0 && (
 								<div className="my-2 mx-2 border-b border-border" />
 							)}
 						</>
 					)}
 
-					{/* Empty state for archived view */}
 					{viewMode === "archived" && !inbox && nonInboxFolders.length === 0 && (
 						<div className="text-center py-8 text-muted-foreground">
 							<Archive size={32} className="mx-auto mb-2 opacity-50" />
@@ -994,11 +952,8 @@ export const FolderNav = ({
 						</div>
 					)}
 
-					{/* Other folders */}
 					<ul
-						className={`space-y-0.5 ${
-							dragOverFolder === "root" ? "bg-accent/50 rounded-lg" : ""
-						}`}
+						className={`space-y-0.5 ${dragOverFolder === "root" ? "bg-accent/50 rounded-lg" : ""}`}
 						role="tree"
 						aria-label="Folder tree"
 					>

@@ -38,15 +38,20 @@ interface NotesStore {
 	restoreNote: (note: Note) => void;
 
 	// Folder Actions
-	addFolder: (
-		folder: Omit<Folder, "id" | "createdAt" | "updatedAt" | "archived" | "order">
-	) => { id: string | null; error: string | null };
-	updateFolder: (id: string, updates: Partial<Folder>) => { success: boolean; error: string | null };
+	addFolder: (folder: Omit<Folder, "id" | "createdAt" | "updatedAt" | "archived" | "order">) => {
+		id: string | null;
+		error: string | null;
+	};
+	updateFolder: (
+		id: string,
+		updates: Partial<Folder>,
+	) => { success: boolean; error: string | null };
 	deleteFolder: (id: string) => void;
 	archiveFolder: (id: string) => void;
 	unarchiveFolder: (id: string) => void;
 	moveFolder: (id: string, newParentId: string | null) => void;
 	restoreFolder: (folder: Folder, withChildren?: Folder[]) => void;
+	reorderSiblings: (updates: { id: string; order: number }[]) => void;
 
 	// Tags Actions
 	addTag: (tag: Tag) => void;
@@ -114,7 +119,7 @@ export const useNotesStore = create<NotesStore>()(
 
 			set((state) => ({
 				notes: state.notes.map((note) =>
-					note.id === id ? { ...note, ...updates, updatedAt: new Date() } : note
+					note.id === id ? { ...note, ...updates, updatedAt: new Date() } : note,
 				),
 			}));
 
@@ -155,7 +160,7 @@ export const useNotesStore = create<NotesStore>()(
 
 			set((state) => ({
 				notes: state.notes.map((note) =>
-					note.id === id ? { ...note, archived: true, updatedAt: new Date() } : note
+					note.id === id ? { ...note, archived: true, updatedAt: new Date() } : note,
 				),
 			}));
 
@@ -176,7 +181,7 @@ export const useNotesStore = create<NotesStore>()(
 
 			set((state) => ({
 				notes: state.notes.map((note) =>
-					note.id === id ? { ...note, archived: false, updatedAt: new Date() } : note
+					note.id === id ? { ...note, archived: false, updatedAt: new Date() } : note,
 				),
 			}));
 
@@ -197,7 +202,7 @@ export const useNotesStore = create<NotesStore>()(
 
 			set((state) => ({
 				notes: state.notes.map((note) =>
-					note.id === id ? { ...note, folder: newFolderId, updatedAt: new Date() } : note
+					note.id === id ? { ...note, folder: newFolderId, updatedAt: new Date() } : note,
 				),
 			}));
 
@@ -231,22 +236,17 @@ export const useNotesStore = create<NotesStore>()(
 		addFolder: (folderData) => {
 			const folders = get().folders;
 
-			// Validate for duplicate names at the same level (exact match)
 			const validationError = validateFolderName(
 				folderData.name,
 				folderData.parentId,
-				folders
+				folders,
 			);
 
 			if (validationError) {
 				return { id: null, error: validationError };
 			}
 
-			const folderId = generateFolderId(
-				folderData.name,
-				folderData.parentId,
-				folders
-			);
+			const folderId = generateFolderId(folderData.name, folderData.parentId, folders);
 			const now = new Date();
 
 			const siblings = folders.filter((f) => f.parentId === folderData.parentId);
@@ -290,37 +290,30 @@ export const useNotesStore = create<NotesStore>()(
 				return { success: false, error: "Folder not found" };
 			}
 
-			// Check if name is changing - if so, we need to validate and regenerate IDs
 			const isRenaming = updates.name && updates.name !== oldFolder.name;
 
 			if (isRenaming) {
-				// Validate for duplicate names at the same level (exact match)
 				const validationError = validateFolderName(
 					updates.name!,
 					oldFolder.parentId,
 					folders,
-					id // Exclude current folder from duplicate check
+					id,
 				);
 
 				if (validationError) {
 					return { success: false, error: validationError };
 				}
 
-				// Regenerate folder IDs for the renamed folder and all descendants
 				const { updatedFolders, idMapping } = regenerateFolderIds(
 					oldFolder,
-					oldFolder.parentId, // Keep same parent
+					oldFolder.parentId,
 					folders,
-					updates.name // Pass the new name
+					updates.name,
 				);
 
-				// Get IDs of folders that were updated
 				const oldFolderIds = new Set(idMapping.keys());
-
-				// Update notes to reference new folder IDs
 				const updatedNotes = updateNotesFolderReferences(notes, idMapping);
 
-				// Apply any other updates (like icon) to the renamed folder
 				const newFolderId = idMapping.get(id);
 				const finalUpdatedFolders = updatedFolders.map((f) => {
 					if (f.id === newFolderId) {
@@ -345,20 +338,19 @@ export const useNotesStore = create<NotesStore>()(
 						before: oldFolder,
 						after: newFolder,
 						id,
-						idMapping: Object.fromEntries(idMapping), // Store mapping for undo
+						idMapping: Object.fromEntries(idMapping),
 					},
 				});
 			} else {
-				// Simple update without name change - no ID regeneration needed
 				set((state) => ({
 					folders: state.folders.map((folder) =>
-						folder.id === id
-							? {
-									...folder,
-									...updates,
-									updatedAt: new Date(),
-							  }
-							: folder
+						folder.id === id ?
+							{
+								...folder,
+								...updates,
+								updatedAt: new Date(),
+							}
+						:	folder,
 					),
 				}));
 
@@ -385,15 +377,15 @@ export const useNotesStore = create<NotesStore>()(
 			const affectedFolderIds = getFolderSubtreeIds(get().folders, id);
 
 			const affectedNotes = get().notes.filter((note) =>
-				affectedFolderIds.includes(note.folder)
+				affectedFolderIds.includes(note.folder),
 			);
 
 			set((state) => ({
 				notes: state.notes.map((note) =>
-					affectedFolderIds.includes(note.folder) ? { ...note, folder: "inbox" } : note
+					affectedFolderIds.includes(note.folder) ? { ...note, folder: "inbox" } : note,
 				),
 				folders: reorderFolders(
-					state.folders.filter((f) => !affectedFolderIds.includes(f.id))
+					state.folders.filter((f) => !affectedFolderIds.includes(f.id)),
 				),
 			}));
 
@@ -425,9 +417,9 @@ export const useNotesStore = create<NotesStore>()(
 
 			set((state) => ({
 				folders: state.folders.map((folder) =>
-					descendantIds.includes(folder.id)
-						? { ...folder, archived: true, updatedAt: new Date() }
-						: folder
+					descendantIds.includes(folder.id) ?
+						{ ...folder, archived: true, updatedAt: new Date() }
+					:	folder,
 				),
 			}));
 
@@ -449,9 +441,9 @@ export const useNotesStore = create<NotesStore>()(
 
 			set((state) => ({
 				folders: state.folders.map((folder) =>
-					descendantIds.includes(folder.id)
-						? { ...folder, archived: false, updatedAt: new Date() }
-						: folder
+					descendantIds.includes(folder.id) ?
+						{ ...folder, archived: false, updatedAt: new Date() }
+					:	folder,
 				),
 			}));
 
@@ -479,26 +471,22 @@ export const useNotesStore = create<NotesStore>()(
 			const oldFolder = folders.find((f) => f.id === id);
 			if (!oldFolder) return;
 
-			// Skip if not actually moving (same parent)
 			if (oldFolder.parentId === newParentId) return;
 
-			// Check if a folder with the same name exists at the target location
 			const conflictingFolder = findDuplicateFolderByName(
 				oldFolder.name,
 				newParentId,
-				folders
+				folders,
 			);
 
 			if (conflictingFolder) {
-				// MERGE: Move contents from source folder to conflicting folder
 				const mergeResult = calculateFolderMerge(
 					oldFolder,
 					conflictingFolder,
 					folders,
-					notes
+					notes,
 				);
 
-				// Apply folder updates (moved subfolders with new IDs)
 				const updatedFoldersList: Folder[] = [];
 				for (const [oldFolderId, update] of mergeResult.folderUpdates) {
 					const folder = folders.find((f) => f.id === oldFolderId);
@@ -512,7 +500,6 @@ export const useNotesStore = create<NotesStore>()(
 					}
 				}
 
-				// Apply note updates
 				const updatedNotes = notes.map((note) => {
 					const newFolderId = mergeResult.noteUpdates.get(note.id);
 					if (newFolderId) {
@@ -521,7 +508,6 @@ export const useNotesStore = create<NotesStore>()(
 					return note;
 				});
 
-				// Build final folder list: remove deleted folders, remove old versions of updated folders, add updated folders
 				const foldersToRemove = new Set([
 					...mergeResult.foldersToDelete,
 					...mergeResult.folderUpdates.keys(),
@@ -545,29 +531,23 @@ export const useNotesStore = create<NotesStore>()(
 					},
 				});
 			} else {
-				// NO CONFLICT: Normal move with ID regeneration
 				const { updatedFolders, idMapping } = regenerateFolderIds(
 					oldFolder,
 					newParentId,
-					folders
+					folders,
 				);
 
-				// Get old folder IDs that will be replaced
 				const oldFolderIds = new Set(idMapping.keys());
-
-				// Update notes to reference new folder IDs
 				const updatedNotes = updateNotesFolderReferences(notes, idMapping);
 
-				// Calculate new order for the moved folder
 				const newSiblings = folders.filter(
-					(f) => f.parentId === newParentId && !oldFolderIds.has(f.id)
+					(f) => f.parentId === newParentId && !oldFolderIds.has(f.id),
 				);
 				const maxOrder = Math.max(0, ...newSiblings.map((f) => f.order || 0));
 
-				// Update the main moved folder's order
 				const movedFolderNewId = idMapping.get(id);
 				const finalUpdatedFolders = updatedFolders.map((f) =>
-					f.id === movedFolderNewId ? { ...f, order: maxOrder + 1 } : f
+					f.id === movedFolderNewId ? { ...f, order: maxOrder + 1 } : f,
 				);
 
 				set((state) => ({
@@ -598,6 +578,20 @@ export const useNotesStore = create<NotesStore>()(
 		restoreFolder: (folder, withChildren = []) => {
 			set((state) => ({
 				folders: reorderFolders([...state.folders, folder, ...withChildren]),
+			}));
+
+			if (useAppStore.getState().autoSaveEnabled) {
+				useAppStore.getState().saveToFile(AppToSave.NotesApp);
+			}
+		},
+
+		// Batch-update folder order values (no history — used for drag reorder)
+		reorderSiblings: (updates) => {
+			set((state) => ({
+				folders: state.folders.map((f) => {
+					const update = updates.find((u) => u.id === f.id);
+					return update ? { ...f, order: update.order } : f;
+				}),
 			}));
 
 			if (useAppStore.getState().autoSaveEnabled) {
@@ -698,7 +692,7 @@ export const useNotesStore = create<NotesStore>()(
 						const beforeFolder = data.before as Folder;
 						set((state) => ({
 							folders: state.folders.map((f) =>
-								f.id === data.id ? beforeFolder : f
+								f.id === data.id ? beforeFolder : f,
 							),
 						}));
 					}
@@ -793,14 +787,11 @@ export const useNotesStore = create<NotesStore>()(
 
 				case "DELETE_FOLDER":
 					const affectedSubfolders = (data.affectedSubfolders || []) as Folder[];
-					const affectedFolderIds = [
-						data.id,
-						...affectedSubfolders.map((f) => f.id),
-					];
+					const affectedFolderIds = [data.id, ...affectedSubfolders.map((f) => f.id)];
 
 					set((state) => ({
 						folders: reorderFolders(
-							state.folders.filter((f) => !affectedFolderIds.includes(f.id))
+							state.folders.filter((f) => !affectedFolderIds.includes(f.id)),
 						),
 						notes: state.notes.map((note) => {
 							if (affectedFolderIds.includes(note.folder)) {
@@ -816,5 +807,5 @@ export const useNotesStore = create<NotesStore>()(
 				useAppStore.getState().saveToFile(AppToSave.NotesApp);
 			}
 		},
-	}))
+	})),
 );
