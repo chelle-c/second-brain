@@ -14,12 +14,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
-import { IconPicker, DEFAULT_TAG_ICON } from "@/components/IconPicker";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { IconPicker, type IconPickerSelection } from "@/components/IconPicker";
+import { DEFAULT_TAG_ICON, renderFolderOrTagIcon } from "@/lib/icons";
 import { useNotesStore } from "@/stores/useNotesStore";
 import type { Tag } from "@/types/notes";
 
@@ -28,23 +25,10 @@ interface TagManagementModalProps {
 	onClose: () => void;
 }
 
-// Default tag definitions for creating new defaults
 const DEFAULT_TAG_DEFINITIONS: Record<string, Omit<Tag, "id">> = {
-	actions: {
-		name: "Actions",
-		icon: CheckCircle,
-		color: "#3b82f6",
-	},
-	ideas: {
-		name: "Ideas",
-		icon: Lightbulb,
-		color: "#eab308",
-	},
-	reference: {
-		name: "Reference",
-		icon: BookOpen,
-		color: "#10b981",
-	},
+	actions: { name: "Actions", icon: CheckCircle, color: "#3b82f6" },
+	ideas: { name: "Ideas", icon: Lightbulb, color: "#eab308" },
+	reference: { name: "Reference", icon: BookOpen, color: "#10b981" },
 };
 
 export const TagManagementModal: React.FC<TagManagementModalProps> = ({ isOpen, onClose }) => {
@@ -53,27 +37,31 @@ export const TagManagementModal: React.FC<TagManagementModalProps> = ({ isOpen, 
 	const [editingTagId, setEditingTagId] = useState<string | null>(null);
 	const [editingName, setEditingName] = useState("");
 	const [editingIcon, setEditingIcon] = useState<LucideIcon | null>(null);
+	const [editingEmoji, setEditingEmoji] = useState<string | undefined>(undefined);
 	const [showEditIconPicker, setShowEditIconPicker] = useState(false);
 	const [newTagName, setNewTagName] = useState("");
 	const [newTagIcon, setNewTagIcon] = useState<LucideIcon>(DEFAULT_TAG_ICON);
+	const [newTagEmoji, setNewTagEmoji] = useState<string | undefined>(undefined);
 	const [showNewIconPicker, setShowNewIconPicker] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	// Get all tags as array
 	const tagList = Object.entries(tags).map(([tagId, tag]) => ({ tagId, ...tag }));
 
-	// Count notes using each tag
 	const getTagUsageCount = useCallback(
-		(tagId: string) => {
-			return notes.filter((note) => note.tags?.includes(tagId)).length;
-		},
-		[notes]
+		(tagId: string) => notes.filter((note) => note.tags?.includes(tagId)).length,
+		[notes],
 	);
 
-	const handleStartEdit = (tagId: string, currentName: string, currentIcon: LucideIcon | undefined) => {
+	const handleStartEdit = (
+		tagId: string,
+		currentName: string,
+		currentIcon: LucideIcon | undefined,
+		currentEmoji?: string,
+	) => {
 		setEditingTagId(tagId);
 		setEditingName(currentName);
 		setEditingIcon(currentIcon || DEFAULT_TAG_ICON);
+		setEditingEmoji(currentEmoji);
 		setError(null);
 	};
 
@@ -81,42 +69,37 @@ export const TagManagementModal: React.FC<TagManagementModalProps> = ({ isOpen, 
 		setEditingTagId(null);
 		setEditingName("");
 		setEditingIcon(null);
+		setEditingEmoji(undefined);
 		setShowEditIconPicker(false);
 		setError(null);
 	};
 
 	const handleSaveEdit = () => {
 		if (!editingTagId) return;
-
 		const trimmedName = editingName.trim();
 		if (!trimmedName) {
 			setError("Tag name cannot be empty");
 			return;
 		}
-
-		// Check for duplicate names (excluding current tag)
 		const isDuplicate = Object.entries(tags).some(
 			([id, tag]) =>
-				id !== editingTagId && tag.name.toLowerCase() === trimmedName.toLowerCase()
+				id !== editingTagId && tag.name.toLowerCase() === trimmedName.toLowerCase(),
 		);
-
 		if (isDuplicate) {
 			setError("A tag with this name already exists");
 			return;
 		}
-
 		updateTag(editingTagId, {
 			name: trimmedName,
-			icon: editingIcon || DEFAULT_TAG_ICON,
+			icon: editingEmoji ? DEFAULT_TAG_ICON : editingIcon || DEFAULT_TAG_ICON,
+			emoji: editingEmoji,
 		});
 		handleCancelEdit();
 	};
 
 	const handleDeleteTag = (tagId: string) => {
 		deleteTag(tagId);
-		if (editingTagId === tagId) {
-			handleCancelEdit();
-		}
+		if (editingTagId === tagId) handleCancelEdit();
 	};
 
 	const handleAddTag = () => {
@@ -125,63 +108,64 @@ export const TagManagementModal: React.FC<TagManagementModalProps> = ({ isOpen, 
 			setError("Tag name cannot be empty");
 			return;
 		}
-
-		// Check for duplicate names
 		const isDuplicate = Object.values(tags).some(
-			(tag) => tag.name.toLowerCase() === trimmedName.toLowerCase()
+			(tag) => tag.name.toLowerCase() === trimmedName.toLowerCase(),
 		);
-
 		if (isDuplicate) {
 			setError("A tag with this name already exists");
 			return;
 		}
-
-		// Generate a unique ID
 		const tagId = `tag-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-
 		addTag({
 			id: tagId,
 			name: trimmedName,
-			icon: newTagIcon,
+			icon: newTagEmoji ? DEFAULT_TAG_ICON : newTagIcon,
+			emoji: newTagEmoji,
 			color: "#6b7280",
 		});
-
 		setNewTagName("");
 		setNewTagIcon(DEFAULT_TAG_ICON);
+		setNewTagEmoji(undefined);
 		setShowNewIconPicker(false);
 		setError(null);
 	};
 
 	const handleRestoreDefaults = () => {
-		// Add any missing default tags
 		Object.entries(DEFAULT_TAG_DEFINITIONS).forEach(([id, tagDef]) => {
-			if (!tags[id]) {
-				addTag({ id, ...tagDef });
-			}
+			if (!tags[id]) addTag({ id, ...tagDef });
 		});
 	};
 
 	const handleKeyDown = (e: React.KeyboardEvent, action: "edit" | "add") => {
 		if (e.key === "Enter") {
 			e.preventDefault();
-			if (action === "edit") {
-				handleSaveEdit();
-			} else {
-				handleAddTag();
-			}
+			action === "edit" ? handleSaveEdit() : handleAddTag();
 		} else if (e.key === "Escape") {
-			if (action === "edit") {
-				handleCancelEdit();
-			} else {
-				setNewTagName("");
-			}
+			action === "edit" ? handleCancelEdit() : setNewTagName("");
 		}
 	};
 
-	// Helper to get display icon
-	const getDisplayIcon = (icon: LucideIcon | undefined): LucideIcon => {
-		return icon || DEFAULT_TAG_ICON;
-	};
+	const handleEditPickerSelect = useCallback((selection: IconPickerSelection) => {
+		if (selection.type === "icon") {
+			setEditingIcon(selection.icon);
+			setEditingEmoji(undefined);
+		} else {
+			setEditingEmoji(selection.emoji);
+			setEditingIcon(DEFAULT_TAG_ICON);
+		}
+		setShowEditIconPicker(false);
+	}, []);
+
+	const handleNewPickerSelect = useCallback((selection: IconPickerSelection) => {
+		if (selection.type === "icon") {
+			setNewTagIcon(selection.icon);
+			setNewTagEmoji(undefined);
+		} else {
+			setNewTagEmoji(selection.emoji);
+			setNewTagIcon(DEFAULT_TAG_ICON);
+		}
+		setShowNewIconPicker(false);
+	}, []);
 
 	return (
 		<Modal
@@ -192,53 +176,65 @@ export const TagManagementModal: React.FC<TagManagementModalProps> = ({ isOpen, 
 			className="sm:max-w-md"
 		>
 			<div className="space-y-4">
-				{/* Error message */}
 				{error && (
 					<div className="p-2 bg-destructive/10 border border-destructive/20 rounded-lg">
 						<p className="text-xs text-destructive">{error}</p>
 					</div>
 				)}
 
-				{/* Existing tags */}
 				<div className="space-y-2">
 					<Label className="text-sm font-medium">Tags</Label>
-					{tagList.length === 0 ? (
+					{tagList.length === 0 ?
 						<p className="text-sm text-muted-foreground py-4 text-center">
 							No tags created yet
 						</p>
-					) : (
-						<div className="space-y-2 max-h-[300px] overflow-y-auto">
-							{tagList.map(({ id, name, icon }) => {
+					:	<div className="space-y-2 max-h-[300px] overflow-y-auto">
+							{tagList.map(({ id, name, icon, emoji }) => {
 								const usageCount = getTagUsageCount(id);
 								const isEditing = editingTagId === id;
-								const Icon = getDisplayIcon(icon);
-								const EditIcon = editingIcon || DEFAULT_TAG_ICON;
 
 								return (
 									<div
 										key={id}
 										className="flex items-center gap-2 p-2 rounded-lg border border-border bg-card"
 									>
-										{isEditing ? (
+										{isEditing ?
 											<>
-												{/* Icon picker for editing */}
-												<Popover open={showEditIconPicker} onOpenChange={setShowEditIconPicker}>
+												<Popover
+													open={showEditIconPicker}
+													onOpenChange={setShowEditIconPicker}
+													modal
+												>
 													<PopoverTrigger asChild>
 														<button
 															type="button"
 															className="h-8 w-8 flex items-center justify-center border border-border rounded-md hover:bg-accent transition-colors shrink-0"
 															title="Change icon"
 														>
-															<EditIcon size={16} />
+															{renderFolderOrTagIcon(
+																editingEmoji ? undefined : (
+																	editingIcon || DEFAULT_TAG_ICON
+																),
+																editingEmoji,
+																16,
+															)}
 														</button>
 													</PopoverTrigger>
-													<PopoverContent className="w-auto p-2" align="start" side="bottom">
+													<PopoverContent
+														className="w-auto p-2"
+														align="start"
+														side="bottom"
+														onWheel={(e) => e.stopPropagation()}
+														onOpenAutoFocus={(e) => e.preventDefault()}
+													>
 														<IconPicker
-															currentIcon={editingIcon || undefined}
-															onSelect={(newIcon) => {
-																setEditingIcon(newIcon);
-																setShowEditIconPicker(false);
-															}}
+															currentIcon={
+																editingEmoji ? undefined : (
+																	editingIcon || undefined
+																)
+															}
+															currentEmoji={editingEmoji}
+															onSelect={handleEditPickerSelect}
 															variant="compact"
 														/>
 													</PopoverContent>
@@ -251,18 +247,26 @@ export const TagManagementModal: React.FC<TagManagementModalProps> = ({ isOpen, 
 													autoFocus
 												/>
 											</>
-										) : (
-											<>
-												<Icon size={16} className="text-muted-foreground shrink-0" />
-												<span className="flex-1 text-sm truncate">{name}</span>
+										:	<>
+												<span className="shrink-0">
+													{renderFolderOrTagIcon(
+														icon,
+														emoji,
+														16,
+														"text-muted-foreground",
+													)}
+												</span>
+												<span className="flex-1 text-sm truncate">
+													{name}
+												</span>
 											</>
-										)}
+										}
 
 										<span className="text-xs text-muted-foreground shrink-0">
 											{usageCount} {usageCount === 1 ? "note" : "notes"}
 										</span>
 
-										{isEditing ? (
+										{isEditing ?
 											<div className="flex gap-1">
 												<Button
 													type="button"
@@ -283,13 +287,14 @@ export const TagManagementModal: React.FC<TagManagementModalProps> = ({ isOpen, 
 													Cancel
 												</Button>
 											</div>
-										) : (
-											<div className="flex gap-1">
+										:	<div className="flex gap-1">
 												<Button
 													type="button"
 													size="sm"
 													variant="ghost"
-													onClick={() => handleStartEdit(id, name, icon)}
+													onClick={() =>
+														handleStartEdit(id, name, icon, emoji)
+													}
 													className="h-7 w-7 p-0"
 													title="Edit tag"
 												>
@@ -306,41 +311,44 @@ export const TagManagementModal: React.FC<TagManagementModalProps> = ({ isOpen, 
 													<Trash2 size={14} />
 												</Button>
 											</div>
-										)}
+										}
 									</div>
 								);
 							})}
 						</div>
-					)}
+					}
 				</div>
 
 				<Separator />
 
-				{/* Add new tag */}
 				<div className="space-y-2">
 					<Label className="text-sm font-medium">Add New Tag</Label>
 					<div className="flex gap-2">
-						{/* Icon picker for new tag */}
-						<Popover open={showNewIconPicker} onOpenChange={setShowNewIconPicker}>
+						<Popover open={showNewIconPicker} onOpenChange={setShowNewIconPicker} modal>
 							<PopoverTrigger asChild>
 								<button
 									type="button"
 									className="h-9 w-9 flex items-center justify-center border border-border rounded-md hover:bg-accent transition-colors shrink-0"
 									title="Choose icon"
 								>
-									{(() => {
-										const NewIcon = newTagIcon;
-										return <NewIcon size={16} />;
-									})()}
+									{renderFolderOrTagIcon(
+										newTagEmoji ? undefined : newTagIcon,
+										newTagEmoji,
+										16,
+									)}
 								</button>
 							</PopoverTrigger>
-							<PopoverContent className="w-auto p-2" align="start" side="bottom">
+							<PopoverContent
+								className="w-auto p-2"
+								align="start"
+								side="bottom"
+								onWheel={(e) => e.stopPropagation()}
+								onOpenAutoFocus={(e) => e.preventDefault()}
+							>
 								<IconPicker
-									currentIcon={newTagIcon}
-									onSelect={(icon) => {
-										setNewTagIcon(icon);
-										setShowNewIconPicker(false);
-									}}
+									currentIcon={newTagEmoji ? undefined : newTagIcon}
+									currentEmoji={newTagEmoji}
+									onSelect={handleNewPickerSelect}
 									variant="compact"
 								/>
 							</PopoverContent>
@@ -370,7 +378,6 @@ export const TagManagementModal: React.FC<TagManagementModalProps> = ({ isOpen, 
 
 				<Separator />
 
-				{/* Restore defaults */}
 				<div className="flex justify-between items-center">
 					<p className="text-xs text-muted-foreground">
 						Missing default tags? Restore them here.

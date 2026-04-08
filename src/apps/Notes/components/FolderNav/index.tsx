@@ -645,7 +645,12 @@ export const FolderNav = ({
 						draggable={!isEditing && !isCreating && viewMode !== "archived"}
 						onNoteDrop={(item) => handleNoteDrop(folder.id, item)}
 						canDropNote={(item) => canDropNoteOnFolder(folder.id, item)}
-						onChangeIcon={(icon) => updateFolder(folder.id, { icon })}
+						onChangeIcon={(icon, emoji) => {
+							updateFolder(folder.id, {
+								icon: emoji ? undefined : icon,
+								emoji: emoji || undefined,
+							});
+						}}
 						draggedFolderParentId={
 							draggedFolder ? draggedFolder.folder.parentId : undefined
 						}

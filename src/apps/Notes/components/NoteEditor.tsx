@@ -1,11 +1,5 @@
-/**
- * NoteEditor.tsx
- *
- * Unified view for both *creating* a new note and *editing* an existing one.
- */
-
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Bell, Calendar, Clock, Pencil, Trash2 } from "lucide-react";
+import { Bell, Calendar, Clock, Pencil, SmilePlus, Trash2 } from "lucide-react";
 import { useEditor, EditorContent, type JSONContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Highlight from "@tiptap/extension-highlight";
@@ -26,6 +20,14 @@ import FontFamily from "@tiptap/extension-font-family";
 import TextAlign from "@tiptap/extension-text-align";
 import { common, createLowlight } from "lowlight";
 
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+	IconPicker,
+	renderNoteIcon,
+	findIconByName,
+	isEmojiString,
+	type IconPickerSelection,
+} from "@/components/IconPicker";
 import { useNotesStore } from "@/stores/useNotesStore";
 import type { Folder, Note, NoteReminder, Tag } from "@/types/notes";
 import { BubbleMenuBar } from "../editor/components/BubbleMenuBar";
@@ -54,33 +56,14 @@ const parseContent = (content: string): JSONContent => {
 };
 
 // ── shared extension factory ─────────────────────────────────────────────────
-//
-// Several of our custom extensions (LinkPreview in particular) internally
-// register their own copy of the Link extension so they can hook into link
-// nodes.  TipTap deduplicates by extension *name*, so if more than one
-// extension with name "link" ends up in the final array we get the console
-// warning and unpredictable behaviour.
-//
-// Strategy:
-//   1. Build the raw list exactly as before.
-//   2. Walk backwards through the array and keep only the *first* occurrence
-//      of each extension name we care about (link).  Walking backwards means
-//      we keep the one that was added last — i.e. our explicitly-configured
-//      Link with the HTMLAttributes we want — and drop any earlier duplicate
-//      that was pulled in by LinkPreview / SlashCommands / etc.
-//
 const createExtensions = (isNew: boolean) => {
 	const raw = [
-		StarterKit.configure({
-			codeBlock: false,
-		}),
+		StarterKit.configure({ codeBlock: false }),
 		TextStyle,
 		Color,
 		Highlight.configure({ multicolor: !isNew }),
 		FontFamily,
 		TextAlign.configure({ types: ["heading", "paragraph"] }),
-		// Our canonical Link config – must appear AFTER LinkPreview so the
-		// dedup pass keeps this one.
 		Link.configure({
 			openOnClick: false,
 			HTMLAttributes: { target: "_blank", rel: "noopener noreferrer" },
@@ -104,29 +87,18 @@ const createExtensions = (isNew: boolean) => {
 		SlashCommands,
 	];
 
-	// Deduplicate: for every extension name, keep only the LAST occurrence.
-	// This lets our explicitly-configured Link (added after LinkPreview) win.
 	const seen = new Set<string>();
 	const deduped: typeof raw = [];
-
 	for (let i = raw.length - 1; i >= 0; i--) {
 		const ext = raw[i];
-		// Extensions created by .configure() or direct import expose their
-		// name via .name on the object itself.  Some are plain classes.
 		const name =
 			(ext as { name?: string }).name ??
 			(ext as { spec?: { name?: string } }).spec?.name ??
 			undefined;
-
-		if (name && seen.has(name)) {
-			// Skip – we already kept a later copy of this extension.
-			continue;
-		}
-
+		if (name && seen.has(name)) continue;
 		if (name) seen.add(name);
-		deduped.unshift(ext); // maintain original order
+		deduped.unshift(ext);
 	}
-
 	return deduped;
 };
 
@@ -135,13 +107,11 @@ function handlePasteGuard(view: any, event: any): boolean {
 	const clipboardData = event.clipboardData;
 	const plainText = clipboardData?.getData("text/plain");
 	const html = clipboardData?.getData("text/html");
-
 	const nativeEvent = event as unknown as { shiftKey?: boolean };
 	if (nativeEvent.shiftKey && plainText) {
 		view.dispatch(view.state.tr.insertText(plainText));
 		return true;
 	}
-
 	if (html && plainText) {
 		const hasCodeBlock = /<pre[\s>]|<code[\s>]/i.test(html);
 		if (hasCodeBlock) {
@@ -194,6 +164,22 @@ function formatNotifSummary(reminder: NoteReminder): string {
 		.join(", ");
 }
 
+// ── helpers for note icon ────────────────────────────────────────────────────
+
+/** Convert a picker selection to a storable string value. */
+function selectionToIconValue(sel: IconPickerSelection): string {
+	return sel.type === "icon" ? sel.name : sel.emoji;
+}
+
+/** Derive picker props from a stored icon value. */
+function iconValueToPickerProps(value?: string | null) {
+	if (!value) return {};
+	const lucide = findIconByName(value);
+	if (lucide) return { currentIcon: lucide };
+	if (isEmojiString(value)) return { currentEmoji: value };
+	return {};
+}
+
 // ── props ────────────────────────────────────────────────────────────────────
 interface NoteEditorProps {
 	note?: Note;
@@ -220,6 +206,8 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 	const [selectedTags, setSelectedTags] = useState<string[]>(note?.tags ?? []);
 	const [reminder, setReminder] = useState<NoteReminder | null>(note?.reminder ?? null);
 	const [showReminderModal, setShowReminderModal] = useState(false);
+	const [noteIcon, setNoteIcon] = useState<string | null>(note?.icon ?? null);
+	const [showIconPicker, setShowIconPicker] = useState(false);
 
 	const titleRef = useRef<HTMLInputElement>(null);
 
@@ -227,6 +215,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 	const titleValueRef = useRef(title);
 	const selectedTagsRef = useRef(selectedTags);
 	const reminderRef = useRef(reminder);
+	const noteIconRef = useRef(noteIcon);
 	const hasSavedRef = useRef(false);
 
 	useEffect(() => {
@@ -238,6 +227,9 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 	useEffect(() => {
 		reminderRef.current = reminder;
 	}, [reminder]);
+	useEffect(() => {
+		noteIconRef.current = noteIcon;
+	}, [noteIcon]);
 
 	// ── sync from note prop (edit mode) ──────────────────────────────────────
 	const noteIdRef = useRef(note?.id);
@@ -248,6 +240,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 			setTitle(note.title);
 			setSelectedTags(note.tags ?? []);
 			setReminder(note.reminder ?? null);
+			setNoteIcon(note.icon ?? null);
 		}
 	}, [note]);
 
@@ -320,6 +313,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 				tags: selectedTagsRef.current,
 				folder: activeFolder?.id || "inbox",
 				reminder: reminderRef.current,
+				icon: noteIconRef.current,
 			});
 		} catch (error) {
 			console.error("Failed to create note:", error);
@@ -357,6 +351,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 						tags: selectedTagsRef.current,
 						folder: activeFolder?.id || "inbox",
 						reminder: reminderRef.current,
+						icon: noteIconRef.current,
 					});
 				} catch (error) {
 					console.error("Failed to auto-save note on unmount:", error);
@@ -398,6 +393,23 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 		if (!isCreateMode) updateNote(note!.id, { reminder: null });
 	}, [isCreateMode, note, updateNote]);
 
+	// ── icon handlers ────────────────────────────────────────────────────────
+	const handleIconSelect = useCallback(
+		(selection: IconPickerSelection) => {
+			const value = selectionToIconValue(selection);
+			setNoteIcon(value);
+			setShowIconPicker(false);
+			if (!isCreateMode) updateNote(note!.id, { icon: value });
+		},
+		[isCreateMode, note, updateNote],
+	);
+
+	const handleIconRemove = useCallback(() => {
+		setNoteIcon(null);
+		setShowIconPicker(false);
+		if (!isCreateMode) updateNote(note!.id, { icon: null });
+	}, [isCreateMode, note, updateNote]);
+
 	// ── render ───────────────────────────────────────────────────────────────
 	if (!editor) return null;
 
@@ -411,126 +423,167 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 			hour12: true,
 		});
 
+	const pickerProps = iconValueToPickerProps(noteIcon);
+
 	return (
 		<div className="h-full flex bg-card">
 			{/* ── Scrollable content area ────────────────────────────────── */}
 			<div className="flex-1 min-w-0 overflow-y-auto">
 				<div className="max-w-4xl mx-auto px-8 py-6">
-						{/* ── Title ────────────────────────────────────────────── */}
-						{isCreateMode || isEditingTitle ?
-							<input
-								ref={titleRef}
-								type="text"
-								value={title}
-								onChange={(e) => setTitle(e.target.value)}
-								onBlur={handleTitleBlur}
-								onKeyDown={(e) => {
-									if (e.key === "Enter") {
-										e.preventDefault();
-										handleTitleBlur();
-									}
-									if (e.key === "Escape" && !isCreateMode) {
-										setTitle(note!.title);
-										setIsEditingTitle(false);
-									}
-								}}
-								placeholder="Untitled"
-								className="w-full text-4xl font-bold text-card-foreground outline-none mb-4 placeholder:text-muted-foreground bg-transparent border-b-2 border-primary pb-2"
-							/>
+					{/* ── Note Icon ────────────────────────────────────────── */}
+					{noteIcon ?
+						<Popover open={showIconPicker} onOpenChange={setShowIconPicker}>
+							<PopoverTrigger asChild>
+								<button
+									type="button"
+									className="mb-2 p-1 rounded-lg hover:bg-accent transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary"
+									aria-label="Change or remove note icon"
+								>
+									{renderNoteIcon(noteIcon, 32)}
+								</button>
+							</PopoverTrigger>
+							<PopoverContent className="w-auto p-2" align="start" side="bottom">
+								<IconPicker
+									{...pickerProps}
+									onSelect={handleIconSelect}
+									onRemove={handleIconRemove}
+									showRemove
+									variant="default"
+								/>
+							</PopoverContent>
+						</Popover>
+					:	<Popover open={showIconPicker} onOpenChange={setShowIconPicker}>
+							<PopoverTrigger asChild>
+								<button
+									type="button"
+									className="mb-2 flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-accent border border-dashed border-border transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary"
+									aria-label="Add icon to note"
+								>
+									<SmilePlus size={16} />
+									<span>Add icon</span>
+								</button>
+							</PopoverTrigger>
+							<PopoverContent className="w-auto p-2" align="start" side="bottom">
+								<IconPicker onSelect={handleIconSelect} variant="default" />
+							</PopoverContent>
+						</Popover>
+					}
+
+					{/* ── Title ────────────────────────────────────────────── */}
+					{isCreateMode || isEditingTitle ?
+						<input
+							ref={titleRef}
+							type="text"
+							value={title}
+							onChange={(e) => setTitle(e.target.value)}
+							onBlur={handleTitleBlur}
+							onKeyDown={(e) => {
+								if (e.key === "Enter") {
+									e.preventDefault();
+									handleTitleBlur();
+								}
+								if (e.key === "Escape" && !isCreateMode) {
+									setTitle(note!.title);
+									setIsEditingTitle(false);
+								}
+							}}
+							placeholder="Untitled"
+							className="w-full text-4xl font-bold text-card-foreground outline-none mb-4 placeholder:text-muted-foreground bg-transparent border-b-2 border-primary pb-2"
+						/>
+					:	<button
+							type="button"
+							onClick={() => setIsEditingTitle(true)}
+							className="w-full text-left text-4xl font-bold text-card-foreground cursor-text hover:bg-accent rounded p-2 -m-2 transition-colors mb-4"
+						>
+							{title || "Untitled"}
+						</button>
+					}
+
+					{/* ── Metadata (edit mode only) ────────────────────────── */}
+					{!isCreateMode && note && (
+						<div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-3">
+							<span className="flex items-center gap-1.5">
+								<Calendar size={14} />
+								<span className="font-medium text-foreground/60">Created:</span>
+								{formatDate(note.createdAt)}
+							</span>
+							{note.updatedAt &&
+								new Date(note.updatedAt).getTime() !==
+									new Date(note.createdAt).getTime() && (
+									<span className="flex items-center gap-1.5">
+										<Clock size={14} />
+										<span className="font-medium text-foreground/60">
+											Updated:
+										</span>
+										{formatDate(note.updatedAt)}
+									</span>
+								)}
+						</div>
+					)}
+
+					{/* ── Tags ──────────────────────────────────────────────── */}
+					<div className="mb-4">
+						<TagSelector
+							tags={tags}
+							selectedTags={selectedTags}
+							onTagToggle={handleTagToggle}
+						/>
+					</div>
+
+					{/* ── Reminder section ─────────────────────────────────── */}
+					<div className="mb-5">
+						{reminder ?
+							<div className="flex flex-wrap items-center gap-2 p-2.5 rounded-lg bg-primary/5 border border-primary/20">
+								<Bell size={16} className="text-primary shrink-0" />
+								<div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm flex-1 min-w-0">
+									<span className="text-foreground font-medium">
+										{formatReminderDateTime(reminder).date}{" "}
+										<span className="text-muted-foreground font-normal">
+											at
+										</span>{" "}
+										{formatReminderDateTime(reminder).time}
+									</span>
+									<span className="text-muted-foreground text-xs">
+										Notify: {formatNotifSummary(reminder)}
+									</span>
+								</div>
+								<div className="flex items-center gap-1 shrink-0">
+									<button
+										type="button"
+										onClick={() => setShowReminderModal(true)}
+										className="p-1.5 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
+										aria-label="Edit reminder"
+									>
+										<Pencil size={15} />
+									</button>
+									<button
+										type="button"
+										onClick={handleReminderClear}
+										className="p-1.5 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-red-500"
+										aria-label="Remove reminder"
+									>
+										<Trash2 size={15} />
+									</button>
+								</div>
+							</div>
 						:	<button
 								type="button"
-								onClick={() => setIsEditingTitle(true)}
-								className="w-full text-left text-4xl font-bold text-card-foreground cursor-text hover:bg-accent rounded p-2 -m-2 transition-colors mb-4"
+								onClick={() => setShowReminderModal(true)}
+								className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-accent border border-border transition-colors"
 							>
-								{title || "Untitled"}
+								<Bell size={15} />
+								<span>Reminder</span>
 							</button>
 						}
+					</div>
 
-						{/* ── Metadata (edit mode only) ────────────────────────── */}
-						{!isCreateMode && note && (
-							<div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-3">
-								<span className="flex items-center gap-1.5">
-									<Calendar size={14} />
-									<span className="font-medium text-foreground/60">Created:</span>
-									{formatDate(note.createdAt)}
-								</span>
-								{note.updatedAt &&
-									new Date(note.updatedAt).getTime() !==
-										new Date(note.createdAt).getTime() && (
-										<span className="flex items-center gap-1.5">
-											<Clock size={14} />
-											<span className="font-medium text-foreground/60">
-												Updated:
-											</span>
-											{formatDate(note.updatedAt)}
-										</span>
-									)}
-							</div>
-						)}
-
-						{/* ── Tags ──────────────────────────────────────────────── */}
-						<div className="mb-4">
-							<TagSelector
-								tags={tags}
-								selectedTags={selectedTags}
-								onTagToggle={handleTagToggle}
-							/>
+					{/* ── Divider + Editor ─────────────────────────────────── */}
+					<div className="border-t border-border pt-6">
+						<div className="w-full min-h-[300px] tiptap-editor-wrapper">
+							<BubbleMenuBar editor={editor} />
+							<EditorContent editor={editor} />
 						</div>
-
-						{/* ── Reminder section ─────────────────────────────────── */}
-						<div className="mb-5">
-							{reminder ?
-								<div className="flex flex-wrap items-center gap-2 p-2.5 rounded-lg bg-primary/5 border border-primary/20">
-									<Bell size={16} className="text-primary shrink-0" />
-									<div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm flex-1 min-w-0">
-										<span className="text-foreground font-medium">
-											{formatReminderDateTime(reminder).date}{" "}
-											<span className="text-muted-foreground font-normal">
-												at
-											</span>{" "}
-											{formatReminderDateTime(reminder).time}
-										</span>
-										<span className="text-muted-foreground text-xs">
-											Notify: {formatNotifSummary(reminder)}
-										</span>
-									</div>
-									<div className="flex items-center gap-1 shrink-0">
-										<button
-											type="button"
-											onClick={() => setShowReminderModal(true)}
-											className="p-1.5 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
-											aria-label="Edit reminder"
-										>
-											<Pencil size={15} />
-										</button>
-										<button
-											type="button"
-											onClick={handleReminderClear}
-											className="p-1.5 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-red-500"
-											aria-label="Remove reminder"
-										>
-											<Trash2 size={15} />
-										</button>
-									</div>
-								</div>
-							:	<button
-									type="button"
-									onClick={() => setShowReminderModal(true)}
-									className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-accent border border-border transition-colors"
-								>
-									<Bell size={15} />
-									<span>Reminder</span>
-								</button>
-							}
-						</div>
-
-						{/* ── Divider + Editor ─────────────────────────────────── */}
-						<div className="border-t border-border pt-6">
-							<div className="w-full min-h-[300px] tiptap-editor-wrapper">
-								<BubbleMenuBar editor={editor} />
-								<EditorContent editor={editor} />
-							</div>
-						</div>
+					</div>
 				</div>
 			</div>
 

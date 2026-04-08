@@ -3,7 +3,7 @@ import type { LucideIcon } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { IconPicker } from "@/components/IconPicker";
+import { IconPicker, type IconPickerSelection } from "@/components/IconPicker";
 import type { Folder, Note } from "@/types/notes";
 import { useDropZone, useDragState, type DragItem } from "@/hooks/useDragAndDrop";
 
@@ -37,12 +37,10 @@ interface FolderItemProps {
 	depth?: number;
 	draggable?: boolean;
 	isDragReady?: boolean;
-	// Note drop handling
 	onNoteDrop?: (item: DragItem<Note>) => void;
 	canDropNote?: (item: DragItem<Note>) => boolean;
-	// Icon change
-	onChangeIcon?: (icon: LucideIcon) => void;
-	// Folder reorder
+	/** Called when user picks an icon OR an emoji via the picker. */
+	onChangeIcon?: (icon: LucideIcon, emoji?: string) => void;
 	draggedFolderParentId?: string | null;
 	onFolderReorder?: (targetFolderId: string, position: "above" | "below") => void;
 }
@@ -85,7 +83,6 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 	const [showIconPicker, setShowIconPicker] = useState(false);
 	const [dropPosition, setDropPosition] = useState<DropPosition | null>(null);
 
-	// Note drop zone handling
 	const {
 		isOver: isNoteOver,
 		canDrop: canDropNoteHere,
@@ -98,21 +95,48 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 
 	const isDraggingNote = isGlobalDragging && draggedItem?.type === "note";
 
-	// Can this item be a reorder target for the currently dragged folder?
 	const isSibling =
 		!isInbox &&
 		!isDragging &&
 		draggedFolderParentId !== undefined &&
 		draggedFolderParentId === folder.parentId;
 
-	// Clear drop position when the drag leaves this folder
 	useEffect(() => {
 		if (!isDragOver) setDropPosition(null);
 	}, [isDragOver]);
 
-	// Get icon
-	let IconComponent = isInbox ? Inbox : FolderIcon;
-	if (!isInbox && folder.icon) IconComponent = folder.icon;
+	// ── Render icon ──────────────────────────────────────────────────────────
+
+	const renderFolderIcon = (size: number) => {
+		if (isInbox) return <Inbox size={size} className="shrink-0" />;
+		if (folder.emoji) {
+			return (
+				<span
+					role="img"
+					aria-hidden
+					className="shrink-0"
+					style={{ fontSize: `${size}px`, lineHeight: 1 }}
+				>
+					{folder.emoji}
+				</span>
+			);
+		}
+		const IconComponent = folder.icon || FolderIcon;
+		return <IconComponent size={size} className="shrink-0" />;
+	};
+
+	// ── Handle picker selection ──────────────────────────────────────────────
+
+	const handlePickerSelect = (selection: IconPickerSelection) => {
+		if (!onChangeIcon) return;
+		if (selection.type === "icon") {
+			onChangeIcon(selection.icon, undefined);
+		} else {
+			// For emoji, we pass the default FolderIcon but signal the emoji
+			onChangeIcon(FolderIcon, selection.emoji);
+		}
+		setShowIconPicker(false);
+	};
 
 	// ── Editing state ────────────────────────────────────────────────────────
 
@@ -155,16 +179,11 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 			setDropPosition(null);
 			return;
 		}
-
-		// Folder drag
 		onDragOver(e);
-
-		// Calculate reorder position
 		if (isSibling) {
 			const rect = e.currentTarget.getBoundingClientRect();
 			const y = e.clientY - rect.top;
 			const h = rect.height;
-
 			if (y < h * 0.3) setDropPosition("above");
 			else if (y > h * 0.7) setDropPosition("below");
 			else setDropPosition("inside");
@@ -185,7 +204,6 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 	const handleDrop = (e: React.DragEvent) => {
 		const pos = dropPosition;
 		setDropPosition(null);
-
 		if (isDraggingNote) {
 			noteDropHandlers.onDrop(e);
 		} else if ((pos === "above" || pos === "below") && onFolderReorder) {
@@ -203,7 +221,6 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 	const canAcceptNote = isDraggingNote && canDropNoteHere;
 	const showNotAllowed = isDraggingNote && isNoteOver && !canDropNoteHere;
 
-	// Only show "inside" highlight when dropPosition is null or "inside"
 	const showInsideHighlight =
 		(isDragOver && !isDragging && (!dropPosition || dropPosition === "inside")) ||
 		(isNoteDropTarget && canAcceptNote);
@@ -250,7 +267,6 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 				cursor: cursorStyle,
 			}}
 		>
-			{/* Drop-position indicators */}
 			{dropPosition === "above" && (
 				<div className="absolute top-0 left-4 right-4 h-0.5 bg-primary rounded-full z-10 pointer-events-none" />
 			)}
@@ -258,7 +274,6 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 				<div className="absolute bottom-0 left-4 right-4 h-0.5 bg-primary rounded-full z-10 pointer-events-none" />
 			)}
 
-			{/* Chevron */}
 			<span className={`shrink-0 transition-transform mr-1 ${!hasChildren && "invisible"}`}>
 				<ChevronRight
 					size={12}
@@ -266,7 +281,6 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 				/>
 			</span>
 
-			{/* Icon and Name */}
 			<div
 				className={`flex-1 flex items-center gap-2 min-w-0 ${isInbox ? "py-2 px-1" : "py-1.5 px-1"}`}
 			>
@@ -282,7 +296,7 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 								className="shrink-0 p-0.5 -m-0.5 rounded hover:bg-accent/50 transition-colors cursor-pointer"
 								title="Change icon"
 							>
-								<IconComponent size={16} />
+								{renderFolderIcon(16)}
 							</button>
 						</PopoverTrigger>
 						<PopoverContent
@@ -292,27 +306,19 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 							onClick={(e) => e.stopPropagation()}
 						>
 							<IconPicker
-								currentIcon={folder.icon}
-								onSelect={(icon) => {
-									onChangeIcon(icon);
-									setShowIconPicker(false);
-								}}
+								currentIcon={!folder.emoji ? folder.icon : undefined}
+								currentEmoji={folder.emoji}
+								onSelect={handlePickerSelect}
 								variant="compact"
 							/>
 						</PopoverContent>
 					</Popover>
-				:	<IconComponent
-						size={isInbox ? 20 : 16}
-						className="shrink-0"
-						key={`icon-${folder.id}-${folder.icon?.name || "default"}`}
-					/>
-				}
+				:	renderFolderIcon(isInbox ? 20 : 16)}
 				<span className={`font-medium truncate ${isInbox ? "text-base" : "text-sm"}`}>
 					{folder.name}
 				</span>
 			</div>
 
-			{/* Badge */}
 			<div className="flex items-center gap-2 pr-2 shrink-0">
 				<span
 					className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded"

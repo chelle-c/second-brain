@@ -2,23 +2,14 @@ import {
 	Calendar,
 	ChevronRight,
 	Clock,
+	FileText,
 	Folder as FolderIcon,
 	GripVertical,
 	Inbox,
 	Redo2,
 	Undo2,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
-import {
-	AVAILABLE_ICONS,
-	getValidIcon,
-	getIconNameFromComponent,
-	DEFAULT_TAG_ICON,
-} from "@/components/IconPicker";
-
-const getTagIcon = (icon: LucideIcon | undefined): LucideIcon => {
-	return getValidIcon(icon, DEFAULT_TAG_ICON);
-};
+import { AVAILABLE_ICONS, getIconNameFromComponent, renderNoteIcon } from "@/lib/icons";
 
 import React, { useCallback, useMemo, useRef } from "react";
 import { toast } from "sonner";
@@ -89,11 +80,8 @@ function extractPreviewText(content: string): string {
 	try {
 		const doc = JSON.parse(content);
 		const parts: string[] = [];
-
 		const walk = (node: any): void => {
-			if (node.text) {
-				parts.push(node.text);
-			}
+			if (node.text) parts.push(node.text);
 			if (node.content && Array.isArray(node.content)) {
 				node.content.forEach((child: any, index: number) => {
 					walk(child);
@@ -108,14 +96,11 @@ function extractPreviewText(content: string): string {
 							"codeBlock",
 							"blockquote",
 						].includes(child.type);
-						if (isBlock) {
-							parts.push(" ");
-						}
+						if (isBlock) parts.push(" ");
 					}
 				});
 			}
 		};
-
 		walk(doc);
 		const text = parts.join("").replace(/\s+/g, " ").trim();
 		return text.length > 80 ? text.slice(0, 80) + "…" : text;
@@ -123,6 +108,29 @@ function extractPreviewText(content: string): string {
 		return "";
 	}
 }
+
+// ── Note icon helper ─────────────────────────────────────────────────────────
+
+const NoteIconDisplay: React.FC<{ icon?: string | null }> = ({ icon }) => {
+	if (icon) {
+		return (
+			<span className="shrink-0 flex items-center justify-center w-5 h-5">
+				{renderNoteIcon(icon, 16)}
+			</span>
+		);
+	}
+	return <FileText size={16} className="shrink-0 text-muted-foreground/50" />;
+};
+
+// ── Tag icon helper ──────────────────────────────────────────────────────────
+
+const TagIconDisplay: React.FC<{ tag: Tag }> = ({ tag }) => {
+	if (tag.emoji) {
+		return <span style={{ fontSize: "12px", lineHeight: 1 }}>{tag.emoji}</span>;
+	}
+	const Icon = tag.icon;
+	return <Icon size={12} />;
+};
 
 // ── Draggable note item ──────────────────────────────────────────────────────
 
@@ -206,6 +214,9 @@ const DraggableNoteItem: React.FC<{
 						<GripVertical size={14} />
 					</div>
 
+					{/* Note icon */}
+					<NoteIconDisplay icon={note.icon} />
+
 					<div className="flex-1 min-w-0">
 						<div className="flex items-center gap-2 mb-1">
 							<h3
@@ -219,7 +230,6 @@ const DraggableNoteItem: React.FC<{
 									{note.tags.slice(0, 3).map((tagId) => {
 										const tag = tags[tagId];
 										if (!tag) return null;
-										const Icon = getTagIcon(tag.icon);
 										const iconKey =
 											getIconNameFromComponent(tag.icon) || "default";
 										return (
@@ -227,7 +237,7 @@ const DraggableNoteItem: React.FC<{
 												key={`${tagId}-${iconKey}`}
 												className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-secondary text-foreground rounded-md text-xs"
 											>
-												<Icon size={12} />
+												<TagIconDisplay tag={tag} />
 												<span className="max-w-[60px] truncate">
 													{tag.name}
 												</span>
@@ -310,6 +320,14 @@ const getFolderIconComponent = (folder: Folder) => {
 	return FolderIcon;
 };
 
+const FolderIconDisplay: React.FC<{ folder: Folder; size?: number }> = ({ folder, size = 16 }) => {
+	if (folder.emoji) {
+		return <span style={{ fontSize: `${size}px`, lineHeight: 1 }}>{folder.emoji}</span>;
+	}
+	const Icon = getFolderIconComponent(folder);
+	return <Icon size={size} />;
+};
+
 // ── Folder drop-zone wrappers ────────────────────────────────────────────────
 
 const FolderSectionDropZone: React.FC<{
@@ -326,7 +344,6 @@ const FolderSectionDropZone: React.FC<{
 
 	const showDropIndicator = isDragActive && isOver;
 	const isInvalidDrop = showDropIndicator && !canDrop;
-	const IconComponent = getFolderIconComponent(folder);
 
 	return (
 		<div
@@ -341,7 +358,7 @@ const FolderSectionDropZone: React.FC<{
 				onClick={onClick}
 				className="flex items-center gap-2 text-sm font-medium text-muted-foreground pl-1 ml-2 mb-2 hover:text-foreground cursor-pointer transition-colors"
 			>
-				<IconComponent size={14} />
+				<FolderIconDisplay folder={folder} size={14} />
 				{folder.name}
 				<ChevronRight size={14} />
 				{showDropIndicator && canDrop && (
@@ -422,7 +439,6 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 		const now = new Date();
 		const noteDate = new Date(date);
 		const diffInHours = (now.getTime() - noteDate.getTime()) / (1000 * 60 * 60);
-
 		if (diffInHours < 1) return "Just now";
 		if (diffInHours < 24) return `${Math.floor(diffInHours)}h ago`;
 		if (diffInHours < 168) return `${Math.floor(diffInHours / 24)}d ago`;
@@ -434,16 +450,12 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 			const note = item.data;
 			const previousFolder = note.folder;
 			const targetFolder = getFolderById(folderId);
-
 			if (!targetFolder) {
 				toast.error("Target folder not found");
 				return;
 			}
-
 			if (note.folder === folderId) return;
-
 			moveNote(note.id, folderId);
-
 			toast.success(`Moved "${note.title || "Untitled"}" to ${targetFolder.name}`, {
 				action: {
 					label: "Undo",
@@ -457,25 +469,20 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 		[getFolderById, moveNote],
 	);
 
-	// Get breadcrumb path (folder mode only)
 	const breadcrumb = useMemo(() => {
 		if (!activeFolder || isCalendarMode) return [];
 		return getFolderBreadcrumb(folders, activeFolder.id);
 	}, [activeFolder, folders, isCalendarMode]);
 
-	// Apply tag filter to a set of notes
 	const applyTagFilter = useCallback(
 		(noteList: Note[]): Note[] => {
 			if (activeTags.length === 0) return noteList;
-
 			const hasUncategorizedFilter = activeTags.includes("uncategorized");
 			const otherTags = activeTags.filter((t) => t !== "uncategorized");
-
 			return noteList.filter((note) => {
 				const noteHasNoTags = !note.tags || note.tags.length === 0;
 				const noteMatchesOtherTags =
 					otherTags.length === 0 || otherTags.some((tag) => note.tags?.includes(tag));
-
 				if (hasUncategorizedFilter && noteHasNoTags) return true;
 				if (otherTags.length > 0 && noteMatchesOtherTags) return true;
 				return false;
@@ -484,53 +491,40 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 		[activeTags],
 	);
 
-	// Filter notes based on mode
 	const filteredNotes = useMemo(() => {
 		let baseNotes: Note[];
-
 		if (calendarMonth) {
-			// Month mode: all non-archived notes updated in the selected month
 			baseNotes = notes
 				.filter((note) => !note.archived && isSameMonthDate(note.updatedAt, calendarMonth))
 				.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 		} else if (calendarDate) {
-			// Date mode: all non-archived notes updated on the selected date
 			baseNotes = notes
 				.filter((note) => !note.archived && isSameDayDate(note.updatedAt, calendarDate))
 				.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 		} else {
-			// Folder mode
 			if (!activeFolder) return [];
-
 			const getSubtreeIds = (folderId: string): string[] => {
 				const children = folders.filter((f) => f.parentId === folderId);
 				return [folderId, ...children.flatMap((child) => getSubtreeIds(child.id))];
 			};
-
 			const folderIds = getSubtreeIds(activeFolder.id);
-
 			baseNotes = notes.filter((note) => {
 				const matchesArchived = note.archived === (viewMode === "archived");
 				if (!matchesArchived) return false;
 				return folderIds.includes(note.folder);
 			});
 		}
-
 		return applyTagFilter(baseNotes);
 	}, [notes, activeFolder, viewMode, folders, calendarDate, calendarMonth, applyTagFilter]);
 
-	// ── Calendar folder groups (calendar mode only) ──────────────────────────
-
 	const calendarFolderGroups = useMemo((): CalendarFolderGroup[] => {
 		if (!isCalendarMode) return [];
-
 		const groupMap = new Map<string, Note[]>();
 		for (const note of filteredNotes) {
 			const existing = groupMap.get(note.folder) || [];
 			existing.push(note);
 			groupMap.set(note.folder, existing);
 		}
-
 		return Array.from(groupMap.entries())
 			.map(([folderId, groupNotes]) => ({
 				folderId,
@@ -544,8 +538,6 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 			});
 	}, [filteredNotes, folders, isCalendarMode]);
 
-	// ── Folder hierarchy (folder mode only) ──────────────────────────────────
-
 	interface FolderNode {
 		folder: Folder;
 		notes: Note[];
@@ -554,12 +546,9 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 
 	const folderHierarchy = useMemo(() => {
 		if (isCalendarMode || !activeFolder) return { directNotes: [], nestedFolders: [] };
-
 		const directNotes = filteredNotes.filter((note) => note.folder === activeFolder.id);
-
-		const buildFolderTree = (parentId: string, depth: number = 0): FolderNode[] => {
+		const buildFolderTree = (parentId: string, depth = 0): FolderNode[] => {
 			if (depth > 10) return [];
-
 			return folders
 				.filter((f) => f.parentId === parentId && !f.archived)
 				.sort((a, b) => (a.order || 0) - (b.order || 0))
@@ -570,12 +559,9 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 				}))
 				.filter((node) => node.notes.length > 0 || node.children.length > 0);
 		};
-
 		const nestedFolders = buildFolderTree(activeFolder.id);
 		return { directNotes, nestedFolders };
 	}, [filteredNotes, activeFolder, folders, isCalendarMode]);
-
-	// ── Shared renderers ─────────────────────────────────────────────────────
 
 	const renderNoteItem = (note: Note) => (
 		<DraggableNoteItem
@@ -591,20 +577,15 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 
 	const renderFolderBreadcrumb = (crumbs: Folder[]) => (
 		<div className="flex items-center gap-1 text-sm text-muted-foreground mb-2 ml-1">
-			{crumbs.map((folder, index) => {
-				const Icon = getFolderIconComponent(folder);
-				return (
-					<React.Fragment key={folder.id}>
-						{index > 0 && (
-							<ChevronRight size={12} className="text-muted-foreground/50" />
-						)}
-						<span className="flex items-center gap-1">
-							<Icon size={13} />
-							<span className="font-medium">{folder.name}</span>
-						</span>
-					</React.Fragment>
-				);
-			})}
+			{crumbs.map((folder, index) => (
+				<React.Fragment key={folder.id}>
+					{index > 0 && <ChevronRight size={12} className="text-muted-foreground/50" />}
+					<span className="flex items-center gap-1">
+						<FolderIconDisplay folder={folder} size={13} />
+						<span className="font-medium">{folder.name}</span>
+					</span>
+				</React.Fragment>
+			))}
 		</div>
 	);
 
@@ -614,42 +595,26 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 			notes: Note[];
 			children: { folder: Folder; notes: Note[]; children: unknown[] }[];
 		},
-		depth: number = 0,
-	): React.ReactNode => {
-		return (
-			<div
-				key={node.folder.id}
-				className={depth > 0 ? "ml-4 border-l border-border pl-4 py-2" : ""}
+		depth = 0,
+	): React.ReactNode => (
+		<div
+			key={node.folder.id}
+			className={depth > 0 ? "ml-4 border-l border-border pl-4 py-2" : ""}
+		>
+			<FolderSectionDropZone
+				folder={node.folder}
+				onNoteDrop={handleNoteDrop}
+				onClick={() => setActiveFolder(node.folder)}
 			>
-				<FolderSectionDropZone
-					folder={node.folder}
-					onNoteDrop={handleNoteDrop}
-					onClick={() => setActiveFolder(node.folder)}
-				>
-					{node.notes.map(renderNoteItem)}
-				</FolderSectionDropZone>
-
-				{node.children.length > 0 && (
-					<div className="mt-3">
-						{node.children.map((child) =>
-							renderFolderSection(
-								child as {
-									folder: Folder;
-									notes: Note[];
-									children: {
-										folder: Folder;
-										notes: Note[];
-										children: unknown[];
-									}[];
-								},
-								depth + 1,
-							),
-						)}
-					</div>
-				)}
-			</div>
-		);
-	};
+				{node.notes.map(renderNoteItem)}
+			</FolderSectionDropZone>
+			{node.children.length > 0 && (
+				<div className="mt-3">
+					{node.children.map((child) => renderFolderSection(child as any, depth + 1))}
+				</div>
+			)}
+		</div>
+	);
 
 	const undoRedoButtons = (
 		<div className="flex items-center gap-1">
@@ -674,16 +639,12 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 		</div>
 	);
 
-	// ── Calendar heading text ────────────────────────────────────────────────
-
 	const calendarHeading =
 		isMonthMode ?
 			calendarMonth ? formatCalendarMonthHeading(calendarMonth)
 			:	""
 		: calendarDate ? formatCalendarDateHeading(calendarDate)
 		: "";
-
-	// ── Empty state message ──────────────────────────────────────────────────
 
 	const emptyMessage =
 		isCalendarMode ?
@@ -702,8 +663,6 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 					: "No archived notes yet",
 			};
 
-	// ── Calendar mode rendering ──────────────────────────────────────────────
-
 	if (isCalendarMode) {
 		return (
 			<div className="h-full flex flex-col p-6 animate-fadeIn">
@@ -718,10 +677,8 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 						</div>
 						{undoRedoButtons}
 					</div>
-
 					<TagFilter tags={tags} activeTags={activeTags} setActiveTags={setActiveTags} />
 				</div>
-
 				<div className="flex-1 overflow-y-auto">
 					{filteredNotes.length === 0 ?
 						<div className="text-center py-12 text-muted-foreground animate-fadeIn">
@@ -744,8 +701,6 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 		);
 	}
 
-	// ── Folder mode rendering ────────────────────────────────────────────────
-
 	return (
 		<div className="h-full flex flex-col p-6 animate-fadeIn">
 			<div className="space-y-4 mb-6">
@@ -753,43 +708,31 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 					<div className="flex items-center gap-2">
 						{breadcrumb.length > 1 && (
 							<>
-								{breadcrumb.slice(0, -1).map((folder) => {
-									const BreadcrumbIcon = getFolderIconComponent(folder);
-									return (
-										<React.Fragment key={folder.id}>
-											<button
-												type="button"
-												onClick={() => setActiveFolder(folder)}
-												className="text-muted-foreground hover:text-foreground flex items-center gap-1 cursor-pointer transition-colors"
-											>
-												<BreadcrumbIcon size={16} />
-												<span className="text-sm">{folder.name}</span>
-											</button>
-											<ChevronRight
-												size={16}
-												className="text-muted-foreground"
-											/>
-										</React.Fragment>
-									);
-								})}
+								{breadcrumb.slice(0, -1).map((folder) => (
+									<React.Fragment key={folder.id}>
+										<button
+											type="button"
+											onClick={() => setActiveFolder(folder)}
+											className="text-muted-foreground hover:text-foreground flex items-center gap-1 cursor-pointer transition-colors"
+										>
+											<FolderIconDisplay folder={folder} size={16} />
+											<span className="text-sm">{folder.name}</span>
+										</button>
+										<ChevronRight size={16} className="text-muted-foreground" />
+									</React.Fragment>
+								))}
 							</>
 						)}
-						{activeFolder &&
-							React.createElement(getFolderIconComponent(activeFolder), {
-								size: 24,
-							})}
+						{activeFolder && <FolderIconDisplay folder={activeFolder} size={24} />}
 						<h1 className="text-2xl font-semibold">{activeFolder?.name || "Inbox"}</h1>
 						<span className="text-sm text-muted-foreground">
 							({filteredNotes.length})
 						</span>
 					</div>
-
 					{undoRedoButtons}
 				</div>
-
 				<TagFilter tags={tags} activeTags={activeTags} setActiveTags={setActiveTags} />
 			</div>
-
 			<div className="flex-1 overflow-y-auto">
 				{filteredNotes.length === 0 ?
 					<div className="text-center py-12 text-muted-foreground animate-fadeIn">
@@ -805,19 +748,8 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 								{folderHierarchy.directNotes.map(renderNoteItem)}
 							</CurrentFolderDropZone>
 						)}
-
 						{folderHierarchy.nestedFolders.map((node) =>
-							renderFolderSection(
-								node as {
-									folder: Folder;
-									notes: Note[];
-									children: {
-										folder: Folder;
-										notes: Note[];
-										children: unknown[];
-									}[];
-								},
-							),
+							renderFolderSection(node as any),
 						)}
 					</div>
 				}

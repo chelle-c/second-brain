@@ -1,65 +1,7 @@
 import type { Folder, Note, NoteReminder, NotesFolders, Tag } from "@/types/notes";
-import type { DatabaseContext } from "../../types/storage";
-import { deepEqual } from "../utils";
-import { getIconNameFromComponent } from "@/components/IconPicker";
-import {
-	// Folder icons
-	Circle,
-	Club,
-	Diamond,
-	Folder as FolderIcon,
-	Heart,
-	Spade,
-	Sparkles,
-	Square,
-	Star,
-	Triangle,
-	X,
-	// Tag icons
-	Tag as TagIcon,
-	Bookmark,
-	Flag,
-	CheckCircle,
-	AlertCircle,
-	Lightbulb,
-	Zap,
-	Flame,
-	Target,
-	BookOpen,
-	FileText,
-	Edit3,
-	Code,
-	Link,
-	Paperclip,
-	List,
-	Calendar,
-	Clock,
-	User,
-	Users,
-	Home,
-	MapPin,
-	Globe,
-	Truck,
-	Mail,
-	Phone,
-	MessageCircle,
-	Music,
-	Play,
-	Coffee,
-	Gift,
-	Palette,
-	Settings,
-	Moon,
-	Sun,
-	Paintbrush,
-	Coins,
-	Banknote,
-	Glasses,
-	Landmark,
-	Key,
-	WalletCards,
-	type LucideIcon,
-} from "lucide-react";
+import type { DatabaseContext } from "@/types/storage";
+import { deepEqual } from "@/lib/utils";
+import { serializeIconField, deserializeIconField, DEFAULT_TAG_ICON } from "@/lib/icons";
 
 interface NormalizedNote {
 	id: string;
@@ -67,83 +9,12 @@ interface NormalizedNote {
 	content: string;
 	tags: string[];
 	folder: string;
-	reminder: string | null; // JSON | null
+	reminder: string | null;
+	icon: string | null;
 	createdAt: string;
 	updatedAt: string;
 	archived: boolean;
 }
-
-const ICON_MAP: Record<string, LucideIcon> = {
-	// Folder icons
-	Folder: FolderIcon,
-	Star: Star,
-	Heart: Heart,
-	Square: Square,
-	Triangle: Triangle,
-	Circle: Circle,
-	X: X,
-	Club: Club,
-	Spade: Spade,
-	Diamond: Diamond,
-	Sparkles: Sparkles,
-	// Tag icons
-	Tag: TagIcon,
-	Bookmark: Bookmark,
-	Flag: Flag,
-	CheckCircle: CheckCircle,
-	AlertCircle: AlertCircle,
-	Lightbulb: Lightbulb,
-	Zap: Zap,
-	Flame: Flame,
-	Target: Target,
-	BookOpen: BookOpen,
-	FileText: FileText,
-	Edit3: Edit3,
-	Code: Code,
-	Link: Link,
-	Paperclip: Paperclip,
-	List: List,
-	Calendar: Calendar,
-	Clock: Clock,
-	User: User,
-	Users: Users,
-	Home: Home,
-	MapPin: MapPin,
-	Globe: Globe,
-	Truck: Truck,
-	Mail: Mail,
-	Phone: Phone,
-	MessageCircle: MessageCircle,
-	Music: Music,
-	Play: Play,
-	Coffee: Coffee,
-	Gift: Gift,
-	Palette: Palette,
-	Settings: Settings,
-	Moon: Moon,
-	Sun: Sun,
-	Paintbrush: Paintbrush,
-	Coins: Coins,
-	Banknote: Banknote,
-	Glasses: Glasses,
-	Landmark: Landmark,
-	Key: Key,
-	WalletCards: WalletCards,
-};
-
-const getIconName = (icon: LucideIcon | undefined): string | null => {
-	if (!icon) return null;
-	for (const [name, component] of Object.entries(ICON_MAP)) {
-		if (component === icon) return name;
-	}
-	const fromIconPicker = getIconNameFromComponent(icon);
-	if (fromIconPicker && ICON_MAP[fromIconPicker]) return fromIconPicker;
-	const iconComponent = icon as unknown as { displayName?: string; name?: string };
-	const extractedName = iconComponent.displayName || iconComponent.name;
-	if (extractedName && ICON_MAP[extractedName]) return extractedName;
-	if (extractedName) return extractedName;
-	return null;
-};
 
 // ── helper: serialize / deserialize reminder ────────────────────────────────
 function serializeReminder(reminder: NoteReminder | null | undefined): string | null {
@@ -162,7 +33,6 @@ function deserializeReminder(raw: string | null | undefined): NoteReminder | nul
 
 export class NotesStorage {
 	private context: DatabaseContext;
-
 	constructor(context: DatabaseContext) {
 		this.context = context;
 	}
@@ -176,6 +46,7 @@ export class NotesStorage {
 				content: note.content,
 				folder: note.folder,
 				reminder: serializeReminder(note.reminder),
+				icon: note.icon || null,
 				createdAt:
 					note.createdAt instanceof Date ?
 						note.createdAt.toISOString()
@@ -215,7 +86,7 @@ export class NotesStorage {
 					id: tag.id,
 					name: tag.name,
 					color: tag.color,
-					iconName: getIconName(tag.icon),
+					iconName: serializeIconField(tag.icon, tag.emoji),
 				};
 			}
 			return normalized;
@@ -226,7 +97,7 @@ export class NotesStorage {
 		);
 	}
 
-	// ── legacy helpers (unchanged) ────────────────────────────────────────────
+	// ── legacy helpers ────────────────────────────────────────────────────────
 	private convertLegacyFolders(oldFolders: NotesFolders): Folder[] {
 		const folders: Folder[] = [];
 		let order = 0;
@@ -241,7 +112,7 @@ export class NotesStorage {
 				createdAt: new Date(),
 				updatedAt: new Date(),
 			});
-			if (oldFolder.children && oldFolder.children.length > 0) {
+			if (oldFolder.children?.length) {
 				for (const child of oldFolder.children) {
 					folders.push({
 						id: child.id,
@@ -330,11 +201,13 @@ export class NotesStorage {
 				const hasFolder = columnNames.includes("folder");
 				const hasFolderId = columnNames.includes("folderId");
 				const hasReminder = columnNames.includes("reminder");
+				const hasIcon = columnNames.includes("icon");
 
 				let query = "SELECT id, title, content, tags, createdAt, updatedAt, archived";
 				if (hasFolder) query += ", folder";
 				if (hasFolderId && !hasFolder) query += ", folderId";
 				if (hasReminder) query += ", reminder";
+				if (hasIcon) query += ", icon";
 				query += " FROM notes";
 
 				const results = await this.context.getDb().select<
@@ -346,6 +219,7 @@ export class NotesStorage {
 						folder?: string;
 						folderId?: string;
 						reminder?: string | null;
+						icon?: string | null;
 						createdAt: string;
 						updatedAt: string;
 						archived: number;
@@ -359,6 +233,7 @@ export class NotesStorage {
 					tags: row.tags ? JSON.parse(row.tags) : [],
 					folder: row.folder || row.folderId || "inbox",
 					reminder: deserializeReminder(row.reminder),
+					icon: row.icon || null,
 					createdAt: new Date(row.createdAt),
 					updatedAt: new Date(row.updatedAt),
 					archived: Boolean(row.archived),
@@ -375,9 +250,7 @@ export class NotesStorage {
 
 	async saveNotes(notes: Note[]): Promise<void> {
 		if (!this.hasNotesChanged(notes)) return;
-
 		return this.context.queueOperation(async () => {
-			// Diff logging (unchanged logic)
 			const oldNotes = this.context.cache.notes || [];
 			const oldIds = new Set(oldNotes.map((n) => n.id));
 			const newIds = new Set(notes.map((n) => n.id));
@@ -391,14 +264,25 @@ export class NotesStorage {
 			});
 
 			const db = this.context.getDb();
+
+			try {
+				const tableInfo = await db.select<Array<{ name: string }>>(
+					"PRAGMA table_info(notes)",
+				);
+				if (!tableInfo.some((col) => col.name === "icon")) {
+					await db.execute("ALTER TABLE notes ADD COLUMN icon TEXT DEFAULT NULL");
+				}
+			} catch {
+				/* column may already exist */
+			}
+
 			await db.execute("BEGIN TRANSACTION");
 			try {
 				await db.execute("DELETE FROM notes");
-
 				for (const note of notes) {
 					await db.execute(
-						`INSERT INTO notes (id, title, content, tags, folder, reminder, createdAt, updatedAt, archived)
-						 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+						`INSERT INTO notes (id, title, content, tags, folder, reminder, icon, createdAt, updatedAt, archived)
+						 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 						[
 							note.id,
 							note.title,
@@ -406,6 +290,7 @@ export class NotesStorage {
 							JSON.stringify(note.tags || []),
 							note.folder || "inbox",
 							serializeReminder(note.reminder),
+							note.icon || null,
 							note.createdAt instanceof Date ?
 								note.createdAt.toISOString()
 							:	note.createdAt,
@@ -416,7 +301,6 @@ export class NotesStorage {
 						],
 					);
 				}
-
 				await db.execute("COMMIT");
 			} catch (error) {
 				await db.execute("ROLLBACK");
@@ -434,7 +318,7 @@ export class NotesStorage {
 		});
 	}
 
-	// ── Folders (unchanged) ───────────────────────────────────────────────────
+	// ── Folders ───────────────────────────────────────────────────────────────
 	async loadFolders(): Promise<Folder[]> {
 		return this.context.queueOperation(async () => {
 			try {
@@ -466,16 +350,21 @@ export class NotesStorage {
 					this.context.cache.folders = initial;
 					return initial;
 				}
-				const folders = results.map((row) => ({
-					id: row.id,
-					name: row.name,
-					parentId: row.parentId,
-					icon: row.icon && ICON_MAP[row.icon] ? ICON_MAP[row.icon] : undefined,
-					archived: Boolean(row.archived),
-					order: row.order,
-					createdAt: new Date(row.createdAt),
-					updatedAt: new Date(row.updatedAt),
-				}));
+
+				const folders = results.map((row) => {
+					const { icon, emoji } = deserializeIconField(row.icon);
+					return {
+						id: row.id,
+						name: row.name,
+						parentId: row.parentId,
+						icon,
+						emoji,
+						archived: Boolean(row.archived),
+						order: row.order,
+						createdAt: new Date(row.createdAt),
+						updatedAt: new Date(row.updatedAt),
+					};
+				});
 				this.context.cache.folders = folders;
 				return folders;
 			} catch (error) {
@@ -543,7 +432,7 @@ export class NotesStorage {
 							folder.id,
 							folder.name,
 							folder.parentId,
-							getIconName(folder.icon),
+							serializeIconField(folder.icon, folder.emoji),
 							folder.archived ? 1 : 0,
 							folder.order || 0,
 							folder.createdAt ?
@@ -568,7 +457,7 @@ export class NotesStorage {
 		});
 	}
 
-	// ── Tags (unchanged) ──────────────────────────────────────────────────────
+	// ── Tags ──────────────────────────────────────────────────────────────────
 	async loadTags(): Promise<Record<string, Tag>> {
 		return this.context.queueOperation(async () => {
 			try {
@@ -580,15 +469,13 @@ export class NotesStorage {
 
 				const tags: Record<string, Tag> = {};
 				results.forEach((row) => {
-					const iconComponent =
-						row.icon && ICON_MAP[row.icon] ?
-							ICON_MAP[row.icon]
-						:	(ICON_MAP["Tag"] ?? FolderIcon);
+					const { icon, emoji } = deserializeIconField(row.icon);
 					tags[row.id] = {
 						id: row.id,
 						name: row.name,
 						color: row.color,
-						icon: iconComponent,
+						icon: icon || DEFAULT_TAG_ICON,
+						emoji,
 					};
 				});
 				this.context.cache.tags = tags;
@@ -608,10 +495,10 @@ export class NotesStorage {
 			try {
 				await db.execute("DELETE FROM tags");
 				for (const [, tag] of Object.entries(tags)) {
-					const iconName = getIconName(tag.icon) || "Tag";
+					const iconStr = serializeIconField(tag.icon, tag.emoji) || "Tag";
 					await db.execute(
 						`INSERT INTO tags (id, name, color, icon) VALUES (?, ?, ?, ?)`,
-						[tag.id, tag.name, tag.color, iconName],
+						[tag.id, tag.name, tag.color, iconStr],
 					);
 				}
 				await db.execute("COMMIT");

@@ -2,23 +2,13 @@ import type { LucideIcon } from "lucide-react";
 
 // ─── Reminder Types ────────────────────────────────────────────────────────
 
-/**
- * A single "notify me N units before" entry.
- * unit: "minutes" | "hours" | "days"
- * value: the numeric amount
- */
 export interface ReminderNotification {
 	unit: "minutes" | "hours" | "days";
 	value: number;
 }
 
-/**
- * The full reminder payload stored on a Note.
- * - dateTime: ISO string of the target reminder date/time
- * - notifications: ordered list of "notify before" entries
- */
 export interface NoteReminder {
-	dateTime: string; // ISO-8601
+	dateTime: string;
 	notifications: ReminderNotification[];
 }
 
@@ -34,6 +24,8 @@ export interface Note {
 	updatedAt: Date;
 	archived: boolean;
 	reminder?: NoteReminder | null;
+	/** Icon identifier – a Lucide icon name (e.g. "FileText") or an emoji character */
+	icon?: string | null;
 }
 
 export interface Folder {
@@ -41,6 +33,8 @@ export interface Folder {
 	name: string;
 	parentId: string | null;
 	icon?: LucideIcon;
+	/** Emoji used as the folder icon (takes priority over `icon` when set) */
+	emoji?: string;
 	archived?: boolean;
 	order?: number;
 	createdAt?: Date;
@@ -56,6 +50,8 @@ export interface Tag {
 			size?: number | string;
 		}
 	>;
+	/** Emoji used as the tag icon (takes priority over `icon` when set) */
+	emoji?: string;
 }
 
 export interface Tags {

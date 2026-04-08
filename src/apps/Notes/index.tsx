@@ -88,6 +88,15 @@ export function NotesApp() {
 		}
 	}, [folders, notesDefaultFolder, activeFolder]);
 
+	// ── Keep activeFolder in sync with store when folder data changes ─────────
+	useEffect(() => {
+		if (!activeFolder) return;
+		const fromStore = folders.find((f) => f.id === activeFolder.id);
+		if (fromStore && fromStore !== activeFolder) {
+			setActiveFolder(fromStore);
+		}
+	}, [folders, activeFolder]);
+
 	useEffect(() => {
 		if (sidebarView !== "folders") return;
 		if (viewState !== "list" && activeFolder && lastActiveFolderRef.current) {
@@ -166,7 +175,6 @@ export function NotesApp() {
 		setViewState("view");
 	}, []);
 
-	// FIX: clear selectedNoteId so NoteEditor mounts fresh
 	const handleCreateNote = useCallback((inFolder?: Folder) => {
 		if (inFolder) {
 			lastActiveFolderRef.current = inFolder;
@@ -298,7 +306,6 @@ export function NotesApp() {
 							onRedo={redo}
 						/>
 						<div className="flex-1 overflow-hidden">
-							{/* key forces a fresh mount so the editor never inherits stale data */}
 							<NoteEditor
 								key="create-new"
 								tags={tags}
