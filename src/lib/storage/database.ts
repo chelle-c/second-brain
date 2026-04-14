@@ -321,7 +321,8 @@ class SqlStorage {
 				parentExpenseId TEXT,
 				monthlyOverrides TEXT,
 				isModified INTEGER,
-				initialState TEXT
+				initialState TEXT,
+				subscriptionStatus TEXT
 			)
 		`);
 
@@ -465,6 +466,7 @@ class SqlStorage {
 				{ name: "paymentMethod", type: "TEXT", defaultValue: "'None'" },
 				{ name: "notify", type: "INTEGER", defaultValue: "0" },
 				{ name: "amountData", type: "TEXT", defaultValue: "NULL" },
+				{ name: "subscriptionStatus", type: "TEXT", defaultValue: "NULL" },
 			];
 
 			for (const column of requiredColumns) {

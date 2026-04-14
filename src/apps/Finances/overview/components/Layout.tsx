@@ -10,11 +10,7 @@ interface LayoutProps {
 
 export const Layout: React.FC<LayoutProps> = ({ children, currentView, setCurrentView }) => {
 	const viewModeOptions = [
-		{
-			label: "Cash Flow",
-			value: "cashflow" as const,
-			ariaLabel: "Monthly income vs expenses",
-		},
+		{ label: "Cash Flow", value: "cashflow" as const, ariaLabel: "Monthly income vs expenses" },
 		{
 			label: "Burn Rate",
 			value: "burnrate" as const,
@@ -25,10 +21,11 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, setCurren
 			value: "coverage" as const,
 			ariaLabel: "How well income covers expenses",
 		},
+		{ label: "Wishlist", value: "wishlist" as const, ariaLabel: "Plan for one-off purchases" },
 		{
-			label: "Savings",
-			value: "savings" as const,
-			ariaLabel: "Plan for discretionary purchases",
+			label: "Subscriptions",
+			value: "subscriptions" as const,
+			ariaLabel: "Manage recurring services",
 		},
 	];
 

@@ -114,6 +114,7 @@ interface RawExpense {
 		dueDate?: string | null;
 		paymentMethod?: string;
 	};
+	subscriptionStatus?: string;
 }
 
 interface RawExpensesData {
@@ -191,6 +192,7 @@ function reviveExpense(raw: RawExpense): Expense {
 		monthlyOverrides: (raw.monthlyOverrides ?? {}) as Expense["monthlyOverrides"],
 		isModified: raw.isModified ?? false,
 		initialState,
+		subscriptionStatus: raw.subscriptionStatus as Expense["subscriptionStatus"],
 	};
 }
 

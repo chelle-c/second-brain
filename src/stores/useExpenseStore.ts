@@ -11,6 +11,7 @@ import type { Expense, ExpenseFormData, OverviewMode } from "@/types/expense";
 import { DEFAULT_PAYMENT_METHODS } from "@/types/storage";
 import useAppStore from "./useAppStore";
 import { type HistoryAction, useHistoryStore } from "./useHistoryStore";
+import type { SubscriptionStatus } from "@/types/overview";
 
 type TimeUnit = "days" | "weeks" | "months" | "years";
 
@@ -79,6 +80,8 @@ interface ExpenseStore {
 	updatePaymentMethod: (oldName: string, newName: string) => void;
 	deletePaymentMethod: (name: string) => void;
 	toggleExpenseNotify: (id: string) => void;
+
+	setSubscriptionStatus: (id: string, status: SubscriptionStatus | undefined) => void;
 
 	undo: () => void;
 	redo: () => void;
@@ -1232,6 +1235,24 @@ export const useExpenseStore = create<ExpenseStore>()(
 					}
 					break;
 			}
+
+			if (useAppStore.getState().autoSaveEnabled) {
+				useAppStore.getState().saveToFile(AppToSave.Expenses);
+			}
+		},
+
+		setSubscriptionStatus: (id, status) => {
+			const { expenses } = get();
+			const expense = expenses.find((e) => e.id === id);
+			if (!expense) return;
+
+			set({
+				expenses: expenses.map((e) =>
+					e.id === id || e.parentExpenseId === id ?
+						{ ...e, subscriptionStatus: status, updatedAt: new Date() }
+					:	e,
+				),
+			});
 
 			if (useAppStore.getState().autoSaveEnabled) {
 				useAppStore.getState().saveToFile(AppToSave.Expenses);

@@ -10,31 +10,15 @@ interface StatCardProps {
 	icon?: LucideIcon;
 	tone?: StatCardTone;
 	sublabel?: string;
-	trend?: number; // Percentage; renders an up/down indicator
-	trendIsGood?: boolean; // If trend > 0 is desirable (e.g. income) set true; for expenses set false
+	trend?: number;
+	trendIsGood?: boolean;
 }
 
-const toneClasses: Record<StatCardTone, { bg: string; fg: string; iconBg: string }> = {
-	neutral: {
-		bg: "bg-card",
-		fg: "text-foreground",
-		iconBg: "bg-accent text-accent-foreground",
-	},
-	positive: {
-		bg: "bg-card",
-		fg: "text-foreground",
-		iconBg: "bg-[var(--chart-2)]/20 text-[var(--chart-2)]",
-	},
-	negative: {
-		bg: "bg-card",
-		fg: "text-foreground",
-		iconBg: "bg-destructive/15 text-destructive",
-	},
-	warning: {
-		bg: "bg-card",
-		fg: "text-foreground",
-		iconBg: "bg-[var(--chart-4)]/20 text-[var(--chart-4)]",
-	},
+const toneClasses: Record<StatCardTone, { iconBg: string }> = {
+	neutral: { iconBg: "bg-accent text-accent-foreground" },
+	positive: { iconBg: "bg-(--chart-2)/20 text-chart-2" },
+	negative: { iconBg: "bg-destructive/15 text-destructive" },
+	warning: { iconBg: "bg-(--chart-4)/20 text-chart-4" },
 };
 
 export const StatCard: React.FC<StatCardProps> = ({
@@ -48,19 +32,16 @@ export const StatCard: React.FC<StatCardProps> = ({
 }) => {
 	const classes = toneClasses[tone];
 
-	// Determine trend color based on direction and desirability
 	const showTrend = trend !== undefined && Math.abs(trend) >= 0.1;
 	let trendColor = "text-muted-foreground";
 	if (showTrend) {
 		const isIncreasing = trend > 0;
 		const isGood = trendIsGood ? isIncreasing : !isIncreasing;
-		trendColor = isGood ? "text-[var(--chart-2)]" : "text-destructive";
+		trendColor = isGood ? "text-chart-2" : "text-destructive";
 	}
 
 	return (
-		<div
-			className={`${classes.bg} rounded-xl border border-border p-4 flex items-start gap-3 transition-shadow hover:shadow-md`}
-		>
+		<div className="bg-card rounded-xl border border-border p-4 flex items-center gap-3 transition-shadow hover:shadow-md">
 			{Icon && (
 				<div className={`${classes.iconBg} rounded-lg p-2 shrink-0`}>
 					<Icon size={20} />
@@ -70,8 +51,8 @@ export const StatCard: React.FC<StatCardProps> = ({
 				<div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
 					{label}
 				</div>
-				<div className={`text-2xl font-bold ${classes.fg} mt-0.5 truncate`}>{value}</div>
-				<div className="flex items-center gap-2 mt-1 min-h-[1rem]">
+				<div className="text-2xl font-bold text-foreground mt-0.5 truncate">{value}</div>
+				<div className="flex items-center gap-2 mt-1 min-h-4">
 					{sublabel && (
 						<span className="text-xs text-muted-foreground truncate">{sublabel}</span>
 					)}

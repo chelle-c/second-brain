@@ -1,11 +1,9 @@
-import { format, isAfter, startOfMonth } from "date-fns";
+import { format } from "date-fns";
 import {
 	ArrowDownCircle,
 	ArrowUpCircle,
 	ChevronLeft,
 	ChevronRight,
-	Eye,
-	EyeOff,
 	MinusCircle,
 	Wallet,
 } from "lucide-react";
@@ -28,27 +26,18 @@ export const CashFlowView: React.FC = () => {
 
 	const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 	const [displayRange, setDisplayRange] = useState<CashFlowRange>(6);
-	const [hideFutureMonths, setHideFutureMonths] = useState(true);
 
 	const today = useMemo(() => new Date(), []);
-	const isViewingCurrentYear = selectedYear === today.getFullYear();
 	const isFullYearMode = displayRange === "all";
 
-	const rawCashFlow = useMemo(() => {
+	// Full Year now ALWAYS shows all 12 months of the selected year,
+	// matching the behavior of the Income and Expense year views.
+	const cashFlow = useMemo(() => {
 		if (isFullYearMode) {
 			return getYearlyCashFlow(incomeEntries, expenses, selectedYear);
 		}
 		return getTrailingCashFlow(incomeEntries, expenses, displayRange, today);
 	}, [incomeEntries, expenses, selectedYear, displayRange, isFullYearMode, today]);
-
-	const cashFlow = useMemo(() => {
-		if (!isFullYearMode) return rawCashFlow;
-		if (!hideFutureMonths) return rawCashFlow;
-		if (!isViewingCurrentYear) return rawCashFlow;
-
-		const currentMonthStart = startOfMonth(today);
-		return rawCashFlow.filter((m) => !isAfter(startOfMonth(m.monthDate), currentMonthStart));
-	}, [rawCashFlow, isFullYearMode, hideFutureMonths, isViewingCurrentYear, today]);
 
 	const stats = useMemo(() => {
 		if (cashFlow.length === 0) {
@@ -66,11 +55,9 @@ export const CashFlowView: React.FC = () => {
 		const totalIncome = cashFlow.reduce((s, m) => s + m.income, 0);
 		const totalExpenses = cashFlow.reduce((s, m) => s + m.expenses, 0);
 		const totalNet = totalIncome - totalExpenses;
-
 		const monthsWithData = cashFlow.filter((m) => m.income > 0 || m.expenses > 0).length;
 		const avgIncome = monthsWithData > 0 ? totalIncome / monthsWithData : 0;
 		const avgExpenses = monthsWithData > 0 ? totalExpenses / monthsWithData : 0;
-
 		const bestMonth = cashFlow.reduce((best, m) => (m.net > best.net ? m : best), cashFlow[0]);
 
 		return {
@@ -110,64 +97,36 @@ export const CashFlowView: React.FC = () => {
 
 	return (
 		<div className="space-y-4">
-			{/* ─── Header ──────────────────────────────────────────────── */}
 			<div className="flex items-center justify-between flex-wrap gap-3">
 				<h2 className="text-lg font-semibold text-foreground">Monthly Cash Flow</h2>
 
-				{/* Controls container — fixed structure prevents jump */}
 				<div className="flex items-center gap-3">
-					{/* Full-year controls: always rendered as a fixed-width block when
-					    in Full Year mode, so toggling years doesn't shift the range
-					    selector. Hidden entirely in trailing mode (single layout change). */}
 					{isFullYearMode && (
-						<div className="flex items-center gap-3">
-							{/* Future toggle — disabled (not hidden) for past years */}
+						<div className="flex items-center gap-1">
 							<button
 								type="button"
-								onClick={() => setHideFutureMonths((v) => !v)}
-								disabled={!isViewingCurrentYear}
-								className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md bg-muted text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-muted disabled:hover:text-muted-foreground min-w-[130px] justify-center"
-								title={
-									!isViewingCurrentYear ? "Only applies to current year"
-									: hideFutureMonths ?
-										"Show future months"
-									:	"Hide future months"
-								}
+								onClick={() => navigateYear(-1)}
+								disabled={!years.includes(selectedYear - 1)}
+								className="p-1.5 hover:bg-accent rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+								title="Previous year"
 							>
-								{hideFutureMonths ?
-									<EyeOff size={14} />
-								:	<Eye size={14} />}
-								{hideFutureMonths ? "Future hidden" : "Showing all"}
+								<ChevronLeft size={18} />
 							</button>
-
-							{/* Year navigation */}
-							<div className="flex items-center gap-1">
-								<button
-									type="button"
-									onClick={() => navigateYear(-1)}
-									disabled={!years.includes(selectedYear - 1)}
-									className="p-1.5 hover:bg-accent rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-									title="Previous year"
-								>
-									<ChevronLeft size={18} />
-								</button>
-								<div className="px-2 font-semibold text-foreground w-[52px] text-center">
-									{selectedYear}
-								</div>
-								<button
-									type="button"
-									onClick={() => navigateYear(1)}
-									disabled={!years.includes(selectedYear + 1)}
-									className="p-1.5 hover:bg-accent rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-									title="Next year"
-								>
-									<ChevronRight size={18} />
-								</button>
+							<div className="px-2 font-semibold text-foreground w-[52px] text-center">
+								{selectedYear}
 							</div>
+							<button
+								type="button"
+								onClick={() => navigateYear(1)}
+								disabled={!years.includes(selectedYear + 1)}
+								className="p-1.5 hover:bg-accent rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+								title="Next year"
+							>
+								<ChevronRight size={18} />
+							</button>
 						</div>
 					)}
 
-					{/* Range selector — always present, anchors the right edge */}
 					<div
 						className="inline-flex gap-0.5 p-0.5 bg-muted rounded-lg"
 						role="radiogroup"
@@ -196,7 +155,6 @@ export const CashFlowView: React.FC = () => {
 				</div>
 			</div>
 
-			{/* ─── Summary Stats ───────────────────────────────────────── */}
 			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
 				<StatCard
 					label="Total Income"
@@ -232,7 +190,6 @@ export const CashFlowView: React.FC = () => {
 				/>
 			</div>
 
-			{/* ─── Comparison Chart ────────────────────────────────────── */}
 			<div className="bg-card rounded-xl shadow-lg border border-border p-6">
 				<div className="mb-4">
 					<h3 className="text-base font-semibold text-foreground">Income vs Expenses</h3>
@@ -272,7 +229,6 @@ export const CashFlowView: React.FC = () => {
 				}
 			</div>
 
-			{/* ─── Monthly Net Breakdown ───────────────────────────────── */}
 			<div className="bg-card rounded-xl shadow-lg border border-border p-6">
 				<h3 className="text-base font-semibold text-foreground mb-3">Monthly Net</h3>
 				<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
@@ -284,9 +240,8 @@ export const CashFlowView: React.FC = () => {
 								key={`${m.month}-${m.monthDate.getTime()}`}
 								className={`rounded-lg border p-2.5 text-center ${
 									!hasData ? "border-border bg-muted/30 opacity-50"
-									: isPositive ?
-										"border-[var(--chart-2)]/40 bg-[var(--chart-2)]/10"
-									:	"border-destructive/40 bg-destructive/10"
+									: isPositive ? "border-(--chart-2)/40 bg-(--chart-2)/10"
+									: "border-destructive/40 bg-destructive/10"
 								}`}
 							>
 								<div className="text-xs font-medium text-muted-foreground">
@@ -295,7 +250,7 @@ export const CashFlowView: React.FC = () => {
 								<div
 									className={`text-sm font-bold mt-0.5 ${
 										!hasData ? "text-muted-foreground"
-										: isPositive ? "text-[var(--chart-2)]"
+										: isPositive ? "text-chart-2"
 										: "text-destructive"
 									}`}
 								>

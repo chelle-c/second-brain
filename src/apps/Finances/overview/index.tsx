@@ -5,7 +5,8 @@ import { BurnRateView } from "./components/BurnRateView";
 import { CashFlowView } from "./components/CashFlowView";
 import { CoverageView } from "./components/CoverageView";
 import { Layout } from "./components/Layout";
-import { SavingsPlannerView } from "./components/SavingsPlannerView";
+import { SubscriptionsView } from "./components/SubscriptionsView";
+import { WishlistView } from "./components/WishlistView";
 
 export const FinancialOverview: React.FC = () => {
 	const [currentView, setCurrentView] = useState<OverviewViewType>("cashflow");
@@ -19,7 +20,9 @@ export const FinancialOverview: React.FC = () => {
 					<BurnRateView />
 				: currentView === "coverage" ?
 					<CoverageView />
-				:	<SavingsPlannerView />}
+				: currentView === "wishlist" ?
+					<WishlistView />
+				:	<SubscriptionsView />}
 			</div>
 		</Layout>
 	);

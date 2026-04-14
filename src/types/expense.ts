@@ -1,3 +1,5 @@
+import type { SubscriptionStatus } from "./overview";
+
 export interface ExpensesData {
 	expenses: {
 		expenses: Expense[];
@@ -42,6 +44,7 @@ export interface Expense {
 	monthlyOverrides?: { [key: string]: Partial<Expense> };
 	isModified?: boolean;
 	initialState?: OccurrenceInitialState;
+	subscriptionStatus?: SubscriptionStatus;
 }
 
 export interface ExpenseFormData {

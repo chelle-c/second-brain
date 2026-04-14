@@ -1,23 +1,21 @@
+import type { Expense } from "@/types/expense";
+import type { IncomeEntry } from "@/types/income";
+import type {
+	IncomeRequirements,
+	MonthlyCashFlow,
+	CoachingAdvice,
+	IncomeFrequency,
+	SubscriptionRow,
+} from "@/types/overview";
 import {
-	addMonths,
 	endOfMonth,
 	format,
 	isSameMonth,
 	parseISO,
 	startOfMonth,
 	subMonths,
+	differenceInDays,
 } from "date-fns";
-import type { Expense } from "@/types/expense";
-import type { IncomeEntry } from "@/types/income";
-import type {
-	IncomeRequirements,
-	MonthlyCashFlow,
-	NeedsAnalysis,
-	TimeRange,
-	MonthlyWantObligation,
-	RecurringWantSeries,
-	SavingsAnalysis,
-} from "@/types/overview";
 
 // ============================================
 // Internal Helpers
@@ -180,74 +178,74 @@ export const getYearlyCashFlow = (
  * Analyze "Need" type expenses over a trailing window ending at (and including)
  * the reference month.
  */
-export const analyzeNeeds = (
-	expenses: Expense[],
-	monthsBack: TimeRange,
-	referenceDate: Date = new Date(),
-): NeedsAnalysis => {
-	const monthlyValues: NeedsAnalysis["monthlyValues"] = [];
-	const categoryTotals: Record<string, number> = {};
-	let total = 0;
-	let monthsWithData = 0;
+// export const analyzeNeeds = (
+// 	expenses: Expense[],
+// 	monthsBack: TimeRange,
+// 	referenceDate: Date = new Date(),
+// ): NeedsAnalysis => {
+// 	const monthlyValues: NeedsAnalysis["monthlyValues"] = [];
+// 	const categoryTotals: Record<string, number> = {};
+// 	let total = 0;
+// 	let monthsWithData = 0;
 
-	// Oldest → newest for intuitive chart ordering
-	for (let i = monthsBack - 1; i >= 0; i--) {
-		const monthDate = subMonths(startOfMonth(referenceDate), i);
-		const monthNeeds = getExpensesForMonth(expenses, monthDate).filter(
-			(e) => e.type === "need",
-		);
+// 	// Oldest → newest for intuitive chart ordering
+// 	for (let i = monthsBack - 1; i >= 0; i--) {
+// 		const monthDate = subMonths(startOfMonth(referenceDate), i);
+// 		const monthNeeds = getExpensesForMonth(expenses, monthDate).filter(
+// 			(e) => e.type === "need",
+// 		);
 
-		const monthTotal = monthNeeds.reduce((sum, e) => sum + e.amount, 0);
-		total += monthTotal;
-		if (monthTotal > 0) monthsWithData++;
+// 		const monthTotal = monthNeeds.reduce((sum, e) => sum + e.amount, 0);
+// 		total += monthTotal;
+// 		if (monthTotal > 0) monthsWithData++;
 
-		for (const expense of monthNeeds) {
-			categoryTotals[expense.category] =
-				(categoryTotals[expense.category] || 0) + expense.amount;
-		}
+// 		for (const expense of monthNeeds) {
+// 			categoryTotals[expense.category] =
+// 				(categoryTotals[expense.category] || 0) + expense.amount;
+// 		}
 
-		monthlyValues.push({
-			month: format(monthDate, monthsBack > 6 ? "MMM" : "MMM yyyy"),
-			monthDate,
-			amount: monthTotal,
-		});
-	}
+// 		monthlyValues.push({
+// 			month: format(monthDate, monthsBack > 6 ? "MMM" : "MMM yyyy"),
+// 			monthDate,
+// 			amount: monthTotal,
+// 		});
+// 	}
 
-	const averageMonthly = monthsBack > 0 ? total / monthsBack : 0;
+// 	const averageMonthly = monthsBack > 0 ? total / monthsBack : 0;
 
-	// Category totals → averages per month
-	const byCategory: Record<string, number> = {};
-	for (const [cat, catTotal] of Object.entries(categoryTotals)) {
-		byCategory[cat] = catTotal / monthsBack;
-	}
+// 	// Category totals → averages per month
+// 	const byCategory: Record<string, number> = {};
+// 	for (const [cat, catTotal] of Object.entries(categoryTotals)) {
+// 		byCategory[cat] = catTotal / monthsBack;
+// 	}
 
-	// Trend: compare older half vs newer half
-	let trend = 0;
-	if (monthsBack >= 2) {
-		const mid = Math.floor(monthsBack / 2);
-		const firstHalf = monthlyValues.slice(0, mid);
-		const secondHalf = monthlyValues.slice(mid);
+// 	// Trend: compare older half vs newer half
+// 	let trend = 0;
+// 	if (monthsBack >= 2) {
+// 		const mid = Math.floor(monthsBack / 2);
+// 		const firstHalf = monthlyValues.slice(0, mid);
+// 		const secondHalf = monthlyValues.slice(mid);
 
-		const firstAvg = firstHalf.reduce((s, m) => s + m.amount, 0) / (firstHalf.length || 1);
-		const secondAvg = secondHalf.reduce((s, m) => s + m.amount, 0) / (secondHalf.length || 1);
+// 		const firstAvg = firstHalf.reduce((s, m) => s + m.amount, 0) / (firstHalf.length || 1);
+// 		const secondAvg = secondHalf.reduce((s, m) => s + m.amount, 0) / (secondHalf.length || 1);
 
-		if (firstAvg > 0) {
-			trend = ((secondAvg - firstAvg) / firstAvg) * 100;
-		} else if (secondAvg > 0) {
-			trend = 100; // Came from zero → consider it a full increase
-		}
-	}
+// 		if (firstAvg > 0) {
+// 			trend = ((secondAvg - firstAvg) / firstAvg) * 100;
+// 		} else if (secondAvg > 0) {
+// 			trend = 100; // Came from zero → consider it a full increase
+// 		}
+// 	}
 
-	return {
-		averageMonthly,
-		total,
-		monthsAnalyzed: monthsBack,
-		monthsWithData,
-		byCategory,
-		trend,
-		monthlyValues,
-	};
-};
+// 	return {
+// 		averageMonthly,
+// 		total,
+// 		monthsAnalyzed: monthsBack,
+// 		monthsWithData,
+// 		byCategory,
+// 		trend,
+// 		monthlyValues,
+// 	};
+// };
 
 // ============================================
 // Income Requirements
@@ -291,25 +289,25 @@ export const calculateIncomeRequirements = (
  * Average discretionary income (income minus needs) over a trailing window.
  * This is the realistic "saveable" amount per month.
  */
-export const getAverageSurplus = (
-	incomeEntries: IncomeEntry[],
-	expenses: Expense[],
-	monthsBack: number,
-	referenceDate: Date = new Date(),
-): number => {
-	if (monthsBack <= 0) return 0;
+// export const getAverageSurplus = (
+// 	incomeEntries: IncomeEntry[],
+// 	expenses: Expense[],
+// 	monthsBack: number,
+// 	referenceDate: Date = new Date(),
+// ): number => {
+// 	if (monthsBack <= 0) return 0;
 
-	let totalSurplus = 0;
+// 	let totalSurplus = 0;
 
-	for (let i = monthsBack - 1; i >= 0; i--) {
-		const monthDate = subMonths(startOfMonth(referenceDate), i);
-		const income = getIncomeForMonth(incomeEntries, monthDate);
-		const breakdown = getExpenseBreakdownForMonth(expenses, monthDate);
-		totalSurplus += income - breakdown.needs;
-	}
+// 	for (let i = monthsBack - 1; i >= 0; i--) {
+// 		const monthDate = subMonths(startOfMonth(referenceDate), i);
+// 		const income = getIncomeForMonth(incomeEntries, monthDate);
+// 		const breakdown = getExpenseBreakdownForMonth(expenses, monthDate);
+// 		totalSurplus += income - breakdown.needs;
+// 	}
 
-	return totalSurplus / monthsBack;
-};
+// 	return totalSurplus / monthsBack;
+// };
 
 /**
  * Analyze all "Want" expenses and compute what it takes to fund them.
@@ -319,108 +317,95 @@ export const getAverageSurplus = (
  *   - For each upcoming month, compute how much must be set aside.
  *   - Recurring wants appear ONCE (as a series), not as 12 duplicates.
  */
-export const analyzeSavingsNeeds = (
-	expenses: Expense[],
-	incomeEntries: IncomeEntry[],
-	surplusWindowMonths: number,
-	lookAheadMonths: number = 6,
-	referenceDate: Date = new Date(),
-): SavingsAnalysis => {
-	// ─── Recurring series: one row per parent want ───────────────────────
-	const recurringParents = expenses.filter(
-		(e) =>
-			!e.isArchived &&
-			e.isRecurring &&
-			!e.parentExpenseId &&
-			e.type === "want",
-	);
+// export const analyzeSavingsNeeds = (
+// 	expenses: Expense[],
+// 	incomeEntries: IncomeEntry[],
+// 	surplusWindowMonths: number,
+// 	lookAheadMonths: number = 6,
+// 	referenceDate: Date = new Date(),
+// ): SavingsAnalysis => {
+// 	// ─── Recurring series: one row per parent want ───────────────────────
+// 	const recurringParents = expenses.filter(
+// 		(e) => !e.isArchived && e.isRecurring && !e.parentExpenseId && e.type === "want",
+// 	);
 
-	const recurringSeries: RecurringWantSeries[] = recurringParents
-		.map((p) => ({
-			id: p.id,
-			name: p.name,
-			category: p.category,
-			monthlyAmount: getMonthlyEquivalent(p),
-			frequency: p.recurrence?.frequency ?? "monthly",
-		}))
-		.sort((a, b) => b.monthlyAmount - a.monthlyAmount);
+// 	const recurringSeries: RecurringWantSeries[] = recurringParents
+// 		.map((p) => ({
+// 			id: p.id,
+// 			name: p.name,
+// 			category: p.category,
+// 			monthlyAmount: getMonthlyEquivalent(p),
+// 			frequency: p.recurrence?.frequency ?? "monthly",
+// 		}))
+// 		.sort((a, b) => b.monthlyAmount - a.monthlyAmount);
 
-	const totalRecurringPerMonth = recurringSeries.reduce(
-		(s, r) => s + r.monthlyAmount,
-		0,
-	);
+// 	const totalRecurringPerMonth = recurringSeries.reduce((s, r) => s + r.monthlyAmount, 0);
 
-	// ─── One-off wants: non-recurring, unpaid ────────────────────────────
-	const oneOffWants = expenses
-		.filter(
-			(e) =>
-				!e.isArchived &&
-				!e.isRecurring &&
-				!e.parentExpenseId &&
-				e.type === "want" &&
-				!e.isPaid,
-		)
-		.sort((a, b) => {
-			if (a.dueDate && b.dueDate)
-				return a.dueDate.getTime() - b.dueDate.getTime();
-			if (a.dueDate) return -1;
-			if (b.dueDate) return 1;
-			return a.amount - b.amount;
-		});
+// 	// ─── One-off wants: non-recurring, unpaid ────────────────────────────
+// 	const oneOffWants = expenses
+// 		.filter(
+// 			(e) =>
+// 				!e.isArchived &&
+// 				!e.isRecurring &&
+// 				!e.parentExpenseId &&
+// 				e.type === "want" &&
+// 				!e.isPaid,
+// 		)
+// 		.sort((a, b) => {
+// 			if (a.dueDate && b.dueDate) return a.dueDate.getTime() - b.dueDate.getTime();
+// 			if (a.dueDate) return -1;
+// 			if (b.dueDate) return 1;
+// 			return a.amount - b.amount;
+// 		});
 
-	const totalOneOff = oneOffWants.reduce((s, e) => s + e.amount, 0);
+// 	const totalOneOff = oneOffWants.reduce((s, e) => s + e.amount, 0);
 
-	// ─── Monthly timeline: actual want amounts per upcoming month ────────
-	// Uses real occurrences (not the parent amount) so months with variable
-	// recurring amounts or clustered one-offs show accurately.
-	const monthlyObligations: MonthlyWantObligation[] = [];
+// 	// ─── Monthly timeline: actual want amounts per upcoming month ────────
+// 	// Uses real occurrences (not the parent amount) so months with variable
+// 	// recurring amounts or clustered one-offs show accurately.
+// 	const monthlyObligations: MonthlyWantObligation[] = [];
 
-	for (let i = 0; i < lookAheadMonths; i++) {
-		const monthDate = addMonths(startOfMonth(referenceDate), i);
-		const monthWants = getExpensesForMonth(expenses, monthDate).filter(
-			(e) => e.type === "want",
-		);
+// 	for (let i = 0; i < lookAheadMonths; i++) {
+// 		const monthDate = addMonths(startOfMonth(referenceDate), i);
+// 		const monthWants = getExpensesForMonth(expenses, monthDate).filter(
+// 			(e) => e.type === "want",
+// 		);
 
-		const recurringOccurrences = monthWants.filter((e) => e.parentExpenseId);
-		// For one-offs, only count unpaid ones — they're what you need to save for.
-		const monthOneOffs = monthWants.filter(
-			(e) => !e.parentExpenseId && !e.isPaid,
-		);
+// 		const recurringOccurrences = monthWants.filter((e) => e.parentExpenseId);
+// 		// For one-offs, only count unpaid ones — they're what you need to save for.
+// 		const monthOneOffs = monthWants.filter((e) => !e.parentExpenseId && !e.isPaid);
 
-		const recurringTotal = recurringOccurrences.reduce(
-			(s, e) => s + e.amount,
-			0,
-		);
-		const oneOffTotal = monthOneOffs.reduce((s, e) => s + e.amount, 0);
+// 		const recurringTotal = recurringOccurrences.reduce((s, e) => s + e.amount, 0);
+// 		const oneOffTotal = monthOneOffs.reduce((s, e) => s + e.amount, 0);
 
-		monthlyObligations.push({
-			month: format(monthDate, "MMM yyyy"),
-			monthDate,
-			recurringTotal,
-			oneOffTotal,
-			total: recurringTotal + oneOffTotal,
-			oneOffItems: monthOneOffs.map((e) => e.name),
-		});
-	}
+// 		monthlyObligations.push({
+// 			month: format(monthDate, "MMM yyyy"),
+// 			monthDate,
+// 			recurringTotal,
+// 			oneOffTotal,
+// 			total: recurringTotal + oneOffTotal,
+// 			oneOffItems: monthOneOffs.map((e) => e.name),
+// 		});
+// 	}
 
-	// ─── Surplus context (informational, doesn't gate what's shown) ──────
-	const averageSurplus = getAverageSurplus(
-		incomeEntries,
-		expenses,
-		surplusWindowMonths,
-		referenceDate,
-	);
+// 	// ─── Surplus context (informational, doesn't gate what's shown) ──────
+// 	const averageSurplus = getAverageSurplus(
+// 		incomeEntries,
+// 		expenses,
+// 		surplusWindowMonths,
+// 		referenceDate,
+// 	);
 
-	return {
-		recurringSeries,
-		oneOffWants,
-		monthlyObligations,
-		totalRecurringPerMonth,
-		totalOneOff,
-		averageSurplus,
-		discretionaryAfterRecurring: averageSurplus - totalRecurringPerMonth,
-	};
-};
+// 	return {
+// 		recurringSeries,
+// 		oneOffWants,
+// 		monthlyObligations,
+// 		totalRecurringPerMonth,
+// 		totalOneOff,
+// 		averageSurplus,
+// 		discretionaryAfterRecurring: averageSurplus - totalRecurringPerMonth,
+// 	};
+// };
 
 /**
  * Build a trailing-window month-by-month comparison ending at (and including)
@@ -442,10 +427,7 @@ export const getTrailingCashFlow = (
 
 		result.push({
 			// Include year when crossing year boundaries for clarity
-			month:
-				monthsBack > 12
-					? format(monthDate, "MMM yy")
-					: format(monthDate, "MMM"),
+			month: monthsBack > 12 ? format(monthDate, "MMM yy") : format(monthDate, "MMM"),
 			monthDate,
 			income,
 			expenses: breakdown.total,
@@ -456,4 +438,164 @@ export const getTrailingCashFlow = (
 	}
 
 	return result;
+};
+
+// ============================================
+// Subscriptions
+// ============================================
+
+/**
+ * Return all recurring expenses that belong to the "Subscriptions" category,
+ * including archived ones (the view filters them into an Inactive section).
+ * Only parent recurring expenses are returned (the occurrences are collapsed).
+ */
+export const getSubscriptions = (expenses: Expense[]): SubscriptionRow[] => {
+	return expenses
+		.filter((e) => e.isRecurring && !e.parentExpenseId && e.category === "Subscriptions")
+		.map((e) => ({
+			expense: e,
+			monthlyCost: getMonthlyEquivalent(e),
+			status: e.subscriptionStatus,
+			isActive: !e.isArchived,
+		}))
+		.sort((a, b) => {
+			// Active first, then by monthly cost desc
+			if (a.isActive !== b.isActive) return a.isActive ? -1 : 1;
+			return b.monthlyCost - a.monthlyCost;
+		});
+};
+
+// ============================================
+// Income cadence detection
+// ============================================
+
+/**
+ * Look at the last ~8 income entries and estimate their cadence based on
+ * the median gap between entries (in days).
+ */
+export const detectIncomeFrequency = (entries: IncomeEntry[]): IncomeFrequency => {
+	const deduped = dedupeIncomeEntries(entries);
+	if (deduped.length < 3) return "irregular";
+
+	const sorted = [...deduped]
+		.sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime())
+		.slice(-10);
+
+	const gaps: number[] = [];
+	for (let i = 1; i < sorted.length; i++) {
+		gaps.push(differenceInDays(parseISO(sorted[i].date), parseISO(sorted[i - 1].date)));
+	}
+	gaps.sort((a, b) => a - b);
+	const median = gaps[Math.floor(gaps.length / 2)];
+
+	if (median <= 3) return "daily"; // logged most workdays
+	if (median >= 5 && median <= 9) return "weekly";
+	if (median >= 12 && median <= 17) return "biweekly";
+	if (median >= 26 && median <= 34) return "monthly";
+	return "irregular";
+};
+
+/** How many paychecks are likely to occur before the given date. */
+const expectedPaychecksUntil = (frequency: IncomeFrequency, days: number): number => {
+	if (days <= 0) return 0;
+	switch (frequency) {
+		// "daily" income is reframed as a weekly savings target — easier to act on
+		case "daily":
+		case "weekly":
+			return Math.max(1, Math.ceil(days / 7));
+		case "biweekly":
+			return Math.max(1, Math.ceil(days / 14));
+		case "monthly":
+			return Math.max(1, Math.ceil(days / 30));
+		default:
+			return Math.max(1, Math.ceil(days / 7));
+	}
+};
+
+// ============================================
+// Coaching advice
+// ============================================
+
+/**
+ * Produce positive, specific coaching text for the Coverage view.
+ * This is deliberately static-rule-based (no AI) — it picks the biggest
+ * upcoming need and frames it as a per-paycheck savings target.
+ */
+export const generateCoachingAdvice = (
+	incomeEntries: IncomeEntry[],
+	expenses: Expense[],
+	month: Date,
+	currencyFormatter: (n: number) => string,
+): CoachingAdvice => {
+	const frequency = detectIncomeFrequency(incomeEntries);
+	const req = calculateIncomeRequirements(incomeEntries, expenses, month);
+	const tips: string[] = [];
+
+	// ── Headline ─────────────────────────────────────────────────────
+	let headline: string;
+	if (req.needsTotal === 0 && req.wantsTotal === 0) {
+		headline = "No expenses logged for this month — you're in the clear!";
+	} else if (req.needsCoverage >= 100 && req.fullCoverage >= 100) {
+		headline = "Everything's covered — nice work! Any extra can go to savings.";
+	} else if (req.needsCoverage >= 100) {
+		const remaining = Math.max(0, req.allExpensesTotal - req.actualIncome);
+		headline = `Essentials are handled. ${currencyFormatter(remaining)} to go for everything else.`;
+	} else {
+		headline = `You're ${Math.round(req.needsCoverage)}% of the way to covering ${format(month, "MMMM")}'s essentials.`;
+	}
+
+	// ── Tip 1: per-paycheck target for the biggest upcoming need ────
+	const monthNeeds = getExpensesForMonth(expenses, month)
+		.filter((e) => e.type === "need" && !e.isPaid)
+		.sort((a, b) => b.amount - a.amount);
+
+	if (monthNeeds.length > 0) {
+		const biggest = monthNeeds[0];
+		const today = new Date();
+		const daysToDue =
+			biggest.dueDate ? Math.max(1, differenceInDays(biggest.dueDate, today)) : 30;
+		const paychecks = expectedPaychecksUntil(frequency, daysToDue);
+		const perPaycheck = biggest.amount / paychecks;
+
+		const cadenceLabel =
+			frequency === "biweekly" ? "from each bi-weekly paycheck"
+			: frequency === "monthly" ? "from each monthly paycheck"
+			: "each week"; // daily / weekly / irregular all get a weekly framing
+
+		tips.push(
+			`Set aside ${currencyFormatter(perPaycheck)} ${cadenceLabel} to cover ${biggest.name} (${currencyFormatter(biggest.amount)}).`,
+		);
+	}
+
+	// ── Tip 2: encouragement based on remaining gap ─────────────────
+	if (req.needsGap < 0) {
+		const remaining = Math.abs(req.needsGap);
+		const today = new Date();
+		const daysLeft = Math.max(
+			1,
+			differenceInDays(
+				endOfMonth(month),
+				today < startOfMonth(month) ? startOfMonth(month) : today,
+			),
+		);
+		const weeksLeft = Math.max(1, Math.ceil(daysLeft / 7));
+		tips.push(
+			`About ${currencyFormatter(remaining)} more will fully cover essentials — that's roughly ${currencyFormatter(remaining / weeksLeft)}/week for the rest of the month.`,
+		);
+	} else if (req.fullGap >= 0 && req.allExpensesTotal > 0) {
+		tips.push(
+			`You've got ${currencyFormatter(req.fullGap)} of breathing room — consider moving part of it to your wishlist savings.`,
+		);
+	} else if (req.needsGap >= 0 && req.fullGap < 0) {
+		tips.push("Essentials are safe — anything extra you earn now goes straight toward wants.");
+	}
+
+	// ── Tip 3: cadence note (only when genuinely irregular AND we have data) ──
+	if (frequency === "irregular" && incomeEntries.length >= 3) {
+		tips.push(
+			"Income arrives on a varied schedule — keeping a one-month essentials buffer can smooth things out.",
+		);
+	}
+
+	return { headline, tips: tips.slice(0, 3) };
 };

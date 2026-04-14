@@ -61,8 +61,6 @@ const useAppStore = create<AppStore>()(
 					parentExpenseId: e.parentExpenseId,
 					monthlyOverrides: e.monthlyOverrides || {},
 					isModified: e.isModified || false,
-					// Preserve amountData if it exists, otherwise leave undefined
-					// so the table falls back to displaying the numeric `amount`
 					amountData: e.amountData ?? undefined,
 					initialState:
 						e.initialState ?
@@ -75,6 +73,7 @@ const useAppStore = create<AppStore>()(
 								paymentMethod: e.initialState.paymentMethod || "None",
 							}
 						:	undefined,
+					subscriptionStatus: e.subscriptionStatus,
 				}));
 
 				useExpenseStore.getState().setExpenseData({

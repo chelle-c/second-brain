@@ -854,6 +854,7 @@ const createRecurringSeries = (spec: RecurringSpec): Expense[] => {
  */
 const createSampleExpenses = (): Expense[] => {
 	const recurring: RecurringSpec[] = [
+		// ─── Needs ───────────────────────────────────────────────────────
 		{
 			name: "Rent",
 			baseAmount: 1500,
@@ -914,21 +915,65 @@ const createSampleExpenses = (): Expense[] => {
 			importance: "high",
 			salt: 6,
 		},
+
+		// ─── Wants — Subscriptions category ──────────────────────────────
 		{
-			name: "Streaming Services",
-			baseAmount: 45.97,
+			name: "Netflix",
+			baseAmount: 15.49,
 			variancePct: 0,
-			category: "Entertainment",
-			dayOfMonth: 10,
+			category: "Subscriptions",
+			dayOfMonth: 3,
 			type: "want",
 			importance: "none",
-			salt: 7,
+			salt: 11,
 		},
+		{
+			name: "Spotify",
+			baseAmount: 10.99,
+			variancePct: 0,
+			category: "Subscriptions",
+			dayOfMonth: 7,
+			type: "want",
+			importance: "medium",
+			salt: 12,
+		},
+		{
+			name: "Cloud Storage",
+			baseAmount: 9.99,
+			variancePct: 0,
+			category: "Subscriptions",
+			dayOfMonth: 14,
+			type: "want",
+			importance: "high",
+			salt: 13,
+		},
+		{
+			name: "News Site",
+			baseAmount: 4.99,
+			variancePct: 0,
+			category: "Subscriptions",
+			dayOfMonth: 21,
+			type: "want",
+			importance: "none",
+			salt: 14,
+		},
+		{
+			name: "Adobe Creative Cloud",
+			baseAmount: 54.99,
+			variancePct: 0,
+			category: "Subscriptions",
+			dayOfMonth: 28,
+			type: "want",
+			importance: "medium",
+			salt: 15,
+		},
+
+		// ─── Wants — non-subscription ────────────────────────────────────
 		{
 			name: "Gym Membership",
 			baseAmount: 49.99,
 			variancePct: 0,
-			category: "Health",
+			category: "Healthcare",
 			dayOfMonth: 5,
 			type: "want",
 			importance: "medium",
@@ -960,6 +1005,40 @@ const createSampleExpenses = (): Expense[] => {
 	for (const spec of recurring) {
 		expenses.push(...createRecurringSeries(spec));
 	}
+
+	// Tag a couple of subscriptions with statuses so the Subscriptions view
+	// has something to render in each bucket.
+	const tagStatus = (name: string, status: Expense["subscriptionStatus"]) => {
+		for (const e of expenses) {
+			if (e.name === name) e.subscriptionStatus = status;
+		}
+	};
+	tagStatus("Cloud Storage", "important");
+	tagStatus("News Site", "cancel");
+	// Everything else falls back to "wanted" in the UI.
+
+	// ─── Inactive subscription (archived) — exercises the Inactive section ──
+	const cancelledId = generateId();
+	expenses.push({
+		id: cancelledId,
+		name: "Meal Kit Delivery",
+		amount: 71.92,
+		category: "Subscriptions",
+		paymentMethod: "Default",
+		dueDate: dayInMonth(2, 11),
+		isRecurring: true,
+		recurrence: { frequency: "monthly", interval: 1 },
+		isArchived: true,
+		isPaid: false,
+		paymentDate: null,
+		type: "want",
+		importance: "none",
+		notify: false,
+		subscriptionStatus: "cancel",
+		createdAt: monthStart(HISTORY_MONTHS - 1),
+		updatedAt: dayInMonth(2, 11),
+		monthlyOverrides: {},
+	});
 
 	// One-off historical expense — creates a visible dip in net cash flow 3 months back
 	expenses.push({
@@ -1060,7 +1139,7 @@ const createSampleExpenses = (): Expense[] => {
 	});
 
 	return expenses;
-};
+};;;
 
 // ============================================================================
 // Income — 6 months of history matching the expense timeline

@@ -78,6 +78,7 @@ export const DEFAULT_EXPENSE_CATEGORIES = [
 	"Shopping",
 	"Personal",
 	"Savings",
+	"Subscriptions",
 	"Other",
 ].sort((a, b) => a.localeCompare(b));
 
@@ -94,6 +95,7 @@ export const DEFAULT_CATEGORY_COLORS: Record<string, string> = {
 	Shopping: "#a855f7",
 	Personal: "#14b8a6",
 	Savings: "#22c55e",
+	Subscriptions: "#06b6d4",
 	Other: "#6b7280",
 };
 

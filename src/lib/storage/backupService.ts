@@ -160,6 +160,7 @@ interface RawExpenseData {
 	isModified?: number | boolean | null;
 	initialState?: string | null;
 	paymentMethod?: string | null;
+	subscriptionStatus?: string | null;
 }
 
 const BACKUP_DIR_NAME = "backups";
@@ -1063,6 +1064,8 @@ class BackupService {
 							};
 						})()
 					:	undefined,
+				subscriptionStatus:
+					(row.subscriptionStatus as Expense["subscriptionStatus"]) || undefined,
 			}));
 
 			// Read expense settings

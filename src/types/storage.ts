@@ -20,7 +20,7 @@ export interface DatabaseContext {
 	cache: StorageCache;
 }
 
-export const DATA_VERSION = "0.0.6"; // Increment for migration
+export const DATA_VERSION = "0.0.7"; // Increment for migration
 
 export const APP_VERSION = "0.0.1";
 

@@ -1,6 +1,6 @@
 import type { Expense } from "./expense";
 
-export type OverviewViewType = "cashflow" | "burnrate" | "coverage" | "savings";
+export type OverviewViewType = "cashflow" | "burnrate" | "coverage" | "wishlist" | "subscriptions";
 
 export type TimeRange = 1 | 3 | 6 | 9 | 12;
 
@@ -14,7 +14,8 @@ export const TIME_RANGE_OPTIONS: Array<{ value: TimeRange; label: string }> = [
 
 /**
  * Cash Flow view: how many months to display.
- * "all" = full calendar year; numbers = trailing N months ending at the current month.
+ * "all" = full calendar year (all 12 months); numbers = trailing N months
+ * ending at the current month.
  */
 export type CashFlowRange = "all" | 3 | 6 | 12;
 
@@ -97,4 +98,36 @@ export interface SavingsAnalysis {
 	averageSurplus: number;
 	/** averageSurplus − totalRecurringPerMonth. What's left for one-offs. */
 	discretionaryAfterRecurring: number;
+}
+
+/** A saved "Custom View" for the Burn Rate module. */
+export interface BurnRateCustomView {
+	id: string;
+	name: string;
+	/** How many months BEFORE the anchor to include (0–6). */
+	monthsBefore: number;
+	/** How many months AFTER the anchor to include (0–6). */
+	monthsAfter: number;
+}
+
+/** User-assigned subscription classification. */
+export type SubscriptionStatus = "important" | "wanted" | "cancel";
+
+export interface SubscriptionRow {
+	/** Parent expense (the recurring template). */
+	expense: Expense;
+	/** Monthly-equivalent cost. */
+	monthlyCost: number;
+	status: SubscriptionStatus | undefined;
+	isActive: boolean; // !isArchived
+}
+
+/** Detected cadence of income entries. */
+export type IncomeFrequency = "daily" | "weekly" | "biweekly" | "monthly" | "irregular";
+
+export interface CoachingAdvice {
+	/** Short headline – the positive/encouraging summary. */
+	headline: string;
+	/** Up to 2–3 concrete, static recommendations. */
+	tips: string[];
 }

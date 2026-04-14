@@ -67,31 +67,32 @@ export class ExpensesStorage {
 				category: expense.category,
 				paymentMethod: expense.paymentMethod || "None",
 				dueDate:
-					expense.dueDate instanceof Date
-						? expense.dueDate.toISOString()
-						: expense.dueDate,
+					expense.dueDate instanceof Date ?
+						expense.dueDate.toISOString()
+					:	expense.dueDate,
 				isRecurring: expense.isRecurring,
 				recurrence: expense.recurrence || null,
 				isArchived: expense.isArchived,
 				isPaid: expense.isPaid,
 				paymentDate:
-					expense.paymentDate instanceof Date
-						? expense.paymentDate.toISOString()
-						: (expense.paymentDate ?? null),
+					expense.paymentDate instanceof Date ?
+						expense.paymentDate.toISOString()
+					:	(expense.paymentDate ?? null),
 				type: expense.type,
 				importance: expense.importance,
 				createdAt:
-					expense.createdAt instanceof Date
-						? expense.createdAt.toISOString()
-						: String(expense.createdAt),
+					expense.createdAt instanceof Date ?
+						expense.createdAt.toISOString()
+					:	String(expense.createdAt),
 				updatedAt:
-					expense.updatedAt instanceof Date
-						? expense.updatedAt.toISOString()
-						: String(expense.updatedAt),
+					expense.updatedAt instanceof Date ?
+						expense.updatedAt.toISOString()
+					:	String(expense.updatedAt),
 				parentExpenseId: expense.parentExpenseId,
 				monthlyOverrides: expense.monthlyOverrides || {},
 				isModified: expense.isModified,
 				initialState: expense.initialState || null,
+				subscriptionStatus: expense.subscriptionStatus ?? null,
 			}))
 			.sort((a, b) => a.id.localeCompare(b.id));
 	}
@@ -140,31 +141,31 @@ export class ExpensesStorage {
 				   updatedAt, parentExpenseId, monthlyOverrides, isModified, initialState 
 				   FROM expenses`;
 
-			const expenses =
-				await this.context.getDb().select<
-					Array<{
-						id: string;
-						name: string;
-						amount: number;
-						amountData: string | null;
-						category: string;
-						paymentMethod: string | null;
-						dueDate: string | null;
-						isRecurring: number;
-						recurrence: string | null;
-						isArchived: number;
-						isPaid: number;
-						paymentDate: string | null;
-						type: string;
-						importance: string;
-						createdAt: string;
-						updatedAt: string;
-						parentExpenseId: string | null;
-						monthlyOverrides: string | null;
-						isModified: number | null;
-						initialState: string | null;
-					}>
-				>(selectQuery);
+			const expenses = await this.context.getDb().select<
+				Array<{
+					id: string;
+					name: string;
+					amount: number;
+					amountData: string | null;
+					category: string;
+					paymentMethod: string | null;
+					dueDate: string | null;
+					isRecurring: number;
+					recurrence: string | null;
+					isArchived: number;
+					isPaid: number;
+					paymentDate: string | null;
+					type: string;
+					importance: string;
+					createdAt: string;
+					updatedAt: string;
+					parentExpenseId: string | null;
+					monthlyOverrides: string | null;
+					isModified: number | null;
+					initialState: string | null;
+					subscriptionStatus: string | null;
+				}>
+			>(selectQuery);
 
 			const selectedMonthResult = await this.context.getDb().select<
 				Array<{ value: string }>
@@ -216,11 +217,11 @@ export class ExpensesStorage {
 						createdAt: new Date(row.createdAt),
 						updatedAt: new Date(row.updatedAt),
 						parentExpenseId: row.parentExpenseId || undefined,
-						monthlyOverrides: row.monthlyOverrides
-							? JSON.parse(row.monthlyOverrides)
-							: {},
+						monthlyOverrides:
+							row.monthlyOverrides ? JSON.parse(row.monthlyOverrides) : {},
 						isModified: row.isModified === 1,
 						initialState,
+						subscriptionStatus: (row as any).subscriptionStatus || undefined,
 					};
 				}),
 				selectedMonth:
@@ -311,8 +312,8 @@ export class ExpensesStorage {
 						`INSERT INTO expenses (
 							id, name, amount, amountData, category, paymentMethod, dueDate, isRecurring, recurrence,
 							isArchived, isPaid, paymentDate, type, importance, notify, createdAt,
-							updatedAt, parentExpenseId, monthlyOverrides, isModified, initialState
-						) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+							updatedAt, parentExpenseId, monthlyOverrides, isModified, initialState, subscriptionStatus
+						) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 						[
 							expense.id,
 							expense.name,
@@ -332,11 +333,12 @@ export class ExpensesStorage {
 							expense.createdAt.toISOString(),
 							expense.updatedAt.toISOString(),
 							expense.parentExpenseId || null,
-							expense.monthlyOverrides
-								? JSON.stringify(expense.monthlyOverrides)
-								: null,
+							expense.monthlyOverrides ?
+								JSON.stringify(expense.monthlyOverrides)
+							:	null,
 							expense.isModified ? 1 : 0,
 							initialState ? JSON.stringify(initialState) : null,
+							expense.subscriptionStatus || null,
 						],
 					);
 				}
