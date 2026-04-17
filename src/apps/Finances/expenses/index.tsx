@@ -61,7 +61,7 @@ export const ExpensesTracker = () => {
 			>
 				<div className="space-y-3">
 					{currentView === "monthly" ?
-						<div className="bg-card rounded-xl shadow-lg p-6 animate-slideUp">
+						<div className="bg-card rounded-xl shadow-lg p-6 animate-fadeIn">
 							<ExpenseOverview />
 							<div className="mt-8 mb-6 border-t border-border"></div>
 							<ExpenseList />

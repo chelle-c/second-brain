@@ -8,9 +8,9 @@ import {
 	ChevronDown,
 	ChevronRight,
 	Copy,
-	Edit2,
 	RefreshCw,
 	RotateCcw,
+	SquarePen,
 	Trash2,
 } from "lucide-react";
 import { useState } from "react";
@@ -292,7 +292,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 								rounded-lg transition-all duration-200 hover:scale-110"
 							title="Edit All Occurrences"
 						>
-							<Edit2 size={14} />
+							<SquarePen size={14} />
 						</button>
 						{onDuplicate && (
 							<button
@@ -497,7 +497,7 @@ export const RecurringExpenseRow: React.FC<RecurringExpenseRowProps> = ({
 											rounded-lg transition-all duration-200 hover:scale-110"
 										title="Edit this occurrence only"
 									>
-										<Edit2 size={14} />
+										<SquarePen size={14} />
 									</button>
 									{onDuplicate && (
 										<button

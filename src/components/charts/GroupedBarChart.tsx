@@ -129,7 +129,6 @@ const GroupedBarChartInner = ({
 	return (
 		<div style={{ position: "relative", width, height }}>
 			<svg width={width} height={height} aria-label="Grouped bar chart">
-				<title>Grouped bar chart</title>
 				<Group left={margin.left} top={margin.top}>
 					{innerWidth > 0 && innerHeight > 0 && (
 						<GridRows

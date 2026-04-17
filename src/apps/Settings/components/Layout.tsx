@@ -69,7 +69,7 @@ export const Layout = ({ children }: LayoutProps) => {
 			ref={scrollContainerRef}
 			className="flex-1 overflow-y-auto max-h-[98vh] p-4 w-full min-h-screen"
 		>
-			<div className="w-full max-w-5xl mx-auto my-6 animate-slideUp">
+			<div className="w-full max-w-5xl mx-auto my-6 animate-fadeIn">
 				<h1 className="sr-only">Settings</h1>
 
 				<div className="flex gap-6">
@@ -85,7 +85,7 @@ export const Layout = ({ children }: LayoutProps) => {
 										type="button"
 										key={section.id}
 										onClick={() => scrollToSection(section.id)}
-										className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left ${
+										className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left cursor-pointer ${
 											activeSection === section.id ?
 												"bg-primary text-primary-foreground"
 											:	"text-muted-foreground hover:text-foreground hover:bg-accent"

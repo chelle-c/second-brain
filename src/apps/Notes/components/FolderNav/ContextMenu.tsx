@@ -1,4 +1,4 @@
-import { Archive, ArchiveRestore, Edit2, FilePlus, FolderPlus, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, FilePlus, FolderPlus, SquarePen, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 interface ContextMenuProps {
@@ -65,16 +65,22 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
 				setKeyboardActive(true);
 
 				const currentIndex = Array.from(items).indexOf(
-					document.activeElement as HTMLButtonElement
+					document.activeElement as HTMLButtonElement,
 				);
 
 				if (e.key === "ArrowDown") {
 					// If no item focused yet, focus first item
-					const nextIndex = currentIndex === -1 ? 0 : (currentIndex < items.length - 1 ? currentIndex + 1 : 0);
+					const nextIndex =
+						currentIndex === -1 ? 0
+						: currentIndex < items.length - 1 ? currentIndex + 1
+						: 0;
 					items[nextIndex].focus();
 				} else {
 					// ArrowUp - if no item focused yet, focus last item
-					const prevIndex = currentIndex === -1 ? items.length - 1 : (currentIndex > 0 ? currentIndex - 1 : items.length - 1);
+					const prevIndex =
+						currentIndex === -1 ? items.length - 1
+						: currentIndex > 0 ? currentIndex - 1
+						: items.length - 1;
 					items[prevIndex].focus();
 				}
 			} else if (e.key === "Enter" || e.key === " ") {
@@ -106,12 +112,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
 			role="menu"
 			aria-label="Folder actions"
 		>
-			<button
-				type="button"
-				onClick={onCreateNote}
-				className={buttonClass}
-				role="menuitem"
-			>
+			<button type="button" onClick={onCreateNote} className={buttonClass} role="menuitem">
 				<FilePlus size={14} />
 				Create Note
 			</button>
@@ -124,7 +125,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
 				className={buttonClass}
 				role="menuitem"
 			>
-				<Edit2 size={14} />
+				<SquarePen size={14} />
 				Rename (F2)
 			</button>
 
@@ -140,23 +141,17 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
 
 			<div className="h-px bg-border my-1" role="separator" />
 
-			<button
-				type="button"
-				onClick={onArchive}
-				className={buttonClass}
-				role="menuitem"
-			>
-				{isArchived ? (
+			<button type="button" onClick={onArchive} className={buttonClass} role="menuitem">
+				{isArchived ?
 					<>
 						<ArchiveRestore size={14} />
 						Unarchive Folder
 					</>
-				) : (
-					<>
+				:	<>
 						<Archive size={14} />
 						Archive Folder
 					</>
-				)}
+				}
 			</button>
 
 			<div className="h-px bg-border my-1" role="separator" />

@@ -43,7 +43,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentView, setCurren
 					</div>
 				</div>
 			</header>
-			<main className="w-full max-w-7xl mx-auto">{children}</main>
+			<main className="w-full mx-auto">{children}</main>
 		</div>
 	);
 };

@@ -27,7 +27,7 @@ export const Modal: React.FC<ModalProps> = ({
 }) => {
 	return (
 		<Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-			<DialogContent className={cn("sm:max-w-md", className)}>
+			<DialogContent className={cn("sm:max-w-md, md:max-w-xl", className)}>
 				<DialogHeader>
 					<DialogTitle>{title}</DialogTitle>
 					{description && <DialogDescription>{description}</DialogDescription>}

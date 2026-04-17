@@ -115,7 +115,6 @@ const BarChartInner = ({
 	return (
 		<div style={{ position: "relative", width, height }}>
 			<svg width={width} height={height} aria-label="Bar chart">
-				<title>Bar chart</title>
 				<Group left={margin.left} top={margin.top}>
 					{innerWidth > 0 && innerHeight > 0 && (
 						<GridRows

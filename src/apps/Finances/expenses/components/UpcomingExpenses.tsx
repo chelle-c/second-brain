@@ -186,7 +186,7 @@ export const UpcomingExpenses = () => {
 
 	return (
 		<>
-			<div className="bg-card rounded-xl shadow-lg p-4 sm:p-6 animate-slideUp">
+			<div className="bg-card rounded-xl shadow-lg p-4 sm:p-6 animate-fadeIn">
 				{/* Header */}
 				<div className="pb-4">
 					<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

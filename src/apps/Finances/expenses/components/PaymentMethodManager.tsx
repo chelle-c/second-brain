@@ -1,4 +1,4 @@
-import { CreditCard, Edit2, Plus, Save, Trash2, X } from "lucide-react";
+import { CreditCard, Plus, Save, SquarePen, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ConfirmationModal } from "@/components/ConfirmationModal";
 import { Modal } from "@/components/Modal";
@@ -143,7 +143,7 @@ export const PaymentMethodManager: React.FC<PaymentMethodManagerProps> = ({
 						<h4 className="text-sm font-semibold text-foreground mb-3">
 							Add New Payment Method
 						</h4>
-						{isAddingNew ? (
+						{isAddingNew ?
 							<div className="flex gap-3">
 								<input
 									ref={addInputRef}
@@ -182,8 +182,7 @@ export const PaymentMethodManager: React.FC<PaymentMethodManagerProps> = ({
 									Cancel
 								</button>
 							</div>
-						) : (
-							<button
+						:	<button
 								type="button"
 								onClick={handleStartAddNew}
 								className="px-4 py-2 bg-primary text-primary-foreground rounded-lg
@@ -193,7 +192,7 @@ export const PaymentMethodManager: React.FC<PaymentMethodManagerProps> = ({
 								<Plus size={18} />
 								Add New Payment Method
 							</button>
-						)}
+						}
 					</div>
 
 					{/* Payment Methods List */}
@@ -210,7 +209,7 @@ export const PaymentMethodManager: React.FC<PaymentMethodManagerProps> = ({
 										editingMethod === method ? "edit-method-row" : ""
 									}`}
 								>
-									{editingMethod === method ? (
+									{editingMethod === method ?
 										<>
 											<CreditCard className="w-8 h-8 text-primary" />
 											<input
@@ -246,8 +245,7 @@ export const PaymentMethodManager: React.FC<PaymentMethodManagerProps> = ({
 												<X size={18} />
 											</button>
 										</>
-									) : (
-										<>
+									:	<>
 											<CreditCard className="w-8 h-8 text-muted-foreground" />
 											<span className="flex-1 font-medium text-foreground">
 												{method}
@@ -259,7 +257,7 @@ export const PaymentMethodManager: React.FC<PaymentMethodManagerProps> = ({
 												transition-colors duration-200"
 												title="Edit"
 											>
-												<Edit2 size={16} />
+												<SquarePen size={16} />
 											</button>
 											<button
 												type="button"
@@ -271,7 +269,7 @@ export const PaymentMethodManager: React.FC<PaymentMethodManagerProps> = ({
 												<Trash2 size={16} />
 											</button>
 										</>
-									)}
+									}
 								</div>
 							))}
 						</div>

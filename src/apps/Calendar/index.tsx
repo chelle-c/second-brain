@@ -132,7 +132,7 @@ export function Calendar() {
 
 	// ── render ────────────────────────────────────────────────────────────────
 	return (
-		<div className="flex flex-col flex-1 min-h-0 h-full animate-slideUp">
+		<div className="flex flex-col flex-1 min-h-0 h-full animate-fadeIn">
 			{/* Header */}
 			<div className="p-4 pb-2 space-y-3 bg-card/80 backdrop-blur border-b border-border">
 				<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">

@@ -10,11 +10,11 @@ import {
 	ChevronUp,
 	Copy,
 	CreditCard,
-	Edit2,
 	Eye,
 	EyeOff,
 	RefreshCw,
 	Search,
+	SquarePen,
 	Trash2,
 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -420,11 +420,11 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 									<SortIcon column="category" />
 								</button>
 							</th>
-							<th className="text-left py-3 px-3 font-medium text-muted-foreground">
+							<th className="text-center py-3 px-3 font-medium text-muted-foreground">
 								<button
 									type="button"
 									onClick={() => handleSort("type")}
-									className="flex items-center gap-1 hover:text-primary"
+									className="flex items-center gap-1 hover:text-primary mx-auto"
 								>
 									Type
 									<SortIcon column="type" />
@@ -450,11 +450,11 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 									<SortIcon column="dueDate" />
 								</button>
 							</th>
-							<th className="text-left py-3 px-3 font-medium text-muted-foreground">
+							<th className="text-center py-3 px-3 font-medium text-muted-foreground">
 								<button
 									type="button"
 									onClick={() => handleSort("paymentDate")}
-									className="flex items-center gap-1 hover:text-primary"
+									className="flex items-center gap-1 hover:text-primary mx-auto"
 								>
 									Payment Date
 									<SortIcon column="paymentDate" />
@@ -511,7 +511,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 										:	"hover:bg-accent"
 									}`}
 								>
-									<td className="py-3 px-2">
+									<td className="text-center py-3 px-2">
 										<button
 											type="button"
 											onClick={() => onTogglePaid(expense.id)}
@@ -530,7 +530,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 											:	<Check size={18} />}
 										</button>
 									</td>
-									<td className="py-3 px-2">
+									<td className="text-center py-3 px-2">
 										{expense.dueDate ?
 											<button
 												type="button"
@@ -553,7 +553,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 											</button>
 										:	<span className="text-muted-foreground/30">—</span>}
 									</td>
-									<td className="py-3 px-3">
+									<td className="w-min text-center py-3 px-3">
 										<div className="flex items-center gap-2">
 											<span
 												className={`font-medium text-foreground text-sm ${
@@ -574,17 +574,17 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 											)}
 										</div>
 									</td>
-									<td className="py-3 px-2">
+									<td className="w-min py-3 px-2">
 										<span className="text-xs text-muted-foreground">
 											{expense.paymentMethod || "None"}
 										</span>
 									</td>
-									<td className="py-3 px-2 text-center">
+									<td className="w-min py-3 px-2 text-center">
 										<ImportanceIcon level={expense.importance || "none"} />
 									</td>
 									<td className="w-min py-3 px-2 text-center">
 										<span
-											className="px-3 py-0.5 rounded-full text-xs font-semibold text-center"
+											className="w-full block py-0.5 rounded-full text-xs font-semibold text-center"
 											style={{
 												backgroundColor: `${categoryColor}20`,
 												color: displayColor,
@@ -594,7 +594,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 											{expense.category}
 										</span>
 									</td>
-									<td className="py-3 px-3">
+									<td className="text-center py-3 px-3">
 										<span
 											className={`text-xs font-medium ${
 												expense.type === "need" ?
@@ -658,11 +658,11 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 											</span>
 										}
 									</td>
-									<td className="py-3 px-3">
+									<td className="text-center py-3 px-3">
 										<span className="text-sm text-muted-foreground">
 											{expense.isPaid && expense.paymentDate ?
 												formatDate(expense.paymentDate)
-											:	"Not paid"}
+											:	"-"}
 										</span>
 									</td>
 									<td className="py-3 px-3">
@@ -671,17 +671,17 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 												type="button"
 												onClick={() => setEditingExpense(expense)}
 												className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10
-												 rounded-lg transition-all duration-200 hover:scale-110"
+												 rounded-lg transition-all duration-200 hover:scale-110 cursor-pointer"
 												title="Edit"
 											>
-												<Edit2 size={14} />
+												<SquarePen size={14} />
 											</button>
 											{onDuplicate && (
 												<button
 													type="button"
 													onClick={() => onDuplicate(expense.id)}
 													className="p-1.5 text-muted-foreground hover:text-purple-500 hover:bg-purple-500/10
-													 rounded-lg transition-all duration-200 hover:scale-110"
+													 rounded-lg transition-all duration-200 hover:scale-110 cursor-pointer"
 													title="Duplicate"
 												>
 													<Copy size={14} />
@@ -693,7 +693,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 														type="button"
 														onClick={() => onUnarchive(expense.id)}
 														className="p-1.5 text-muted-foreground hover:text-green-500 hover:bg-green-500/10
-														 rounded-lg transition-all duration-200 hover:scale-110"
+														 rounded-lg transition-all duration-200 hover:scale-110 cursor-pointer"
 														title="Unarchive"
 													>
 														<ArchiveRestore size={14} />
@@ -702,7 +702,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 														type="button"
 														onClick={() => onArchive(expense.id)}
 														className="p-1.5 text-muted-foreground hover:text-yellow-500 hover:bg-yellow-500/10
-														 rounded-lg transition-all duration-200 hover:scale-110"
+														 rounded-lg transition-all duration-200 hover:scale-110 cursor-pointer"
 														title="Archive"
 													>
 														<Archive size={14} />
@@ -711,7 +711,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
 												type="button"
 												onClick={() => onDelete(expense.id, expense.name)}
 												className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-500/10
-												 rounded-lg transition-all duration-200 hover:scale-110"
+												 rounded-lg transition-all duration-200 hover:scale-110 cursor-pointer"
 												title="Delete"
 											>
 												<Trash2 size={14} />

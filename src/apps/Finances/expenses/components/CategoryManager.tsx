@@ -1,4 +1,4 @@
-import { Edit2, Plus, Save, Trash2, X } from "lucide-react";
+import { Plus, Save, SquarePen, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ConfirmationModal } from "@/components/ConfirmationModal";
 import { Modal } from "@/components/Modal";
@@ -144,7 +144,7 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
 				isOpen={isOpen}
 				onClose={onClose}
 				title="Manage Categories"
-				className="max-w-2xl"
+				className="w-full"
 			>
 				<div className="flex flex-col h-full">
 					{/* Add New Category */}
@@ -152,7 +152,7 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
 						<h4 className="text-sm font-semibold text-foreground mb-3">
 							Add New Category
 						</h4>
-						{isAddingNew ? (
+						{isAddingNew ?
 							<div className="flex gap-3">
 								<input
 									ref={addInputRef}
@@ -199,8 +199,7 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
 									Cancel
 								</button>
 							</div>
-						) : (
-							<button
+						:	<button
 								type="button"
 								onClick={handleStartAddNew}
 								className="px-4 py-2 bg-primary text-primary-foreground rounded-lg
@@ -210,7 +209,7 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
 								<Plus size={18} />
 								Add New Category
 							</button>
-						)}
+						}
 					</div>
 
 					{/* Categories List */}
@@ -223,18 +222,18 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
 								<div
 									key={category}
 									className={`bg-muted rounded-lg p-3 flex items-center gap-3
-									hover:bg-accent transition-colors duration-200 ${
+									hover:bg-accent transition-colors duration-200 mx-2 ${
 										editingCategory === category ? "edit-category-row" : ""
 									}`}
 								>
-									{editingCategory === category ? (
+									{editingCategory === category ?
 										<>
 											<input
 												type="color"
 												value={editColor}
 												onChange={(e) => setEditColor(e.target.value)}
 												onBlur={handleEditInputBlur}
-												className="w-12 h-10 border border-border rounded-lg cursor-pointer"
+												className="w-8 h-8 border border-border rounded-lg cursor-pointer"
 											/>
 											<input
 												ref={editInputRef}
@@ -246,7 +245,7 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
 													if (e.key === "Escape") handleCancelEdit();
 												}}
 												onBlur={handleEditInputBlur}
-												className="flex-1 px-3 py-2 border border-border rounded-lg
+												className="flex-1 px-3 border border-border rounded-md
 												focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
 											/>
 											<button
@@ -269,8 +268,7 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
 												<X size={18} />
 											</button>
 										</>
-									) : (
-										<>
+									:	<>
 											<div
 												className="w-8 h-8 rounded-lg border-2 border-border"
 												style={{
@@ -287,7 +285,7 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
 												transition-colors duration-200"
 												title="Edit"
 											>
-												<Edit2 size={16} />
+												<SquarePen size={16} />
 											</button>
 											<button
 												type="button"
@@ -299,7 +297,7 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
 												<Trash2 size={16} />
 											</button>
 										</>
-									)}
+									}
 								</div>
 							))}
 						</div>

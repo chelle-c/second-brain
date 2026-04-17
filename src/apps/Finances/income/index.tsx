@@ -156,8 +156,8 @@ export const IncomeTracker: React.FC = () => {
 	];
 
 	return (
-		<div className="flex-1 overflow-y-auto max-h-[98vh] p-2 w-full min-h-screen">
-			<div className="w-full max-w-7xl mx-auto animate-slideUp">
+		<div className="flex-1 overflow-y-auto max-h-[98vh] rounded-lg p-2">
+			<div className="w-full mx-auto animate-fadeIn">
 				{/* Header */}
 				<div className="flex items-center justify-between mb-4">
 					<div className="w-min">
@@ -189,7 +189,7 @@ export const IncomeTracker: React.FC = () => {
 					</div>
 				</div>
 
-				{incomeViewType === "weekly" ? (
+				{incomeViewType === "weekly" ?
 					<div className="space-y-4">
 						{/* Top Row: Summary (wider) + Navigation */}
 						<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -217,9 +217,9 @@ export const IncomeTracker: React.FC = () => {
 							)}
 							<div
 								className={
-									currentWeekEntries.length > 0
-										? "lg:col-span-1"
-										: "lg:col-span-3"
+									currentWeekEntries.length > 0 ?
+										"lg:col-span-1"
+									:	"lg:col-span-3"
 								}
 							>
 								<IncomeEntriesList
@@ -229,15 +229,13 @@ export const IncomeTracker: React.FC = () => {
 							</div>
 						</div>
 					</div>
-				) : incomeViewType === "monthly" ? (
+				: incomeViewType === "monthly" ?
 					<MonthlyView
 						selectedYear={selectedYear}
 						onYearChange={setSelectedYear}
 						years={years}
 					/>
-				) : (
-					<YearlyView />
-				)}
+				:	<YearlyView />}
 			</div>
 		</div>
 	);

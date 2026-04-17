@@ -101,7 +101,7 @@ export const AllExpenses: React.FC = () => {
 
 	if (totalExpenseCount === 0) {
 		return (
-			<div className="bg-card rounded-xl shadow-lg p-4 sm:p-6 animate-slideUp">
+			<div className="bg-card rounded-xl shadow-lg p-4 sm:p-6 animate-fadeIn">
 				<h3 className="text-lg sm:text-xl font-bold text-card-foreground mb-4">
 					All Expenses
 				</h3>
@@ -121,7 +121,7 @@ export const AllExpenses: React.FC = () => {
 
 	return (
 		<>
-			<div className="bg-card rounded-xl shadow-lg p-4 sm:p-6 animate-slideUp">
+			<div className="bg-card rounded-xl shadow-lg p-4 sm:p-6 animate-fadeIn">
 				<div className="pb-4">
 					<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
 						<h3 className="text-lg sm:text-xl font-bold text-card-foreground">

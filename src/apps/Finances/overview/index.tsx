@@ -13,7 +13,7 @@ export const FinancialOverview: React.FC = () => {
 
 	return (
 		<Layout currentView={currentView} setCurrentView={setCurrentView}>
-			<div className="animate-slideUp">
+			<div className="animate-fadeIn">
 				{currentView === "cashflow" ?
 					<CashFlowView />
 				: currentView === "burnrate" ?
