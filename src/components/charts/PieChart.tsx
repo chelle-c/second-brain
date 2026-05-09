@@ -2,7 +2,7 @@ import { Group } from "@visx/group";
 import { ParentSize } from "@visx/responsive";
 import { scaleOrdinal } from "@visx/scale";
 import { Pie } from "@visx/shape";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 export interface PieChartData {
 	name: string;
@@ -39,7 +39,21 @@ const PieChartInner = ({
 	} | null>(null);
 	const [animationProgress, setAnimationProgress] = useState(0);
 
+	// Stable signature so the animation only restarts when values actually change
+	const dataSignature = useMemo(
+		() =>
+			data
+				.map((d) => `${d.name}:${d.value.toFixed(2)}`)
+				.sort()
+				.join("|"),
+		[data],
+	);
+	const prevSignature = useRef("");
+
 	useEffect(() => {
+		if (dataSignature === prevSignature.current) return;
+		prevSignature.current = dataSignature;
+
 		setAnimationProgress(0);
 		const startTime = performance.now();
 		const duration = 500;
@@ -53,7 +67,7 @@ const PieChartInner = ({
 		};
 
 		requestAnimationFrame(animate);
-	}, [data]);
+	}, [dataSignature]);
 
 	const total = data.reduce((sum, d) => sum + d.value, 0);
 
@@ -139,7 +153,6 @@ export const PieChart = (props: PieChartProps) => {
 	return (
 		<ParentSize>
 			{({ width, height }) =>
-				// Minimum size guard — below this radius becomes meaningless
 				width > 40 && height > 40 ?
 					<PieChartInner {...props} width={width} height={height} />
 				:	null

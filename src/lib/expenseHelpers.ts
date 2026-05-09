@@ -56,6 +56,7 @@ export const generateRecurringExpenses = (
 			isModified: false,
 			initialState: {
 				amount: baseExpense.amount,
+				amountData: baseExpense.amountData,
 				dueDate: occurrenceDate,
 				paymentMethod: paymentMethod || "None",
 			},
@@ -135,9 +136,7 @@ export const COLOR_POOL = [
 
 // Helper function to get an available color that's not already in use
 export const getAvailableColor = (usedColors: string[]): string => {
-	const availableColors = COLOR_POOL.filter(
-		(color) => !usedColors.includes(color),
-	);
+	const availableColors = COLOR_POOL.filter((color) => !usedColors.includes(color));
 	if (availableColors.length > 0) {
 		return availableColors[0];
 	}
@@ -157,24 +156,13 @@ export const darkenColor = (hex: string, amount: number = 0.4): string => {
 // Lighten a hex color by a given amount (0-1)
 export const lightenColor = (hex: string, amount: number = 0.4): string => {
 	const num = parseInt(hex.replace("#", ""), 16);
-	const r = Math.min(
-		255,
-		((num >> 16) & 255) + (255 - ((num >> 16) & 255)) * amount,
-	);
-	const g = Math.min(
-		255,
-		((num >> 8) & 255) + (255 - ((num >> 8) & 255)) * amount,
-	);
+	const r = Math.min(255, ((num >> 16) & 255) + (255 - ((num >> 16) & 255)) * amount);
+	const g = Math.min(255, ((num >> 8) & 255) + (255 - ((num >> 8) & 255)) * amount);
 	const b = Math.min(255, (num & 255) + (255 - (num & 255)) * amount);
 	return `#${Math.round(r).toString(16).padStart(2, "0")}${Math.round(g).toString(16).padStart(2, "0")}${Math.round(b).toString(16).padStart(2, "0")}`;
 };
 
 // Get the adjusted color for category display based on theme
-export const getCategoryDisplayColor = (
-	baseColor: string,
-	isDarkMode: boolean,
-): string => {
-	return isDarkMode
-		? lightenColor(baseColor, 0.3)
-		: darkenColor(baseColor, 0.4);
+export const getCategoryDisplayColor = (baseColor: string, isDarkMode: boolean): string => {
+	return isDarkMode ? lightenColor(baseColor, 0.3) : darkenColor(baseColor, 0.4);
 };

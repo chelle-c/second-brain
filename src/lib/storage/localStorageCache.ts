@@ -111,6 +111,7 @@ interface RawExpense {
 	isModified?: boolean;
 	initialState?: {
 		amount: number;
+		amountData?: unknown;
 		dueDate?: string | null;
 		paymentMethod?: string;
 	};
@@ -165,6 +166,7 @@ function reviveExpense(raw: RawExpense): Expense {
 		raw.initialState ?
 			{
 				amount: raw.initialState.amount,
+				amountData: raw.initialState.amountData as Expense["amountData"],
 				dueDate: reviveDate(raw.initialState.dueDate),
 				paymentMethod: raw.initialState.paymentMethod || "None",
 			}
@@ -278,6 +280,7 @@ export const localStorageCache = {
 						e.initialState ?
 							{
 								amount: e.initialState.amount,
+								amountData: e.initialState.amountData,
 								dueDate:
 									e.initialState.dueDate instanceof Date ?
 										e.initialState.dueDate.toISOString()

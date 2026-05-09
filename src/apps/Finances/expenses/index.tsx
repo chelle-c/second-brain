@@ -19,14 +19,12 @@ export const ExpensesTracker = () => {
 	const { editingExpense, setEditingExpense, undo, redo } = useExpenseStore();
 	const { canUndo, canRedo } = useHistoryStore();
 
-	// Bridge: listen for form submissions from the expense-form window
 	useExpenseFormListener();
 
 	const handleCloseEdit = () => {
 		setEditingExpense(null);
 	};
 
-	// Keyboard shortcuts for undo/redo
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
 			const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
@@ -61,9 +59,9 @@ export const ExpensesTracker = () => {
 			>
 				<div className="space-y-3">
 					{currentView === "monthly" ?
-						<div className="bg-card rounded-xl shadow-lg p-6 animate-fadeIn">
+						<div className="bg-card rounded-xl shadow-lg p-4 sm:p-6 animate-fadeIn">
 							<ExpenseOverview />
-							<div className="mt-8 mb-6 border-t border-border"></div>
+							<div className="mt-6 mb-4 border-t border-border"></div>
 							<ExpenseList />
 						</div>
 					: currentView === "upcoming" ?
@@ -72,7 +70,6 @@ export const ExpensesTracker = () => {
 				</div>
 			</Layout>
 
-			{/* Edit form window trigger */}
 			{editingExpense && (
 				<ExpenseForm
 					key={editingExpense.id}

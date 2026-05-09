@@ -549,6 +549,7 @@ class BackupService {
 						e.initialState ?
 							{
 								amount: e.initialState.amount,
+								amountData: e.initialState.amountData,
 								dueDate: e.initialState.dueDate?.toISOString() ?? null,
 								paymentMethod: e.initialState.paymentMethod || "None",
 							}
@@ -1059,6 +1060,7 @@ class BackupService {
 							const parsed = JSON.parse(row.initialState);
 							return {
 								amount: parsed.amount,
+								amountData: parsed.amountData,
 								dueDate: parsed.dueDate ? new Date(parsed.dueDate) : null,
 								paymentMethod: parsed.paymentMethod || "None",
 							};

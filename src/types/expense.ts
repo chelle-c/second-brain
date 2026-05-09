@@ -84,6 +84,7 @@ export interface RecurrenceSettings {
 
 export interface OccurrenceInitialState {
 	amount: number;
+	amountData?: AmountRange;
 	dueDate: Date | null;
 	paymentMethod: string;
 }

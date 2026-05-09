@@ -60,7 +60,7 @@ export const Layout: React.FC<LayoutProps> = ({
 	];
 
 	return (
-		<div className="flex-1 overflow-y-auto max-h-[98vh] rounded-lg p-2">
+		<div className="p-2">
 			<header className="animate-fadeIn mb-4">
 				<h1 className="sr-only">Expense Tracker</h1>
 				<div className="flex items-center justify-between mb-4">
@@ -102,7 +102,7 @@ export const Layout: React.FC<LayoutProps> = ({
 					</div>
 				</div>
 			</header>
-			<main>{children}</main>
+			<main className="flex-1 max-h-[90vh] overflow-y-auto scrollbar scrollbar-thumb-primary scrollbar-track-background">{children}</main>
 		</div>
 	);
 };

@@ -18,71 +18,38 @@ export const AllExpenses: React.FC = () => {
 
 	const [showArchived, setShowArchived] = useState(false);
 	const [selectedYear, setSelectedYear] = useState<number | "all">("all");
-	const [deleteModal, setDeleteModal] = useState<{
-		isOpen: boolean;
-		id: string;
-		name: string;
-	}>({
+	const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string; name: string }>({
 		isOpen: false,
 		id: "",
 		name: "",
 	});
 
-	// Filter expenses by year and archived status
 	const filteredExpenses = useMemo(() => {
 		let filtered = expenses;
-
-		// Filter by archived status
 		filtered = filtered.filter((expense) =>
 			showArchived ? expense.isArchived : !expense.isArchived,
 		);
-
-		// Filter by year
 		if (selectedYear !== "all") {
 			filtered = filtered.filter((expense) => {
-				const expenseYear = expense.dueDate
-					? expense.dueDate.getFullYear()
-					: expense.createdAt.getFullYear();
+				const expenseYear =
+					expense.dueDate ?
+						expense.dueDate.getFullYear()
+					:	expense.createdAt.getFullYear();
 				return expenseYear === selectedYear;
 			});
 		}
-
 		return filtered;
 	}, [expenses, showArchived, selectedYear]);
 
-	// Count archived and active expenses
-	const archivedCount = useMemo(() => {
-		return expenses.filter((e) => !e.parentExpenseId && e.isArchived).length;
-	}, [expenses]);
-
-	const activeCount = useMemo(() => {
-		return expenses.filter((e) => !e.parentExpenseId && !e.isArchived).length;
-	}, [expenses]);
-
-	const handleDeleteClick = (id: string, name: string) => {
-		setDeleteModal({ isOpen: true, id, name });
-	};
-
-	const handleDeleteConfirm = () => {
-		deleteExpense(deleteModal.id);
-		setDeleteModal({ isOpen: false, id: "", name: "" });
-	};
-
-	const handleDeleteCancel = () => {
-		setDeleteModal({ isOpen: false, id: "", name: "" });
-	};
-
-	const handleTogglePaid = (id: string) => {
-		toggleExpensePaid(id);
-	};
-
-	const handleDuplicate = (id: string) => {
-		duplicateExpense(id);
-	};
-
-	const handleSelectedYearChange = (year: number | "all") => {
-		setSelectedYear(year);
-	};
+	const archivedCount = useMemo(
+		() => expenses.filter((e) => !e.parentExpenseId && e.isArchived).length,
+		[expenses],
+	);
+	const activeCount = useMemo(
+		() => expenses.filter((e) => !e.parentExpenseId && !e.isArchived).length,
+		[expenses],
+	);
+	const totalExpenseCount = activeCount + archivedCount;
 
 	const archiveToggleOptions = [
 		{
@@ -97,21 +64,14 @@ export const AllExpenses: React.FC = () => {
 		},
 	];
 
-	const totalExpenseCount = activeCount + archivedCount;
-
 	if (totalExpenseCount === 0) {
 		return (
 			<div className="bg-card rounded-xl shadow-lg p-4 sm:p-6 animate-fadeIn">
-				<h3 className="text-lg sm:text-xl font-bold text-card-foreground mb-4">
-					All Expenses
-				</h3>
-				<div className="text-center py-12">
-					<DollarSign
-						className="mx-auto text-muted-foreground/30 mb-4"
-						size={48}
-					/>
-					<p className="text-muted-foreground">No expenses found.</p>
-					<p className="text-muted-foreground/70 text-sm mt-2">
+				<h3 className="text-lg font-bold text-card-foreground mb-4">All Expenses</h3>
+				<div className="text-center py-8">
+					<DollarSign className="mx-auto text-muted-foreground/30 mb-3" size={40} />
+					<p className="text-muted-foreground text-sm">No expenses found.</p>
+					<p className="text-muted-foreground/70 text-xs mt-1">
 						Click the + button to add your first expense.
 					</p>
 				</div>
@@ -122,13 +82,9 @@ export const AllExpenses: React.FC = () => {
 	return (
 		<>
 			<div className="bg-card rounded-xl shadow-lg p-4 sm:p-6 animate-fadeIn">
-				<div className="pb-4">
+				<div className="pb-3">
 					<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-						<h3 className="text-lg sm:text-xl font-bold text-card-foreground">
-							All Expenses
-						</h3>
-
-						{/* Archive Toggle */}
+						<h3 className="text-lg font-bold text-card-foreground">All Expenses</h3>
 						<AnimatedToggle
 							options={archiveToggleOptions}
 							value={showArchived ? "archived" : "active"}
@@ -138,34 +94,29 @@ export const AllExpenses: React.FC = () => {
 				</div>
 
 				<div>
-					{filteredExpenses.length === 0 ? (
-						<div className="text-center py-8 text-muted-foreground">
-							{showArchived
-								? `No archived expenses found${
-										selectedYear !== "all" ? ` for ${selectedYear}` : ""
-									}.`
-								: `No active expenses found${
-										selectedYear !== "all" ? ` for ${selectedYear}` : ""
-									}.`}
+					{filteredExpenses.length === 0 ?
+						<div className="text-center py-6 text-muted-foreground text-sm">
+							{showArchived ?
+								`No archived expenses found${selectedYear !== "all" ? ` for ${selectedYear}` : ""}.`
+							:	`No active expenses found${selectedYear !== "all" ? ` for ${selectedYear}` : ""}.`
+							}
 						</div>
-					) : (
-						<ExpenseTable
+					:	<ExpenseTable
 							key={`all-${expenses.length}-${selectedYear}-${showArchived}`}
 							expensesToDisplay={filteredExpenses}
-							isCurrentMonth={false}
 							selectedMonth={new Date()}
-							onDelete={handleDeleteClick}
+							onDelete={(id, name) => setDeleteModal({ isOpen: true, id, name })}
 							onArchive={archiveExpense}
 							onUnarchive={unarchiveExpense}
-							onTogglePaid={handleTogglePaid}
-							onDuplicate={handleDuplicate}
-							showArchiveActions={true}
-							isAllExpensesView={true}
+							onTogglePaid={toggleExpensePaid}
+							onDuplicate={duplicateExpense}
+							showArchiveActions
+							isAllExpensesView
 							showRelativeDates={false}
-							onSelectedYearChange={handleSelectedYearChange}
+							onSelectedYearChange={setSelectedYear}
 							categoryColors={categoryColors}
 						/>
-					)}
+					}
 				</div>
 			</div>
 
@@ -176,8 +127,11 @@ export const AllExpenses: React.FC = () => {
 				confirmLabel="Delete"
 				cancelLabel="Cancel"
 				variant="danger"
-				onConfirm={handleDeleteConfirm}
-				onCancel={handleDeleteCancel}
+				onConfirm={() => {
+					deleteExpense(deleteModal.id);
+					setDeleteModal({ isOpen: false, id: "", name: "" });
+				}}
+				onCancel={() => setDeleteModal({ isOpen: false, id: "", name: "" })}
 			/>
 		</>
 	);

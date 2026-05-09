@@ -15,6 +15,22 @@ import type { SubscriptionStatus } from "@/types/overview";
 
 type TimeUnit = "days" | "weeks" | "months" | "years";
 
+/**
+ * Returns true when an expense is an overdue one-time (non-child) expense
+ * that should "roll over" into the current month because it is still unpaid.
+ */
+const isOverdueRollover = (expense: Expense, targetDate: Date): boolean => {
+	if (!expense.dueDate || expense.isPaid || expense.parentExpenseId) return false;
+	const now = new Date();
+	// Only roll over when viewing the current month
+	if (!isSameMonth(targetDate, now)) return false;
+	const dueMonth = expense.dueDate.getMonth();
+	const dueYear = expense.dueDate.getFullYear();
+	const currentMonth = now.getMonth();
+	const currentYear = now.getFullYear();
+	return dueYear < currentYear || (dueYear === currentYear && dueMonth < currentMonth);
+};
+
 interface ExpenseStore {
 	expenses: Expense[];
 	selectedMonth: Date | null;
@@ -208,21 +224,34 @@ export const useExpenseStore = create<ExpenseStore>()(
 		},
 
 		resetOccurrence: (id) => {
-			set((state) => ({
-				expenses: state.expenses.map((expense) => {
-					if (expense.id === id && expense.initialState) {
-						return {
-							...expense,
-							amount: expense.initialState.amount,
-							dueDate: expense.initialState.dueDate,
-							paymentMethod: expense.initialState.paymentMethod || "None",
-							isModified: false,
-							updatedAt: new Date(),
-						};
-					}
-					return expense;
-				}),
-			}));
+			set((state) => {
+				const expense = state.expenses.find((e) => e.id === id);
+				if (!expense?.initialState) return state;
+
+				// Fall back to parent's amountData when initialState doesn't have it
+				const parentAmountData =
+					expense.parentExpenseId ?
+						state.expenses.find((e) => e.id === expense.parentExpenseId)?.amountData
+					:	undefined;
+
+				return {
+					expenses: state.expenses.map((e) => {
+						if (e.id === id && e.initialState) {
+							return {
+								...e,
+								amount: e.initialState.amount,
+								amountData:
+									e.initialState.amountData ?? parentAmountData ?? e.amountData,
+								dueDate: e.initialState.dueDate,
+								paymentMethod: e.initialState.paymentMethod || "None",
+								isModified: false,
+								updatedAt: new Date(),
+							};
+						}
+						return e;
+					}),
+				};
+			});
 
 			if (useAppStore.getState().autoSaveEnabled) {
 				useAppStore.getState().saveToFile(AppToSave.Expenses);
@@ -244,6 +273,10 @@ export const useExpenseStore = create<ExpenseStore>()(
 
 					const newAmount =
 						expenseData.amount !== undefined ? expenseData.amount : expense.amount;
+					const newAmountData =
+						expenseData.amountData !== undefined ?
+							expenseData.amountData
+						:	expense.amountData;
 					const newDueDate =
 						expenseData.dueDate !== undefined ? expenseData.dueDate : expense.dueDate;
 					const newPaymentMethod =
@@ -257,12 +290,15 @@ export const useExpenseStore = create<ExpenseStore>()(
 						expense.initialState ?
 							newAmount !== expense.initialState.amount ||
 							newDueDate?.getTime() !== expense.initialState.dueDate?.getTime() ||
-							newPaymentMethod !== initialPaymentMethod
+							newPaymentMethod !== initialPaymentMethod ||
+							JSON.stringify(newAmountData) !==
+								JSON.stringify(expense.initialState.amountData)
 						:	expense.isModified || false;
 
 					return {
 						...expense,
 						amount: newAmount,
+						amountData: newAmountData,
 						dueDate: newDueDate,
 						paymentMethod: newPaymentMethod,
 						isPaid:
@@ -296,7 +332,6 @@ export const useExpenseStore = create<ExpenseStore>()(
 				expenseData.isRecurring !== undefined ? expenseData.isRecurring : wasRecurring;
 
 			if (!wasRecurring && willBeRecurring && !existingExpense.parentExpenseId) {
-				// Becoming recurring for the first time
 				const updatedParent: Expense = {
 					...existingExpense,
 					...expenseData,
@@ -309,7 +344,6 @@ export const useExpenseStore = create<ExpenseStore>()(
 					updatedAt: new Date(),
 				};
 
-				// Ensure occurrences is set (not zero)
 				if (
 					!updatedParent.recurrence!.occurrences ||
 					updatedParent.recurrence!.occurrences <= 0
@@ -357,7 +391,6 @@ export const useExpenseStore = create<ExpenseStore>()(
 					updatedAt: new Date(),
 				};
 
-				// Remove all occurrences
 				const updatedExpenses = expenses
 					.filter((e) => e.id !== id && e.parentExpenseId !== id)
 					.concat([updatedParent]);
@@ -420,6 +453,7 @@ export const useExpenseStore = create<ExpenseStore>()(
 							return {
 								...newOcc,
 								amount: existingMod.amount,
+								amountData: existingMod.amountData,
 								paymentMethod: existingMod.paymentMethod,
 								isPaid: existingMod.isPaid,
 								paymentDate: existingMod.paymentDate,
@@ -481,6 +515,10 @@ export const useExpenseStore = create<ExpenseStore>()(
 								expenseData.amount !== undefined ?
 									expenseData.amount
 								:	expense.amount,
+							amountData:
+								expenseData.amountData !== undefined ?
+									expenseData.amountData
+								:	expense.amountData,
 							isRecurring:
 								expenseData.isRecurring !== undefined ?
 									expenseData.isRecurring
@@ -497,6 +535,10 @@ export const useExpenseStore = create<ExpenseStore>()(
 											expenseData.amount !== undefined ?
 												expenseData.amount
 											:	expense.initialState.amount,
+										amountData:
+											expenseData.amountData !== undefined ?
+												expenseData.amountData
+											:	expense.initialState.amountData,
 										paymentMethod:
 											expenseData.paymentMethod !== undefined ?
 												expenseData.paymentMethod
@@ -729,6 +771,7 @@ export const useExpenseStore = create<ExpenseStore>()(
 							occurrence.initialState ?
 								{
 									amount: occurrence.initialState.amount,
+									amountData: occurrence.initialState.amountData,
 									dueDate: occurrence.initialState.dueDate,
 									paymentMethod: occurrence.initialState.paymentMethod || "None",
 								}
@@ -816,7 +859,6 @@ export const useExpenseStore = create<ExpenseStore>()(
 
 		getMonthlyExpenses: (date) => {
 			const { expenses } = get();
-			const currentDate = new Date();
 			const targetMonth = date.getMonth();
 			const targetYear = date.getFullYear();
 			const monthKey = getMonthKey(date);
@@ -857,19 +899,16 @@ export const useExpenseStore = create<ExpenseStore>()(
 					return expenseMonth === targetMonth && expenseYear === targetYear;
 				}
 
+				// Non-recurring, non-child expense with a due date:
+				// Overdue unpaid expenses roll over into the current month.
+				if (isOverdueRollover(expense, date)) {
+					return true;
+				}
+
+				// Otherwise show only in the exact due month.
 				const dueMonth = expense.dueDate.getMonth();
 				const dueYear = expense.dueDate.getFullYear();
-				const currentMonth = currentDate.getMonth();
-				const currentYear = currentDate.getFullYear();
-
-				const isAfterOrEqualCurrent =
-					targetYear > currentYear ||
-					(targetYear === currentYear && targetMonth >= currentMonth);
-
-				const isBeforeOrEqualDue =
-					targetYear < dueYear || (targetYear === dueYear && targetMonth <= dueMonth);
-
-				return isAfterOrEqualCurrent && isBeforeOrEqualDue;
+				return dueMonth === targetMonth && dueYear === targetYear;
 			});
 		},
 
@@ -887,7 +926,7 @@ export const useExpenseStore = create<ExpenseStore>()(
 									isSameMonth(
 										expense.dueDate || new Date(),
 										get().selectedMonth || new Date(),
-									)
+									) || isOverdueRollover(expense, date)
 								:	false;
 							break;
 						case "required":
@@ -915,6 +954,7 @@ export const useExpenseStore = create<ExpenseStore>()(
 
 		getTotalByCategoryFiltered: (date, mode, showPaid) => {
 			const monthlyExpenses = get().getMonthlyExpenses(date);
+			const selectedMonth = get().selectedMonth || new Date();
 
 			return monthlyExpenses.reduce(
 				(acc, expense) => {
@@ -924,19 +964,14 @@ export const useExpenseStore = create<ExpenseStore>()(
 						case "remaining":
 							includeExpense =
 								!expense.isPaid &&
-								isSameMonth(
-									expense.dueDate || new Date(),
-									get().selectedMonth || new Date(),
-								);
+								(isSameMonth(expense.dueDate || new Date(), selectedMonth) ||
+									isOverdueRollover(expense, date));
 							break;
 						case "required":
 							includeExpense =
-								!expense.isPaid && expense.type === "need" ?
-									isSameMonth(
-										expense.dueDate || new Date(),
-										get().selectedMonth || new Date(),
-									)
-								:	false;
+								expense.type === "need" &&
+								(isSameMonth(expense.dueDate || new Date(), selectedMonth) ||
+									isOverdueRollover(expense, date));
 							break;
 						case "all":
 							includeExpense = true;

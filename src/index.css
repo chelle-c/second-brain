@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@plugin "tailwind-scrollbar";
 
 /* Theme System - Import theme files */
 @import "./styles/themes/base.css";

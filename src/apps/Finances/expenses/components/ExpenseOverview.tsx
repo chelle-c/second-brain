@@ -1,4 +1,5 @@
 import { TrendingUp } from "lucide-react";
+import { useMemo } from "react";
 import { AnimatedToggle } from "@/components/AnimatedToggle";
 import { PieChart, type PieChartData } from "@/components/charts";
 import { getCurrencySymbol } from "@/lib/currencyUtils";
@@ -11,6 +12,7 @@ import { MonthNavigation } from "./MonthNavigation";
 export const ExpenseOverview: React.FC = () => {
 	const {
 		selectedMonth,
+		getMonthlyExpenses,
 		getTotalByCategoryFiltered,
 		getMonthlyTotalFiltered,
 		overviewMode,
@@ -28,18 +30,23 @@ export const ExpenseOverview: React.FC = () => {
 		overviewMode,
 		showPaidExpenses,
 	);
-	const monthlyTotal = getMonthlyTotalFiltered(
-		selectedMonth,
-		overviewMode,
-		showPaidExpenses,
-	);
+	const monthlyTotal = getMonthlyTotalFiltered(selectedMonth, overviewMode, showPaidExpenses);
 
-	const data: PieChartData[] = Object.entries(categoryTotals).map(
-		([category, amount]) => ({
-			name: category,
-			value: amount,
-		}),
-	);
+	const monthlyExpenses = getMonthlyExpenses(selectedMonth);
+	const hasNonExactByCategory = useMemo(() => {
+		const result: Record<string, boolean> = {};
+		for (const expense of monthlyExpenses) {
+			if (expense.amountData && expense.amountData.type !== "exact") {
+				result[expense.category] = true;
+			}
+		}
+		return result;
+	}, [monthlyExpenses]);
+
+	const data: PieChartData[] = Object.entries(categoryTotals).map(([category, amount]) => ({
+		name: category,
+		value: amount,
+	}));
 
 	const placeholderData: PieChartData[] = [
 		{ name: "Housing", value: 1200 },
@@ -73,8 +80,14 @@ export const ExpenseOverview: React.FC = () => {
 			<p className="font-medium text-popover-foreground">{datum.name}</p>
 			<p className="text-primary font-bold">
 				{isPlaceholder ? "Example: " : ""}
+				{!isPlaceholder && hasNonExactByCategory[datum.name] ? "~ " : ""}
 				{formatCurrency(datum.value, expenseCurrency)}
 			</p>
+			{!isPlaceholder && hasNonExactByCategory[datum.name] && (
+				<p className="text-xs text-muted-foreground italic">
+					Includes estimated/range amounts
+				</p>
+			)}
 			{!isPlaceholder && total > 0 && (
 				<p className="text-xs text-muted-foreground">
 					{((datum.value / total) * 100).toFixed(1)}% of total
@@ -85,10 +98,10 @@ export const ExpenseOverview: React.FC = () => {
 
 	return (
 		<>
-			<div className="mb-4 flex flex-col gap-4">
-				<div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-					<h3 className="text-lg sm:text-xl font-bold text-card-foreground flex items-center gap-2 whitespace-nowrap">
-						<TrendingUp className="text-primary" size={20} />
+			<div className="mb-3 flex flex-col gap-3">
+				<div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+					<h3 className="text-base sm:text-lg font-bold text-card-foreground flex items-center gap-2 whitespace-nowrap">
+						<TrendingUp className="text-primary" size={18} />
 						Expense Overview
 					</h3>
 					<div className="w-full sm:w-auto">
@@ -97,12 +110,11 @@ export const ExpenseOverview: React.FC = () => {
 				</div>
 			</div>
 
-			<div className="flex flex-col lg:flex-row gap-6">
-				{/* Left side - Total and View Modes */}
-				<div className="lg:w-80 flex flex-col gap-4">
-					{/* View Mode Selector */}
+			<div className="flex flex-col lg:flex-row gap-4">
+				{/* Left side */}
+				<div className="lg:w-72 flex flex-col gap-3">
 					<div>
-						<p className="text-sm text-muted-foreground mb-2">Filter by:</p>
+						<p className="text-xs text-muted-foreground mb-1.5">Filter by:</p>
 						<AnimatedToggle
 							options={viewModeOptions}
 							value={overviewMode}
@@ -111,10 +123,9 @@ export const ExpenseOverview: React.FC = () => {
 						/>
 					</div>
 
-					{/* Total Display */}
-					<div className="bg-linear-to-br from-secondary to-accent rounded-lg p-6 flex-1 flex flex-col justify-center">
+					<div className="bg-linear-to-br from-secondary to-accent rounded-lg p-3 sm:p-4 flex-1 flex flex-col justify-center">
 						<div className="text-center">
-							<p className="text-xs sm:text-sm text-muted-foreground mb-2">
+							<p className="text-xs text-muted-foreground mb-1">
 								{overviewMode === "remaining" && "Remaining Unpaid"}
 								{overviewMode === "required" &&
 									showPaidExpenses &&
@@ -129,11 +140,11 @@ export const ExpenseOverview: React.FC = () => {
 									!showPaidExpenses &&
 									"All Unpaid Expenses"}
 							</p>
-							<div className="flex items-center justify-center gap-2">
-								<span className="text-primary text-2xl font-bold">
+							<div className="flex items-center justify-center gap-1">
+								<span className="text-primary text-lg font-bold">
 									{currencySymbol}
 								</span>
-								<p className="text-2xl sm:text-4xl font-bold text-primary">
+								<p className="text-xl sm:text-2xl font-bold text-primary">
 									{formatCurrency(monthlyTotal, expenseCurrency).replace(
 										/^[^0-9]+/,
 										"",
@@ -143,10 +154,9 @@ export const ExpenseOverview: React.FC = () => {
 						</div>
 					</div>
 
-					{/* Category breakdown stats */}
 					{data.length > 0 && (
-						<div className="bg-muted rounded-lg p-4">
-							<p className="text-xs font-bold text-foreground mb-2">
+						<div className="bg-muted rounded-lg p-3">
+							<p className="text-xs font-bold text-foreground mb-1.5">
 								Top Categories:
 							</p>
 							{data
@@ -158,6 +168,7 @@ export const ExpenseOverview: React.FC = () => {
 										className="flex items-center justify-between text-xs mb-1"
 									>
 										<span className="text-muted-foreground truncate mr-2">
+											{hasNonExactByCategory[category.name] ? "~ " : ""}
 											{category.name}
 										</span>
 										<span className="font-medium text-foreground shrink-0">
@@ -169,18 +180,16 @@ export const ExpenseOverview: React.FC = () => {
 					)}
 				</div>
 
-				{/* Right side - Chart and Legend */}
+				{/* Right side */}
 				<div className="flex-1 min-w-0">
 					{isPlaceholder && (
-						<p className="text-center text-muted-foreground text-sm mb-4">
-							Example distribution - Add expenses to see your data
+						<p className="text-center text-muted-foreground text-xs mb-2">
+							Example distribution — add expenses to see your data
 						</p>
 					)}
 
-					<div
-						className={`flex flex-col space-y-4 ${isPlaceholder ? "opacity-60" : ""}`}
-					>
-						<div className="h-48 sm:h-64">
+					<div className={`flex flex-col space-y-3 ${isPlaceholder ? "opacity-60" : ""}`}>
+						<div className="h-36 sm:h-48">
 							<PieChart
 								data={chartData}
 								colors={allColors}
@@ -189,15 +198,14 @@ export const ExpenseOverview: React.FC = () => {
 							/>
 						</div>
 
-						{/* Custom Legend */}
-						<div className="flex gap-x-4 gap-y-2 justify-center flex-wrap">
+						<div className="flex gap-x-4 gap-y-1.5 justify-center flex-wrap">
 							{chartData.map((entry) => (
 								<div
 									key={`legend-${entry.name}`}
-									className="flex items-center gap-2 min-w-0"
+									className="flex items-center gap-1.5 min-w-0"
 								>
 									<span
-										className="w-3 h-3 rounded-full shrink-0"
+										className="w-2.5 h-2.5 rounded-full shrink-0"
 										style={{
 											backgroundColor:
 												categoryColors[entry.name] ||
@@ -205,11 +213,14 @@ export const ExpenseOverview: React.FC = () => {
 												"var(--chart-1)",
 										}}
 									/>
-									<span className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
+									<span className="text-xs font-medium text-muted-foreground truncate">
 										{entry.name}
 									</span>
-									<span className="text-xs sm:text-sm font-bold text-foreground whitespace-nowrap">
+									<span className="text-xs font-bold text-foreground whitespace-nowrap">
 										{isPlaceholder && "ex: "}
+										{!isPlaceholder && hasNonExactByCategory[entry.name] ?
+											"~ "
+										:	""}
 										{formatCurrency(entry.value, expenseCurrency)}
 									</span>
 								</div>

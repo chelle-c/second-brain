@@ -66,6 +66,7 @@ const useAppStore = create<AppStore>()(
 						e.initialState ?
 							{
 								amount: e.initialState.amount,
+								amountData: e.initialState.amountData,
 								dueDate:
 									e.initialState.dueDate ?
 										new Date(e.initialState.dueDate)
