@@ -961,6 +961,7 @@ class BackupService {
 					tags: string;
 					folder: string;
 					reminder: string | null;
+					icon: string | null; // ← add
 					createdAt: string;
 					updatedAt: string;
 					archived: number;
@@ -977,6 +978,7 @@ class BackupService {
 				createdAt: new Date(row.createdAt),
 				updatedAt: new Date(row.updatedAt),
 				archived: Boolean(row.archived),
+				icon: row.icon ?? null,
 			}));
 
 			// Read folders

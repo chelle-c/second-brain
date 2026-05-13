@@ -1,6 +1,8 @@
-import "./index.css";
+import { sqlStorage } from "@/lib/storage";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+
+import "./index.css";
 
 const rootElement = document.getElementById("root");
 
@@ -46,5 +48,9 @@ async function bootstrap() {
 		);
 	}
 }
+
+window.addEventListener("beforeunload", () => {
+	sqlStorage.checkpoint(); // best-effort sync WAL flush
+});
 
 bootstrap();

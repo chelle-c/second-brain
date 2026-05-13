@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useExpenseStore } from "@/stores/useExpenseStore";
 import { useHistoryStore } from "@/stores/useHistoryStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
@@ -48,7 +49,7 @@ export const ExpensesTracker = () => {
 	}, [canUndo, canRedo, undo, redo]);
 
 	return (
-		<>
+		<ErrorBoundary appName="Expenses">
 			<Layout
 				currentView={currentView}
 				setCurrentView={setCurrentView}
@@ -78,6 +79,6 @@ export const ExpensesTracker = () => {
 					isGlobalEdit={!editingExpense.parentExpenseId}
 				/>
 			)}
-		</>
+		</ErrorBoundary>
 	);
 };

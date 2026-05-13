@@ -1,11 +1,13 @@
-import { ChevronRight, Folder as FolderIcon, Inbox } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
-import type React from "react";
-import { useEffect, useRef, useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { IconPicker, type IconPickerSelection } from "@/components/IconPicker";
+import { renderFolderOrTagIcon } from "@/lib/icons";
 import type { Folder, Note } from "@/types/notes";
 import { useDropZone, useDragState, type DragItem } from "@/hooks/useDragAndDrop";
+
+import type { LucideIcon } from "lucide-react";
+import { ChevronRight, Folder as FolderIcon, Inbox } from "lucide-react";
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
 
 type DropPosition = "above" | "inside" | "below";
 
@@ -109,20 +111,11 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 
 	const renderFolderIcon = (size: number) => {
 		if (isInbox) return <Inbox size={size} className="shrink-0" />;
-		if (folder.emoji) {
-			return (
-				<span
-					role="img"
-					aria-hidden
-					className="shrink-0"
-					style={{ fontSize: `${size}px`, lineHeight: 1 }}
-				>
-					{folder.emoji}
-				</span>
-			);
-		}
-		const IconComponent = folder.icon || FolderIcon;
-		return <IconComponent size={size} className="shrink-0" />;
+		return (
+			renderFolderOrTagIcon(folder.icon, folder.emoji, size, "shrink-0") ?? (
+				<FolderIcon size={size} className="shrink-0" />
+			)
+		);
 	};
 
 	// ── Handle picker selection ──────────────────────────────────────────────
@@ -143,7 +136,7 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 	if (isEditing) {
 		return (
 			<div
-				className={`flex items-center rounded-lg px-2 py-1.5 ${isActive ? "bg-primary/10" : ""}`}
+				className={`flex items-center rounded px-2 py-1.5 ${isActive ? "bg-primary/10" : ""}`}
 				data-folder-id={dataFolderId}
 				style={{ paddingLeft: `${depth * 12 + 8}px` }}
 			>
@@ -163,7 +156,7 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 						}
 					}}
 					onBlur={onEditSave}
-					className="flex-1 px-2 py-1 text-sm border border-border rounded bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+					className="flex-1 text-sm border border-border rounded bg-background focus:outline-none focus:ring-inset focus:ring-primary"
 					autoFocus
 					aria-label="Folder name"
 				/>
@@ -241,7 +234,7 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 		<div
 			role="button"
 			tabIndex={0}
-			className={`group relative w-full flex items-center rounded-lg transition-all text-left ${
+			className={`group relative w-full flex items-center rounded transition-all text-left ${
 				isInbox ? "mb-2" : ""
 			} ${isActive ? "bg-primary/10 text-primary" : "hover:bg-accent"} ${
 				isDragging ? "opacity-30 cursor-grabbing" : ""
@@ -261,7 +254,7 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 			onClick={onSelect}
 			onKeyDown={handleKeyDown}
 			style={{
-				paddingLeft: isInbox ? "8px" : `${depth * 12 + 8}px`,
+				paddingLeft: isInbox ? "0px" : `${depth * 24}px`,
 				userSelect: "none",
 				WebkitUserSelect: "none",
 				cursor: cursorStyle,
@@ -276,13 +269,13 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 
 			<span className={`shrink-0 transition-transform mr-1 ${!hasChildren && "invisible"}`}>
 				<ChevronRight
-					size={12}
+					size={16}
 					className={`text-muted-foreground transition-transform ${isExpanded ? "rotate-90" : ""}`}
 				/>
 			</span>
 
 			<div
-				className={`flex-1 flex items-center gap-2 min-w-0 ${isInbox ? "py-2 px-1" : "py-1.5 px-1"}`}
+				className={`flex-1 flex items-center gap-2 min-w-0 ${isInbox ? "py-2 px-1" : "py-1 px-1"}`}
 			>
 				{!isInbox && onChangeIcon ?
 					<Popover open={showIconPicker} onOpenChange={setShowIconPicker}>
@@ -319,7 +312,7 @@ export const FolderItem: React.FC<FolderItemProps> = ({
 				</span>
 			</div>
 
-			<div className="flex items-center gap-2 pr-2 shrink-0">
+			<div className={`flex items-center gap-2 shrink-0 ${noteCount >= 10 ? "pr-1.5" : "pr-2"}`}>
 				<span
 					className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded"
 					aria-label={`${noteCount} notes`}

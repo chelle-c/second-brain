@@ -82,209 +82,82 @@ const createReminder = (
 // ============================================================================
 
 const createSampleFolders = (): Folder[] => {
-	const now = new Date();
-	return [
-		{
-			id: "inbox",
-			name: "Inbox",
-			parentId: null,
-			archived: false,
-			order: 0,
-			createdAt: now,
-			updatedAt: now,
-		},
-		{
-			id: "work",
-			name: "Work",
-			parentId: null,
-			icon: Diamond as LucideIcon,
-			archived: false,
-			order: 1,
-			createdAt: now,
-			updatedAt: now,
-		},
-		{
-			id: "work_meetings",
-			name: "Meetings",
-			parentId: "work",
-			archived: false,
-			order: 2,
-			createdAt: now,
-			updatedAt: now,
-		},
-		{
-			id: "work_projects",
-			name: "Projects",
-			parentId: "work",
-			icon: Star as LucideIcon,
-			archived: false,
-			order: 3,
-			createdAt: now,
-			updatedAt: now,
-		},
-		{
-			id: "work_projects_alpha",
-			name: "Project Alpha",
-			parentId: "work_projects",
-			archived: false,
-			order: 4,
-			createdAt: now,
-			updatedAt: now,
-		},
-		{
-			id: "work_projects_beta",
-			name: "Project Beta",
-			parentId: "work_projects",
-			archived: false,
-			order: 5,
-			createdAt: now,
-			updatedAt: now,
-		},
-		{
-			id: "work_projects_beta_docs",
-			name: "Documentation",
-			parentId: "work_projects_beta",
-			archived: false,
-			order: 6,
-			createdAt: now,
-			updatedAt: now,
-		},
-		{
-			id: "work_tasks",
-			name: "Tasks",
-			parentId: "work",
-			archived: false,
-			order: 7,
-			createdAt: now,
-			updatedAt: now,
-		},
-		{
-			id: "personal",
-			name: "Personal",
-			parentId: null,
-			icon: Heart as LucideIcon,
-			archived: false,
-			order: 8,
-			createdAt: now,
-			updatedAt: now,
-		},
-		{
-			id: "personal_health",
-			name: "Health",
-			parentId: "personal",
-			archived: false,
-			order: 9,
-			createdAt: now,
-			updatedAt: now,
-		},
-		{
-			id: "personal_health_fitness",
-			name: "Fitness",
-			parentId: "personal_health",
-			archived: false,
-			order: 10,
-			createdAt: now,
-			updatedAt: now,
-		},
-		{
-			id: "personal_health_nutrition",
-			name: "Nutrition",
-			parentId: "personal_health",
-			archived: false,
-			order: 11,
-			createdAt: now,
-			updatedAt: now,
-		},
-		{
-			id: "personal_finance",
-			name: "Finance",
-			parentId: "personal",
-			archived: false,
-			order: 12,
-			createdAt: now,
-			updatedAt: now,
-		},
-		{
-			id: "personal_home",
-			name: "Home",
-			parentId: "personal",
-			archived: false,
-			order: 13,
-			createdAt: now,
-			updatedAt: now,
-		},
-		{
-			id: "ideas",
-			name: "Ideas",
-			parentId: null,
-			icon: Sparkles as LucideIcon,
-			archived: false,
-			order: 14,
-			createdAt: now,
-			updatedAt: now,
-		},
-		{
-			id: "ideas_app",
-			name: "App Features",
-			parentId: "ideas",
-			archived: false,
-			order: 15,
-			createdAt: now,
-			updatedAt: now,
-		},
-		{
-			id: "ideas_business",
-			name: "Business",
-			parentId: "ideas",
-			archived: false,
-			order: 16,
-			createdAt: now,
-			updatedAt: now,
-		},
-		{
-			id: "learning",
-			name: "Learning",
-			parentId: null,
-			archived: false,
-			order: 17,
-			createdAt: now,
-			updatedAt: now,
-		},
-		{
-			id: "learning_programming",
-			name: "Programming",
-			parentId: "learning",
-			archived: false,
-			order: 18,
-			createdAt: now,
-			updatedAt: now,
-		},
-		{
-			id: "learning_languages",
-			name: "Languages",
-			parentId: "learning",
-			archived: false,
-			order: 19,
-			createdAt: now,
-			updatedAt: now,
-		},
-	];
+    const now = new Date();
+    return [
+        { id: "inbox", name: "Inbox", parentId: null, archived: false, order: 0, createdAt: now, updatedAt: now },
+
+        // Lucide icon
+        { id: "work", name: "Work", parentId: null, icon: Diamond as LucideIcon,
+          archived: false, order: 1, createdAt: now, updatedAt: now },
+
+        // Emoji folder
+        { id: "work_meetings", name: "Meetings", parentId: "work", emoji: "🤝",
+          archived: false, order: 2, createdAt: now, updatedAt: now },
+
+        { id: "work_projects", name: "Projects", parentId: "work", icon: Star as LucideIcon,
+          archived: false, order: 3, createdAt: now, updatedAt: now },
+
+        { id: "work_projects_alpha", name: "Project Alpha", parentId: "work_projects",
+          emoji: "🚀", archived: false, order: 4, createdAt: now, updatedAt: now },
+
+        { id: "work_projects_beta", name: "Project Beta", parentId: "work_projects",
+          emoji: "🧪", archived: false, order: 5, createdAt: now, updatedAt: now },
+
+        { id: "work_projects_beta_docs", name: "Documentation", parentId: "work_projects_beta",
+          emoji: "📚", archived: false, order: 6, createdAt: now, updatedAt: now },
+
+        { id: "work_tasks", name: "Tasks", parentId: "work", emoji: "✅",
+          archived: false, order: 7, createdAt: now, updatedAt: now },
+
+        { id: "personal", name: "Personal", parentId: null, icon: Heart as LucideIcon,
+          archived: false, order: 8, createdAt: now, updatedAt: now },
+
+        { id: "personal_health", name: "Health", parentId: "personal", emoji: "🏥",
+          archived: false, order: 9, createdAt: now, updatedAt: now },
+
+        { id: "personal_health_fitness", name: "Fitness", parentId: "personal_health",
+          emoji: "🏋️", archived: false, order: 10, createdAt: now, updatedAt: now },
+
+        { id: "personal_health_nutrition", name: "Nutrition", parentId: "personal_health",
+          emoji: "🥗", archived: false, order: 11, createdAt: now, updatedAt: now },
+
+        { id: "personal_finance", name: "Finance", parentId: "personal", emoji: "💰",
+          archived: false, order: 12, createdAt: now, updatedAt: now },
+
+        { id: "personal_home", name: "Home", parentId: "personal", emoji: "🏠",
+          archived: false, order: 13, createdAt: now, updatedAt: now },
+
+        { id: "ideas", name: "Ideas", parentId: null, icon: Sparkles as LucideIcon,
+          archived: false, order: 14, createdAt: now, updatedAt: now },
+
+        { id: "ideas_app", name: "App Features", parentId: "ideas", emoji: "📱",
+          archived: false, order: 15, createdAt: now, updatedAt: now },
+
+        { id: "ideas_business", name: "Business", parentId: "ideas", emoji: "💼",
+          archived: false, order: 16, createdAt: now, updatedAt: now },
+
+        { id: "learning", name: "Learning", parentId: null, emoji: "🎓",
+          archived: false, order: 17, createdAt: now, updatedAt: now },
+
+        { id: "learning_programming", name: "Programming", parentId: "learning", emoji: "💻",
+          archived: false, order: 18, createdAt: now, updatedAt: now },
+
+        { id: "learning_languages", name: "Languages", parentId: "learning", emoji: "🗣️",
+          archived: false, order: 19, createdAt: now, updatedAt: now },
+    ];
 };
 
 const createSampleTags = (): Record<string, Tag> => ({
-	actions: { id: "actions", name: "Actions", icon: CheckCircle as LucideIcon, color: "#3b82f6" },
-	ideas: { id: "ideas", name: "Ideas", icon: Lightbulb as LucideIcon, color: "#eab308" },
-	reference: {
-		id: "reference",
-		name: "Reference",
-		icon: BookOpen as LucideIcon,
-		color: "#10b981",
-	},
-	urgent: { id: "urgent", name: "Urgent", icon: Flag as LucideIcon, color: "#ef4444" },
-	goal: { id: "goal", name: "Goal", icon: Target as LucideIcon, color: "#8b5cf6" },
-	code: { id: "code", name: "Code", icon: Code as LucideIcon, color: "#64748b" },
-	meeting: { id: "meeting", name: "Meeting", icon: Calendar as LucideIcon, color: "#0ea5e9" },
-	personal: { id: "personal", name: "Personal", icon: User as LucideIcon, color: "#f97316" },
+    actions:   { id: "actions",   name: "Actions",   icon: CheckCircle as LucideIcon, color: "#3b82f6" },
+    ideas:     { id: "ideas",     name: "Ideas",     icon: Lightbulb   as LucideIcon, color: "#eab308" },
+    reference: { id: "reference", name: "Reference", icon: BookOpen    as LucideIcon, color: "#10b981" },
+
+    // Emoji-based tags
+    urgent:    { id: "urgent",    name: "Urgent",    icon: Flag     as LucideIcon, emoji: "🔥", color: "#ef4444" },
+    goal:      { id: "goal",      name: "Goal",      icon: Target   as LucideIcon, emoji: "🎯", color: "#8b5cf6" },
+    code:      { id: "code",      name: "Code",      icon: Code     as LucideIcon, emoji: "👨‍💻", color: "#64748b" },
+    meeting:   { id: "meeting",   name: "Meeting",   icon: Calendar as LucideIcon, emoji: "📅", color: "#0ea5e9" },
+    personal:  { id: "personal",  name: "Personal",  icon: User     as LucideIcon, emoji: "🙂", color: "#f97316" },
 });
 
 const tiptapDoc = (content: object[]) => JSON.stringify({ type: "doc", content });
@@ -329,6 +202,7 @@ const createSampleNotes = (): Note[] => {
 			createdAt: daysAgo(7),
 			updatedAt: daysAgo(7),
 			archived: false,
+			icon: "Sparkles",
 		},
 		{
 			id: generateId(),
@@ -341,6 +215,7 @@ const createSampleNotes = (): Note[] => {
 			createdAt: daysAgo(1),
 			updatedAt: daysAgo(1),
 			archived: false,
+			icon: "Lightbulb",
 		},
 		{
 			id: generateId(),
@@ -359,6 +234,7 @@ const createSampleNotes = (): Note[] => {
 				{ unit: "hours", value: 1 },
 				{ unit: "minutes", value: 15 },
 			]),
+			icon: "📞",
 		},
 		{
 			id: generateId(),
@@ -372,6 +248,7 @@ const createSampleNotes = (): Note[] => {
 			updatedAt: daysAgo(1),
 			archived: false,
 			reminder: createReminder(3, 10, 0, [{ unit: "days", value: 1 }]),
+			icon: "🛒",
 		},
 		{
 			id: generateId(),
@@ -382,6 +259,7 @@ const createSampleNotes = (): Note[] => {
 			createdAt: daysAgo(3),
 			updatedAt: daysAgo(3),
 			archived: false,
+			icon: "📝",
 		},
 		{
 			id: generateId(),
@@ -395,6 +273,7 @@ const createSampleNotes = (): Note[] => {
 			createdAt: daysAgo(5),
 			updatedAt: daysAgo(2),
 			archived: false,
+			icon: "Target",
 		},
 		{
 			id: generateId(),
@@ -409,6 +288,7 @@ const createSampleNotes = (): Note[] => {
 				{ unit: "days", value: 1 },
 				{ unit: "hours", value: 2 },
 			]),
+			icon: "⭐",
 		},
 		{
 			id: generateId(),
@@ -427,6 +307,7 @@ const createSampleNotes = (): Note[] => {
 			createdAt: daysAgo(3),
 			updatedAt: daysAgo(3),
 			archived: false,
+			icon: "🤝",
 		},
 		{
 			id: generateId(),
@@ -440,6 +321,7 @@ const createSampleNotes = (): Note[] => {
 			updatedAt: daysAgo(5),
 			archived: false,
 			reminder: createReminder(2, 11, 0, [{ unit: "minutes", value: 30 }]),
+			icon: "💼",
 		},
 		{
 			id: generateId(),
@@ -457,6 +339,7 @@ const createSampleNotes = (): Note[] => {
 			createdAt: daysAgo(10),
 			updatedAt: daysAgo(1),
 			archived: false,
+			icon: "Code",
 		},
 		{
 			id: generateId(),
@@ -469,6 +352,7 @@ const createSampleNotes = (): Note[] => {
 			createdAt: daysAgo(4),
 			updatedAt: daysAgo(2),
 			archived: false,
+			icon: "🚀",
 		},
 		{
 			id: generateId(),
@@ -487,6 +371,7 @@ const createSampleNotes = (): Note[] => {
 			createdAt: daysAgo(8),
 			updatedAt: daysAgo(3),
 			archived: false,
+			icon: "BookOpen",
 		},
 		{
 			id: generateId(),
@@ -503,6 +388,7 @@ const createSampleNotes = (): Note[] => {
 			createdAt: daysAgo(2),
 			updatedAt: daysAgo(1),
 			archived: false,
+			icon: "✅",
 		},
 		{
 			id: generateId(),
@@ -527,6 +413,7 @@ const createSampleNotes = (): Note[] => {
 					notifications: [{ unit: "minutes" as const, value: 5 }],
 				};
 			})(),
+			icon: "🔥",
 		},
 		{
 			id: generateId(),
@@ -540,6 +427,7 @@ const createSampleNotes = (): Note[] => {
 			createdAt: daysAgo(10),
 			updatedAt: daysAgo(4),
 			archived: false,
+			icon: "📚",
 		},
 		{
 			id: generateId(),
@@ -558,6 +446,7 @@ const createSampleNotes = (): Note[] => {
 			createdAt: daysAgo(15),
 			updatedAt: daysAgo(3),
 			archived: false,
+			icon: "🏋️",
 		},
 		{
 			id: generateId(),
@@ -568,6 +457,7 @@ const createSampleNotes = (): Note[] => {
 			createdAt: daysAgo(7),
 			updatedAt: daysAgo(2),
 			archived: false,
+			icon: "💪",
 		},
 		{
 			id: generateId(),
@@ -578,6 +468,7 @@ const createSampleNotes = (): Note[] => {
 			createdAt: daysAgo(5),
 			updatedAt: daysAgo(1),
 			archived: false,
+			icon: "🥗",
 		},
 		{
 			id: generateId(),
@@ -595,6 +486,7 @@ const createSampleNotes = (): Note[] => {
 			updatedAt: daysAgo(2),
 			archived: false,
 			reminder: createReminder(14, 18, 0, [{ unit: "days", value: 2 }]),
+			icon: "💰",
 		},
 		{
 			id: generateId(),
@@ -608,6 +500,7 @@ const createSampleNotes = (): Note[] => {
 			createdAt: daysAgo(20),
 			updatedAt: daysAgo(6),
 			archived: false,
+			icon: "🏠",
 		},
 		{
 			id: generateId(),
@@ -624,6 +517,7 @@ const createSampleNotes = (): Note[] => {
 			createdAt: daysAgo(14),
 			updatedAt: daysAgo(1),
 			archived: false,
+			icon: "Lightbulb",
 		},
 		{
 			id: generateId(),
@@ -636,6 +530,7 @@ const createSampleNotes = (): Note[] => {
 			createdAt: daysAgo(12),
 			updatedAt: daysAgo(3),
 			archived: false,
+			icon: "✨",
 		},
 		{
 			id: generateId(),
@@ -648,6 +543,7 @@ const createSampleNotes = (): Note[] => {
 			createdAt: daysAgo(18),
 			updatedAt: daysAgo(5),
 			archived: false,
+			icon: "💼",
 		},
 		{
 			id: generateId(),
@@ -658,6 +554,7 @@ const createSampleNotes = (): Note[] => {
 			createdAt: daysAgo(6),
 			updatedAt: daysAgo(2),
 			archived: false,
+			icon: "Code",
 		},
 		{
 			id: generateId(),
@@ -668,6 +565,7 @@ const createSampleNotes = (): Note[] => {
 			createdAt: daysAgo(9),
 			updatedAt: daysAgo(4),
 			archived: false,
+			icon: "⚡",
 		},
 		{
 			id: generateId(),
@@ -679,6 +577,7 @@ const createSampleNotes = (): Note[] => {
 			updatedAt: daysAgo(3),
 			archived: false,
 			reminder: createReminder(1, 8, 0, [{ unit: "minutes", value: 15 }]),
+			icon: "🗣️",
 		},
 		{
 			id: generateId(),

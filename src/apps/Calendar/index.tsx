@@ -1,16 +1,3 @@
-/**
- * Calendar – top-level orchestrator.
- *
- * "Representative date" contract
- *   day   → the day itself (midnight)
- *   week  → Monday of that week (midnight)
- *   month → 1st of that month (midnight)
- *
- * A ref (`focusDay`) always tracks the concrete day the user is looking at.
- * When views switch, focusDay stays fixed and the new anchor is derived from
- * it.  This prevents the Day → Week → Day round-trip from drifting.
- */
-
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { CalendarEvent, CalendarFilters, CalendarViewType } from "@/types/calendar";
 import { DEFAULT_CALENDAR_FILTERS } from "@/types/calendar";
@@ -19,6 +6,7 @@ import { useExpenseStore } from "@/stores/useExpenseStore";
 import { useIncomeStore } from "@/stores/useIncomeStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
 import { AnimatedToggle } from "@/components/AnimatedToggle";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { buildCalendarEvents } from "./calendarEvents";
 import { NavigationBar } from "./components/NavigationBar";
 import { FilterBar } from "./components/FilterBar";
@@ -132,43 +120,45 @@ export function Calendar() {
 
 	// ── render ────────────────────────────────────────────────────────────────
 	return (
-		<div className="flex flex-col flex-1 min-h-0 h-full animate-fadeIn">
-			{/* Header */}
-			<div className="p-4 pb-2 space-y-3 bg-card/80 backdrop-blur border-b border-border">
-				<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-					<AnimatedToggle<CalendarViewType>
-						options={VIEW_OPTIONS}
-						value={view}
-						onChange={handleViewChange}
-					/>
-					<NavigationBar
-						view={view}
-						currentDate={currentDate}
-						onDateChange={handleDateChange}
-					/>
+		<ErrorBoundary appName="Calendar">
+			<div className="flex flex-col flex-1 min-h-0 h-full animate-fadeIn">
+				{/* Header */}
+				<div className="p-4 pb-2 space-y-3 bg-card/80 backdrop-blur border-b border-border">
+					<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+						<AnimatedToggle<CalendarViewType>
+							options={VIEW_OPTIONS}
+							value={view}
+							onChange={handleViewChange}
+						/>
+						<NavigationBar
+							view={view}
+							currentDate={currentDate}
+							onDateChange={handleDateChange}
+						/>
+					</div>
+					<div className="flex justify-end">
+						<FilterBar filters={filters} onFilterChange={setFilters} />
+					</div>
 				</div>
-				<div className="flex justify-end">
-					<FilterBar filters={filters} onFilterChange={setFilters} />
-				</div>
-			</div>
 
-			{/* Active view – fills remaining vertical space */}
-			<div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-				{view === "day" && (
-					<DayView date={currentDate} events={events} startHour={startHour} />
-				)}
-				{view === "week" && (
-					<WeekView weekStart={currentDate} events={events} startHour={startHour} />
-				)}
-				{view === "month" && (
-					<MonthView
-						monthStart={currentDate}
-						events={events}
-						onDayClick={handleDayClick}
-					/>
-				)}
+				{/* Active view – fills remaining vertical space */}
+				<div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+					{view === "day" && (
+						<DayView date={currentDate} events={events} startHour={startHour} />
+					)}
+					{view === "week" && (
+						<WeekView weekStart={currentDate} events={events} startHour={startHour} />
+					)}
+					{view === "month" && (
+						<MonthView
+							monthStart={currentDate}
+							events={events}
+							onDayClick={handleDayClick}
+						/>
+					)}
+				</div>
 			</div>
-		</div>
+		</ErrorBoundary>
 	);
 }
 

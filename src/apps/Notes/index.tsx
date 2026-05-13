@@ -7,6 +7,7 @@ import { useHistoryStore } from "@/stores/useHistoryStore";
 import { useNotesStore } from "@/stores/useNotesStore";
 import { useSettingsStore } from "@/stores/useSettingsStore";
 import type { Folder, Tag } from "@/types/notes";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { FolderNav } from "./components/FolderNav";
 import { NoteEditor } from "./components/NoteEditor";
 import { NotesBreadcrumb } from "./components/NotesBreadcrumb";
@@ -458,7 +459,7 @@ export function NotesApp() {
 	};
 
 	return (
-		<>
+		<ErrorBoundary appName="Notes">
 			<ConfirmationModal
 				isOpen={showDeleteConfirm}
 				title="Delete Note"
@@ -477,6 +478,6 @@ export function NotesApp() {
 					content={<div className="h-full">{renderContent()}</div>}
 				/>
 			</div>
-		</>
+		</ErrorBoundary>
 	);
 }

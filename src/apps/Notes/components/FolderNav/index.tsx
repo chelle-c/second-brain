@@ -605,7 +605,12 @@ export const FolderNav = ({
 			const isDragReady = dragReadyFolder === folder.id;
 
 			return (
-				<li key={folder.id} role="treeitem" aria-expanded={isExpanded}>
+				<li
+					key={folder.id}
+					role="treeitem"
+					aria-expanded={isExpanded}
+					className={`ml-1 my-0 rounded`}
+				>
 					<FolderItem
 						folder={folder}
 						isActive={activeFolder?.id === folder.id}
@@ -660,7 +665,7 @@ export const FolderNav = ({
 					{showNewFolder && newFolderParent === folder.id && (
 						<div
 							className="ml-8 mt-1 mb-2"
-							style={{ paddingLeft: `${(depth + 1) * 12}px` }}
+							style={{ paddingLeft: `4px` }}
 						>
 							<input
 								ref={inputRef}
@@ -678,16 +683,28 @@ export const FolderNav = ({
 								}}
 								onBlur={cancelCreating}
 								placeholder="Folder name..."
-								className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+								className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:ring-inset"
 								aria-label="New folder name"
 							/>
 						</div>
 					)}
 
-					{isExpanded && hasChildren && (
-						<ul className="ml-1" style={{ paddingLeft: `${depth * 6}px` }} role="group">
-							{renderFolderTree(children, depth + 1)}
-						</ul>
+					{hasChildren && (
+						<div
+							className={
+								`w-full grid transition-[grid-template-rows] duration-200 ease-out` +
+								(isExpanded ? " bg-card" : "")
+							}
+							style={{ gridTemplateRows: isExpanded ? "1fr" : "0fr" }}
+							aria-hidden={!isExpanded}
+						>
+							<ul
+								className="overflow-hidden w-full"
+								role="group"
+							>
+								{renderFolderTree(children, depth + 1)}
+							</ul>
+						</div>
 					)}
 				</li>
 			);
@@ -895,7 +912,7 @@ export const FolderNav = ({
 							}}
 							onBlur={cancelCreating}
 							placeholder="Folder name..."
-							className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+							className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:ring-inset"
 							aria-label="New folder name"
 						/>
 					</div>
@@ -903,7 +920,7 @@ export const FolderNav = ({
 
 				{/* Folder tree */}
 				<div
-					className="flex-1 overflow-y-auto overflow-x-hidden p-2"
+					className="flex-1 overflow-y-auto overflow-x-hidden p-2 scrollbar-thin"
 					onDragOver={handleRootDragOver}
 					onDrop={(e) => handleDrop(e, null)}
 					onDragLeave={handleDragLeave}
@@ -958,7 +975,7 @@ export const FolderNav = ({
 					)}
 
 					<ul
-						className={`space-y-0.5 ${dragOverFolder === "root" ? "bg-accent/50 rounded-lg" : ""}`}
+						className={`space-y-1.5 ${dragOverFolder === "root" ? "bg-accent/50 rounded-lg" : ""}`}
 						role="tree"
 						aria-label="Folder tree"
 					>

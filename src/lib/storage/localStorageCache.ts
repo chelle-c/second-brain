@@ -1,11 +1,11 @@
 import { DEFAULT_CATEGORY_COLORS, DEFAULT_EXPENSE_CATEGORIES } from "@/lib/expenseHelpers";
+import { findIconByName, DEFAULT_TAG_ICON, getIconNameFromComponent } from "@/lib/icons";
 import type { AppData } from "@/types";
 import type { Expense, OccurrenceInitialState } from "@/types/expense";
 import type { Folder, Note, Tag } from "@/types/notes";
 import { DEFAULT_SETTINGS } from "@/types/settings";
 import { DEFAULT_PAYMENT_METHODS } from "@/types/storage";
 import { DEFAULT_THEME_SETTINGS } from "@/types/theme";
-import type { LucideIcon } from "lucide-react";
 
 /**
  * localStorage keys — split across several keys to avoid quota issues
@@ -22,7 +22,7 @@ const KEYS = {
 } as const;
 
 const VERSION_KEY = "sb_cache_version";
-const CACHE_VERSION = "1";
+const CACHE_VERSION = "2";
 
 // ── Serialization helpers ────────────────────────────────────────────────────
 
@@ -78,6 +78,8 @@ interface RawNote {
 }
 
 interface RawFolder {
+	emoji: undefined;
+	iconName: any;
 	id: string;
 	name: string;
 	parentId: string | null;
@@ -128,6 +130,8 @@ interface RawExpensesData {
 }
 
 interface RawTag {
+	emoji: undefined;
+	iconName: any;
 	id: string;
 	name: string;
 	color: string;
@@ -153,7 +157,8 @@ function reviveFolder(raw: RawFolder): Folder {
 		id: raw.id,
 		name: raw.name,
 		parentId: raw.parentId,
-		icon: undefined, // Icons are resolved by NotesStorage from icon names
+		icon: raw.iconName ? findIconByName(raw.iconName) : undefined,
+		emoji: raw.emoji ?? undefined,
 		archived: raw.archived ?? false,
 		order: raw.order ?? 0,
 		createdAt: reviveDate(raw.createdAt) ?? new Date(),
@@ -223,13 +228,8 @@ export const localStorageCache = {
 			const foldersJson = tryStringify(
 				data.folders.map((f) => ({
 					...f,
-					icon:
-						f.icon ?
-							((f.icon as unknown as { displayName?: string; name?: string })
-								.displayName ??
-							(f.icon as unknown as { name?: string }).name ??
-							null)
-						:	null,
+					iconName: getIconNameFromComponent(f.icon) ?? null,
+					emoji: f.emoji ?? null,
 					createdAt:
 						f.createdAt instanceof Date ? f.createdAt.toISOString() : f.createdAt,
 					updatedAt:
@@ -243,18 +243,11 @@ export const localStorageCache = {
 					Object.entries(data.tags).map(([id, tag]) => [
 						id,
 						{
-							...tag,
-							icon:
-								tag.icon ?
-									((
-										tag.icon as unknown as {
-											displayName?: string;
-											name?: string;
-										}
-									).displayName ??
-									(tag.icon as unknown as { name?: string }).name ??
-									"Tag")
-								:	"Tag",
+							id: tag.id,
+							name: tag.name,
+							color: tag.color,
+							iconName: getIconNameFromComponent(tag.icon) ?? null,
+							emoji: tag.emoji ?? null,
 						},
 					]),
 				),
@@ -347,7 +340,11 @@ export const localStorageCache = {
 						color: tag.color,
 						// Cast to LucideIcon to satisfy the type - the actual icon
 						// will be resolved by NotesStorage when syncing with DB
-						icon: undefined as unknown as LucideIcon,
+						icon:
+							tag.iconName ?
+								(findIconByName(tag.iconName) ?? DEFAULT_TAG_ICON)
+							:	DEFAULT_TAG_ICON,
+						emoji: tag.emoji ?? undefined,
 					},
 				]),
 			);

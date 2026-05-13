@@ -134,6 +134,13 @@ class SqlStorage {
 		await this.db.execute("PRAGMA synchronous=NORMAL");
 		await this.db.execute("PRAGMA busy_timeout=30000");
 
+		const integrity =
+			await this.db.select<Array<{ integrity_check: string }>>("PRAGMA integrity_check");
+		if (integrity[0]?.integrity_check !== "ok") {
+			console.error("Database integrity check failed:", integrity);
+			// Optionally: auto-trigger a restore from latest backup
+		}
+
 		if (!this.tablesCreated) {
 			await this.createTables();
 			await this.runMigrations();

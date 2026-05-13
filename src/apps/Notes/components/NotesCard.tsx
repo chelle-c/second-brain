@@ -9,7 +9,12 @@ import {
 	Redo2,
 	Undo2,
 } from "lucide-react";
-import { AVAILABLE_ICONS, getIconNameFromComponent, renderNoteIcon } from "@/lib/icons";
+import {
+	AVAILABLE_ICONS,
+	getIconNameFromComponent,
+	renderNoteIcon,
+	renderFolderOrTagIcon,
+} from "@/lib/icons";
 
 import React, { useCallback, useMemo, useRef } from "react";
 import { toast } from "sonner";
@@ -124,13 +129,9 @@ const NoteIconDisplay: React.FC<{ icon?: string | null }> = ({ icon }) => {
 
 // ── Tag icon helper ──────────────────────────────────────────────────────────
 
-const TagIconDisplay: React.FC<{ tag: Tag }> = ({ tag }) => {
-	if (tag.emoji) {
-		return <span style={{ fontSize: "12px", lineHeight: 1 }}>{tag.emoji}</span>;
-	}
-	const Icon = tag.icon;
-	return <Icon size={12} />;
-};
+const TagIconDisplay: React.FC<{ tag: Tag }> = ({ tag }) => (
+	<>{renderFolderOrTagIcon(tag.icon, tag.emoji, 12)}</>
+);
 
 // ── Draggable note item ──────────────────────────────────────────────────────
 
@@ -679,7 +680,7 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 					</div>
 					<TagFilter tags={tags} activeTags={activeTags} setActiveTags={setActiveTags} />
 				</div>
-				<div className="flex-1 overflow-y-auto">
+				<div className="flex-1 overflow-y-auto scrollbar-thin">
 					{filteredNotes.length === 0 ?
 						<div className="text-center py-12 text-muted-foreground animate-fadeIn">
 							<p className="text-lg mb-2">{emptyMessage.title}</p>
@@ -733,7 +734,7 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 				</div>
 				<TagFilter tags={tags} activeTags={activeTags} setActiveTags={setActiveTags} />
 			</div>
-			<div className="flex-1 overflow-y-auto">
+			<div className="flex-1 overflow-y-auto scrollbar-thin">
 				{filteredNotes.length === 0 ?
 					<div className="text-center py-12 text-muted-foreground animate-fadeIn">
 						<p className="text-lg mb-2">{emptyMessage.title}</p>

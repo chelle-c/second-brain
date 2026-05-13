@@ -428,7 +428,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 	return (
 		<div className="h-full flex bg-card">
 			{/* ── Scrollable content area ────────────────────────────────── */}
-			<div className="flex-1 min-w-0 overflow-y-auto">
+			<div className="flex-1 min-w-0 overflow-y-auto scrollbar-thin">
 				<div className="max-w-4xl mx-auto px-8 py-6">
 					{/* ── Note Icon ────────────────────────────────────────── */}
 					{noteIcon ?

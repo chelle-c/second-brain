@@ -474,7 +474,7 @@ export class NotesStorage {
 						id: row.id,
 						name: row.name,
 						color: row.color,
-						icon: icon || DEFAULT_TAG_ICON,
+						icon: icon ?? DEFAULT_TAG_ICON,
 						emoji,
 					};
 				});

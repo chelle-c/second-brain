@@ -1,6 +1,7 @@
 import { Calendar, Clock, FileText, Folder, FolderOpen, Search, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Modal } from "@/components/Modal";
+import { renderFolderOrTagIcon } from "@/lib/icons";
 import type { Folder as FolderType, Note, Tag } from "@/types/notes";
 
 type FilterMode = "all" | "folders" | "notes";
@@ -138,20 +139,19 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 			.map((note) => {
 				const blocks = extractBlocksFromContent(note.content);
 				// Find the first block that matches the search term
-				const matchingBlock = blocks.find((block) =>
-					block.toLowerCase().includes(term)
-				);
+				const matchingBlock = blocks.find((block) => block.toLowerCase().includes(term));
 
 				// Check if any tag matches (by name)
-				const matchingTag = isTagSearch && tagSearchTerm
-					? note.tags?.some((tagId) => {
+				const matchingTag =
+					isTagSearch && tagSearchTerm ?
+						note.tags?.some((tagId) => {
 							const tag = tags[tagId];
 							return tag?.name.toLowerCase().includes(tagSearchTerm);
-					  })
-					: note.tags?.some((tagId) => {
+						})
+					:	note.tags?.some((tagId) => {
 							const tag = tags[tagId];
 							return tag?.name.toLowerCase().includes(term);
-					  });
+						});
 
 				return { note, blocks, matchingBlock, matchingTag };
 			})
@@ -170,9 +170,8 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 			.map(({ note, matchingBlock, matchingTag }) => {
 				// Use the matching block as preview, truncated to 120 chars
 				const preview = matchingBlock?.trim() || "";
-				const contentPreview = preview.length > 120
-					? `${preview.slice(0, 120)}...`
-					: preview;
+				const contentPreview =
+					preview.length > 120 ? `${preview.slice(0, 120)}...` : preview;
 
 				return {
 					type: "note" as const,
@@ -189,9 +188,10 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 				};
 			});
 
-		const folderResults: FolderResult[] = isTagSearch
-			? [] // Don't search folders when using # tag search
-			: folders
+		const folderResults: FolderResult[] =
+			isTagSearch ?
+				[] // Don't search folders when using # tag search
+			:	folders
 					.filter((folder) => folder.name.toLowerCase().includes(term))
 					.map((folder) => ({
 						type: "folder" as const,
@@ -225,7 +225,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 	useEffect(() => {
 		if (resultsRef.current && filteredResults.length > 0) {
 			const selectedElement = resultsRef.current.querySelector(
-				`[data-index="${selectedIndex}"]`
+				`[data-index="${selectedIndex}"]`,
 			);
 			if (selectedElement) {
 				selectedElement.scrollIntoView({ block: "nearest" });
@@ -236,14 +236,10 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 	const handleKeyDown = (e: React.KeyboardEvent) => {
 		if (e.key === "ArrowDown") {
 			e.preventDefault();
-			setSelectedIndex((prev) =>
-				prev < filteredResults.length - 1 ? prev + 1 : 0
-			);
+			setSelectedIndex((prev) => (prev < filteredResults.length - 1 ? prev + 1 : 0));
 		} else if (e.key === "ArrowUp") {
 			e.preventDefault();
-			setSelectedIndex((prev) =>
-				prev > 0 ? prev - 1 : filteredResults.length - 1
-			);
+			setSelectedIndex((prev) => (prev > 0 ? prev - 1 : filteredResults.length - 1));
 		} else if (e.key === "Enter") {
 			e.preventDefault();
 			const result = filteredResults[selectedIndex];
@@ -274,7 +270,8 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 	};
 
 	const renderNoteResult = (result: NoteResult, index: number) => {
-		const hasUpdated = result.updatedAt &&
+		const hasUpdated =
+			result.updatedAt &&
 			new Date(result.updatedAt).getTime() !== new Date(result.createdAt).getTime();
 
 		return (
@@ -287,9 +284,9 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 					onClose();
 				}}
 				className={`w-full text-left p-3 rounded-lg border transition-all ${
-					index === selectedIndex
-						? "border-primary bg-primary/10"
-						: "border-border hover:bg-accent"
+					index === selectedIndex ?
+						"border-primary bg-primary/10"
+					:	"border-border hover:bg-accent"
 				}`}
 				role="option"
 				aria-selected={index === selectedIndex}
@@ -312,13 +309,15 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 								{result.tags.slice(0, 4).map((tagId) => {
 									const tag = tags[tagId];
 									if (!tag) return null;
-									const Icon = tag.icon;
 									return (
 										<span
 											key={tagId}
 											className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-muted text-muted-foreground rounded text-xs"
 										>
-											{typeof Icon === "function" && <Icon size={10} />}
+											{tag.icon &&
+												(typeof tag.icon === "function" ||
+													typeof tag.icon === "object") &&
+												renderFolderOrTagIcon(tag.icon, tag.emoji, 10)}
 											{tag.name}
 										</span>
 									);
@@ -351,9 +350,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 									{formatDate(result.updatedAt)}
 								</span>
 							)}
-							{result.archived && (
-								<span className="text-orange-600">Archived</span>
-							)}
+							{result.archived && <span className="text-orange-600">Archived</span>}
 						</div>
 					</div>
 				</div>
@@ -366,9 +363,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 			key={`folder-${result.id}`}
 			data-index={index}
 			className={`p-3 rounded-lg border ${
-				index === selectedIndex
-					? "border-primary bg-primary/10"
-					: "border-border"
+				index === selectedIndex ? "border-primary bg-primary/10" : "border-border"
 			}`}
 		>
 			<div className="flex items-center justify-between">
@@ -402,16 +397,15 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 							<FolderOpen size={12} />
 							Folders ({folderResults.length})
 						</div>
-						{folderResults.length === 0 ? (
+						{folderResults.length === 0 ?
 							<div className="text-sm text-muted-foreground py-2 pl-5">
 								No folders found
 							</div>
-						) : (
-							folderResults.map((result) => {
+						:	folderResults.map((result) => {
 								const index = currentIndex++;
 								return renderFolderResult(result, index);
 							})
-						)}
+						}
 					</div>
 				)}
 
@@ -423,16 +417,15 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 							<FileText size={12} />
 							Notes ({noteResults.length})
 						</div>
-						{noteResults.length === 0 ? (
+						{noteResults.length === 0 ?
 							<div className="text-sm text-muted-foreground py-2 pl-5">
 								No notes found
 							</div>
-						) : (
-							noteResults.map((result) => {
+						:	noteResults.map((result) => {
 								const index = currentIndex++;
 								return renderNoteResult(result, index);
 							})
-						)}
+						}
 					</div>
 				)}
 			</>
@@ -480,9 +473,9 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 						type="button"
 						onClick={() => setFilterMode("all")}
 						className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-							filterMode === "all"
-								? "bg-background text-foreground shadow-sm"
-								: "text-muted-foreground hover:text-foreground"
+							filterMode === "all" ?
+								"bg-background text-foreground shadow-sm"
+							:	"text-muted-foreground hover:text-foreground"
 						}`}
 					>
 						All
@@ -494,9 +487,9 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 						type="button"
 						onClick={() => setFilterMode("folders")}
 						className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-							filterMode === "folders"
-								? "bg-background text-foreground shadow-sm"
-								: "text-muted-foreground hover:text-foreground"
+							filterMode === "folders" ?
+								"bg-background text-foreground shadow-sm"
+							:	"text-muted-foreground hover:text-foreground"
 						}`}
 					>
 						Folders
@@ -508,9 +501,9 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 						type="button"
 						onClick={() => setFilterMode("notes")}
 						className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-							filterMode === "notes"
-								? "bg-background text-foreground shadow-sm"
-								: "text-muted-foreground hover:text-foreground"
+							filterMode === "notes" ?
+								"bg-background text-foreground shadow-sm"
+							:	"text-muted-foreground hover:text-foreground"
 						}`}
 					>
 						Notes

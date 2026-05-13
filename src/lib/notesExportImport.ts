@@ -122,7 +122,7 @@ function isValidExportFormat(data: unknown): data is NotesExport {
 function getIconNameForExport(icon: unknown): string | undefined {
 	if (!icon) return undefined;
 
-	if (typeof icon === "function") {
+	if (typeof icon === "function" || typeof icon === "object") {
 		const iconComponent = icon as { displayName?: string; name?: string };
 		return iconComponent.displayName || iconComponent.name || undefined;
 	}

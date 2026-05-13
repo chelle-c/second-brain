@@ -3,6 +3,7 @@ import { Redo2, Undo2 } from "lucide-react";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { AnimatedToggle } from "@/components/AnimatedToggle";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { years } from "@/lib/date-utils/constants";
 import { useHistoryStore } from "@/stores/useHistoryStore";
 import { useIncomeStore } from "@/stores/useIncomeStore";
@@ -156,87 +157,89 @@ export const IncomeTracker: React.FC = () => {
 	];
 
 	return (
-		<div className="flex-1 overflow-y-auto max-h-[98vh] rounded-lg p-2">
-			<div className="w-full mx-auto animate-fadeIn">
-				{/* Header */}
-				<div className="flex items-center justify-between mb-4">
-					<div className="w-min">
-						<AnimatedToggle
-							options={viewModeOptions}
-							value={incomeViewType}
-							onChange={updateIncomeViewType}
-						/>
-					</div>
-					<div className="flex items-center gap-1">
-						<button
-							type="button"
-							onClick={undo}
-							disabled={!canUndo}
-							className="p-1.5 hover:bg-accent rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-							title="Undo (Ctrl+Z)"
-						>
-							<Undo2 size={18} />
-						</button>
-						<button
-							type="button"
-							onClick={redo}
-							disabled={!canRedo}
-							className="p-1.5 hover:bg-accent rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-							title="Redo (Ctrl+Y)"
-						>
-							<Redo2 size={18} />
-						</button>
-					</div>
-				</div>
-
-				{incomeViewType === "weekly" ?
-					<div className="space-y-4">
-						{/* Top Row: Summary (wider) + Navigation */}
-						<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-							<div className="lg:col-span-1">
-								<WeekNavigation
-									selectedWeek={selectedWeek}
-									setSelectedWeek={setSelectedWeek}
-									years={years}
-								/>
-							</div>
-							<div className="lg:col-span-2">
-								<WeeklySummary
-									weeklyTotal={weeklyTotal}
-									selectedWeek={selectedWeek.week}
-								/>
-							</div>
+		<ErrorBoundary appName="Income">
+			<div className="flex-1 overflow-y-auto max-h-[98vh] rounded-lg p-2">
+				<div className="w-full mx-auto animate-fadeIn">
+					{/* Header */}
+					<div className="flex items-center justify-between mb-4">
+						<div className="w-min">
+							<AnimatedToggle
+								options={viewModeOptions}
+								value={incomeViewType}
+								onChange={updateIncomeViewType}
+							/>
 						</div>
-
-						{/* Chart + Entries Row */}
-						<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-							{currentWeekEntries.length > 0 && (
-								<div className="lg:col-span-2">
-									<IncomeChart weeklyData={weeklyData} />
-								</div>
-							)}
-							<div
-								className={
-									currentWeekEntries.length > 0 ?
-										"lg:col-span-1"
-									:	"lg:col-span-3"
-								}
+						<div className="flex items-center gap-1">
+							<button
+								type="button"
+								onClick={undo}
+								disabled={!canUndo}
+								className="p-1.5 hover:bg-accent rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+								title="Undo (Ctrl+Z)"
 							>
-								<IncomeEntriesList
-									selectedWeek={selectedWeek}
-									currentWeekEntries={currentWeekEntries}
-								/>
-							</div>
+								<Undo2 size={18} />
+							</button>
+							<button
+								type="button"
+								onClick={redo}
+								disabled={!canRedo}
+								className="p-1.5 hover:bg-accent rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+								title="Redo (Ctrl+Y)"
+							>
+								<Redo2 size={18} />
+							</button>
 						</div>
 					</div>
-				: incomeViewType === "monthly" ?
-					<MonthlyView
-						selectedYear={selectedYear}
-						onYearChange={setSelectedYear}
-						years={years}
-					/>
-				:	<YearlyView />}
+
+					{incomeViewType === "weekly" ?
+						<div className="space-y-4">
+							{/* Top Row: Summary (wider) + Navigation */}
+							<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+								<div className="lg:col-span-1">
+									<WeekNavigation
+										selectedWeek={selectedWeek}
+										setSelectedWeek={setSelectedWeek}
+										years={years}
+									/>
+								</div>
+								<div className="lg:col-span-2">
+									<WeeklySummary
+										weeklyTotal={weeklyTotal}
+										selectedWeek={selectedWeek.week}
+									/>
+								</div>
+							</div>
+
+							{/* Chart + Entries Row */}
+							<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+								{currentWeekEntries.length > 0 && (
+									<div className="lg:col-span-2">
+										<IncomeChart weeklyData={weeklyData} />
+									</div>
+								)}
+								<div
+									className={
+										currentWeekEntries.length > 0 ?
+											"lg:col-span-1"
+										:	"lg:col-span-3"
+									}
+								>
+									<IncomeEntriesList
+										selectedWeek={selectedWeek}
+										currentWeekEntries={currentWeekEntries}
+									/>
+								</div>
+							</div>
+						</div>
+					: incomeViewType === "monthly" ?
+						<MonthlyView
+							selectedYear={selectedYear}
+							onYearChange={setSelectedYear}
+							years={years}
+						/>
+					:	<YearlyView />}
+				</div>
 			</div>
-		</div>
+		</ErrorBoundary>
 	);
 };
