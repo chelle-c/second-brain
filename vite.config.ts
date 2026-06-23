@@ -1,13 +1,12 @@
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
-import tsconfigPaths from "vite-tsconfig-paths";
 
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vite.dev/config/
 export default defineConfig(async () => ({
-	plugins: [react(), tailwindcss(), tsconfigPaths()],
+	plugins: [react(), tailwindcss()],
 
 	// Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
 	//
@@ -33,23 +32,18 @@ export default defineConfig(async () => ({
 	build: {
 		rollupOptions: {
 			output: {
-				manualChunks: {
+				codeSplitting: {
+					groups: [
 					// Core React vendor chunk
-					"vendor-react": ["react", "react-dom", "react-router"],
+					{name: "vendor-react", test: /node_modules[\\/]react/},
 					// UI framework chunk
-					"vendor-radix": [
-						"@radix-ui/react-dialog",
-						"@radix-ui/react-dropdown-menu",
-						"@radix-ui/react-tabs",
-						"@radix-ui/react-tooltip",
-						"@radix-ui/react-scroll-area",
-						"@radix-ui/react-select",
-						"@radix-ui/react-slot",
-					],
+					{name: "vendor-radix", test: /node_modules[\\/]@radix-ui/},
 					// State management
-					"vendor-zustand": ["zustand"],
+					{name: "vendor-zustand", test: /node_modules[\\/]zustand/},
+					]
 				},
 			},
 		},
 	},
+	resolve: {tsconfigPaths: true}
 }));

@@ -342,7 +342,7 @@ export const SlashCommands = Extension.create({
 						item.title.toLowerCase().includes(query.toLowerCase())
 					);
 				},
-				render: renderItems,
+				render: renderItems as any,
 			}),
 		];
 	},
