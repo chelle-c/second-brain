@@ -76,11 +76,23 @@ const buildFlatFolderList = (
 
 // ── component ────────────────────────────────────────────────────────────────
 
-export const NotesDropdownMenu: React.FC<NotesDropdownMenuProps> = ({ note, folders }) => {
-	const { addNote, deleteNote, updateNote, archiveNote, unarchiveNote, restoreNote } =
-		useNotesStore();
+export const NotesDropdownMenu: React.FC<NotesDropdownMenuProps> = ({
+	note,
+}) => {
+	const {
+		addNote,
+		deleteNote,
+		updateNote,
+		archiveNote,
+		unarchiveNote,
+		restoreNote,
+	} = useNotesStore();
 
-	const allFolders = useMemo(() => buildFlatFolderList(folders, null, 0), [folders]);
+	const folders = useNotesStore((s) => s.folders);
+	const allFolders = useMemo(
+		() => buildFlatFolderList(folders, null, 0),
+		[folders],
+	);
 
 	// ── actions ──────────────────────────────────────────────────────────────
 
@@ -160,7 +172,10 @@ export const NotesDropdownMenu: React.FC<NotesDropdownMenuProps> = ({ note, fold
 
 	return (
 		<DropdownMenu>
-			<DropdownMenuTrigger asChild className="relative flex items-center gap-1">
+			<DropdownMenuTrigger
+				asChild
+				className="relative flex items-center gap-1"
+			>
 				<button
 					className="p-1 hover:bg-accent rounded transition-colors cursor-pointer duration-200"
 					title="Actions"
@@ -180,51 +195,68 @@ export const NotesDropdownMenu: React.FC<NotesDropdownMenuProps> = ({ note, fold
 					<DropdownMenuPortal>
 						<DropdownMenuSubContent className="py-1">
 							<div className="max-h-[300px] overflow-y-auto">
-								{allFolders.map(({ folder, depth, hasChildren }) => {
-									const isCurrentFolder = folder.id === note.folder;
-									const Icon = getFolderIconComponent(folder);
+								{allFolders.map(
+									({ folder, depth, hasChildren }) => {
+										const isCurrentFolder =
+											folder.id === note.folder;
+										const Icon =
+											getFolderIconComponent(folder);
 
-									return (
-										<DropdownMenuItem
-											key={folder.id}
-											onClick={() =>
-												!isCurrentFolder && moveNote(note.id, folder.id)
-											}
-											disabled={isCurrentFolder}
-											className={`cursor-pointer ${
-												isCurrentFolder ?
-													"opacity-50 cursor-not-allowed"
-												:	""
-											}`}
-											style={{ paddingLeft: `${depth * 12 + 8}px` }}
-										>
-											<span
-												className={`shrink-0 mr-1 ${
-													!hasChildren ? "invisible" : ""
+										return (
+											<DropdownMenuItem
+												key={folder.id}
+												onClick={() =>
+													!isCurrentFolder &&
+													moveNote(note.id, folder.id)
+												}
+												disabled={isCurrentFolder}
+												className={`cursor-pointer ${
+													isCurrentFolder
+														? "opacity-50 cursor-not-allowed"
+														: ""
 												}`}
+												style={{
+													paddingLeft: `${depth * 12 + 8}px`,
+												}}
 											>
-												<ChevronRight
-													size={12}
-													className="text-muted-foreground rotate-90"
-												/>
-											</span>
-											<Icon size={14} className="mr-2 shrink-0" />
-											<span className="truncate">{folder.name}</span>
-											{isCurrentFolder && (
-												<span className="ml-auto text-xs text-muted-foreground pl-2 shrink-0">
-													(current)
+												<span
+													className={`shrink-0 mr-1 ${
+														!hasChildren
+															? "invisible"
+															: ""
+													}`}
+												>
+													<ChevronRight
+														size={12}
+														className="text-muted-foreground rotate-90"
+													/>
 												</span>
-											)}
-										</DropdownMenuItem>
-									);
-								})}
+												<Icon
+													size={14}
+													className="mr-2 shrink-0"
+												/>
+												<span className="truncate">
+													{folder.name}
+												</span>
+												{isCurrentFolder && (
+													<span className="ml-auto text-xs text-muted-foreground pl-2 shrink-0">
+														(current)
+													</span>
+												)}
+											</DropdownMenuItem>
+										);
+									},
+								)}
 							</div>
 						</DropdownMenuSubContent>
 					</DropdownMenuPortal>
 				</DropdownMenuSub>
 
 				{/* Duplicate */}
-				<DropdownMenuItem onClick={handleDuplicate} className="cursor-pointer">
+				<DropdownMenuItem
+					onClick={handleDuplicate}
+					className="cursor-pointer"
+				>
 					<Copy size={14} className="mr-2" />
 					Duplicate
 				</DropdownMenuItem>
@@ -232,17 +264,21 @@ export const NotesDropdownMenu: React.FC<NotesDropdownMenuProps> = ({ note, fold
 				<DropdownMenuSeparator />
 
 				{/* Archive / Unarchive */}
-				<DropdownMenuItem onClick={handleArchiveToggle} className="cursor-pointer">
-					{note.archived ?
+				<DropdownMenuItem
+					onClick={handleArchiveToggle}
+					className="cursor-pointer"
+				>
+					{note.archived ? (
 						<>
 							<ArchiveRestore size={14} className="mr-2" />
 							Unarchive
 						</>
-					:	<>
+					) : (
+						<>
 							<Archive size={14} className="mr-2" />
 							Archive
 						</>
-					}
+					)}
 				</DropdownMenuItem>
 
 				{/* Delete */}

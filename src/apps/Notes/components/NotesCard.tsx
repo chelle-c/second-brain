@@ -1,5 +1,7 @@
 import {
+	ArrowDownUp,
 	Calendar,
+	Check,
 	ChevronRight,
 	Clock,
 	FileText,
@@ -16,14 +18,31 @@ import {
 	renderFolderOrTagIcon,
 } from "@/lib/icons";
 
-import React, { useCallback, useMemo, useRef } from "react";
+import React, {
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { getFolderBreadcrumb } from "@/lib/folderHelpers";
 import { useNotesStore } from "@/stores/useNotesStore";
 import type { Folder, Note, Tag } from "@/types/notes";
 import { NotesDropdownMenu } from "./NotesDropdownMenu";
 import { TagFilter } from "./TagFilter";
-import { useDraggable, useDropZone, type DragItem } from "@/hooks/useDragAndDrop";
+import {
+	useDraggable,
+	useDropZone,
+	type DragItem,
+} from "@/hooks/useDragAndDrop";
 
 interface NotesCardProps {
 	folders: Folder[];
@@ -32,7 +51,11 @@ interface NotesCardProps {
 	getFolderById: (id: string) => Folder | undefined;
 	tags: Record<string, Tag>;
 	activeTags: string[];
-	getNoteCount: (folderId: string, archived?: boolean, includeDescendants?: boolean) => number;
+	getNoteCount: (
+		folderId: string,
+		archived?: boolean,
+		includeDescendants?: boolean,
+	) => number;
 	setActiveTags: React.Dispatch<React.SetStateAction<string[]>>;
 	onSelectNote: (noteId: string) => void;
 	viewMode: "active" | "archived";
@@ -43,6 +66,15 @@ interface NotesCardProps {
 	calendarDate?: Date;
 	calendarMonth?: Date;
 }
+
+type NoteSortOption =
+	| "name-asc"
+	| "name-desc"
+	| "updated-desc"
+	| "updated-asc"
+	| "created-desc"
+	| "created-asc";
+const NOTE_SORT_KEY = "notes-sort-option";
 
 // ── date helpers ─────────────────────────────────────────────────────────────
 
@@ -59,7 +91,9 @@ function isSameDayDate(a: Date, b: Date): boolean {
 function isSameMonthDate(a: Date, b: Date): boolean {
 	const ad = new Date(a);
 	const bd = new Date(b);
-	return ad.getFullYear() === bd.getFullYear() && ad.getMonth() === bd.getMonth();
+	return (
+		ad.getFullYear() === bd.getFullYear() && ad.getMonth() === bd.getMonth()
+	);
 }
 
 function formatCalendarDateHeading(date: Date): string {
@@ -174,7 +208,10 @@ const DraggableNoteItem: React.FC<{
 		e.stopPropagation();
 	}, []);
 
-	const previewText = useMemo(() => extractPreviewText(note.content), [note.content]);
+	const previewText = useMemo(
+		() => extractPreviewText(note.content),
+		[note.content],
+	);
 
 	return (
 		<>
@@ -195,9 +232,9 @@ const DraggableNoteItem: React.FC<{
 				role="button"
 				aria-label={`Open note: ${note.title || "Untitled"}`}
 				className={`relative pl-1.5 pr-3 py-2.5 bg-card border border-border rounded-lg transition-all animate-fadeIn group focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
-					isDragging ? "opacity-30" : (
-						"hover:border-primary/30 hover:shadow-sm cursor-pointer"
-					)
+					isDragging
+						? "opacity-30"
+						: "hover:border-primary/30 hover:shadow-sm cursor-pointer"
 				}`}
 			>
 				<div className="flex items-center gap-2">
@@ -209,7 +246,9 @@ const DraggableNoteItem: React.FC<{
 						tabIndex={-1}
 						aria-label="Drag to move note"
 						className={`flex items-center text-muted-foreground/50 hover:text-muted-foreground px-0.5 rounded hover:bg-accent self-stretch transition-colors ${
-							isDragging ? "cursor-grabbing text-muted-foreground" : "cursor-grab"
+							isDragging
+								? "cursor-grabbing text-muted-foreground"
+								: "cursor-grab"
 						}`}
 					>
 						<GripVertical size={14} />
@@ -232,7 +271,9 @@ const DraggableNoteItem: React.FC<{
 										const tag = tags[tagId];
 										if (!tag) return null;
 										const iconKey =
-											getIconNameFromComponent(tag.icon) || "default";
+											getIconNameFromComponent(
+												tag.icon,
+											) || "default";
 										return (
 											<span
 												key={`${tagId}-${iconKey}`}
@@ -315,15 +356,24 @@ const DraggableNoteItem: React.FC<{
 const getFolderIconComponent = (folder: Folder) => {
 	if (folder.id === "inbox") return Inbox;
 	if (folder.icon) {
-		const matchingIcon = AVAILABLE_ICONS.find((i) => i.icon === folder.icon);
+		const matchingIcon = AVAILABLE_ICONS.find(
+			(i) => i.icon === folder.icon,
+		);
 		if (matchingIcon) return matchingIcon.icon;
 	}
 	return FolderIcon;
 };
 
-const FolderIconDisplay: React.FC<{ folder: Folder; size?: number }> = ({ folder, size = 16 }) => {
+const FolderIconDisplay: React.FC<{ folder: Folder; size?: number }> = ({
+	folder,
+	size = 16,
+}) => {
 	if (folder.emoji) {
-		return <span style={{ fontSize: `${size}px`, lineHeight: 1 }}>{folder.emoji}</span>;
+		return (
+			<span style={{ fontSize: `${size}px`, lineHeight: 1 }}>
+				{folder.emoji}
+			</span>
+		);
 	}
 	const Icon = getFolderIconComponent(folder);
 	return <Icon size={size} />;
@@ -433,13 +483,71 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 }) => {
 	const { notes, moveNote } = useNotesStore();
 
+	const [sortOption, setSortOption] = useState<NoteSortOption>(() => {
+		const saved = localStorage.getItem(
+			NOTE_SORT_KEY,
+		) as NoteSortOption | null;
+		return saved ?? "updated-desc";
+	});
+	useEffect(() => {
+		localStorage.setItem(NOTE_SORT_KEY, sortOption);
+	}, [sortOption]);
+
+	const sortNotes = useCallback(
+		(list: Note[]): Note[] => {
+			const arr = [...list];
+			switch (sortOption) {
+				case "name-asc":
+					return arr.sort((a, b) =>
+						(a.title || "Untitled").localeCompare(
+							b.title || "Untitled",
+						),
+					);
+				case "name-desc":
+					return arr.sort((a, b) =>
+						(b.title || "Untitled").localeCompare(
+							a.title || "Untitled",
+						),
+					);
+				case "updated-asc":
+					return arr.sort(
+						(a, b) =>
+							new Date(a.updatedAt).getTime() -
+							new Date(b.updatedAt).getTime(),
+					);
+				case "updated-desc":
+					return arr.sort(
+						(a, b) =>
+							new Date(b.updatedAt).getTime() -
+							new Date(a.updatedAt).getTime(),
+					);
+				case "created-asc":
+					return arr.sort(
+						(a, b) =>
+							new Date(a.createdAt).getTime() -
+							new Date(b.createdAt).getTime(),
+					);
+				case "created-desc":
+					return arr.sort(
+						(a, b) =>
+							new Date(b.createdAt).getTime() -
+							new Date(a.createdAt).getTime(),
+					);
+				default:
+					return arr;
+			}
+		},
+		[sortOption],
+	);
+
 	const isCalendarMode = !!(calendarDate || calendarMonth);
 	const isMonthMode = !!calendarMonth;
 
 	const formatDate = (date: Date) => {
 		const now = new Date();
 		const noteDate = new Date(date);
-		const diffInHours = (now.getTime() - noteDate.getTime()) / (1000 * 60 * 60);
+		const diffInHours =
+			(now.getTime() - noteDate.getTime()) / (1000 * 60 * 60);
 		if (diffInHours < 1) return "Just now";
 		if (diffInHours < 24) return `${Math.floor(diffInHours)}h ago`;
 		if (diffInHours < 168) return `${Math.floor(diffInHours / 24)}d ago`;
@@ -457,15 +565,18 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 			}
 			if (note.folder === folderId) return;
 			moveNote(note.id, folderId);
-			toast.success(`Moved "${note.title || "Untitled"}" to ${targetFolder.name}`, {
-				action: {
-					label: "Undo",
-					onClick: () => {
-						moveNote(note.id, previousFolder);
-						toast.success("Move undone");
+			toast.success(
+				`Moved "${note.title || "Untitled"}" to ${targetFolder.name}`,
+				{
+					action: {
+						label: "Undo",
+						onClick: () => {
+							moveNote(note.id, previousFolder);
+							toast.success("Move undone");
+						},
 					},
 				},
-			});
+			);
 		},
 		[getFolderById, moveNote],
 	);
@@ -483,7 +594,8 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 			return noteList.filter((note) => {
 				const noteHasNoTags = !note.tags || note.tags.length === 0;
 				const noteMatchesOtherTags =
-					otherTags.length === 0 || otherTags.some((tag) => note.tags?.includes(tag));
+					otherTags.length === 0 ||
+					otherTags.some((tag) => note.tags?.includes(tag));
 				if (hasUncategorizedFilter && noteHasNoTags) return true;
 				if (otherTags.length > 0 && noteMatchesOtherTags) return true;
 				return false;
@@ -496,27 +608,56 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 		let baseNotes: Note[];
 		if (calendarMonth) {
 			baseNotes = notes
-				.filter((note) => !note.archived && isSameMonthDate(note.updatedAt, calendarMonth))
-				.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+				.filter(
+					(note) =>
+						!note.archived &&
+						isSameMonthDate(note.updatedAt, calendarMonth),
+				)
+				.sort(
+					(a, b) =>
+						new Date(b.updatedAt).getTime() -
+						new Date(a.updatedAt).getTime(),
+				);
 		} else if (calendarDate) {
 			baseNotes = notes
-				.filter((note) => !note.archived && isSameDayDate(note.updatedAt, calendarDate))
-				.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+				.filter(
+					(note) =>
+						!note.archived &&
+						isSameDayDate(note.updatedAt, calendarDate),
+				)
+				.sort(
+					(a, b) =>
+						new Date(b.updatedAt).getTime() -
+						new Date(a.updatedAt).getTime(),
+				);
 		} else {
 			if (!activeFolder) return [];
 			const getSubtreeIds = (folderId: string): string[] => {
 				const children = folders.filter((f) => f.parentId === folderId);
-				return [folderId, ...children.flatMap((child) => getSubtreeIds(child.id))];
+				return [
+					folderId,
+					...children.flatMap((child) => getSubtreeIds(child.id)),
+				];
 			};
 			const folderIds = getSubtreeIds(activeFolder.id);
 			baseNotes = notes.filter((note) => {
-				const matchesArchived = note.archived === (viewMode === "archived");
+				const matchesArchived =
+					note.archived === (viewMode === "archived");
 				if (!matchesArchived) return false;
 				return folderIds.includes(note.folder);
 			});
 		}
-		return applyTagFilter(baseNotes);
-	}, [notes, activeFolder, viewMode, folders, calendarDate, calendarMonth, applyTagFilter]);
+		return sortNotes(applyTagFilter(baseNotes));
+	}, [
+		notes,
+		activeFolder,
+		viewMode,
+		folders,
+		calendarDate,
+		calendarMonth,
+		applyTagFilter,
+		sortNotes,
+	]);
 
 	const calendarFolderGroups = useMemo((): CalendarFolderGroup[] => {
 		if (!isCalendarMode) return [];
@@ -546,8 +687,11 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 	}
 
 	const folderHierarchy = useMemo(() => {
-		if (isCalendarMode || !activeFolder) return { directNotes: [], nestedFolders: [] };
-		const directNotes = filteredNotes.filter((note) => note.folder === activeFolder.id);
+		if (isCalendarMode || !activeFolder)
+			return { directNotes: [], nestedFolders: [] };
+		const directNotes = filteredNotes.filter(
+			(note) => note.folder === activeFolder.id,
+		);
 		const buildFolderTree = (parentId: string, depth = 0): FolderNode[] => {
 			if (depth > 10) return [];
 			return folders
@@ -555,10 +699,14 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 				.sort((a, b) => (a.order || 0) - (b.order || 0))
 				.map((folder) => ({
 					folder,
-					notes: filteredNotes.filter((note) => note.folder === folder.id),
+					notes: filteredNotes.filter(
+						(note) => note.folder === folder.id,
+					),
 					children: buildFolderTree(folder.id, depth + 1),
 				}))
-				.filter((node) => node.notes.length > 0 || node.children.length > 0);
+				.filter(
+					(node) => node.notes.length > 0 || node.children.length > 0,
+				);
 		};
 		const nestedFolders = buildFolderTree(activeFolder.id);
 		return { directNotes, nestedFolders };
@@ -580,7 +728,12 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 		<div className="flex items-center gap-1 text-sm text-muted-foreground mb-2 ml-1">
 			{crumbs.map((folder, index) => (
 				<React.Fragment key={folder.id}>
-					{index > 0 && <ChevronRight size={12} className="text-muted-foreground/50" />}
+					{index > 0 && (
+						<ChevronRight
+							size={12}
+							className="text-muted-foreground/50"
+						/>
+					)}
 					<span className="flex items-center gap-1">
 						<FolderIconDisplay folder={folder} size={13} />
 						<span className="font-medium">{folder.name}</span>
@@ -611,7 +764,9 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 			</FolderSectionDropZone>
 			{node.children.length > 0 && (
 				<div className="mt-3">
-					{node.children.map((child) => renderFolderSection(child as any, depth + 1))}
+					{node.children.map((child) =>
+						renderFolderSection(child as any, depth + 1),
+					)}
 				</div>
 			)}
 		</div>
@@ -640,28 +795,65 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 		</div>
 	);
 
-	const calendarHeading =
-		isMonthMode ?
-			calendarMonth ? formatCalendarMonthHeading(calendarMonth)
-			:	""
-		: calendarDate ? formatCalendarDateHeading(calendarDate)
-		: "";
+	const noteSortItem = (value: NoteSortOption, label: string) => (
+		<DropdownMenuItem onClick={() => setSortOption(value)}>
+			<Check
+				size={14}
+				className={`mr-2 ${sortOption === value ? "" : "invisible"}`}
+			/>
+			{label}
+		</DropdownMenuItem>
+	);
 
-	const emptyMessage =
-		isCalendarMode ?
-			{
-				title:
-					isMonthMode ?
-						`No notes updated in ${calendarHeading}`
-					:	"No notes updated on this date",
-				subtitle: "Notes that are created or edited during this period will appear here",
+	const sortDropdown = (
+		<DropdownMenu>
+			<DropdownMenuTrigger asChild>
+				<button
+					type="button"
+					className="p-1.5 hover:bg-accent rounded-lg transition-colors cursor-pointer"
+					title="Sort notes"
+					aria-label="Sort notes"
+				>
+					<ArrowDownUp size={18} />
+				</button>
+			</DropdownMenuTrigger>
+			<DropdownMenuContent align="end">
+				{noteSortItem("name-asc", "Name (A–Z)")}
+				{noteSortItem("name-desc", "Name (Z–A)")}
+				<DropdownMenuSeparator />
+				{noteSortItem("updated-desc", "Recently updated")}
+				{noteSortItem("updated-asc", "Least recently updated")}
+				<DropdownMenuSeparator />
+				{noteSortItem("created-desc", "Newest first")}
+				{noteSortItem("created-asc", "Oldest first")}
+			</DropdownMenuContent>
+		</DropdownMenu>
+	);
+
+	const calendarHeading = isMonthMode
+		? calendarMonth
+			? formatCalendarMonthHeading(calendarMonth)
+			: ""
+		: calendarDate
+			? formatCalendarDateHeading(calendarDate)
+			: "";
+
+	const emptyMessage = isCalendarMode
+		? {
+				title: isMonthMode
+					? `No notes updated in ${calendarHeading}`
+					: "No notes updated on this date",
+				subtitle:
+					"Notes that are created or edited during this period will appear here",
 			}
-		:	{
+		: {
 				title: `No ${viewMode} notes in ${activeFolder?.name || "this folder"}`,
 				subtitle:
-					activeTags.length > 0 ? "Try removing some tag filters"
-					: viewMode === "active" ? "Create a new note to get started"
-					: "No archived notes yet",
+					activeTags.length > 0
+						? "Try removing some tag filters"
+						: viewMode === "active"
+							? "Create a new note to get started"
+							: "No archived notes yet",
 			};
 
 	if (isCalendarMode) {
@@ -671,22 +863,32 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 					<div className="flex items-center justify-between">
 						<div className="flex items-center gap-2">
 							<Calendar size={24} />
-							<h1 className="text-2xl font-semibold">{calendarHeading}</h1>
+							<h1 className="text-2xl font-semibold">
+								{calendarHeading}
+							</h1>
 							<span className="text-sm text-muted-foreground">
 								({filteredNotes.length})
 							</span>
 						</div>
-						{undoRedoButtons}
+						<div className="flex items-center gap-1">
+							{sortDropdown}
+							{undoRedoButtons}
+						</div>
 					</div>
-					<TagFilter tags={tags} activeTags={activeTags} setActiveTags={setActiveTags} />
+					<TagFilter
+						tags={tags}
+						activeTags={activeTags}
+						setActiveTags={setActiveTags}
+					/>
 				</div>
 				<div className="flex-1 overflow-y-auto scrollbar-thin">
-					{filteredNotes.length === 0 ?
+					{filteredNotes.length === 0 ? (
 						<div className="text-center py-12 text-muted-foreground animate-fadeIn">
 							<p className="text-lg mb-2">{emptyMessage.title}</p>
 							<p className="text-sm">{emptyMessage.subtitle}</p>
 						</div>
-					:	<div className="space-y-5 animate-fadeIn">
+					) : (
+						<div className="space-y-5 animate-fadeIn">
 							{calendarFolderGroups.map((group) => (
 								<div key={group.folderId}>
 									{renderFolderBreadcrumb(group.breadcrumb)}
@@ -696,7 +898,7 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 								</div>
 							))}
 						</div>
-					}
+					)}
 				</div>
 			</div>
 		);
@@ -713,47 +915,75 @@ export const NotesCard: React.FC<NotesCardProps> = ({
 									<React.Fragment key={folder.id}>
 										<button
 											type="button"
-											onClick={() => setActiveFolder(folder)}
+											onClick={() =>
+												setActiveFolder(folder)
+											}
 											className="text-muted-foreground hover:text-foreground flex items-center gap-1 cursor-pointer transition-colors"
 										>
-											<FolderIconDisplay folder={folder} size={16} />
-											<span className="text-sm">{folder.name}</span>
+											<FolderIconDisplay
+												folder={folder}
+												size={16}
+											/>
+											<span className="text-sm">
+												{folder.name}
+											</span>
 										</button>
-										<ChevronRight size={16} className="text-muted-foreground" />
+										<ChevronRight
+											size={16}
+											className="text-muted-foreground"
+										/>
 									</React.Fragment>
 								))}
 							</>
 						)}
-						{activeFolder && <FolderIconDisplay folder={activeFolder} size={24} />}
-						<h1 className="text-2xl font-semibold">{activeFolder?.name || "Inbox"}</h1>
+						{activeFolder && (
+							<FolderIconDisplay
+								folder={activeFolder}
+								size={24}
+							/>
+						)}
+						<h1 className="text-2xl font-semibold">
+							{activeFolder?.name || "Inbox"}
+						</h1>
 						<span className="text-sm text-muted-foreground">
 							({filteredNotes.length})
 						</span>
 					</div>
-					{undoRedoButtons}
+					<div className="flex items-center gap-1">
+						{sortDropdown}
+						{undoRedoButtons}
+					</div>
 				</div>
-				<TagFilter tags={tags} activeTags={activeTags} setActiveTags={setActiveTags} />
+				<TagFilter
+					tags={tags}
+					activeTags={activeTags}
+					setActiveTags={setActiveTags}
+				/>
 			</div>
 			<div className="flex-1 overflow-y-auto scrollbar-thin">
-				{filteredNotes.length === 0 ?
+				{filteredNotes.length === 0 ? (
 					<div className="text-center py-12 text-muted-foreground animate-fadeIn">
 						<p className="text-lg mb-2">{emptyMessage.title}</p>
 						<p className="text-sm">{emptyMessage.subtitle}</p>
 					</div>
-				:	<div className="space-y-4 animate-fadeIn">
-						{folderHierarchy.directNotes.length > 0 && activeFolder && (
-							<CurrentFolderDropZone
-								folder={activeFolder}
-								onNoteDrop={handleNoteDrop}
-							>
-								{folderHierarchy.directNotes.map(renderNoteItem)}
-							</CurrentFolderDropZone>
-						)}
+				) : (
+					<div className="space-y-4 animate-fadeIn">
+						{folderHierarchy.directNotes.length > 0 &&
+							activeFolder && (
+								<CurrentFolderDropZone
+									folder={activeFolder}
+									onNoteDrop={handleNoteDrop}
+								>
+									{folderHierarchy.directNotes.map(
+										renderNoteItem,
+									)}
+								</CurrentFolderDropZone>
+							)}
 						{folderHierarchy.nestedFolders.map((node) =>
 							renderFolderSection(node as any),
 						)}
 					</div>
-				}
+				)}
 			</div>
 		</div>
 	);

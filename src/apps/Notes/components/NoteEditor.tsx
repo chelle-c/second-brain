@@ -1,26 +1,17 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { Bell, Calendar, Clock, Pencil, SmilePlus, Trash2 } from "lucide-react";
 import { useEditor, EditorContent, type JSONContent } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import Highlight from "@tiptap/extension-highlight";
-import Link from "@tiptap/extension-link";
-import Image from "@tiptap/extension-image";
-import { Table } from "@tiptap/extension-table";
-import TableRow from "@tiptap/extension-table-row";
-import TableHeader from "@tiptap/extension-table-header";
-import TableCell from "@tiptap/extension-table-cell";
-import TaskList from "@tiptap/extension-task-list";
-import TaskItem from "@tiptap/extension-task-item";
-import Placeholder from "@tiptap/extension-placeholder";
-import Typography from "@tiptap/extension-typography";
-import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
-import Color from "@tiptap/extension-color";
-import { TextStyle } from "@tiptap/extension-text-style";
-import FontFamily from "@tiptap/extension-font-family";
-import TextAlign from "@tiptap/extension-text-align";
-import { common, createLowlight } from "lowlight";
-
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover";
 import {
 	IconPicker,
 	renderNoteIcon,
@@ -31,19 +22,24 @@ import {
 import { useNotesStore } from "@/stores/useNotesStore";
 import type { Folder, Note, NoteReminder, Tag } from "@/types/notes";
 import { BubbleMenuBar } from "../editor/components/BubbleMenuBar";
-import { SlashCommands } from "../editor/components/SlashCommandMenu";
-import { Callout } from "../editor/extensions/Callout";
-import { LinkPreview } from "../editor/extensions/LinkPreview";
-import { DragHandle } from "../editor/extensions/DragHandle";
 import { TagSelector } from "./TagSelector";
 import { TableOfContentsSidebar } from "./TableOfContentsSidebar";
 import { ReminderModal } from "./ReminderModal";
+import {
+	createNoteExtensions,
+	handleEditorPaste,
+	noteClipboardTextSerializer,
+} from "../editor/editorExtensions";
 
-const lowlight = createLowlight(common);
 const SAVE_DEBOUNCE_MS = 500;
-const EMPTY_DOC: JSONContent = { type: "doc", content: [{ type: "paragraph" }] };
+const EMPTY_DOC: JSONContent = {
+	type: "doc",
+	content: [{ type: "paragraph" }],
+};
 
-// ── content parsing ─────────────────────────────────────────────────────────
+// keep parseContent / formatReminderDateTime / formatNotifSummary /
+// selectionToIconValue / iconValueToPickerProps exactly as they are
+
 const parseContent = (content: string): JSONContent => {
 	if (!content) return EMPTY_DOC;
 	try {
@@ -55,96 +51,17 @@ const parseContent = (content: string): JSONContent => {
 	}
 };
 
-// ── shared extension factory ─────────────────────────────────────────────────
-const createExtensions = (isNew: boolean) => {
-	const raw = [
-		StarterKit.configure({ codeBlock: false }),
-		TextStyle,
-		Color,
-		Highlight.configure({ multicolor: !isNew }),
-		FontFamily,
-		TextAlign.configure({ types: ["heading", "paragraph"] }),
-		Link.configure({
-			openOnClick: false,
-			HTMLAttributes: { target: "_blank", rel: "noopener noreferrer" },
-		}),
-		Image.configure({ inline: false, allowBase64: true }),
-		Table.configure({ resizable: true }),
-		TableRow,
-		TableHeader,
-		TableCell,
-		TaskList,
-		TaskItem.configure({ nested: true }),
-		Placeholder.configure({
-			placeholder:
-				isNew ? "Start writing or type '/' for commands…" : "Type '/' for commands…",
-		}),
-		Typography,
-		CodeBlockLowlight.configure({ lowlight }),
-		Callout,
-		LinkPreview,
-		...(isNew ? [] : [DragHandle]),
-		SlashCommands,
-	];
-
-	const seen = new Set<string>();
-	const deduped: typeof raw = [];
-	for (let i = raw.length - 1; i >= 0; i--) {
-		const ext = raw[i];
-		const name =
-			(ext as { name?: string }).name ??
-			(ext as { spec?: { name?: string } }).spec?.name ??
-			undefined;
-		if (name && seen.has(name)) continue;
-		if (name) seen.add(name);
-		deduped.unshift(ext);
-	}
-	return deduped;
-};
-
-// ── paste guard ─────────────────────────────────────────────────────────────
-function handlePasteGuard(view: any, event: any): boolean {
-	const clipboardData = event.clipboardData;
-	const plainText = clipboardData?.getData("text/plain");
-	const html = clipboardData?.getData("text/html");
-	const nativeEvent = event as unknown as { shiftKey?: boolean };
-	if (nativeEvent.shiftKey && plainText) {
-		view.dispatch(view.state.tr.insertText(plainText));
-		return true;
-	}
-	if (html && plainText) {
-		const hasCodeBlock = /<pre[\s>]|<code[\s>]/i.test(html);
-		if (hasCodeBlock) {
-			const isIDECopy =
-				html.includes("hljs") ||
-				html.includes("syntax") ||
-				html.includes("token") ||
-				html.includes("monaco") ||
-				html.includes("CodeMirror") ||
-				html.includes("ace_") ||
-				html.includes("prism-");
-			const strippedHtml = html
-				.replace(/<[^>]*>/g, "")
-				.replace(/&[a-z]+;/gi, " ")
-				.trim();
-			const isMostlyPlainText =
-				strippedHtml.length > 0 &&
-				Math.abs(strippedHtml.length - plainText.trim().length) / plainText.trim().length <
-					0.1;
-			if (isIDECopy || isMostlyPlainText) {
-				view.dispatch(view.state.tr.insertText(plainText));
-				return true;
-			}
-		}
-	}
-	return false;
-}
-
-// ── reminder display helpers ─────────────────────────────────────────────────
-function formatReminderDateTime(reminder: NoteReminder): { date: string; time: string } {
+function formatReminderDateTime(reminder: NoteReminder): {
+	date: string;
+	time: string;
+} {
 	const dt = new Date(reminder.dateTime);
 	return {
-		date: dt.toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" }),
+		date: dt.toLocaleDateString(undefined, {
+			month: "long",
+			day: "numeric",
+			year: "numeric",
+		}),
 		time: dt.toLocaleTimeString(undefined, {
 			hour: "2-digit",
 			minute: "2-digit",
@@ -164,14 +81,10 @@ function formatNotifSummary(reminder: NoteReminder): string {
 		.join(", ");
 }
 
-// ── helpers for note icon ────────────────────────────────────────────────────
-
-/** Convert a picker selection to a storable string value. */
 function selectionToIconValue(sel: IconPickerSelection): string {
 	return sel.type === "icon" ? sel.name : sel.emoji;
 }
 
-/** Derive picker props from a stored icon value. */
 function iconValueToPickerProps(value?: string | null) {
 	if (!value) return {};
 	const lucide = findIconByName(value);
@@ -180,7 +93,6 @@ function iconValueToPickerProps(value?: string | null) {
 	return {};
 }
 
-// ── props ────────────────────────────────────────────────────────────────────
 interface NoteEditorProps {
 	note?: Note;
 	tags: Record<string, Tag>;
@@ -197,41 +109,51 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 	onNoteCreated,
 	registerBackHandler,
 }) => {
+
 	const isCreateMode = !note;
 	const { addNote, updateNote } = useNotesStore();
-
-	// ── local state ──────────────────────────────────────────────────────────
 	const [title, setTitle] = useState(note?.title ?? "");
 	const [isEditingTitle, setIsEditingTitle] = useState(isCreateMode);
-	const [selectedTags, setSelectedTags] = useState<string[]>(note?.tags ?? []);
-	const [reminder, setReminder] = useState<NoteReminder | null>(note?.reminder ?? null);
+	const [selectedTags, setSelectedTags] = useState<string[]>(
+		note?.tags ?? [],
+	);
+	const [reminder, setReminder] = useState<NoteReminder | null>(
+		note?.reminder ?? null,
+	);
 	const [showReminderModal, setShowReminderModal] = useState(false);
 	const [noteIcon, setNoteIcon] = useState<string | null>(note?.icon ?? null);
 	const [showIconPicker, setShowIconPicker] = useState(false);
-
 	const titleRef = useRef<HTMLInputElement>(null);
-
-	// ── create-mode refs ─────────────────────────────────────────────────────
 	const titleValueRef = useRef(title);
 	const selectedTagsRef = useRef(selectedTags);
 	const reminderRef = useRef(reminder);
 	const noteIconRef = useRef(noteIcon);
 	const hasSavedRef = useRef(false);
 
+	// Always points to the latest note prop – prevents stale-closure saves
+	// that could overwrite an edited duplicate with its original content. (Issue 6)
+	const noteRef = useRef<Note | undefined>(note);
+
+	useEffect(() => {
+		noteRef.current = note;
+	}, [note]);
+
 	useEffect(() => {
 		titleValueRef.current = title;
 	}, [title]);
+
 	useEffect(() => {
 		selectedTagsRef.current = selectedTags;
 	}, [selectedTags]);
+
 	useEffect(() => {
 		reminderRef.current = reminder;
 	}, [reminder]);
+
 	useEffect(() => {
 		noteIconRef.current = noteIcon;
 	}, [noteIcon]);
 
-	// ── sync from note prop (edit mode) ──────────────────────────────────────
 	const noteIdRef = useRef(note?.id);
 	useEffect(() => {
 		if (!note) return;
@@ -241,18 +163,21 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 			setSelectedTags(note.tags ?? []);
 			setReminder(note.reminder ?? null);
 			setNoteIcon(note.icon ?? null);
+			// Reset the save baseline so edits to the new note aren't compared
+			// against the previous note's content.
+			lastSavedContentRef.current = note.content ?? "";
 		}
 	}, [note]);
 
-	// ── focus title on mount ─────────────────────────────────────────────────
 	useEffect(() => {
 		if (isCreateMode) titleRef.current?.focus();
-	}, []); // eslint-disable-line react-hooks/exhaustive-deps
+	}, []);
 
-	// ── extensions ───────────────────────────────────────────────────────────
-	const extensions = useMemo(() => createExtensions(isCreateMode), [isCreateMode]);
+	const extensions = useMemo(
+		() => createNoteExtensions({ isNew: isCreateMode }),
+		[isCreateMode],
+	);
 
-	// ── editor ───────────────────────────────────────────────────────────────
 	const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const lastSavedContentRef = useRef<string>(note?.content ?? "");
 
@@ -261,38 +186,44 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 		content: isCreateMode ? EMPTY_DOC : parseContent(note!.content),
 		autofocus: !isCreateMode,
 		editorProps: {
-			attributes: { class: "tiptap-editor focus:outline-none min-h-[200px]" },
-			handlePaste: handlePasteGuard,
+			attributes: {
+				class: "tiptap-editor focus:outline-none min-h-[200px] break-words max-w-full",
+			},
+			handlePaste: handleEditorPaste,
+			clipboardTextSerializer: noteClipboardTextSerializer,
 		},
 		onUpdate: ({ editor: ed }) => {
 			if (isCreateMode) return;
 			if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
 			saveTimeoutRef.current = setTimeout(() => {
+				const current = noteRef.current;
+				if (!current) return;
 				const content = JSON.stringify(ed.getJSON());
 				if (content !== lastSavedContentRef.current) {
 					lastSavedContentRef.current = content;
-					updateNote(note!.id, { content }, false);
+					updateNote(current.id, { content }, false);
 				}
 				saveTimeoutRef.current = null;
 			}, SAVE_DEBOUNCE_MS);
 		},
 	});
 
-	// ── flush pending save on unmount (edit mode) ────────────────────────────
 	useEffect(() => {
 		return () => {
 			if (!isCreateMode && editor) {
-				if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+				if (saveTimeoutRef.current)
+					clearTimeout(saveTimeoutRef.current);
+				const current = noteRef.current;
+				if (!current) return;
 				const content = JSON.stringify(editor.getJSON());
 				if (content !== lastSavedContentRef.current) {
 					lastSavedContentRef.current = content;
-					updateNote(note!.id, { content }, false);
+					updateNote(current.id, { content }, false);
 				}
 			}
 		};
-	}, [editor, isCreateMode, note, updateNote]);
+	}, [editor, isCreateMode, updateNote]);
 
-	// ── create-mode helpers ──────────────────────────────────────────────────
 	const checkHasContent = useCallback(() => {
 		if (titleValueRef.current.trim()) return true;
 		if (!editor) return false;
@@ -330,10 +261,10 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 	}, [checkHasContent, saveNewNote, onNoteCreated]);
 
 	useEffect(() => {
-		if (isCreateMode && registerBackHandler) registerBackHandler(handleBack);
+		if (isCreateMode && registerBackHandler)
+			registerBackHandler(handleBack);
 	}, [isCreateMode, registerBackHandler, handleBack]);
 
-	// ── create-mode: auto-save on unmount ────────────────────────────────────
 	useEffect(() => {
 		if (!isCreateMode) return;
 		return () => {
@@ -354,63 +285,71 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 						icon: noteIconRef.current,
 					});
 				} catch (error) {
-					console.error("Failed to auto-save note on unmount:", error);
+					console.error(
+						"Failed to auto-save note on unmount:",
+						error,
+					);
 				}
 			}
 		};
-	}, [addNote, activeFolder, editor, isCreateMode]); // eslint-disable-line react-hooks/exhaustive-deps
+	}, [addNote, activeFolder, editor, isCreateMode]);
 
-	// ── edit-mode handlers ───────────────────────────────────────────────────
 	const handleTitleBlur = useCallback(() => {
 		if (isCreateMode) return;
 		setIsEditingTitle(false);
-		if (title !== note!.title) updateNote(note!.id, { title });
-	}, [isCreateMode, title, note, updateNote]);
+		const current = noteRef.current;
+		if (current && title !== current.title)
+			updateNote(current.id, { title });
+	}, [isCreateMode, title, updateNote]);
 
 	const handleTagToggle = useCallback(
 		(tagId: string) => {
 			setSelectedTags((prev) => {
-				const newTags =
-					prev.includes(tagId) ? prev.filter((t) => t !== tagId) : [...prev, tagId];
-				if (!isCreateMode) updateNote(note!.id, { tags: newTags });
+				const newTags = prev.includes(tagId)
+					? prev.filter((t) => t !== tagId)
+					: [...prev, tagId];
+				if (!isCreateMode && noteRef.current)
+					updateNote(noteRef.current.id, { tags: newTags });
 				return newTags;
 			});
 		},
-		[isCreateMode, note, updateNote],
+		[isCreateMode, updateNote],
 	);
 
 	const handleReminderSave = useCallback(
 		(r: NoteReminder) => {
 			setReminder(r);
 			setShowReminderModal(false);
-			if (!isCreateMode) updateNote(note!.id, { reminder: r });
+			if (!isCreateMode && noteRef.current)
+				updateNote(noteRef.current.id, { reminder: r });
 		},
-		[isCreateMode, note, updateNote],
+		[isCreateMode, updateNote],
 	);
 
 	const handleReminderClear = useCallback(() => {
 		setReminder(null);
-		if (!isCreateMode) updateNote(note!.id, { reminder: null });
-	}, [isCreateMode, note, updateNote]);
+		if (!isCreateMode && noteRef.current)
+			updateNote(noteRef.current.id, { reminder: null });
+	}, [isCreateMode, updateNote]);
 
-	// ── icon handlers ────────────────────────────────────────────────────────
 	const handleIconSelect = useCallback(
 		(selection: IconPickerSelection) => {
 			const value = selectionToIconValue(selection);
 			setNoteIcon(value);
 			setShowIconPicker(false);
-			if (!isCreateMode) updateNote(note!.id, { icon: value });
+			if (!isCreateMode && noteRef.current)
+				updateNote(noteRef.current.id, { icon: value });
 		},
-		[isCreateMode, note, updateNote],
+		[isCreateMode, updateNote],
 	);
 
 	const handleIconRemove = useCallback(() => {
 		setNoteIcon(null);
 		setShowIconPicker(false);
-		if (!isCreateMode) updateNote(note!.id, { icon: null });
-	}, [isCreateMode, note, updateNote]);
+		if (!isCreateMode && noteRef.current)
+			updateNote(noteRef.current.id, { icon: null });
+	}, [isCreateMode, updateNote]);
 
-	// ── render ───────────────────────────────────────────────────────────────
 	if (!editor) return null;
 
 	const formatDate = (date: Date) =>
@@ -426,13 +365,22 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 	const pickerProps = iconValueToPickerProps(noteIcon);
 
 	return (
-		<div className="h-full flex bg-card">
-			{/* ── Scrollable content area ────────────────────────────────── */}
-			<div className="flex-1 min-w-0 overflow-y-auto scrollbar-thin">
-				<div className="max-w-4xl mx-auto px-8 py-6">
-					{/* ── Note Icon ────────────────────────────────────────── */}
-					{noteIcon ?
-						<Popover open={showIconPicker} onOpenChange={setShowIconPicker}>
+		<div className="h-full flex bg-card overflow-hidden">
+			{/* Scoped styles to keep long/large content inside bounds (Issue 9) */}
+			<style>{`
+				.tiptap-editor { overflow-wrap: anywhere; word-break: break-word; }
+				.tiptap-editor pre { overflow-x: auto; max-width: 100%; }
+				.tiptap-editor img { max-width: 100%; height: auto; }
+				.tiptap-editor table { display: block; width: max-content; max-width: 100%; overflow-x: auto; }
+			`}</style>
+			{/* Scrollable content area */}
+			<div className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden scrollbar-thin">
+				<div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+					{noteIcon ? (
+						<Popover
+							open={showIconPicker}
+							onOpenChange={setShowIconPicker}
+						>
 							<PopoverTrigger asChild>
 								<button
 									type="button"
@@ -442,7 +390,11 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 									{renderNoteIcon(noteIcon, 32)}
 								</button>
 							</PopoverTrigger>
-							<PopoverContent className="w-auto p-2" align="start" side="bottom">
+							<PopoverContent
+								className="w-auto p-2"
+								align="start"
+								side="bottom"
+							>
 								<IconPicker
 									{...pickerProps}
 									onSelect={handleIconSelect}
@@ -452,7 +404,11 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 								/>
 							</PopoverContent>
 						</Popover>
-					:	<Popover open={showIconPicker} onOpenChange={setShowIconPicker}>
+					) : (
+						<Popover
+							open={showIconPicker}
+							onOpenChange={setShowIconPicker}
+						>
 							<PopoverTrigger asChild>
 								<button
 									type="button"
@@ -463,14 +419,19 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 									<span>Add icon</span>
 								</button>
 							</PopoverTrigger>
-							<PopoverContent className="w-auto p-2" align="start" side="bottom">
-								<IconPicker onSelect={handleIconSelect} variant="default" />
+							<PopoverContent
+								className="w-auto p-2"
+								align="start"
+								side="bottom"
+							>
+								<IconPicker
+									onSelect={handleIconSelect}
+									variant="default"
+								/>
 							</PopoverContent>
 						</Popover>
-					}
-
-					{/* ── Title ────────────────────────────────────────────── */}
-					{isCreateMode || isEditingTitle ?
+					)}
+					{isCreateMode || isEditingTitle ? (
 						<input
 							ref={titleRef}
 							type="text"
@@ -482,29 +443,34 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 									e.preventDefault();
 									handleTitleBlur();
 								}
-								if (e.key === "Escape" && !isCreateMode) {
-									setTitle(note!.title);
+								if (
+									e.key === "Escape" &&
+									!isCreateMode &&
+									noteRef.current
+								) {
+									setTitle(noteRef.current.title);
 									setIsEditingTitle(false);
 								}
 							}}
 							placeholder="Untitled"
-							className="w-full text-4xl font-bold text-card-foreground outline-none mb-4 placeholder:text-muted-foreground bg-transparent border-b-2 border-primary pb-2"
+							className="w-full text-4xl font-bold text-card-foreground outline-none mb-4 placeholder:text-muted-foreground bg-transparent border-b-2 border-primary pb-2 break-words"
 						/>
-					:	<button
+					) : (
+						<button
 							type="button"
 							onClick={() => setIsEditingTitle(true)}
-							className="w-full text-left text-4xl font-bold text-card-foreground cursor-text hover:bg-accent rounded p-2 -m-2 transition-colors mb-4"
+							className="w-full text-left text-4xl font-bold text-card-foreground cursor-text hover:bg-accent rounded p-2 -m-2 transition-colors mb-4 break-words"
 						>
 							{title || "Untitled"}
 						</button>
-					}
-
-					{/* ── Metadata (edit mode only) ────────────────────────── */}
+					)}
 					{!isCreateMode && note && (
 						<div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-3">
 							<span className="flex items-center gap-1.5">
 								<Calendar size={14} />
-								<span className="font-medium text-foreground/60">Created:</span>
+								<span className="font-medium text-foreground/60">
+									Created:
+								</span>
 								{formatDate(note.createdAt)}
 							</span>
 							{note.updatedAt &&
@@ -520,8 +486,6 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 								)}
 						</div>
 					)}
-
-					{/* ── Tags ──────────────────────────────────────────────── */}
 					<div className="mb-4">
 						<TagSelector
 							tags={tags}
@@ -529,12 +493,13 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 							onTagToggle={handleTagToggle}
 						/>
 					</div>
-
-					{/* ── Reminder section ─────────────────────────────────── */}
 					<div className="mb-5">
-						{reminder ?
+						{reminder ? (
 							<div className="flex flex-wrap items-center gap-2 p-2.5 rounded-lg bg-primary/5 border border-primary/20">
-								<Bell size={16} className="text-primary shrink-0" />
+								<Bell
+									size={16}
+									className="text-primary shrink-0"
+								/>
 								<div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm flex-1 min-w-0">
 									<span className="text-foreground font-medium">
 										{formatReminderDateTime(reminder).date}{" "}
@@ -550,7 +515,9 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 								<div className="flex items-center gap-1 shrink-0">
 									<button
 										type="button"
-										onClick={() => setShowReminderModal(true)}
+										onClick={() =>
+											setShowReminderModal(true)
+										}
 										className="p-1.5 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
 										aria-label="Edit reminder"
 									>
@@ -566,7 +533,8 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 									</button>
 								</div>
 							</div>
-						:	<button
+						) : (
+							<button
 								type="button"
 								onClick={() => setShowReminderModal(true)}
 								className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-accent border border-border transition-colors"
@@ -574,25 +542,23 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 								<Bell size={15} />
 								<span>Reminder</span>
 							</button>
-						}
+						)}
 					</div>
-
-					{/* ── Divider + Editor ─────────────────────────────────── */}
 					<div className="border-t border-border pt-6">
-						<div className="w-full min-h-[300px] tiptap-editor-wrapper">
+						<div className="w-full min-h-[300px] tiptap-editor-wrapper min-w-0">
 							<BubbleMenuBar editor={editor} />
 							<EditorContent editor={editor} />
 						</div>
 					</div>
+					{/* Scroll-past-end spacer so the last heading can reach the top
+					    (fixes ToC highlighting of the final headings – Issue 4). */}
+					<div aria-hidden className="h-[80vh]" />
 				</div>
 			</div>
-
-			{/* ── Right column: ToC ──────────────────────────────────────── */}
-			<div className="shrink-0 h-full">
+			{/* ToC – hidden on narrow widths so it never pushes the editor off-screen (Issue 9) */}
+			<div className="shrink-0 h-full hidden md:block">
 				<TableOfContentsSidebar editor={editor} />
 			</div>
-
-			{/* ── Reminder Modal ───────────────────────────────────────────────── */}
 			<ReminderModal
 				isOpen={showReminderModal}
 				onClose={() => setShowReminderModal(false)}

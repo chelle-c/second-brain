@@ -28,16 +28,37 @@ type ViewState = "list" | "view" | "create";
 type SidebarView = "folders" | "calendar";
 type CalendarViewMode = "date" | "month";
 
-const SIDEBAR_VIEW_OPTIONS: { value: SidebarView; label: string; ariaLabel: string }[] = [
+const SIDEBAR_VIEW_OPTIONS: {
+	value: SidebarView;
+	label: string;
+	ariaLabel: string;
+}[] = [
 	{ value: "folders", label: "Folders", ariaLabel: "Switch to folder view" },
-	{ value: "calendar", label: "Calendar", ariaLabel: "Switch to calendar view" },
+	{
+		value: "calendar",
+		label: "Calendar",
+		ariaLabel: "Switch to calendar view",
+	},
 ];
 
 const DEFAULT_TAGS: Record<string, Tag> = {
-	actions: { id: "actions", name: "Actions", icon: CheckCircle, color: "#3b82f6" },
+	actions: {
+		id: "actions",
+		name: "Actions",
+		icon: CheckCircle,
+		color: "#3b82f6",
+	},
 	ideas: { id: "ideas", name: "Ideas", icon: Lightbulb, color: "#eab308" },
-	reference: { id: "reference", name: "Reference", icon: BookOpen, color: "#10b981" },
+	reference: {
+		id: "reference",
+		name: "Reference",
+		icon: BookOpen,
+		color: "#10b981",
+	},
 };
+
+const FOLDER_STORAGE_KEY = "notes-active-folder-id";
+const SIDEBAR_VIEW_KEY = "notes-sidebar-view";
 
 export function NotesApp() {
 	const {
@@ -63,23 +84,42 @@ export function NotesApp() {
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
 	const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-	const [sidebarView, setSidebarView] = useState<SidebarView>("folders");
-	const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date>(() => new Date());
-	const [calendarViewMode, setCalendarViewMode] = useState<CalendarViewMode>("date");
+	const [sidebarView, setSidebarView] = useState<SidebarView>(() => {
+		const saved = localStorage.getItem(SIDEBAR_VIEW_KEY);
+		return saved === "calendar" || saved === "folders" ? saved : "folders";
+	});
+	const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date>(
+		() => new Date(),
+	);
+	const [calendarViewMode, setCalendarViewMode] =
+		useState<CalendarViewMode>("date");
 
 	const lastActiveFolderRef = useRef<Folder | null>(null);
 
 	useEffect(() => {
 		if (Object.keys(tags).length === 0) {
-			Object.entries(DEFAULT_TAGS).forEach(([id, tag]) => addTag({ ...tag, id }));
+			Object.entries(DEFAULT_TAGS).forEach(([id, tag]) =>
+				addTag({ ...tag, id }),
+			);
 		}
 	}, [tags, addTag]);
 
 	const allTags = { ...tags };
 
+	// ── Restore last-opened folder, else default, else inbox ─────────
 	useEffect(() => {
 		if (!activeFolder && folders.length > 0) {
-			const defaultFolder = folders.find((f) => f.id === notesDefaultFolder);
+			const savedId = localStorage.getItem(FOLDER_STORAGE_KEY);
+			const saved = savedId
+				? folders.find((f) => f.id === savedId)
+				: undefined;
+			if (saved) {
+				setActiveFolder(saved);
+				return;
+			}
+			const defaultFolder = folders.find(
+				(f) => f.id === notesDefaultFolder,
+			);
 			if (defaultFolder) {
 				setActiveFolder(defaultFolder);
 			} else {
@@ -88,6 +128,16 @@ export function NotesApp() {
 			}
 		}
 	}, [folders, notesDefaultFolder, activeFolder]);
+
+	// ── Persist active folder + sidebar view so they survive leaving the app ─────────
+	useEffect(() => {
+		if (activeFolder)
+			localStorage.setItem(FOLDER_STORAGE_KEY, activeFolder.id);
+	}, [activeFolder]);
+
+	useEffect(() => {
+		localStorage.setItem(SIDEBAR_VIEW_KEY, sidebarView);
+	}, [sidebarView]);
 
 	// ── Keep activeFolder in sync with store when folder data changes ─────────
 	useEffect(() => {
@@ -100,7 +150,11 @@ export function NotesApp() {
 
 	useEffect(() => {
 		if (sidebarView !== "folders") return;
-		if (viewState !== "list" && activeFolder && lastActiveFolderRef.current) {
+		if (
+			viewState !== "list" &&
+			activeFolder &&
+			lastActiveFolderRef.current
+		) {
 			if (activeFolder.id !== lastActiveFolderRef.current.id) {
 				if (viewState === "create" && createBackHandlerRef.current) {
 					createBackHandlerRef.current();
@@ -112,52 +166,31 @@ export function NotesApp() {
 		lastActiveFolderRef.current = activeFolder;
 	}, [activeFolder, viewState, sidebarView]);
 
-	useEffect(() => {
-		const handleKeyDown = (e: KeyboardEvent) => {
-			const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
-			const modKey = isMac ? e.metaKey : e.ctrlKey;
-
-			if (modKey && (e.key === "=" || e.key === "+")) {
-				e.preventDefault();
-				setSelectedNoteId(null);
-				setViewState("create");
-			}
-			if (modKey && e.key === "z" && !e.shiftKey && canUndo) {
-				e.preventDefault();
-				undo();
-			}
-			if ((modKey && e.shiftKey && e.key === "z") || (modKey && e.key === "y")) {
-				if (canRedo) {
-					e.preventDefault();
-					redo();
-				}
-			}
-			if (e.key === "Escape" && viewState === "view") {
-				e.preventDefault();
-				handleBackToList();
-			}
-		};
-		document.addEventListener("keydown", handleKeyDown);
-		return () => document.removeEventListener("keydown", handleKeyDown);
-	}, [canUndo, canRedo, undo, redo, viewState]);
-
 	const getNoteCount = (
 		folderId: string,
 		archived = false,
 		includeDescendants = true,
 	): number => {
 		if (!includeDescendants) {
-			return notes.filter((n) => n.folder === folderId && n.archived === archived).length;
+			return notes.filter(
+				(n) => n.folder === folderId && n.archived === archived,
+			).length;
 		}
 		const getDescendantIds = (id: string): string[] => {
 			const children = folders.filter((f) => f.parentId === id);
-			return [id, ...children.flatMap((child) => getDescendantIds(child.id))];
+			return [
+				id,
+				...children.flatMap((child) => getDescendantIds(child.id)),
+			];
 		};
 		const folderIds = getDescendantIds(folderId);
-		return notes.filter((n) => folderIds.includes(n.folder) && n.archived === archived).length;
+		return notes.filter(
+			(n) => folderIds.includes(n.folder) && n.archived === archived,
+		).length;
 	};
 
-	const getFolderById = (id: string): Folder | undefined => folders.find((f) => f.id === id);
+	const getFolderById = (id: string): Folder | undefined =>
+		folders.find((f) => f.id === id);
 
 	const inboxFolder = folders.find((f) => f.id === "inbox") || null;
 
@@ -284,12 +317,74 @@ export function NotesApp() {
 		handleBackToList();
 	}, [handleBackToList]);
 
-	const editorFolder = sidebarView === "calendar" ? inboxFolder || activeFolder : activeFolder;
+	useEffect(() => {
+		const handleKeyDown = (e: KeyboardEvent) => {
+			const target = e.target as HTMLElement | null;
+			const isEditorActive = !!(
+				target &&
+				(target.isContentEditable ||
+					target.closest?.(".tiptap-editor") ||
+					target.tagName === "INPUT" ||
+					target.tagName === "TEXTAREA")
+			);
+			if (isEditorActive) return;
+
+			const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
+			const modKey = isMac ? e.metaKey : e.ctrlKey;
+
+			if (modKey && (e.key === "=" || e.key === "+")) {
+				e.preventDefault();
+				const defaultFolder =
+					folders.find((f) => f.id === notesDefaultFolder) ||
+					folders.find((f) => f.id === "inbox") ||
+					undefined;
+				// Route through handleCreateNote so lastActiveFolderRef is set first
+				handleCreateNote(defaultFolder);
+			}
+
+			if (modKey && e.key === "z" && !e.shiftKey && canUndo) {
+				e.preventDefault();
+				undo();
+			}
+			if (
+				(modKey && e.shiftKey && e.key === "z") ||
+				(modKey && e.key === "y")
+			) {
+				if (canRedo) {
+					e.preventDefault();
+					redo();
+				}
+			}
+			if (e.key === "Escape" && viewState === "view") {
+				e.preventDefault();
+				handleBackToList();
+			}
+		};
+		document.addEventListener("keydown", handleKeyDown);
+		return () => document.removeEventListener("keydown", handleKeyDown);
+	}, [
+		canUndo,
+		canRedo,
+		undo,
+		redo,
+		viewState,
+		folders,
+		notesDefaultFolder,
+		handleCreateNote,
+		handleBackToList,
+	]);
+
+	const editorFolder =
+		sidebarView === "calendar" ? inboxFolder || activeFolder : activeFolder;
 	const isCalendarActive = sidebarView === "calendar";
 	const calendarDateProp =
-		isCalendarActive && calendarViewMode === "date" ? selectedCalendarDate : undefined;
+		isCalendarActive && calendarViewMode === "date"
+			? selectedCalendarDate
+			: undefined;
 	const calendarMonthProp =
-		isCalendarActive && calendarViewMode === "month" ? selectedCalendarDate : undefined;
+		isCalendarActive && calendarViewMode === "month"
+			? selectedCalendarDate
+			: undefined;
 
 	const renderContent = () => {
 		switch (viewState) {
@@ -323,7 +418,10 @@ export function NotesApp() {
 					return (
 						<div className="h-full flex flex-col">
 							<NotesBreadcrumb
-								activeFolder={getFolderById(selectedNote.folder) || activeFolder}
+								activeFolder={
+									getFolderById(selectedNote.folder) ||
+									activeFolder
+								}
 								folders={folders}
 								noteTitle={selectedNote.title}
 								onBack={handleBackToList}
@@ -340,16 +438,17 @@ export function NotesApp() {
 											size="sm"
 											className="flex items-center gap-2"
 										>
-											{selectedNote.archived ?
+											{selectedNote.archived ? (
 												<>
 													<ArchiveRestore size={16} />
 													Unarchive
 												</>
-											:	<>
+											) : (
+												<>
 													<Archive size={16} />
 													Archive
 												</>
-											}
+											)}
 										</Button>
 										<Button
 											type="button"
@@ -419,8 +518,11 @@ export function NotesApp() {
 
 		return (
 			<div className="h-full flex flex-col bg-muted">
-				<div key={sidebarView} className="flex-1 overflow-hidden min-h-0 animate-fadeIn">
-					{sidebarView === "folders" ?
+				<div
+					key={sidebarView}
+					className="flex-1 overflow-hidden min-h-0 animate-fadeIn"
+				>
+					{sidebarView === "folders" ? (
 						<FolderNav
 							folders={folders}
 							activeFolder={activeFolder}
@@ -436,7 +538,8 @@ export function NotesApp() {
 							onToggleCollapse={setIsSidebarCollapsed}
 							tags={allTags}
 						/>
-					:	<NotesCalendar
+					) : (
+						<NotesCalendar
 							notes={notes}
 							selectedDate={selectedCalendarDate}
 							onSelectDate={handleCalendarDateSelect}
@@ -445,7 +548,7 @@ export function NotesApp() {
 							onCreateNote={handleCalendarCreateNote}
 							onToggleCollapse={setIsSidebarCollapsed}
 						/>
-					}
+					)}
 				</div>
 				<div className="shrink-0 border-t border-border p-2">
 					<AnimatedToggle

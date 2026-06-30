@@ -27,12 +27,16 @@ import { Button } from "@/components/ui/button";
 import type { NoteReminder, ReminderNotification } from "@/types/notes";
 
 // ── constants ────────────────────────────────────────────────────────────────
-const MINUTE_OPTIONS = [5, 10, 15, 30, 45];
+const MINUTES_MIN = 1;
+const MINUTES_MAX = 59;
 const HOURS_MIN = 1;
 const HOURS_MAX = 23;
 const DAYS_MIN = 1;
 const DAYS_MAX = 30;
-const DEFAULT_NOTIFICATION: ReminderNotification = { unit: "minutes", value: 15 };
+const DEFAULT_NOTIFICATION: ReminderNotification = {
+	unit: "minutes",
+	value: 15,
+};
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 /** Unique key for duplicate detection */
@@ -77,12 +81,11 @@ function validate(
 	if (dateStr && timeStr) {
 		const combined = new Date(`${dateStr}T${timeStr}`);
 		if (combined <= new Date()) {
-			errors.dateTime = "The reminder date and time must be in the future.";
+			errors.dateTime =
+				"The reminder date and time must be in the future.";
 		}
 	}
-	if (notifications.length === 0) {
-		errors.notifications = "At least one notification time is required.";
-	}
+
 	const seen = new Set<string>();
 	notifications.forEach((n, i) => {
 		const key = notifKey(n);
@@ -93,14 +96,23 @@ function validate(
 	});
 	notifications.forEach((n, i) => {
 		if (errors[`notif-${i}`]) return;
-		if (n.unit === "minutes" && !MINUTE_OPTIONS.includes(n.value)) {
-			errors[`notif-${i}`] = `Choose one of: ${MINUTE_OPTIONS.join(", ")} minutes.`;
+		if (
+			n.unit === "minutes" &&
+			(n.value < MINUTES_MIN || n.value > MINUTES_MAX)
+		) {
+			errors[`notif-${i}`] =
+				`Minutes must be between ${MINUTES_MIN} and ${MINUTES_MAX}.`;
 		}
-		if (n.unit === "hours" && (n.value < HOURS_MIN || n.value > HOURS_MAX)) {
-			errors[`notif-${i}`] = `Hours must be between ${HOURS_MIN} and ${HOURS_MAX}.`;
+		if (
+			n.unit === "hours" &&
+			(n.value < HOURS_MIN || n.value > HOURS_MAX)
+		) {
+			errors[`notif-${i}`] =
+				`Hours must be between ${HOURS_MIN} and ${HOURS_MAX}.`;
 		}
 		if (n.unit === "days" && (n.value < DAYS_MIN || n.value > DAYS_MAX)) {
-			errors[`notif-${i}`] = `Days must be between ${DAYS_MIN} and ${DAYS_MAX}.`;
+			errors[`notif-${i}`] =
+				`Days must be between ${DAYS_MIN} and ${DAYS_MAX}.`;
 		}
 	});
 
@@ -119,6 +131,13 @@ const NotificationRow: React.FC<{
 }> = ({ index, notif, error, onChange, onRemove, canRemove }) => {
 	const rowId = `notif-row-${index}`;
 
+	const { min, max } =
+		notif.unit === "minutes"
+			? { min: MINUTES_MIN, max: MINUTES_MAX }
+			: notif.unit === "hours"
+				? { min: HOURS_MIN, max: HOURS_MAX }
+				: { min: DAYS_MIN, max: DAYS_MAX };
+
 	const handleUnitChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
 		const unit = e.target.value as ReminderNotification["unit"];
 		let value: number;
@@ -128,7 +147,9 @@ const NotificationRow: React.FC<{
 		onChange(index, { unit, value });
 	};
 
-	const handleValueChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
+	const handleValueChange = (
+		e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>,
+	) => {
 		const value = Number(e.target.value);
 		if (!Number.isNaN(value)) {
 			onChange(index, { ...notif, value });
@@ -161,37 +182,22 @@ const NotificationRow: React.FC<{
 				</select>
 
 				<label htmlFor={`${rowId}-value`} className="sr-only">
-					{notif.unit === "minutes" ?
-						"Minute amount"
-					: notif.unit === "hours" ?
-						"Hour amount"
-					:	"Day amount"}
+					{notif.unit === "minutes"
+						? "Minute amount"
+						: notif.unit === "hours"
+							? "Hour amount"
+							: "Day amount"}
 				</label>
-				{notif.unit === "minutes" ?
-					<select
-						id={`${rowId}-value`}
-						value={notif.value}
-						onChange={handleValueChange}
-						className="flex-1 px-2 py-1.5 text-sm border border-input rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-						aria-invalid={!!error}
-					>
-						{MINUTE_OPTIONS.map((m) => (
-							<option key={m} value={m}>
-								{m}
-							</option>
-						))}
-					</select>
-				:	<input
-						id={`${rowId}-value`}
-						type="number"
-						min={notif.unit === "hours" ? HOURS_MIN : DAYS_MIN}
-						max={notif.unit === "hours" ? HOURS_MAX : DAYS_MAX}
-						value={notif.value}
-						onChange={handleValueChange}
-						className="flex-1 px-2 py-1.5 text-sm border border-input rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-						aria-invalid={!!error}
-					/>
-				}
+				<input
+					id={`${rowId}-value`}
+					type="number"
+					min={min}
+					max={max}
+					value={notif.value}
+					onChange={handleValueChange}
+					className="flex-1 px-2 py-1.5 text-sm border border-input rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+					aria-invalid={!!error}
+				/>
 
 				<button
 					type="button"
@@ -204,7 +210,11 @@ const NotificationRow: React.FC<{
 				</button>
 			</div>
 			{error && (
-				<p className="text-xs text-red-500 ml-0" role="alert" id={`${rowId}-error`}>
+				<p
+					className="text-xs text-red-500 ml-0"
+					role="alert"
+					id={`${rowId}-error`}
+				>
 					{error}
 				</p>
 			)}
@@ -228,18 +238,12 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({
 }) => {
 	const [dateStr, setDateStr] = useState("");
 	const [timeStr, setTimeStr] = useState("");
-	const [notifications, setNotifications] = useState<ReminderNotification[]>([
-		DEFAULT_NOTIFICATION,
-	]);
+	const [notifications, setNotifications] = useState<ReminderNotification[]>([]);
 	const [errors, setErrors] = useState<Record<string, string>>({});
 	const [showExitConfirm, setShowExitConfirm] = useState(false);
 
 	const isDirtyRef = useRef(false);
-	const initialValuesRef = useRef({
-		dateStr: "",
-		timeStr: "",
-		notifications: [DEFAULT_NOTIFICATION],
-	});
+	const initialValuesRef = useRef({ dateStr: "", timeStr: "", notifications: [] as ReminderNotification[]})
 
 	// ── seed form when modal opens ──────────────────────────────────────────
 	useEffect(() => {
@@ -249,29 +253,30 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({
 			const dt = new Date(initialReminder.dateTime);
 			const d = toDateInputValue(dt);
 			const t = toTimeInputValue(dt);
-			const n =
-				initialReminder.notifications.length > 0 ?
-					initialReminder.notifications
-				:	[DEFAULT_NOTIFICATION];
+			const n = initialReminder.notifications ?? [];
 			setDateStr(d);
 			setTimeStr(t);
 			setNotifications(n);
-			initialValuesRef.current = { dateStr: d, timeStr: t, notifications: n };
+			initialValuesRef.current = {
+				dateStr: d,
+				timeStr: t,
+				notifications: n,
+			};
 		} else {
-			// New reminder – default to today, current time rounded to next 15 min
 			const now = new Date();
 			const d = toDateInputValue(now);
-			// Round time up to next 15-minute mark
-			const minutes = now.getMinutes();
-			const rounded = Math.ceil(minutes / 15) * 15;
+			const rounded = Math.ceil(now.getMinutes() / 15) * 15;
 			now.setMinutes(rounded, 0, 0);
-			// If rounding pushed us to next hour, the Date object handles it
 			const t = toTimeInputValue(now);
-			const n = [DEFAULT_NOTIFICATION];
+			const n: ReminderNotification[] = []; // no "notify before" by default
 			setDateStr(d);
 			setTimeStr(t);
 			setNotifications(n);
-			initialValuesRef.current = { dateStr: d, timeStr: t, notifications: n };
+			initialValuesRef.current = {
+				dateStr: d,
+				timeStr: t,
+				notifications: n,
+			};
 		}
 
 		setErrors({});
@@ -314,9 +319,14 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({
 		}
 	}, [onClose]);
 
-	const handleNotifChange = useCallback((index: number, updated: ReminderNotification) => {
-		setNotifications((prev) => prev.map((n, i) => (i === index ? updated : n)));
-	}, []);
+	const handleNotifChange = useCallback(
+		(index: number, updated: ReminderNotification) => {
+			setNotifications((prev) =>
+				prev.map((n, i) => (i === index ? updated : n)),
+			);
+		},
+		[],
+	);
 
 	const handleNotifRemove = useCallback((index: number) => {
 		setNotifications((prev) => prev.filter((_, i) => i !== index));
@@ -383,12 +393,15 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({
 									});
 								}}
 								className="px-3 py-1.5 text-sm border border-input rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-								aria-invalid={!!errors.date || !!errors.dateTime}
+								aria-invalid={
+									!!errors.date || !!errors.dateTime
+								}
 								aria-describedby={
-									errors.date ? "reminder-date-error"
-									: errors.dateTime ?
-										"reminder-datetime-error"
-									:	undefined
+									errors.date
+										? "reminder-date-error"
+										: errors.dateTime
+											? "reminder-datetime-error"
+											: undefined
 								}
 							/>
 							{errors.date && (
@@ -423,12 +436,15 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({
 									});
 								}}
 								className="px-3 py-1.5 text-sm border border-input rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-								aria-invalid={!!errors.time || !!errors.dateTime}
+								aria-invalid={
+									!!errors.time || !!errors.dateTime
+								}
 								aria-describedby={
-									errors.time ? "reminder-time-error"
-									: errors.dateTime ?
-										"reminder-datetime-error"
-									:	undefined
+									errors.time
+										? "reminder-time-error"
+										: errors.dateTime
+											? "reminder-datetime-error"
+											: undefined
 								}
 							/>
 							{errors.time && (
@@ -456,7 +472,7 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({
 					{/* ── notification times ───────────────────────────────────────── */}
 					<fieldset>
 						<legend className="text-sm font-medium text-foreground mb-2">
-							Notify me before
+							Notify me before (optional)
 						</legend>
 						<div className="flex flex-col gap-2">
 							{notifications.map((notif, i) => (
@@ -467,12 +483,15 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({
 									error={errors[`notif-${i}`]}
 									onChange={handleNotifChange}
 									onRemove={handleNotifRemove}
-									canRemove={notifications.length > 1}
+									canRemove={true}
 								/>
 							))}
 
 							{errors.notifications && (
-								<p className="text-xs text-red-500" role="alert">
+								<p
+									className="text-xs text-red-500"
+									role="alert"
+								>
 									{errors.notifications}
 								</p>
 							)}
@@ -491,7 +510,11 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({
 
 					{/* ── actions ───────────────────────────────────────────────────── */}
 					<div className="flex justify-end gap-2 pt-2 border-t border-border mt-1">
-						<Button variant="outline" type="button" onClick={handleClose}>
+						<Button
+							variant="outline"
+							type="button"
+							onClick={handleClose}
+						>
 							Cancel
 						</Button>
 						<Button type="submit">Save Reminder</Button>

@@ -30,7 +30,11 @@ interface CommandItem {
 	title: string;
 	description: string;
 	icon: LucideIcon;
-	command: (props: { editor: Editor; range: { from: number; to: number } }) => void;
+	searchTerms?: string[];
+	command: (props: {
+		editor: Editor;
+		range: { from: number; to: number };
+	}) => void;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -41,25 +45,48 @@ const getSuggestionItems = (): CommandItem[] => [
 		title: "Heading 1",
 		description: "Large section heading",
 		icon: Heading1,
-		command: ({ editor, range }) => {
-			editor.chain().focus().deleteRange(range).setNode("heading", { level: 1 }).run();
-		},
+		searchTerms: ["h1", "heading1", "title"],
+		command: ({ editor, range }) =>
+			editor
+				.chain()
+				.focus()
+				.deleteRange(range)
+				.setNode("heading", { level: 1 })
+				.run(),
 	},
 	{
 		title: "Heading 2",
 		description: "Medium section heading",
 		icon: Heading2,
-		command: ({ editor, range }) => {
-			editor.chain().focus().deleteRange(range).setNode("heading", { level: 2 }).run();
-		},
+		searchTerms: ["h2", "heading2", "subheading"],
+		command: ({ editor, range }) =>
+			editor
+				.chain()
+				.focus()
+				.deleteRange(range)
+				.setNode("heading", { level: 2 })
+				.run(),
 	},
 	{
 		title: "Heading 3",
 		description: "Small section heading",
 		icon: Heading3,
-		command: ({ editor, range }) => {
-			editor.chain().focus().deleteRange(range).setNode("heading", { level: 3 }).run();
-		},
+		searchTerms: ["h3", "heading3"],
+		command: ({ editor, range }) =>
+			editor
+				.chain()
+				.focus()
+				.deleteRange(range)
+				.setNode("heading", { level: 3 })
+				.run(),
+	},
+	{
+		title: "Inline Code",
+		description: "Format selection as inline code",
+		icon: Code,
+		searchTerms: ["code", "inline", "inlinecode", "mono"],
+		command: ({ editor, range }) =>
+			editor.chain().focus().deleteRange(range).toggleCode().run(),
 	},
 	{
 		title: "Bullet List",
@@ -114,7 +141,12 @@ const getSuggestionItems = (): CommandItem[] => [
 		description: "Insert a table",
 		icon: Table,
 		command: ({ editor, range }) => {
-			editor.chain().focus().deleteRange(range).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+			editor
+				.chain()
+				.focus()
+				.deleteRange(range)
+				.insertTable({ rows: 3, cols: 3, withHeaderRow: true })
+				.run();
 		},
 	},
 	{
@@ -338,8 +370,11 @@ export const SlashCommands = Extension.create({
 				editor: this.editor,
 				...this.options.suggestion,
 				items: ({ query }: { query: string }) => {
-					return getSuggestionItems().filter((item) =>
-						item.title.toLowerCase().includes(query.toLowerCase())
+					const q = query.toLowerCase();
+					return getSuggestionItems().filter(
+						(item) =>
+							item.title.toLowerCase().includes(q) ||
+							item.searchTerms?.some((t) => t.includes(q)),
 					);
 				},
 				render: renderItems as any,
